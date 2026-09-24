@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { bearer } from '../lib/security';
-import { userClient } from '../lib/supabase';
+import { userClient } from '../lib/db';
 
 /**
  * Canonical workflow for non-browser clients (future extension, imports).

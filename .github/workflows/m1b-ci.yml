@@ -1,0 +1,75 @@
+name: M1B CI
+
+on:
+  push:
+    branches: [feature/**, development]
+  pull_request:
+    branches: [development]
+  workflow_dispatch:
+
+concurrency:
+  group: m1b-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Lint · typecheck · unit · build · secret scans
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+      - run: pnpm build
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      - name: Secret scan · browser bundle (B24)
+        run: pnpm check:bundle
+      - name: Secret scan · every tracked file
+        run: pnpm check:secrets
+      - name: No committed env or key files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then echo "committed .env file"; exit 1; fi
+          if git ls-files | grep -E '(^|/)signing_keys\.json$|\.(pem|jwk|key)$'; then echo "committed key file"; exit 1; fi
+
+  database:
+    name: Migrations · Option B auth · RLS · browser (local Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - name: Generate an ephemeral ES256 signing key for the disposable stack (never uploaded)
+        run: pnpm local:key
+      - name: Start disposable Supabase stack (applies supabase/migrations; trusts the key)
+        run: pnpm exec supabase start -x studio,imgproxy,vector,logflare,realtime,storage-api,edge-runtime,postgres-meta,supavisor
+      - name: Write local env (local stack only; nothing leaves the runner)
+        run: pnpm local:env
+      - name: M1B integration suite (B01–B22, B25, B26, SEC)
+        run: pnpm test:integration
+        env:
+          M1B_ENV_FILE: .env.m1b-local
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser exposure test (B03, B11, B12)
+        run: pnpm test:e2e
+        env:
+          M1B_ENV_FILE: .env.m1b-local
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1b-evidence
+          path: migration-upgrade/m1b/evidence/
+          if-no-files-found: ignore
+      - if: always()
+        run: pnpm exec supabase stop --no-backup

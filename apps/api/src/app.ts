@@ -1,13 +1,12 @@
 import { Hono } from 'hono';
 import { auth } from './routes/auth';
 import { workflow } from './routes/workflow';
-import { blockAliasLeaks, requireSameOriginJson, securityHeaders } from './lib/security';
+import { requireSameOriginJson, securityHeaders } from './lib/security';
 
-/** JobQuest Node façade (M1). Same origin as the SPA, mounted at /api. */
+/** JobQuest Node API (M1B, Auth Option B). Same origin as the SPA, mounted at /api. */
 export const app = new Hono().basePath('/api');
 
 app.use('*', securityHeaders);
-app.use('*', blockAliasLeaks);
 app.use('*', requireSameOriginJson);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));

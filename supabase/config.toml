@@ -2,12 +2,13 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
+# JobQuest local stack uses the 553xx port range so it can run beside other local Supabase projects.
 project_id = "JobQuest2.0"
 
 [api]
 enabled = true
 # Port to use for the API URL.
-port = 54321
+port = 55321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
 schemas = ["public", "graphql_public"]
@@ -31,9 +32,9 @@ enabled = false
 
 [db]
 # Port to use for the local database URL.
-port = 54322
+port = 55322
 # Port used by db diff command to initialize the shadow database.
-shadow_port = 54320
+shadow_port = 55320
 # Maximum amount of time to wait for health check when starting the local database.
 health_timeout = "2m"
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
@@ -43,7 +44,7 @@ major_version = 17
 [db.pooler]
 enabled = false
 # Port to use for the local connection pooler.
-port = 54329
+port = 55329
 # Specifies when a server connection can be reused by other clients.
 # Configure one of the supported pooler modes: `transaction`, `session`.
 pool_mode = "transaction"
@@ -93,7 +94,7 @@ enabled = true
 [studio]
 enabled = true
 # Port to use for Supabase Studio.
-port = 54323
+port = 55323
 # External URL of the API server that frontend connects to.
 api_url = "http://127.0.0.1"
 # OpenAI API Key to use for Supabase AI in the Supabase Studio.
@@ -104,7 +105,7 @@ openai_api_key = "env(OPENAI_API_KEY)"
 [local_smtp]
 enabled = true
 # Port to use for the email testing server web interface.
-port = 54324
+port = 55324
 # Uncomment to expose additional ports for testing user applications that send emails.
 # smtp_port = 54325
 # pop3_port = 54326
@@ -134,7 +135,8 @@ enabled = true
 # Store analytical data in S3 for running ETL jobs over Iceberg Catalog
 # This feature is only available on the hosted platform.
 [storage.analytics]
-enabled = false
+# Matches the verified hosted value before M1's unintended config push (m1/M1_CLOSEOUT_INVESTIGATIONS.md).
+enabled = true
 max_namespaces = 5
 max_tables = 10
 max_catalogs = 2
@@ -165,15 +167,19 @@ jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
-# signing_keys_path = "./signing_keys.json"
+# JobQuest M1B (Auth Option B), LOCAL STACK ONLY: the Node API mints ES256 access tokens with
+# this key, so the local Data API trusts them. The file is generated per machine / CI run
+# (`supabase gen signing-key --algorithm ES256`) and gitignored. The hosted project uses
+# an IMPORTED key instead; see gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md (signing key procedure).
+signing_keys_path = "./signing_keys.json"
 # If disabled, the refresh token will never expire.
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-# JobQuest M1 (Auth Option A): public GoTrue sign-up is OFF. Only the Node façade
-# (service role, admin API) creates identities, so username rules cannot be bypassed.
+# JobQuest (Auth Option B): Supabase Auth holds NO JobQuest user identities. Credentials and
+# sessions are owned by the Node API. Public GoTrue sign-up stays OFF.
 enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
@@ -205,10 +211,9 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-# M1 finding (T10b): every login reaches Supabase Auth from the façade's IP (X-Forwarded-For is
-# not honoured), so the default 30/5min would throttle ALL users together. The façade enforces the
-# approved per-account + per-IP limits; this ceiling only bounds the façade as a whole.
-sign_in_sign_ups = 1000
+# Option B: JobQuest logins never reach Supabase Auth, so the default applies again.
+# (The M1 Option A value of 1000 compensated for GoTrue seeing only the façade IP.)
+sign_in_sign_ups = 30
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
@@ -222,9 +227,9 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-# M1 finding: on hosted Supabase `false` here disables the email PROVIDER, which also blocks
-# the façade's password grant. Public sign-up is blocked globally by [auth] enable_signup = false.
-enable_signup = true
+# Option B: the Supabase Auth email provider is not used by JobQuest. On hosted Supabase `false`
+# disables the email provider entirely (M1 finding), so no GoTrue password grant exists at all.
+enable_signup = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -233,9 +238,9 @@ enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "1m0s"
 # Number of characters used in the email OTP.
-otp_length = 6
+otp_length = 8
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
@@ -287,9 +292,10 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
+# Option A's custom_access_token_hook was removed by migration 20260924200000 (M1B).
 [auth.hook.custom_access_token]
-enabled = true
-uri = "pg-functions://postgres/public/custom_access_token_hook"
+enabled = false
+# uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
@@ -306,8 +312,9 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+# Matches the verified hosted value before M1's unintended config push.
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
@@ -393,7 +400,7 @@ deno_version = 2
 
 [analytics]
 enabled = true
-port = 54327
+port = 55327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
 

@@ -3,8 +3,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 beforeAll(() => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_unit_test_placeholder';
-  process.env.SUPABASE_SECRET_KEY = 'sb_secret_unit_test_placeholder_value';
+  process.env.SUPABASE_SECRET_KEY = 'sb_secret_placeholder';
   process.env.APP_ORIGINS = 'http://localhost:5173';
+  process.env.JQ_JWT_PRIVATE_JWK = '{"placeholder":"unit-test-not-a-key"}'; // presence only; never parsed here
 });
 
 async function call(path: string, init: RequestInit) {

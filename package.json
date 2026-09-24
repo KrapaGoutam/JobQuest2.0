@@ -16,7 +16,10 @@
     "test:integration": "vitest run --project integration",
     "test:e2e": "playwright test",
     "db:push": "supabase db push",
-    "check:bundle": "node scripts/check-bundle.mjs"
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "check:secrets": "node scripts/check-bundle.mjs --tracked",
+    "local:key": "node scripts/gen-local-signing-key.mjs",
+    "local:env": "node scripts/m1b-local-env.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -26,6 +29,7 @@
     "@types/pg": "^8.23.1",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
+    "jose": "^6.2.12",
     "pg": "^8.23.0",
     "supabase": "^2.117.0",
     "tsx": "^4.23.15",

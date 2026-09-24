@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Context, MiddlewareHandler } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { allowedOrigins, ALIAS_DOMAIN } from '../env';
+import { allowedOrigins } from '../env';
 
 export const REFRESH_COOKIE = 'jq_rt';
 export const CSRF_COOKIE = 'jq_csrf';
@@ -86,26 +86,6 @@ export function bearer(c: Context): string | undefined {
   const h = c.req.header('authorization');
   return h?.startsWith('Bearer ') ? h.slice(7) : undefined;
 }
-
-/**
- * Defense in depth for T03: if any response body ever contains the internal alias
- * domain, refuse to send it (500) and count it. The M1 leak test asserts the counter
- * stays at zero, so this guard cannot mask a leak — it only prevents one reaching users.
- */
-export const aliasLeakCounter = { blocked: 0 };
-export const blockAliasLeaks: MiddlewareHandler = async (c, next) => {
-  await next();
-  const body = await c.res.clone().text();
-  const headers = JSON.stringify([...c.res.headers.entries()]);
-  if (body.includes(ALIAS_DOMAIN) || headers.includes(ALIAS_DOMAIN)) {
-    aliasLeakCounter.blocked += 1;
-    console.error('SECURITY: blocked a response containing the internal alias domain', c.req.path);
-    c.res = new Response(JSON.stringify({ error: { code: 'INTERNAL', message: 'Internal error.' } }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    });
-  }
-};
 
 export const securityHeaders: MiddlewareHandler = async (c, next) => {
   await next();

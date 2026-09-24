@@ -1,7 +1,20 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync, readFileSync } from 'node:fs';
 
-// Browser-level T03 leak inspection. Local mode starts the API (tsx) + web (vite);
-// set M1_BASE_URL to run the same spec against a Vercel preview instead.
+// Browser-level B03 inspection. Local mode starts the API (tsx) + web (vite) with the env
+// file chosen by M1B_ENV_FILE (default .env.m1b-local = local Supabase stack). Process env
+// takes precedence over Node --env-file and over Vite .env files, so the chosen target is
+// the one both servers use. Set M1_BASE_URL to run the same spec against a Vercel preview.
+const envFile = process.env.M1B_ENV_FILE ?? '.env.m1b-local';
+const serverEnv: Record<string, string> = {};
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const i = line.indexOf('=');
+    if (i > 0 && /^[A-Z0-9_]+$/.test(line.slice(0, i))) serverEnv[line.slice(0, i)] = line.slice(i + 1);
+  }
+  process.env.M1B_TARGET ??= serverEnv.M1B_TARGET ?? 'hosted-dev';
+}
+
 const base = process.env.M1_BASE_URL ?? 'http://localhost:5173';
 export default defineConfig({
   testDir: 'e2e',
@@ -11,7 +24,7 @@ export default defineConfig({
   webServer: process.env.M1_BASE_URL
     ? undefined
     : [
-        { command: 'corepack pnpm --filter @jobquest/api dev', url: 'http://localhost:8787/api/health', reuseExistingServer: true, timeout: 60_000 },
-        { command: 'corepack pnpm --filter @jobquest/web dev', url: 'http://localhost:5173', reuseExistingServer: true, timeout: 60_000 },
+        { command: 'corepack pnpm --filter @jobquest/api dev', url: 'http://localhost:8787/api/health', reuseExistingServer: false, timeout: 60_000, env: serverEnv },
+        { command: 'corepack pnpm --filter @jobquest/web dev', url: 'http://localhost:5173', reuseExistingServer: false, timeout: 60_000, env: serverEnv },
       ],
 });

@@ -3,13 +3,12 @@ import { api, type PublicSession, type PublicUser } from './api';
 import { setAccessToken, supabase, SUPABASE_KEY, SUPABASE_URL } from './supabase';
 
 /*
- * M1 ENGINEERING HARNESS — not product UI (Direction D ships in later milestones).
+ * M1B ENGINEERING HARNESS (Auth Option B), not product UI (Direction D ships in later milestones).
  * Exercises: register, login, session refresh/logout, password change, recovery,
- * direct PostgREST CRUD under RLS, canonical workflow (PostgREST + Node), leak self-check.
+ * direct Data API CRUD under RLS with the Node-minted access token, canonical workflow
+ * (Data API + Node), and a browser self-check for credential / identity exposure.
  */
 
-// Built at runtime so the served source/bundle never contains the marker itself.
-const ALIAS_MARKER = ['auth', 'jobquest', 'internal'].join('.');
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('jobquest-auth') : null;
 
 interface Workspace { id: string; name: string; workspace_type: string }
@@ -32,6 +31,7 @@ export function App() {
   const [wfDirect, setWfDirect] = useState<WorkflowDef | null>(null);
   const [wfNode, setWfNode] = useState<WorkflowDef | null>(null);
   const [leak, setLeak] = useState<Record<string, boolean> | null>(null);
+  const [probe, setProbe] = useState<string>('');
   const refreshTimer = useRef<number | undefined>(undefined);
 
   const note = (m: string) => setLog((l) => [`${new Date().toLocaleTimeString()} ${m}`, ...l].slice(0, 40));
@@ -48,7 +48,10 @@ export function App() {
   }, []);
 
   const refresh = useCallback(async () => {
-    const r = await api<{ session?: PublicSession }>('/auth/refresh', {});
+    // Refresh tokens are strictly single use (replay revokes the session), so tabs must
+    // never rotate concurrently: serialize through a cross-tab Web Lock.
+    const run = () => api<{ session?: PublicSession }>('/auth/refresh', {});
+    const r = navigator.locks ? await navigator.locks.request('jobquest-refresh', run) : await run();
     if (r.status === 200 && r.data.session) {
       adopt(r.data.session);
       note('session refreshed (token rotated)');
@@ -194,26 +197,29 @@ export function App() {
   }
 
   async function leakCheck() {
-    const payload = session ? JSON.parse(atob(session.access_token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/'))) : {};
+    const payload = session ? JSON.parse(atob(session.access_token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown> : {};
     const probe = session
-      ? await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}` } }).then((r) => r.text())
-      : '';
+      ? await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}` } })
+          .then(async (r) => ({ status: r.status, text: await r.text() }))
+      : { status: 0, text: '' };
+    const storage = JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage });
+    const html = document.documentElement.outerHTML;
+    const name = user?.username ?? '\u0000';
     const result = {
-      localStorage: JSON.stringify({ ...localStorage }).includes(ALIAS_MARKER),
-      sessionStorage: JSON.stringify({ ...sessionStorage }).includes(ALIAS_MARKER),
-      readableCookies: document.cookie.includes(ALIAS_MARKER),
-      reactState: JSON.stringify(window.__jqState ?? {}).includes(ALIAS_MARKER),
-      html: document.documentElement.outerHTML.includes(ALIAS_MARKER),
-      jwtClaims: JSON.stringify(payload).includes(ALIAS_MARKER),
-      gotrueUserEndpointWithMyToken: probe.includes(ALIAS_MARKER),
+      refreshTokenReadableByScript: document.cookie.includes('jqr_') || storage.includes('jqr_'),
+      accessTokenInWebStorage: storage.includes('eyJ'),
+      credentialMaterialInPage: html.includes('$argon2id$') || html.includes('jqr_'),
+      identityClaimsInJwt: ['email', 'phone', 'username', 'user_metadata', 'app_metadata'].some((k) => k in payload),
+      supabaseAuthUserEndpointRevealsIdentity: probe.status === 200 || probe.text.includes('@') || probe.text.includes(name),
     };
-    setLeak(result); // booleans only — never render the value itself
+    setLeak(result); // booleans only; never render values
+    setProbe(`${probe.status}`);
   }
 
   const panel: CSSProperties = { border: '1px solid #c7ced9', borderRadius: 8, padding: 12, marginBottom: 12 };
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1100, margin: '0 auto', padding: 16, fontSize: 14 }}>
-      <h1 style={{ fontSize: 20 }}>JobQuest 2.0 · M1 architecture harness</h1>
+      <h1 style={{ fontSize: 20 }}>JobQuest 2.0 · M1B architecture harness (Auth Option B)</h1>
       <p style={{ color: '#5f6b7e' }}>Engineering test surface only. Not product UI.</p>
 
       {!session ? (
@@ -295,9 +301,10 @@ export function App() {
             </form>
           </section>
           <section style={panel} aria-label="Leak self-check">
-            <h2 style={{ fontSize: 16 }}>T03 leak self-check</h2>
-            <button onClick={() => void leakCheck()}>Scan for internal identity</button>
-            {leak && <ul>{Object.entries(leak).map(([k, v]) => <li key={k} data-leak={k} data-found={String(v)}>{k}: {v ? 'FOUND (leak)' : 'clean'}</li>)}</ul>}
+            <h2 style={{ fontSize: 16 }}>B03 exposure self-check</h2>
+            <button onClick={() => void leakCheck()}>Scan for exposed identity or credentials</button>
+            {leak && <ul>{Object.entries(leak).map(([k, v]) => <li key={k} data-leak={k} data-found={String(v)}>{k}: {v ? 'FOUND (exposure)' : 'clean'}</li>)}</ul>}
+            {probe && <div data-testid="auth-user-probe-status">Supabase /auth/v1/user with my token → HTTP {probe}</div>}
           </section>
         </>
       )}

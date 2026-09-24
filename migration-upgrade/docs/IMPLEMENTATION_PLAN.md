@@ -304,16 +304,19 @@ first.
 
 ---
 
-## Gate 03 Milestone Alignment (APPROVED WITH REQUIRED CORRECTIONS, 2026-09-24)
+## Gate 03 & M1/M1B Architecture Alignment (UPDATED POST-M1B OPTION B ADOPTION, 2026-09-24)
 
-Based on approved Gate 03 database, authentication, and security architecture specifications (`../gate-03/`):
+Based on approved Gate 03 specifications and the completed M1B Auth Option B adoption:
 
-1. **Milestone 1 (M1) Spike Execution:**
-   - Dedicated specification in [`../gate-03/M1_SPIKE_PLAN.md`](../gate-03/M1_SPIKE_PLAN.md).
-   - Validates Auth Option A (Node-controlled username/password over Supabase Auth synthetic alias) under 12 strict test conditions.
-   - Evaluates native `auth.uid()` RLS binding, personal workspace auto-creation, canonical workflow retrieval from `workflow_definitions`, session cookie transport, and zero synthetic identity leakage hard-fail criteria triggering Option B architectural fallback.
-   - Restricts schema to 7 foundational baseline tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`).
-2. **Milestone 19 (Data Migration) Alignment:**
+1. **Milestone 1 (M1) Spike Execution & Option B Adoption:**
+   - Option A was evaluated under [`../gate-03/M1_SPIKE_PLAN.md`](../gate-03/M1_SPIKE_PLAN.md) and FAILED due to synthetic identity exposure via `/auth/v1/user` (T03 hard-fail invariant).
+   - Option B was evaluated and passed all 26 test conditions with sanitized evidence across Local Supabase, CI, and Hosted `jobquest-dev`. Formally APPROVED in [`../gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md`](../gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md) and [`../m1b/M1B_FINAL_APPROVAL_REPORT.md`](../m1b/M1B_FINAL_APPROVAL_REPORT.md).
+   - Reconciled target database catalog: **29 permanent production tables + 2 migration tracking tables = 31 total target tables** (Option B added `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+   - M1/M1B Implemented Baseline: 11 tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`, `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+2. **Next Milestone Alignment:**
+   - **Milestone 2:** Design System & App Shell (Gate 02B Direction D tokens, base themed components, navigation shell, visual regression baseline, and Vercel preview project initialization).
+   - **Milestone 3:** Full Supabase Schema Migration (authoring all remaining target tables).
+3. **Milestone 19 (Data Migration) Alignment:**
    - Detailed in [`../gate-03/DATA_MIGRATION_DESIGN.md`](../gate-03/DATA_MIGRATION_DESIGN.md).
    - Follows 10-phase execution plan targeting dedicated `"JobQuest (Migrated)"` system team workspace (OQ-012 resolution) using canonical UUIDv4 (`gen_random_uuid()`) primary keys.
    - Enforces deterministic 13-stage legacy state decomposition into 4 decoupled dimensions (`stage`, `state`, `outcome`, `closure_reason`) verified directly against legacy source code (`Saved` through `Accepted`) and backfilled append-only event sourcing.

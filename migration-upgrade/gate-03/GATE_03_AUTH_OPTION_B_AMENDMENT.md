@@ -2,11 +2,11 @@
 
 **Document ID:** `JQ2-GATE03-AUTH-002`
 **Amends:** `AUTHENTICATION_DESIGN.md` (authentication only; no other part of Gate 03 changes)
-**Status:** `VERIFIED: SPIKE-VERIFIED ACROSS LOCAL SUPABASE STACK, CI, AND HOSTED JOBQUEST-DEV (RECOMMENDED FOR FORMAL USER APPROVAL)`
+**Status:** `APPROVED AS JOBQUEST 2.0 AUTHENTICATION ARCHITECTURE (SUPERSEDES OPTION A)`
 **Date:** 2026-09-24
-**Evidence:** `../m1b/M1B_AUTH_OPTION_B_RESULT.md`, `../m1b/M1B_TEST_RESULTS.md`, `../m1b/evidence/`
+**Evidence:** `../m1b/M1B_AUTH_OPTION_B_RESULT.md`, `../m1b/M1B_TEST_RESULTS.md`, `../m1b/M1B_FINAL_APPROVAL_REPORT.md`, `../m1b/evidence/`
 
-This amendment becomes binding only after the user reviews M1B and approves it. The Option A text in `AUTHENTICATION_DESIGN.md` is kept for history and marked **SUPERSEDED / FAILED IN M1**.
+This amendment is formally adopted following complete local, CI, and hosted `jobquest-dev` validation. The Option A text in `AUTHENTICATION_DESIGN.md` is preserved as historical context and marked **SUPERSEDED / FAILED IN M1**.
 
 ---
 
@@ -214,7 +214,10 @@ Migration `supabase/migrations/20260924200000_m1b_option_b_auth.sql`:
   - `rpc_clear_login_failures`
   - `rpc_rate_limit_hit`
 - **Removed (Option A only):** `custom_access_token_hook`, `rpc_bootstrap_account`.
-- The 7 M1 foundation tables are reused. The full 25-table schema is **not** implemented.
+- **Reconciled schema and implementation counts:**
+  - **M1/M1B Implemented Baseline:** 11 tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`, `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+  - **Reconciled Target Schema:** **29 permanent production tables + 2 migration tracking tables = 31 target tables** (superseding the pre-Option-B Gate 03 target count of 25 permanent + 2 migration = 27 tables). The remaining 20 target tables are scheduled for subsequent milestones (M3+).
+  - **Views / Functions / RPCs:** 0 views, 5 internal `app` schema helpers, 1 domain RPC (`rpc_create_workspace`), 1 trigger function (`trg_protect_last_manager`), 11 service-role auth RPCs.
 
 ## 15. Deprecated Option A concepts
 

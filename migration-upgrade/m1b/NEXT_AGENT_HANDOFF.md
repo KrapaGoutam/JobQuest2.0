@@ -1,107 +1,137 @@
 # M1B → Next Agent Handoff
 
-This file is written for any coding agent (Claude Code, Antigravity, Codex, …) and needs no chat history.
+This file is written for any coding agent (Claude Code, Antigravity, Codex, etc.) and operates without requiring prior chat history.
 
-## Current state
+---
 
-| Item | State |
-|---|---|
-| Repo | `KrapaGoutam/JobQuest2.0` |
-| Branches | `feature/m1b-option-b-auth-spike` (active, pushed); `feature/m1-foundation-auth-spike` (Option A history, pushed, keep intact). **Nothing merged to `development` or `main`. No PR.** |
-| Legacy | `../JobQuest1.0/` is READ ONLY; never link to it |
-| M1 (Option A) | **FAILED, final.** Supabase Auth `/auth/v1/user` leaked the synthetic email (`migration-upgrade/m1/M1_AUTH_OPTION_A_RESULT.md`) |
-| M1B (Option B) | **COMPLETED — OPTION B PASS.** 26/26 B-tests + SEC PASS across Local Supabase stack, GitHub Actions CI (Run `36053855534`), and hosted `jobquest-dev` (`integration-hosted-dev-56ede5.json`, `e2e-browser-hosted-dev-593c4b.json`). Zero hard-fail conditions |
-| Supabase dev | `jobquest-dev` (ref `xpnkasclquplmrcmhsif`, org `fisaxwdkkdpbamvwkvnm`, us-west-2), active. Schema = M1 + M1B (`20260924200000_m1b_option_b_auth.sql` applied). Active signing key `a73390b9-56bf-4d1a-a642-efd4479ca0b3` (`in_use`), prior keys preserved and trusted. 4 dev settings restored; 5th (storage analytics) explained (requires paid tier for Iceberg catalog). 20 synthetic Option A test accounts purged |
-| Supabase CLI | Authenticated as `goutam.krapa11@gmail.com` (`059ca115-edbc-4269-894b-77cf4531b18b`). Linked to `jobquest-dev` (`xpnkasclquplmrcmhsif`) |
-| Vercel | CLI account `goutamkrapa11-8565`, team `one-piece-5779`, **0 projects**. No Vercel project created. No production anywhere |
-| Local | Docker Supabase stack for this repo on ports 553xx (another project, `restaurant-roster`, uses 543xx: leave it alone) |
+## 1. Current State & Milestone Closure
 
-## Architecture (Option B, VERIFIED & APPROVED)
+| Dimension | Approved Status | Notes |
+|---|---|---|
+| **Repository** | `KrapaGoutam/JobQuest2.0` | Active Git repository |
+| **Legacy Codebase** | `../JobQuest1.0/` | **STRICTLY READ ONLY**. Never modify, delete, or link directly |
+| **M1 Foundation** | **COMPLETE** | Architectural plumbing validated end-to-end |
+| **Auth Option A** | **FAILED / SUPERSEDED** | Permanent failure due to T03 identity leak via `/auth/v1/user` |
+| **M1B Option B** | **PASS / APPROVED** | Formally adopted as JobQuest 2.0 authentication architecture |
+| **Integration Branch** | `development` | M1B approved and merged into `development` |
+| **Protected Branch** | `main` | **STRICTLY PROTECTED**. Never merge to `main` until final production cutover |
+| **Active Next Branch** | `feature/m2-design-system` | Dedicated feature branch for Milestone 2 (Design System) |
 
-- The Node API owns credentials (Argon2id in `user_credentials`) and sessions (`auth_sessions`, plus single-use rotating refresh tokens in `auth_refresh_tokens` / HttpOnly `jq_rt`).
-- It mints 15-minute ES256 JWTs (`sub`, `role=authenticated`, `aud`, `iss`, `iat`, `exp`, `jti`, `session_id`) with the server-only `JQ_JWT_PRIVATE_JWK`.
-- The browser calls the Supabase Data API directly: supabase-js `accessToken` option, RLS, `auth.uid()` = `sub`.
-- There are no Supabase Auth identities.
-- The service role is used only for auth RPCs.
-- Normative spec: `migration-upgrade/gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md`.
+---
 
-## Schema state
+## 2. Proven Architecture (Option B)
 
-- M1 foundation (7 tables) plus migration `20260924200000_m1b_option_b_auth.sql` applied to local, CI, and hosted `jobquest-dev`:
-  - 4 auth tables (`user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`)
-  - the `auth.users` FK dropped (`user_accounts.user_id default gen_random_uuid()`)
-  - session liveness via `auth_sessions`
-  - 11 service-role RPCs
-  - Option A hook and bootstrap RPC removed
-- The full 25-table schema is **not** implemented (reserved for M2).
+- **Authentication Model:** Node-owned credentials (`public.user_credentials`) and sessions (`public.auth_sessions`).
+- **Password Engine:** Argon2id PHC string verifier (contains memory, iterations, parallelism parameters, and salt).
+- **Session Tokens:** 15-minute ES256 access JWTs minted by the Node API using a server-only private JWK (`JQ_JWT_PRIVATE_JWK`).
+- **Refresh Tokens:** Single-use rotating opaque 256-bit CSPRNG tokens transported in HttpOnly, Secure, SameSite=Strict cookie `jq_rt` (path `/api/auth`). Stored as SHA-256 hash in `public.auth_refresh_tokens`.
+- **Replay Protection:** Reusing a consumed refresh token immediately terminates the session (`REFRESH_REUSED`).
+- **Data Access:** Browser calls Supabase Data API (PostgREST) directly using `supabase-js` custom `accessToken` injection.
+- **RLS & Identity:** Postgres `auth.uid()` evaluates to `request.jwt.claims.sub` (`user_accounts.user_id`).
+- **Supabase Auth Decoupling:** Zero `auth.users` identities; zero synthetic emails; no PINs.
+- **Service Role Restriction:** The service role key is strictly server-only and used solely for auth RPCs.
 
-## Tests and CI
+---
 
-- **Local stack:** `pnpm local:key`, `npx supabase start -x studio,imgproxy,vector,logflare,realtime,storage-api,edge-runtime,postgres-meta,supavisor`, `pnpm local:env`, `pnpm test:integration`, `pnpm test:e2e`.
-- **Static:** `pnpm lint`, `pnpm typecheck`, `pnpm test:unit` (37), `pnpm build`, `pnpm check:bundle`, `pnpm check:secrets`.
-- **Hosted dev:** `$env:M1B_ENV_FILE=".env.local"; pnpm test:integration` (17/17 PASS), `$env:M1B_ENV_FILE=".env.local"; pnpm test:e2e` (PASS).
-- **CI:** `.github/workflows/m1b-ci.yml`; run `36053855534` on commit `6e17efc` fully green.
-- Windows note: package scripts call `pnpm`, which must be on PATH; `corepack pnpm` alone is not enough for nested calls.
+## 3. Reconciled Schema State
 
-## Known deviations
+- **Target Database Catalog:** **29 Permanent Production Tables + 2 Migration Tracking Tables = 31 Total Target Tables**.
+- **Implemented Baseline (11 Tables):**
+  1. `public.user_accounts` (System account anchor, application-owned UUIDv4 `user_id`)
+  2. `public.profiles` (User settings, theme, timezone, week_start, optional notification email/phone)
+  3. `public.auth_recovery_codes` (10 single-use >=128-bit CSPRNG recovery codes)
+  4. `public.workspaces` (Personal and team workspaces)
+  5. `public.workspace_members` (Tenant memberships with USER and MANAGER roles)
+  6. `public.applications` (Core job application entity under RLS)
+  7. `public.workflow_definitions` (Canonical pipeline stages, outcomes, closure reasons)
+  8. `public.user_credentials` (Argon2id password hashes, salt, parameters, version)
+  9. `public.auth_sessions` (Application-owned active/revoked sessions)
+  10. `public.auth_refresh_tokens` (SHA-256 hashed single-use rotating refresh tokens)
+  11. `public.auth_rate_limits` (Fixed-window rate limit counters for IP and account throttling)
+- **Functions, Triggers & RPCs:**
+  - 0 Views
+  - 5 internal `app` schema helpers (`touch_updated_at`, `current_user_id`, `user_is_member_of`, `user_has_role_in`, `session_is_active`)
+  - 6 Triggers (`trg_protect_last_manager`, touch triggers)
+  - 1 Domain RPC (`rpc_create_workspace`)
+  - 11 Service-Role Auth RPCs (`rpc_register_account`, `rpc_create_session`, `rpc_rotate_refresh_token`, `rpc_session_for_refresh`, `rpc_revoke_sessions`, `rpc_session_is_live`, `rpc_change_password`, `rpc_recover_account`, `rpc_record_auth_failure`, `rpc_clear_login_failures`, `rpc_rate_limit_hit`)
+- **Remaining Tables (20 Tables):** Reserved for subsequent milestones (M3+).
 
-See `migration-upgrade/m1b/M1B_COMPLETION_REPORT.md` §24:
-- 4 new auth tables
-- Postgres rate limiter instead of Upstash
-- `jq_rt` cookie name
-- access token held in memory
-- M1 deviations carried over
+---
 
-## Open questions status
+## 4. Infrastructure & Environment State
 
-- OQ-011: RESOLVED PASS (Option B replaces Option A)
-- OQ-025: RESOLVED (Signing key imported and rotated to `in_use`)
-- OQ-026: RESOLVED (CLI authenticated to `goutam.krapa11@gmail.com`)
-- OQ-027: RESOLVED (4 dev settings restored; 5th explained)
-- OQ-028: RESOLVED (20 synthetic Option A test accounts purged)
-- OQ-029: OPEN (Production key custody: env vs KMS)
-- OQ-030: OPEN (Edge/WAF limits before production)
-- OQ-031: RESOLVED (Vanished project: CAUSE UNKNOWN)
-- Approval of amendment ADR-043 to ADR-047: APPROVED BASED ON M1B PROOF
+- **Hosted Supabase Dev Project:**
+  - Name: `jobquest-dev`
+  - Reference: `xpnkasclquplmrcmhsif`
+  - Region: `us-west-2`
+  - Active Signing Key: `kid: a73390b9-56bf-4d1a-a642-efd4479ca0b3` (ES256, `in_use`)
+  - Standby Signing Key: `kid: 551fc599-e6da-49e0-8fb8-886ec177b90f` (ES256, `previously_used`, trusted)
+  - Settings: 4 restored (TOTP enroll/verify, OTP length 8, email interval 60s), 1 constrained by free tier (storage analytics)
+  - Users: 0 synthetic Option A accounts in `auth.users`
+- **Vercel State:**
+  - Account: `goutamkrapa11-8565`
+  - Team: `one-piece-5779`
+  - Current Projects: 0
+  - Status: **Explicitly deferred to Milestone 2 (Design System & App Shell)**
+- **CI / Testing State:**
+  - Workflow: `.github/workflows/m1-ci.yml`
+  - Status: 100% green on latest HEAD commit (`5b9bced`, run `36060373279`)
 
-## Source-of-truth documents (read in order)
+---
 
-1. `migration-upgrade/m1b/M1B_COMPLETION_REPORT.md`
-2. `migration-upgrade/m1b/M1B_AUTH_OPTION_B_RESULT.md`
-3. `migration-upgrade/gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md`
-4. `migration-upgrade/m1b/M1B_INFRASTRUCTURE.md`
-5. `migration-upgrade/m1b/M1B_TEST_PLAN.md`, `M1B_TEST_RESULTS.md`
-6. `migration-upgrade/m1/M1_AUTH_OPTION_A_RESULT.md`, `migration-upgrade/m1/M1_CLOSEOUT_INVESTIGATIONS.md`
-7. `migration-upgrade/DECISIONS.md`, `OPEN_QUESTIONS.md`, `CHANGE_REQUESTS.md`
+## 5. Open Questions Summary
 
-## Exact next phase
+- **OQ-011 (Auth Option A vs B):** RESOLVED. Option A FAILED; Option B APPROVED.
+- **OQ-025 (Signing Key Import/Rotation):** RESOLVED. Active on `jobquest-dev`.
+- **OQ-026 (CLI Authentication):** RESOLVED. Authenticated to `goutam.krapa11@gmail.com`.
+- **OQ-027 (Dev Settings Restoration):** RESOLVED. Restored on `jobquest-dev`.
+- **OQ-028 (Option A Account Purge):** RESOLVED. 20 accounts purged; 0 remain.
+- **OQ-029 (Production Key Custody):** DEFERRED to pre-production hardening.
+- **OQ-030 (Production Rate Limiting & Cleanup):** DEFERRED to pre-production scaling.
+- **OQ-031 (Vanished Project):** CAUSE UNKNOWN. Non-blocking.
 
-**Awaiting user review and approval.**
-The M1B Option B authentication spike is complete. Do NOT start M2. Do NOT merge to development or main.
+---
 
-## Ready-to-copy next-agent prompt
+## 6. Authoritative Files to Read (In Order)
 
-```
-You are continuing JobQuest 2.0 (repo KrapaGoutam/JobQuest2.0), branch feature/m1b-option-b-auth-spike.
-../JobQuest1.0/ is READ ONLY. Never link to it.
+1. `migration-upgrade/m1b/M1B_FINAL_APPROVAL_REPORT.md` (integration & approval record)
+2. `migration-upgrade/gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md` (normative auth spec)
+3. `migration-upgrade/gate-03/TARGET_SCHEMA.md` (reconciled schema catalog)
+4. `migration-upgrade/docs/IMPLEMENTATION_PLAN.md` (master roadmap)
+5. `migration-upgrade/ui-design/gate-02b/GATE_02B_UI_SPEC.md` (Direction D design specification)
+6. `migration-upgrade/m2/README.md` (Milestone 2 planning package)
+
+---
+
+## 7. Exact Next Milestone: Milestone 2 (Design System & App Shell)
+
+- **Milestone Name:** **Milestone 2 — Design System & App Shell**
+- **Objective:** Implement Gate 02B-approved Direction D (JobQuest Hybrid) tokens, base themed components (Button, Input, Table, Dialog, Drawer, Toast, Tabs, InlineEdit), responsive navigation shell with workspace switcher, visual regression baseline, and Vercel development preview project initialization.
+- **Target Branch:** `feature/m2-design-system` (branched from updated `development`).
+- **Implementation Status:** Planning package established in `migration-upgrade/m2/`. **STOP before unapproved implementation.**
+
+---
+
+## 8. Ready-to-Copy Next-Agent Prompt
+
+```markdown
+You are continuing JobQuest 2.0 (repo KrapaGoutam/JobQuest2.0) on branch feature/m2-design-system.
+../JobQuest1.0/ is STRICTLY READ ONLY. Never link to or modify it.
 
 Read, in order:
-1. migration-upgrade/m1b/M1B_COMPLETION_REPORT.md
-2. migration-upgrade/m1b/M1B_AUTH_OPTION_B_RESULT.md
-3. migration-upgrade/gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md
-4. migration-upgrade/m1b/M1B_INFRASTRUCTURE.md
-5. migration-upgrade/m1b/NEXT_AGENT_HANDOFF.md
+1. migration-upgrade/m1b/M1B_FINAL_APPROVAL_REPORT.md
+2. migration-upgrade/m1b/NEXT_AGENT_HANDOFF.md
+3. migration-upgrade/m2/README.md
+4. migration-upgrade/m2/IMPLEMENTATION_PLAN.md
+5. migration-upgrade/ui-design/gate-02b/GATE_02B_UI_SPEC.md
 
-Status:
-- M1 Option A: FAILED (final)
-- M1B Option B: OPTION B — PASS across Local Supabase stack, GitHub Actions CI, and hosted Supabase jobquest-dev (ref xpnkasclquplmrcmhsif).
-- Signing key: a73390b9-56bf-4d1a-a642-efd4479ca0b3 (in_use); prior keys preserved in previously_used.
-- Migration 20260924200000 applied to jobquest-dev.
-- Dev settings restored; Option A test identities purged.
-- Working branch: feature/m1b-option-b-auth-spike. Nothing merged to development or main.
+Current State:
+- M1/M1B: COMPLETE & APPROVED. Option B merged into development.
+- Target schema: 29 permanent + 2 migration = 31 total target tables (11 implemented in M1/M1B).
+- Supabase dev: jobquest-dev (xpnkasclquplmrcmhsif), ES256 key active, 11 baseline tables migrated.
+- Vercel: Account goutamkrapa11-8565 / team one-piece-5779; project creation deferred to M2 preview.
 
-Task: Await user instructions following their review of M1B completion.
-Do NOT start M2 without explicit user authorization.
-Do NOT merge to development or main without explicit user authorization.
+Task:
+Proceed with Milestone 2 (Design System & App Shell) planning review and execution strictly per migration-upgrade/m2/ plan.
+Do NOT merge anything to main.
 ```
-

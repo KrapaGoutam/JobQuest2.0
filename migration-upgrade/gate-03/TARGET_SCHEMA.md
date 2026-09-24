@@ -5,7 +5,7 @@
 **Related Documents:** [GATE_03_ARCHITECTURE.md](GATE_03_ARCHITECTURE.md), [AUTHENTICATION_DESIGN.md](AUTHENTICATION_DESIGN.md), [AUTHORIZATION_RLS_DESIGN.md](AUTHORIZATION_RLS_DESIGN.md), [LEGACY_TABLE_MAPPING.md](LEGACY_TABLE_MAPPING.md)
 
 
-> **M1B amendment note (2026-09-24):** Auth Option B adds `user_credentials`, `auth_sessions`, `auth_refresh_tokens` and `auth_rate_limits`, and removes the `user_accounts.user_id → auth.users` foreign key. It also changes the Option A statement that `user_accounts` stores no password (the verifier now lives in the separate `user_credentials`). See [`GATE_03_AUTH_OPTION_B_AMENDMENT.md`](GATE_03_AUTH_OPTION_B_AMENDMENT.md) §14 (PROPOSED).
+> **M1B Amendment Reconciliation (2026-09-24, APPROVED):** Auth Option B is approved as the JobQuest 2.0 authentication architecture, superseding Option A (ADR-030 → ADR-043). Option B adds 4 permanent auth/session tables (`user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`) and removes the `user_accounts.user_id → auth.users` foreign key (`user_accounts.user_id` is application-owned UUIDv4 and binds directly to `sub` and `auth.uid()`). See [`GATE_03_AUTH_OPTION_B_AMENDMENT.md`](GATE_03_AUTH_OPTION_B_AMENDMENT.md) §14.
 
 ---
 
@@ -13,15 +13,16 @@
 
 | Dimension | Specification | Notes |
 |---|---|---|
-| **Database Engine** | PostgreSQL 16+ on Supabase | Native PostgREST + GoTrue Auth integration |
+| **Database Engine** | PostgreSQL 16+ on Supabase | Native PostgREST Data API + custom ES256 JWT verification |
 | **Primary Key Standard** | **UUIDv4** (`DEFAULT gen_random_uuid()`) | **ADR-031 Approved**. Native, portable, mature. UUIDv7 proposal superseded. |
 | **Tenancy Boundary** | `workspace_id UUID NOT NULL REFERENCES workspaces(id)` | Engine-enforced multi-tenancy |
 | **Cross-Tenant Integrity** | Composite FK `(parent_id, workspace_id) REFERENCES ...` | Structural cross-workspace reference prevention (ADR-032) |
 | **Traceability Columns** | `legacy_id INTEGER NULL` on all migrated tables | Preserves 100% deterministic audit and rollback tracing |
-| **Permanent Production Tables** | **25 Tables** | Clean normalization of 33 legacy tables |
+| **Permanent Production Tables** | **29 Tables** | 25 Gate 03 domain tables + 4 Option B auth tables (`user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`) |
 | **Migration-Tracking Tables** | **2 Tables** (`migration_batches`, `migration_id_mappings`) | Persistent for migration, reconciliation, and audit window |
-| **Total Schema Tables** | **27 Tables** | 25 Production + 2 Migration/Audit Tracking |
-| **M1 Foundational Tables** | **7 Tables** | Baseline schema required for M1 Architecture Spike |
+| **Total Schema Tables** | **31 Tables** | 29 Production + 2 Migration/Audit Tracking |
+| **M1/M1B Implemented Tables** | **11 Tables** | 7 M1 baseline + 4 Option B auth tables (fully migrated and tested) |
+| **Views / Functions / RPCs** | 0 Views / 5 App Helpers / 1 Domain RPC / 1 Trigger / 11 Auth RPCs | Documented in `supabase/migrations/` and `GATE_03_AUTH_OPTION_B_AMENDMENT.md` |
 
 ---
 

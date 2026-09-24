@@ -306,5 +306,5 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 | OQ-028 | Delete the Option A test identities (alias emails) left in `jobquest-dev` `auth.users` | Cleanup Action | **RESOLVED**: 20 synthetic test accounts inventoried and permanently purged from `auth.users`. Zero remain. |
 | OQ-029 | Signing-key custody for production (Vercel sensitive env vs managed KMS signing) | Production Security | **OPEN (PRE-PRODUCTION)**: Evaluate KMS signing vs Vercel sensitive environment variable before production deployment. |
 | OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | Production Scaling | **OPEN (PRE-PRODUCTION)**: Vercel firewall rules + scheduled Postgres bucket cleanup job before production launch. |
-| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | Audit / Informational | **RESOLVED: CAUSE UNKNOWN**; no destructive actions taken; `jobquest-dev` verified. |
+| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | Audit / Informational | **CAUSE UNKNOWN (Non-blocking)**: Cause cannot be determined from available platform logs; no destructive actions taken; `jobquest-dev` is verified as the active development environment; non-blocking. |
 

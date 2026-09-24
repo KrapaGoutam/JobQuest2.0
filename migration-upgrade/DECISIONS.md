@@ -246,3 +246,11 @@ All entries below are **Status: APPROVED WITH REQUIRED CORRECTIONS** following f
 
 ADR-030 remains **SUPERSEDED / FAILED IN M1** (see above). ADR-038 (recovery codes) and ADR-042 (3-tier boundary) are unchanged and re-verified under Option B.
 
+### Reconciled Target Schema & Implemented Baseline
+With Option B approved (ADR-043, CR-031), the target PostgreSQL catalog is reconciled:
+- **Permanent Production Tables:** 29 tables (25 Gate 03 baseline + `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+- **Migration-Tracking Tables:** 2 tables (`migration_batches`, `migration_id_mappings`).
+- **Total Schema Tables:** 31 tables (29 production + 2 migration).
+- **M1/M1B Implemented Baseline:** 11 tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`, `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+- **Functions / Triggers / RPCs:** 0 views, 5 internal `app` schema helpers, 1 domain RPC (`rpc_create_workspace`), 1 trigger function (`trg_protect_last_manager`), 11 service-role auth RPCs.
+

@@ -1,0 +1,176 @@
+/* JobQuest 2.0 — Approved Direction D Design Tokens
+   Sources: migration-upgrade/ui-design/specs/DESIGN_TOKENS.md
+            migration-upgrade/ui-design/gate-02b/mockups/assets/jq.css */
+
+:root,
+[data-jq] {
+  /* Canvas & Surfacing */
+  --color-canvas: #f6f7f9;
+  --color-sidebar: #ffffff;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f1f3f6;
+  --color-surface-3: #e8ebf0;
+
+  /* Typography Colors */
+  --color-text: #172033;
+  --color-text-muted: #5f6b7e; /* calibrated for >=5.3:1 contrast on canvas */
+  --color-text-subtle: #7d8799;
+
+  /* Borders & Dividers */
+  --color-border: #dfe3ea;
+  --color-border-strong: #c7ced9;
+
+  /* Accent & Primary Actions */
+  --color-accent: #3157d5;
+  --color-accent-hover: #2849b8;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #e9edff;
+  --color-focus: #5076f2;
+
+  /* Status Colors */
+  --color-success: #147a55;
+  --color-warning: #9a5b08;
+  --color-danger: #ba3341;
+  --color-info: #246b9f;
+
+  /* Derived Soft Status Surfaces */
+  --color-success-soft: color-mix(in oklch, var(--color-success) 9%, var(--color-surface-1));
+  --color-warning-soft: color-mix(in oklch, var(--color-warning) 9%, var(--color-surface-1));
+  --color-danger-soft: color-mix(in oklch, var(--color-danger) 7%, var(--color-surface-1));
+  --color-info-soft: color-mix(in oklch, var(--color-info) 9%, var(--color-surface-1));
+
+  /* Overlays & Shadows */
+  --color-scrim: rgba(23, 32, 51, 0.32);
+  --shadow-popover: 0 12px 32px rgba(23, 32, 51, 0.16);
+  --shadow-modal: 0 16px 48px rgba(23, 32, 51, 0.22);
+  --shadow-card: 0 1px 3px rgba(23, 32, 51, 0.06);
+
+  /* Form & Interactive Tokens */
+  --field-bg: var(--color-surface-1);
+  --field-disabled: var(--color-surface-2);
+  --interactive-selected: var(--color-accent-soft);
+  --inverse-bg: var(--color-text);
+  --inverse-fg: var(--color-canvas);
+
+  /* Workspace Accent Default */
+  --workspace-accent: #3157d5;
+
+  /* Short Aliases (for exact Gate 02B mockups fidelity) */
+  --bg: var(--color-canvas);
+  --sidebar: var(--color-sidebar);
+  --surface: var(--color-surface-1);
+  --surface-muted: var(--color-surface-2);
+  --surface-3: var(--color-surface-3);
+  --fg: var(--color-text);
+  --muted: var(--color-text-muted);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --primary: var(--color-accent);
+  --primary-hover: var(--color-accent-hover);
+  --primary-fg: var(--color-on-accent);
+  --primary-soft: var(--color-accent-soft);
+  --focus: var(--color-focus);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-danger);
+  --info: var(--color-info);
+  --warning-soft: var(--color-warning-soft);
+  --danger-soft: var(--color-danger-soft);
+  --success-soft: var(--color-success-soft);
+  --info-soft: var(--color-info-soft);
+  --scrim: var(--color-scrim);
+  --shadow: var(--shadow-popover);
+
+  /* Charts */
+  --chart-1: #3157d5;
+  --chart-2: #147a55;
+  --chart-3: #9a5b08;
+  --chart-4: #8a3fb0;
+  --chart-5: #246b9f;
+  --chart-6: #5f6b7e;
+
+  /* Typography Scale */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 26px;
+
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.45;
+  --leading-loose: 1.6;
+
+  /* Radii Scale */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-pill: 9999px;
+
+  /* Layout Dimensions */
+  --sidebar-width: 240px;
+  --sidebar-rail-width: 64px;
+  --header-height: 52px;
+  --mobile-tabbar-height: 78px;
+  --mobile-header-height: 52px;
+  --row-height: 44px;
+  --target-touch-min: 44px;
+
+  /* Transitions */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Dark Theme Overrides */
+[data-theme="dark"],
+[data-jq][data-theme="dark"] {
+  --color-canvas: #090d16;
+  --color-sidebar: #0d1220;
+  --color-surface-1: #121827;
+  --color-surface-2: #171f30;
+  --color-surface-3: #202a3d;
+
+  --color-text: #edf1f7;
+  --color-text-muted: #b1bbca;
+  --color-text-subtle: #828e9e;
+
+  --color-border: #273247;
+  --color-border-strong: #35425a;
+
+  --color-accent: #8098ff;
+  --color-accent-hover: #9aacff;
+  --color-on-accent: #0b1030;
+  --color-accent-soft: #202b58;
+  --color-focus: #9ab0ff;
+
+  --color-success: #54c89a;
+  --color-warning: #edb457;
+  --color-danger: #ff7f8c;
+  --color-info: #75b8e7;
+
+  --color-success-soft: color-mix(in oklch, var(--color-success) 12%, var(--color-surface-1));
+  --color-warning-soft: color-mix(in oklch, var(--color-warning) 12%, var(--color-surface-1));
+  --color-danger-soft: color-mix(in oklch, var(--color-danger) 10%, var(--color-surface-1));
+  --color-info-soft: color-mix(in oklch, var(--color-info) 12%, var(--color-surface-1));
+
+  --color-scrim: rgba(3, 6, 12, 0.65);
+  --shadow-popover: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.25);
+
+  --chart-1: #8098ff;
+  --chart-2: #54c89a;
+  --chart-3: #edb457;
+  --chart-4: #c9a0ff;
+  --chart-5: #75b8e7;
+  --chart-6: #b1bbca;
+}

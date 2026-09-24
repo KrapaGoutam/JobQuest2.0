@@ -160,3 +160,39 @@ public-facing API surface once the app moves to a platform with a different
 traffic/abuse profile than a single Render service behind no CDN.
 **Migration impact**: Low-to-Medium — a reasonable `docs/IMPLEMENTATION_PLAN.md`
 non-functional hardening item, not a blocker.
+
+---
+
+# Gate 01 Review (added 2026-09-23)
+
+Classification per [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md) §21.
+The original entries above are kept unchanged as the historical record.
+
+| ID | Classification | Resolution / recommendation (PROPOSED) |
+|---|---|---|
+| OQ-001 | RESOLVED BY USER REQUIREMENT | Username + password; PIN retired |
+| OQ-002 | RESOLVED BY USER REQUIREMENT | Scoped, expiring, hashed, workspace-bound extension tokens |
+| OQ-003 | RESOLVED BY USER REQUIREMENT | Workspace-scoped managers → expressible in RLS |
+| OQ-004 | RESOLVED | Worker-thread RPC not ported |
+| OQ-005 | CAN RESOLVE DURING MILESTONE | Recommend honouring `week_start` everywhere (D-16) |
+| OQ-006 | CAN SAFELY DEFER | Architecture keeps Realtime possible |
+| OQ-007 | RESOLVED BY USER REQUIREMENT (hybrid) | Boundary proposed in §4. Approval needed before M1. |
+| OQ-008 | MUST RESOLVE BEFORE IMPLEMENTATION (extension milestone) | Recommend incremental migration |
+| OQ-009 | **RESOLVED (verified)** | `ui-upgrade` has 1 commit not in `main` (`29624a6`): agent tooling only, no product code |
+| OQ-010 | RESOLVED BY USER REQUIREMENT | Per-IP + per-account limits, Vercel WAF |
+
+## New questions raised by Gate 01
+
+| ID | Question | Classification | Recommendation |
+|---|---|---|---|
+| OQ-011 | Does Auth Option A hold up: alias identity accepted, server-proxied sign-in not collectively IP-throttled, `supabase-js` `accessToken` mode works with RLS? | MUST RESOLVE BEFORE IMPLEMENTATION (M1 spike) | Spike in M1; fall back to Option B |
+| OQ-012 | Which workspace(s) receive legacy data? | MUST RESOLVE BEFORE DATABASE WORK | One "JobQuest (migrated)" workspace |
+| OQ-013 | What can a USER see inside a shared workspace? | MUST RESOLVE BEFORE IMPLEMENTATION | Own records only |
+| OQ-014 | Analytics: "ever reached" vs legacy current-stage counting (finding F-2) | MUST RESOLVE BEFORE DATABASE WORK | Ever reached |
+| OQ-015 | Theme default | RESOLVED BY USER REQUIREMENT | System + manual + persisted |
+| OQ-016 | Supabase/Vercel plan tiers (Branching, PITR, leaked-password protection) | CAN RESOLVE DURING MILESTONE (before production) | Free/dev first; confirm before production |
+| OQ-017 | Per-user timezone for "today" calculations | MUST RESOLVE BEFORE DATABASE WORK | Add `profiles.timezone` |
+| OQ-018 | Email provider for verification/recovery | CAN SAFELY DEFER | Recovery codes cover the MVP |
+| OQ-019 | How do legacy users reclaim accounts without PIN migration? | MUST RESOLVE BEFORE DATABASE WORK | Operator-issued claim codes |
+| OQ-020 | Record ownership when a member leaves a shared workspace | CAN RESOLVE DURING MILESTONE | Records stay; export first; transfer later |
+| OQ-021 | Production smoke-test account | CAN RESOLVE DURING MILESTONE | Dedicated smoke user in an isolated workspace |

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>mark{background:color-mix(in oklch,var(--warning) 28%,var(--surface));color:inherit;border-radius:2px;padding:0 1px}
+.sr{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:7px 10px;border-radius:6px}.sr.hl{background:var(--surface-muted)}
+.grp{font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted);padding:8px 10px 4px;display:flex;align-items:center;gap:6px}
+.sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:20px 24px;overflow:hidden}
+.sheet .card-b{display:flex;flex-direction:column;gap:10px}</style>
+</head><body><script>
+const { shell, mobile, gallery, pips, pri, aging, outcome } = JQ;
+const tile = (ic) => `<span class="tile"><i class="icon-${ic}"></i></span>`;
+
+/* ---------- global search ---------- */
+const dropdown = `<div class="scrim" style="background:transparent"></div><div class="menu" style="width:620px;right:64px;top:44px;padding:8px;gap:0" role="dialog" aria-label="Search">
+  <div class="input focus" style="height:38px;margin-bottom:6px"><i class="icon-search"></i>halcyon<span class="sfx xs">Esc to close</span></div>
+  <div class="row" style="gap:5px;padding:2px 4px 6px"><span class="chip sm inv">All 9</span><span class="chip sm">Applications 2</span><span class="chip sm">Contacts 2</span><span class="chip sm">Notes 3</span><span class="chip sm">Tasks 2</span></div>
+  <div class="grp"><i class="icon-briefcase"></i>APPLICATIONS</div>
+  <div class="sr hl" role="option" aria-selected="true"><span class="tile">H</span><div style="min-width:0"><div class="b ell"><mark>Halcyon</mark> Health · Senior Product Designer</div><div class="small muted ell">Recruiter Screen · Open · Boston, MA · LinkedIn · Job ID HH-4471</div></div><span class="kbd">↵</span></div>
+  <div class="sr"><span class="tile">H</span><div style="min-width:0"><div class="b ell"><mark>Halcyon</mark> Health · UX Researcher</div><div class="small muted ell">Applied · ${'Rejected'} at Recruiter Screen · Mar 2026 · archived</div></div><span class="pill muted">Archived</span></div>
+  <div class="grp"><i class="icon-users"></i>CONTACTS</div>
+  <div class="sr"><span class="av">DC</span><div><div class="b">Dana Cole</div><div class="small muted">Talent Partner · <mark>Halcyon</mark> Health · Recruiter</div></div><span></span></div>
+  <div class="grp"><i class="icon-notebook-pen"></i>NOTES</div>
+  <div class="sr"><span class="tile"><i class="icon-building-2"></i></span><div style="min-width:0"><div class="b">Company research · Sep 21</div><div class="small muted ell">…<mark>Halcyon</mark> is rewriting the patient-facing app in 2027. Design team of 12…</div></div><span></span></div>
+  <div class="grp"><i class="icon-list-checks"></i>TASKS</div>
+  <div class="sr"><span class="tile"><i class="icon-square-check"></i></span><div><div class="b">Prep recruiter call</div><div class="small muted">Tomorrow · <mark>Halcyon</mark> Health</div></div><span></span></div>
+  <div class="row small muted" style="padding:8px 10px 2px;border-top:1px solid var(--border);margin-top:6px"><span>↑↓ to move · ↵ to open · Tab to filter</span><span class="grow"></span><a>See all 9 results</a></div></div>`;
+const dash = `<div class="page"><div class="page-title"><div><div class="small muted">Wednesday, September 23</div><h1>What needs attention today</h1></div></div>${[1, 2, 3].map(() => '<div class="card" style="height:220px"></div>').join('')}</div>`;
+
+const results = `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Search</h1><span class="muted">9 results for "halcyon" in Personal</span></div>
+  <div class="row" style="gap:8px"><div class="input" style="width:420px;height:36px"><i class="icon-search muted"></i>halcyon<i class="icon-x muted" style="margin-left:auto"></i></div><label class="check small"><span class="cb on"><i class="icon-check"></i></span>Include archived</label></div>
+  <div class="tabs"><span class="tab sel">All <span class="cnt">9</span></span><span class="tab">Applications <span class="cnt">2</span></span><span class="tab">Contacts <span class="cnt">2</span></span><span class="tab">Notes <span class="cnt">3</span></span><span class="tab">Tasks <span class="cnt">2</span></span></div>
+  <div class="card" style="overflow:hidden">
+  ${[['briefcase', 'Application', 'Halcyon Health · Senior Product Designer', 'Recruiter Screen · Open · Boston, MA · Full-time · Onsite', 'Matched: company, description ("…<mark>Halcyon</mark>\'s care team platform…")'],
+    ['briefcase', 'Application', 'Halcyon Health · UX Researcher', 'Rejected at Recruiter Screen · archived Mar 2026', 'Matched: company'],
+    ['user-round', 'Contact', 'Dana Cole', 'Talent Partner · Recruiter', 'Matched: company'],
+    ['user-round', 'Contact', 'Marta Ivers', 'Design Manager · Referral', 'Matched: notes ("…former <mark>Halcyon</mark> lead…")'],
+    ['notebook-pen', 'Note', 'Company research · Sep 21', 'Linked to Halcyon Health · Senior Product Designer', 'Matched: title, body'],
+    ['notebook-pen', 'Note', 'Recruiter screen prep', 'Interview note · Sep 23', 'Matched: body'],
+    ['square-check', 'Task', 'Prep recruiter call', 'Due tomorrow · High', 'Matched: linked application']].map(r => `<div class="row" style="padding:10px 16px;border-bottom:1px solid var(--border);gap:12px;align-items:flex-start"><span class="pill muted" style="width:96px;justify-content:center;flex:none"><i class="icon-${r[0]}"></i>${r[1]}</span><div class="grow"><div class="b">${r[2].replace('Halcyon', '<mark>Halcyon</mark>')}</div><div class="small muted">${r[3]}</div><div class="xs muted" style="margin-top:2px">${r[4]}</div></div></div>`).join('')}
+  </div>
+  <div class="small muted">Searches company, role, location, description, skills, source, employment type, work arrangement, stage, outcome, notes, job ID and contacts.</div></div>`;
+
+const mSearch = mobile({ noHeader: true, noTabs: true, bodyStyle: 'padding:8px 12px;gap:8px' }, `
+  <div class="row"><div class="m-input grow" style="height:44px;border-color:var(--focus);box-shadow:0 0 0 3px var(--primary-soft)"><i class="icon-search muted"></i>halcyon</div><a style="font-size:15px;padding:0 6px">Cancel</a></div>
+  <div class="row" style="gap:6px;overflow:hidden"><span class="chip inv" style="height:32px;border-radius:16px">All 9</span><span class="chip" style="height:32px;border-radius:16px">Apps 2</span><span class="chip" style="height:32px;border-radius:16px">Contacts 2</span><span class="chip" style="height:32px;border-radius:16px">Notes 3</span></div>
+  <div class="grp">APPLICATIONS</div>
+  <div class="m-card"><div class="m-row"><span class="tile">H</span><div class="grow" style="min-width:0"><div class="b"><mark>Halcyon</mark> Health</div><div class="small muted ell">Senior Product Designer · Recruiter Screen</div></div></div><div class="m-row"><span class="tile">H</span><div class="grow" style="min-width:0"><div class="b"><mark>Halcyon</mark> Health</div><div class="small muted ell">UX Researcher · Rejected · archived</div></div></div></div>
+  <div class="grp">CONTACTS</div><div class="m-card"><div class="m-row"><span class="av lg">DC</span><div class="grow"><div class="b">Dana Cole</div><div class="small muted">Recruiter · <mark>Halcyon</mark> Health</div></div><span class="m-ib"><i class="icon-phone"></i></span></div></div>`);
+
+/* ---------- states ---------- */
+const loading = `<div class="page" style="gap:10px;padding:16px 20px 0 24px"><div class="page-title"><h1>Applications</h1><span class="skel" style="width:120px"></span></div>
+  <div class="tabs">${['All active', 'Needs follow-up', 'Interviewing', 'Saved', 'Archived'].map((t, i) => `<span class="tab ${i ? '' : 'sel'}">${t}</span>`).join('')}</div>
+  <div class="tbl" aria-busy="true"><div class="tr th" style="grid-template-columns:16px 1fr 156px 196px 64px 270px 92px"><span></span><span>Company · Role</span><span>Stage</span><span>Aging</span><span>Priority</span><span>Next action</span><span>Source</span></div>
+  ${Array.from({ length: 14 }, (_, i) => `<div class="tr" style="grid-template-columns:16px 1fr 156px 196px 64px 270px 92px"><span class="skel" style="width:14px;height:14px"></span><span class="row"><span class="skel" style="width:26px;height:26px"></span><span class="col" style="gap:5px"><span class="skel" style="width:${120 + (i * 37) % 80}px"></span><span class="skel" style="width:${90 + (i * 23) % 60}px;height:8px"></span></span></span><span class="skel" style="width:100px"></span><span class="skel" style="width:130px"></span><span class="skel" style="width:40px"></span><span class="skel" style="width:${150 + (i * 19) % 90}px"></span><span class="skel" style="width:60px"></span></div>`).join('')}</div>
+  <div class="small muted" role="status">Loading applications…</div></div>`;
+
+const empties = `<div class="page" style="padding:16px 24px 0"><div class="page-title"><h1>Applications</h1><span class="muted">0 applications</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:none;align-items:start">
+  <div class="card"><div class="empty"><div class="ic"><i class="icon-briefcase"></i></div><div style="font-size:16px;font-weight:600">Track your first application</div><div class="small muted" style="max-width:360px">Add one by hand, capture it from a job page with the browser extension, or import a spreadsheet.</div>
+    <div class="row" style="gap:8px;margin-top:6px"><span class="btn primary"><i class="icon-plus"></i>New application</span><span class="btn"><i class="icon-puzzle"></i>Set up extension</span><span class="btn"><i class="icon-upload"></i>Import</span></div><div class="xs muted">First-run · empty workspace</div></div></div>
+  <div class="card"><div class="empty"><div class="ic"><i class="icon-search-x"></i></div><div style="font-size:16px;font-weight:600">No applications match these filters</div><div class="small muted">Outcome: Open · Stage: Offer · Priority: Low</div><div class="row" style="gap:8px;margin-top:6px"><span class="btn">Clear filters</span><span class="btn">Show archived too</span></div><div class="xs muted">No filter matches · different from "no data"</div></div></div>
+  <div class="card"><div class="empty"><div class="ic"><i class="icon-party-popper"></i></div><div style="font-size:16px;font-weight:600">Nothing needs attention today</div><div class="small muted">No overdue or due-today items. Next: Portfolio review prep, Fri Sep 25.</div><div class="xs muted">Dashboard queue empty</div></div></div>
+  <div class="card"><div class="empty"><div class="ic"><i class="icon-chart-line"></i></div><div style="font-size:16px;font-weight:600">Not enough data yet</div><div class="small muted" style="max-width:360px">Analytics appear once you have at least 5 applications in this range. You have 2.</div><div class="xs muted">Analytics · insufficient sample</div></div></div>
+  </div></div>`;
+
+const errors = `<div class="banner danger" style="margin:0;border-radius:0;border-width:0 0 1px;padding:8px 24px" role="alert"><i class="icon-wifi-off danger-t"></i><span><b>You're offline.</b> Showing what was loaded before. Changes are paused until you reconnect.</span><span class="grow"></span><span class="btn sm">Retry now</span></div>
+  <div class="page" style="padding:16px 24px 0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:none;align-items:start">
+  <div class="card"><div class="empty"><div class="ic" style="background:var(--danger-soft);color:var(--danger)"><i class="icon-server-crash"></i></div><div style="font-size:16px;font-weight:600">Couldn't load analytics</div><div class="small muted">Something went wrong on our side. Your data is safe.</div><div class="row" style="gap:8px;margin-top:6px"><span class="btn primary"><i class="icon-refresh-cw"></i>Try again</span><span class="btn">Go to dashboard</span></div><div class="xs muted mono">Reference: req_8f2k1q</div></div></div>
+  <div class="card"><div class="empty"><div class="ic"><i class="icon-lock"></i></div><div style="font-size:16px;font-weight:600">Managers only</div><div class="small muted" style="max-width:340px">Members is available to Managers of <b>Northside Bootcamp</b>. You're a User here.</div><div class="row" style="gap:8px;margin-top:6px"><span class="btn">Back to dashboard</span></div><div class="xs muted">Permission denied · also returned for records outside your access (shown as "not found")</div></div></div>
+  <div class="card"><div class="card-b"><div class="sec-t">Inline section error</div><div class="banner danger small"><i class="icon-circle-alert danger-t"></i><span>Couldn't load interviews.</span><span class="grow"></span><a>Retry</a></div><div class="sec-t" style="margin-top:6px">Form save error (server)</div><div class="banner danger small" style="align-items:flex-start"><i class="icon-circle-alert danger-t" style="margin-top:2px"></i><span>Couldn't save changes. Your edits are still here. <a>Try again</a></span></div></div></div>
+  <div class="card"><div class="card-b"><div class="sec-t">Deleted or inaccessible application</div><div class="small muted">Opening a link to a record that no longer exists returns to Applications with:</div><div class="toast" style="position:relative;align-self:flex-start"><i class="icon-info"></i>That application couldn't be found. It may have been deleted.</div></div></div>
+  </div></div>`;
+
+/* component + state sheet (both themes) */
+const sheet = `<div class="sheet">
+  <div class="card"><div class="card-h"><span class="card-t">Buttons</span></div><div class="card-b">
+    <div class="row" style="gap:8px;flex-wrap:wrap"><span class="btn primary">Primary</span><span class="btn">Secondary</span><span class="btn ghost">Ghost</span><span class="btn danger">Danger</span><span class="btn danger-o">Danger outline</span></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><span class="btn primary" style="background:var(--primary-hover)">Hover</span><span class="btn focus">Focus</span><span class="btn disabled">Disabled</span><span class="btn primary"><i class="icon-loader-circle"></i>Saving…</span></div></div></div>
+  <div class="card"><div class="card-h"><span class="card-t">Inputs</span></div><div class="card-b">
+    <div class="field"><label class="label">Default</label><div class="input">Corvid Labs</div></div>
+    <div class="field"><label class="label">Focus</label><div class="input focus">Staff Product Designer</div></div>
+    <div class="field"><label class="label">Error</label><div class="input err">javascript:alert(1)</div><div class="ferr"><i class="icon-circle-alert"></i>Use a link starting with http:// or https://</div></div>
+    <div class="field"><label class="label">Disabled</label><div class="input dis">Final Interview<span class="sfx"><i class="icon-lock"></i></span></div></div></div></div>
+  <div class="card"><div class="card-h"><span class="card-t">Status language</span></div><div class="card-b">
+    <div class="row" style="gap:10px;flex-wrap:wrap">${pips(1)}Saved ${pips(2)}Applied ${pips(4)}Interview ${pips(5)}Offer</div>
+    <div class="row" style="gap:10px;flex-wrap:wrap">${outcome('Open')}${outcome('Accepted')}${outcome('Rejected')}${outcome('Ghosted')}${outcome('Withdrawn')}${outcome('Position Closed')}</div>
+    <div class="col small" style="gap:4px">${aging('New', '2d')}${aging('Waiting', '5d')}${aging('Follow-Up Recommended', '11d')}${aging('Stale', '21d')}${aging('Long Waiting', '63d')}</div>
+    <div class="row small" style="gap:14px">${pri('High')}${pri('Medium')}${pri('Low')}</div></div></div>
+  <div class="card"><div class="card-h"><span class="card-t">Table rows</span></div>
+    ${[['Default', ''], ['Hover', 'background:var(--surface-muted)'], ['Selected', 'background:var(--interactive-selected)'], ['Focused (keyboard)', 'outline:2px solid var(--focus);outline-offset:-2px'], ['Preview active', 'background:var(--interactive-selected);box-shadow:inset 3px 0 0 var(--primary)'], ['Archived', 'color:var(--muted)']].map((r, i) => `<div class="tr" style="grid-template-columns:16px 1fr auto;${r[1]}"><span class="cb ${i === 2 || i === 4 ? 'on' : ''}">${i === 2 || i === 4 ? '<i class="icon-check"></i>' : ''}</span><span class="b">${r[0]}</span><span class="small">${i === 5 ? '<i class="icon-archive"></i> Archived' : ''}</span></div>`).join('')}</div>
+  <div class="card"><div class="card-h"><span class="card-t">Feedback</span></div><div class="card-b">
+    <div class="banner success small"><i class="icon-circle-check success-t"></i>Saved</div><div class="banner warning small"><i class="icon-triangle-alert warning-t"></i>Due today</div><div class="banner danger small"><i class="icon-circle-alert danger-t"></i>Couldn't save</div><div class="banner info small"><i class="icon-info info-t"></i>Possible duplicate</div>
+    <div class="toast" style="position:relative;align-self:flex-start"><i class="icon-archive"></i>Archived Vantage Retail<span class="btn sm">Undo · 8s</span></div>
+    <div class="toast" style="position:relative;align-self:flex-start"><i class="icon-rotate-ccw"></i>Couldn't mark done. Change undone.<span class="btn sm">Retry</span></div></div></div>
+  <div class="card"><div class="card-h"><span class="card-t">Chips, tabs, controls</span></div><div class="card-b">
+    <div class="row" style="gap:6px;flex-wrap:wrap"><span class="chip on">Outcome: Open<i class="icon-x"></i></span><span class="chip add"><i class="icon-plus"></i>Stage</span><span class="chip sm inv">All</span></div>
+    <div class="tabs"><span class="tab sel">Timeline <span class="cnt">19</span></span><span class="tab">Job posting</span><span class="tab">Notes <span class="cnt">4</span></span></div>
+    <div class="row" style="gap:12px"><div class="seg"><span class="on">Daily</span><span>Weekly</span></div><span class="switch on"></span><span class="switch"></span><span class="cb on"><i class="icon-check"></i></span><span class="cb"></span><span class="radio on"></span><span class="radio"></span></div>
+    <div class="row" style="gap:6px"><span class="pill success">Manager</span><span class="pill">User</span><span class="pill warning">Expiring</span><span class="pill danger">Strong</span><span class="pill accent">Next action</span></div></div></div>
+</div>`;
+
+gallery('Global search & cross-cutting states',
+  'Search results always name the entity type and the field that matched. Loading, empty, error, offline, permission and not-found states are designed once and reused. The component/state sheet is rendered in both themes to prove light/dark equivalence for every major pattern.',
+  [
+    { title: 'Global search', items: [
+      { cap: 'G1 · Search dropdown', sub: '1440 · light · "/" to focus', html: shell({ theme: 'light', active: 'dashboard', crumb: 'Dashboard', overlay: dropdown }, dash) },
+      { cap: 'G2 · All results', sub: '1440 · dark', html: shell({ theme: 'dark', active: '', crumb: 'Search' }, results) },
+      { cap: 'G3 · Search', sub: 'mobile · light', html: mSearch }
+    ]},
+    { title: 'States', items: [
+      { cap: 'Q1 · Loading (virtualized table skeleton)', sub: '1440 · light', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications' }, loading) },
+      { cap: 'Q2 · Empty states', sub: '1440 · light', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications', counts: { applications: '0' } }, empties) },
+      { cap: 'Q3 · Errors, offline, permission, not found', sub: '1440 · dark', html: shell({ theme: 'dark', ws: 'nb', active: 'dashboard', crumb: 'Dashboard' }, errors) }
+    ]},
+    { title: 'Component & state sheet', items: [
+      { cap: 'Q4 · States sheet', sub: '1440 · light', html: `<div data-jq class="frame-d" data-theme="light" style="height:auto;display:block">${sheet}</div>` },
+      { cap: 'Q5 · States sheet', sub: '1440 · dark', html: `<div data-jq class="frame-d" data-theme="dark" style="height:auto;display:block">${sheet}</div>` }
+    ]}
+  ]);
+</script></body></html>

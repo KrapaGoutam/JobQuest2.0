@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.q{font-size:12px;color:var(--muted);margin-top:1px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.kpis>div{padding:12px 16px;border-left:1px solid var(--border)}.kpis>div:first-child{border-left:0}
+.kpis b{font-size:20px;font-weight:600}.bar{display:block;height:7px;border-radius:2px;background:var(--surface-muted);position:relative}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--primary)}
+.brow{display:grid;grid-template-columns:120px 1fr 44px 50px;gap:10px;align-items:center;height:22px;font-size:12px}
+.atbl .tr{height:36px;font-size:12px}</style>
+</head><body><script>
+const { shell, mobile, gallery } = JQ;
+const hdr = (t, q, extra) => `<div class="card-h" style="height:auto;min-height:52px;padding:8px 16px;align-items:center"><div class="grow"><div class="card-t">${t}</div><div class="q">${q}</div></div>${extra || '<span class="seg" style="transform:scale(.9);transform-origin:right"><span class="on"><i class="icon-chart-column"></i></span><span><i class="icon-table"></i></span></span>'}</div>`;
+
+/* weekly activity svg */
+function activity() {
+  const w = [9, 12, 7, 14, 11, 15, 13, 10, 16, 14, 12, 14], r = [2, 3, 1, 4, 2, 4, 3, 3, 5, 4, 3, 4], iv = [0, 1, 0, 1, 1, 2, 1, 1, 2, 2, 1, 2];
+  const W = 560, H = 150, bw = 30, gap = (W - 40 - 12 * bw) / 11;
+  let s = `<svg viewBox="0 0 ${W} ${H + 24}" width="100%" height="${H + 24}" role="img" aria-label="Applications, responses and interviews per week, last 12 weeks">`;
+  [0, 5, 10, 15].forEach(v => { const y = H - v * 8; s += `<line x1="28" x2="${W}" y1="${y}" y2="${y}" stroke="var(--border)"/><text x="0" y="${y + 4}" font-size="10" fill="var(--muted)">${v}</text>`; });
+  s += `<line x1="28" x2="${W}" y1="${H - 15 * 8}" y2="${H - 15 * 8}" stroke="var(--warning)" stroke-dasharray="4 3"/><text x="${W - 70}" y="${H - 15 * 8 - 5}" font-size="10" fill="var(--warning)">Goal 15/wk</text>`;
+  w.forEach((v, i) => { const x = 36 + i * (bw + gap); s += `<rect x="${x}" y="${H - v * 8}" width="${bw}" height="${v * 8}" rx="2" fill="color-mix(in oklch,var(--chart-1) 35%,var(--surface))"/><rect x="${x}" y="${H - r[i] * 8}" width="${bw}" height="${r[i] * 8}" rx="2" fill="var(--chart-1)"/><rect x="${x + 8}" y="${H - iv[i] * 8}" width="${bw - 16}" height="${iv[i] * 8}" fill="var(--chart-2)"/><text x="${x + bw / 2}" y="${H + 15}" font-size="10" fill="var(--muted)" text-anchor="middle">${['Jul 6', '', 'Jul 20', '', 'Aug 3', '', 'Aug 17', '', 'Aug 31', '', 'Sep 14', 'Sep 21'][i]}</text>`; });
+  return s + '</svg>';
+}
+const legend = items => `<div class="row small" style="gap:14px">${items.map(i => `<span class="row" style="gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:${i[1]}"></span>${i[0]}</span>`).join('')}</div>`;
+
+const bars = (rows, color, max) => rows.map(r => `<div class="brow"><span class="ell">${r[0]}</span><span class="bar"><i style="width:${Math.max(1, r[1] / max * 100)}%;background:${color}"></i></span><span style="text-align:right" class="b">${r[1]}</span><span class="muted" style="text-align:right">${r[2] || ''}</span></div>`).join('');
+
+const rate = (n, d, small) => d === 0 ? '<span class="muted">No data</span>' : d < 5 && small ? `<span class="muted" title="Fewer than 5 applications">${n}/${d} · <i>too few</i></span>` : `<span class="nowrap"><b>${n}</b>/${d} <span class="muted">(${(n / d * 100).toFixed(1)}%)</span></span>`;
+
+function overview(mgr) {
+  return `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Analytics</h1><span class="muted">Applied Jun 25 – Sep 23 · ${mgr ? 'All 12 members' : 'your applications'}</span><span class="spacer"></span>
+    ${mgr ? '<span class="chip"><i class="icon-user-round"></i>Owner: All members<i class="icon-chevron-down"></i></span>' : ''}<span class="seg"><span>30d</span><span class="on">90d</span><span>180d</span><span>1y</span><span><i class="icon-calendar-range"></i>Custom</span></span><span class="btn"><i class="icon-download"></i>Export</span></div>
+  <div class="tabs"><span class="tab sel">Overview</span><span class="tab">Stage timing</span><span class="tab">Aging</span><span class="tab">Goals</span></div>
+  <div class="kpis" style="flex:none">
+    <div><div class="small muted">Applications</div><b>${mgr ? '1,684' : 142}</b><div class="small muted">${mgr ? '12 members' : '+18 vs previous 90d'}</div></div>
+    <div><div class="small muted">Response rate</div><div>${mgr ? rate(402, 1684) : rate(31, 142)}</div><div class="small muted">Any recruiter reply</div></div>
+    <div><div class="small muted">Reached interview</div><div>${mgr ? rate(211, 1684) : rate(18, 142)}</div><div class="small muted">Ever reached, incl. closed</div></div>
+    <div><div class="small muted">Reached offer</div><div>${mgr ? rate(27, 1684) : rate(3, 142)}</div><div class="small muted">Ever reached</div></div>
+    <div><div class="small muted">Median time to first response</div><b>9 days</b><div class="small muted">from 31 responses</div></div></div>
+  <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:12px;flex:none;align-items:start">
+    <div class="col" style="gap:12px"><div class="card">${hdr('Am I keeping pace?', 'Applications, responses and interviews per week')}<div class="card-b" style="padding-top:8px">${activity()}${legend([['Applied', 'color-mix(in oklch,var(--chart-1) 35%,var(--surface))'], ['Got a response', 'var(--chart-1)'], ['Reached interview', 'var(--chart-2)'], ['Weekly goal', 'var(--warning)']])}</div></div>
+      <div class="card">${hdr('What is open right now?', 'Current pipeline · 46 open, by current stage', '<span class="pill muted">Current stage</span>')}<div class="card-b" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">${bars([['Applied', 24], ['Assessment', 3], ['Recruiter Screen', 9]], 'var(--primary)', 24)}${bars([['Interview', 6], ['Final Interview', 2], ['Offer', 1]], 'var(--primary)', 24)}</div></div></div>
+    <div class="card">${hdr('Where do applications stop?', 'Historical funnel · ever reached, from stage history', '<span class="pill muted">Not current stage</span>')}<div class="card-b col" style="gap:6px">
+      ${bars([['Applied', 142, '100%'], ['Assessment', 22, '15.5%'], ['Recruiter Screen', 29, '20.4%'], ['Interview', 18, '12.7%'], ['Final Interview', 7, '4.9%'], ['Offer', 3, '2.1%'], ['Accepted', 0, '0%']], 'var(--fg)', 142)}
+      <div class="hr" style="margin:8px 0"></div><div class="small muted">Stages can be skipped, so a later stage can be larger than an earlier one (e.g. Screen &gt; Assessment). Closed applications count for every stage they reached.</div></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;flex:none;align-items:start">
+    <div class="card">${hdr('Which sources work?', 'Response and interview rate by source', '<span class="small muted">≥5 apps</span>')}
+      <div class="atbl">${[['Source', 'Apps', 'Response', 'Interview'], ['Referral', '12', rate(7, 12), rate(5, 12)], ['LinkedIn', '61', rate(11, 61), rate(6, 61)], ['Company site', '38', rate(9, 38), rate(4, 38)], ['Indeed', '27', rate(4, 27), rate(3, 27)], ['Recruiter', '4', rate(3, 4, 1), rate(0, 4, 1)]].map((r, i) => `<div class="tr ${i ? '' : 'th'}" style="grid-template-columns:1fr 40px 1.3fr 1.3fr;gap:8px">${r.map(c => `<span class="ell">${c}</span>`).join('')}</div>`).join('')}</div></div>
+    <div class="card">${hdr('Which resume performs?', 'By resume version used', '')}
+      <div class="atbl">${[['Resume', 'Apps', 'Response', 'Interview'], ['Product v3', '58', rate(17, 58), rate(10, 58)], ['Product v2', '49', rate(8, 49), rate(5, 49)], ['Research-lean', '21', rate(4, 21), rate(2, 21)], ['Tailored (free text)', '14', rate(2, 14), rate(1, 14)]].map((r, i) => `<div class="tr ${i ? '' : 'th'}" style="grid-template-columns:1fr 40px 1.3fr 1.3fr;gap:8px">${r.map(c => `<span class="ell">${c}</span>`).join('')}</div>`).join('')}</div></div>
+    <div class="card">${hdr('How do applications end?', '96 closed · outcome and the stage they reached', '')}<div class="card-b col" style="gap:6px">
+      ${[['Rejected', 58, 'var(--danger)', 'Applied 31 · Screen 14 · Interview 11 · Final 2'], ['Ghosted', 29, 'var(--chart-6)', 'Mostly after Applied (26)'], ['Withdrawn', 6, 'var(--chart-3)', 'After Interview 4'], ['Position Closed', 3, 'var(--chart-6)', ''], ['Accepted', 0, 'var(--success)', '']].map(o => `<div><div class="row small"><b>${o[0]}</b><span class="grow"></span><span>${o[1]} <span class="muted">(${(o[1] / 96 * 100).toFixed(0)}%)</span></span></div><div class="bar" style="margin:3px 0"><i style="width:${o[1] / 96 * 100}%;background:${o[2]}"></i></div><div class="xs muted">${o[3]}</div></div>`).join('')}</div></div>
+  </div></div>`;
+}
+
+const timing = `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Analytics</h1><span class="muted">Applied Jun 25 – Sep 23</span><span class="spacer"></span><span class="seg"><span>30d</span><span class="on">90d</span><span>180d</span><span>1y</span></span></div>
+  <div class="tabs"><span class="tab">Overview</span><span class="tab sel">Stage timing</span><span class="tab">Aging</span><span class="tab">Goals</span></div>
+  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:12px;flex:none;align-items:start">
+  <div class="card">${hdr('How long does each step take?', 'Days between stages, from stage history · median and range')}
+    <div class="atbl">${[['Transition', 'Median', 'Range', 'Sample', ''], ['Applied → first response', '9 d', '2–31 d', '31', 'bar:9'], ['Applied → Recruiter Screen', '12 d', '4–35 d', '29', 'bar:12'], ['Applied → Interview', '19 d', '8–44 d', '18', 'bar:19'], ['Interview → Offer', '16 d', '9–27 d', '3', 'few'], ['Applied → Rejection', '15 d', '1–62 d', '58', 'bar:15'], ['Full lifecycle (closed)', '24 d', '3–88 d', '96', 'bar:24']].map((r, i) => `<div class="tr ${i ? '' : 'th'}" style="grid-template-columns:1.6fr 60px 80px 56px 1fr;gap:10px">${r.slice(0, 4).map(c => `<span class="ell ${i ? '' : ''}">${c}</span>`).join('')}<span>${i === 0 ? '' : r[4] === 'few' ? '<span class="pill muted"><i class="icon-info"></i>Insufficient data (&lt;5)</span>' : `<span class="bar"><i style="width:${+r[4].split(':')[1] / 30 * 100}%"></i></span>`}</span></div>`).join('')}</div></div>
+  <div class="card">${hdr('What is stuck right now?', 'Open applications in the same stage for 14+ days', '<a class="small">View all 12</a>')}
+    <div class="atbl">${[['Application', 'Stage', 'In stage'], ['Meridian Bank · UX Designer', 'Applied', '21 d'], ['Aster Mobility · Principal Designer', 'Applied', '19 d'], ['Lumen Civic · Senior Designer', 'Recruiter Screen', '16 d'], ['Northwind · Product Designer II', 'Applied', '16 d'], ['Sable & Co. · Product Designer', 'Applied', '15 d']].map((r, i) => `<div class="tr ${i ? '' : 'th'}" style="grid-template-columns:1fr 120px 70px;gap:10px">${r.map(c => `<span class="ell">${c}</span>`).join('')}</div>`).join('')}</div></div>
+  <div class="card" style="grid-column:span 2">${hdr('Does following up help?', 'Response within 14 days, with vs without a follow-up sent', '')}<div class="card-b" style="display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:24px;align-items:center">
+    <div><div class="small muted">With follow-up</div><div style="font-size:18px">${rate(14, 48)}</div></div><div><div class="small muted">Without follow-up</div><div style="font-size:18px">${rate(17, 94)}</div></div>
+    <div class="small muted">Correlation, not proof: applications you follow up on may differ in other ways. Follow-ups sent this period: <b style="color:var(--fg)">48</b> · average 1.4 per application.</div></div></div>
+  </div></div>`;
+
+const aging = `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Analytics</h1><span class="muted">Open applications · days since last activity</span></div>
+  <div class="tabs"><span class="tab">Overview</span><span class="tab">Stage timing</span><span class="tab sel">Aging</span><span class="tab">Goals</span></div>
+  <div class="card"><div class="card-b" style="display:grid;grid-template-columns:repeat(5,1fr);gap:0">${[['New', '≤3 days', 41, 'circle', 'var(--muted)'], ['Waiting', '4–7 days', 58, 'hourglass', 'var(--muted)'], ['Follow-Up Recommended', '8–14 days', 45, 'bell-ring', 'var(--warning)'], ['Stale', '15–30 days', 27, 'moon', 'var(--danger)'], ['Long Waiting', '31+ days', 10, 'alarm-clock-off', 'var(--danger)']].map((b, i) => `<div style="padding:4px 16px;${i ? 'border-left:1px solid var(--border)' : ''}"><div class="row small b" style="color:${b[4]};gap:5px"><i class="icon-${b[3]}"></i>${b[0]}</div><div style="font-size:22px;font-weight:600">${b[2]}</div><div class="xs muted">${b[1]}</div></div>`).join('')}</div></div>
+  <div class="banner neutral small"><i class="icon-moon muted"></i><span><b>37</b> applications have had no activity for <b>28+ days</b> and appear in <b>Review quiet applications</b> on the dashboard. The review threshold vs the Stale / Long Waiting bands is an open decision (OQ-022).</span></div>
+  <div class="card" style="overflow:hidden"><div class="atbl">${[['Application', 'Stage', 'Aging', 'Last activity', 'Next action', ''], ['Vantage Retail · Product Designer', 'Applied', 'Long Waiting · 63d', 'Jul 22 · follow-up sent', 'None', ''], ['Juniper Transit · UX Designer', 'Recruiter Screen', 'Long Waiting · 34d', 'Aug 20 · screen completed', 'None', ''], ['Fjord Robotics · Product Designer', 'Applied', 'Stale · 29d', 'Aug 25 · applied', 'Follow up · Sep 30', ''], ['Meridian Bank · UX Designer', 'Applied', 'Stale · 21d', 'Sep 02 · follow-up sent', 'Final follow-up · 4d overdue', '']].map((r, i) => `<div class="tr ${i ? '' : 'th'}" style="grid-template-columns:1.4fr 120px 160px 1fr 1fr 220px;gap:10px">${r.slice(0, 5).map((c, j) => `<span class="ell ${j === 2 && i ? 'danger-t' : ''}">${j === 2 && i ? `<i class="icon-${c.startsWith('Long') ? 'alarm-clock-off' : 'moon'}"></i> ${c}` : c}</span>`).join('')}<span class="row" style="gap:6px;justify-content:flex-end">${i ? '<span class="btn sm">Keep</span><span class="btn sm">Mark Ghosted</span><span class="btn sm">Archive</span>' : ''}</span></div>`).join('')}</div></div>
+  </div>`;
+
+const mAnalytics = mobile({ tab: 'more', title: 'Analytics' }, `
+  <div class="seg" style="display:grid;grid-template-columns:repeat(4,1fr)"><span style="justify-content:center">30d</span><span class="on" style="justify-content:center">90d</span><span style="justify-content:center">180d</span><span style="justify-content:center">1y</span></div>
+  <div class="m-card" style="padding:12px 14px"><div class="small muted">Response rate</div><div style="font-size:20px">${rate(31, 142)}</div><div class="hr" style="margin:10px 0"></div><div class="small muted">Reached interview (ever)</div><div style="font-size:20px">${rate(18, 142)}</div></div>
+  <div class="m-card" style="padding:12px 14px"><div class="b">Where do applications stop?</div><div class="small muted" style="margin-bottom:8px">Ever reached, incl. closed</div>${bars([['Applied', 142, '100%'], ['Screen', 29, '20%'], ['Interview', 18, '13%'], ['Final', 7, '5%'], ['Offer', 3, '2%']], 'var(--fg)', 142).replaceAll('grid-template-columns:120px 1fr 44px 50px', 'grid-template-columns:70px 1fr 34px 38px')}</div>
+  <div class="m-card" style="padding:12px 14px"><div class="b">Which sources work?</div><div class="small muted">Tables show as a list on mobile · <a>View</a></div></div>`);
+
+gallery('Analytics',
+  'Every card answers a job-search question and shows rates as numerator/denominator (percentage). Zero denominators show "No data"; samples under 5 show "Insufficient data" (BL-004/BL-005). The historical funnel counts "ever reached" from stage history (D-15 / CR-014) and is shown next to, never instead of, the current pipeline. Each chart has a table view (accessible alternative).',
+  [
+    { title: 'Desktop', items: [
+      { cap: 'Y1 · Analytics overview', sub: '1440 · light', html: shell({ theme: 'light', active: 'analytics', crumb: 'Analytics' }, overview(false)) },
+      { cap: 'Y2 · Analytics overview (manager)', sub: '1440 · dark · workspace-wide', html: shell({ theme: 'dark', ws: 'lab', active: 'analytics', crumb: 'Analytics' }, overview(true)) },
+      { cap: 'Y3 · Stage timing', sub: '1440 · light · sample-size floor', html: shell({ theme: 'light', active: 'analytics', crumb: 'Analytics / Stage timing' }, timing) },
+      { cap: 'Y4 · Aging report', sub: '1440 · dark · CR-005 drill-through target', html: shell({ theme: 'dark', active: 'analytics', crumb: 'Analytics / Aging' }, aging) }
+    ]},
+    { title: 'Mobile', items: [{ cap: 'Y5 · Analytics', sub: 'mobile · light · summary + funnel', html: mAnalytics }] }
+  ]);
+</script></body></html>

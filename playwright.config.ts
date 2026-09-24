@@ -19,6 +19,7 @@ const base = process.env.M1_BASE_URL ?? 'http://localhost:5173';
 export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
+  workers: 1,
   use: { baseURL: base, ...devices['Desktop Chrome'], extraHTTPHeaders: process.env.M1_BYPASS ? { 'x-vercel-protection-bypass': process.env.M1_BYPASS } : {} },
   reporter: [['list']],
   webServer: process.env.M1_BASE_URL

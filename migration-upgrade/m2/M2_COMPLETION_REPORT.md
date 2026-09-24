@@ -14,7 +14,7 @@ Milestone 2 transitions JobQuest 2.0 from the approved M1/M1B Option B authentic
 
 Key outcomes achieved:
 1. **Design Tokens & Theme Foundation:** Fully tokenized semantic color system (canvas, surfaces, text, borders, accents, statuses) with first-class Light, Dark, and System modes, persistent preference storage, and anti-FOUC initialization.
-2. **Reusable UI Component Library:** 24 production-grade primitives adhering to WCAG 2.2 AA accessibility standards (buttons, form controls, cards, dense tables, dialogs with focus trapping, slide-in drawers, tabs, toasts, badges, and avatars).
+2. **Reusable UI Component Library:** 23 production-grade primitives adhering to WCAG 2.2 AA accessibility standards (buttons, form controls, cards, dense tables, dialogs with focus trapping, slide-in drawers, tabs, toasts, badges, and avatars).
 3. **Responsive Application Shell:** Responsive shell transforming seamlessly across Mobile (<768px, bottom navigation), Tablet (768–1023px, collapsed 64px icon rail), Desktop (1024–1679px, persistent 240px sidebar), and Wide Desktop (>=1680px, expanded canvas with preview rail accommodation).
 4. **Workspace Context:** Shell-level workspace switcher with accent indicators, role display, and RPC workspace creation.
 5. **Vercel Development Project & Preview Deployment:** First Vercel development project (`jobquest2`) created under team `one-piece-5779`, securely configured with server-only secrets, and live Preview deployment tested with zero failures.
@@ -30,14 +30,19 @@ Key outcomes achieved:
 - **Legacy JobQuest 1.0 Untouched:** `../JobQuest1.0/` remains strictly READ ONLY.
 - **Commits on M2 Branch:**
   - `8427993` (`chore(deps): add lucide-react and axe-core playwright for M2`)
-  - Subsequent M2 implementation, test, and documentation commits.
+  - `878b45a` (`feat(m2): implement JobQuest2 design tokens and theme system`)
+  - `a53b770` (`feat(m2): build responsive application shell and navigation`)
+  - `a579495` (`test(m2): add visual regression baselines and accessibility tests`)
+  - `a51f272` (`chore(m2): configure Vercel preview deployment and strict security`)
+  - `63189df` (`docs(m2): complete Milestone 2 design system report and handoff`)
 
 ---
 
 ## 4. M1B Integration Confirmation
 
 - M1B Option B authentication was formally merged into `development` via non-fast-forward merge `b3295a3`.
-- The 11 baseline foundation tables (`auth_identities`, `auth_sessions`, `auth_recovery_codes`, `auth_rate_limits`, `workspaces`, `workspace_members`, `workflow_definitions`, `applications`, `contacts`, `interviews`, `tasks`) remain the active database schema on hosted Supabase dev (`jobquest-dev`).
+- The 11 baseline foundation tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`, `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`) remain the active database schema on hosted Supabase dev (`jobquest-dev`).
+- Note on deferred schema: `contacts`, `interviews`, `tasks` belong to the target schema for subsequent milestones and were not implemented in M1/M1B/M2.
 - No database schema expansion was performed during M2.
 - The active signing key on hosted Supabase remains the approved M1B ES256 keypair.
 
@@ -257,18 +262,26 @@ Executed `e2e/leak.spec.ts` against the live Vercel Preview deployment:
 
 ## 22. CI Results
 
-GitHub Actions workflow `.github/workflows/m1b-ci.yml` is configured to run:
-- Lint (`pnpm lint`)
-- Typecheck (`pnpm typecheck`)
-- Unit tests (`pnpm test:unit`)
-- Production web build (`pnpm build`)
-- Secret scanner for browser bundle (`pnpm check:bundle`)
-- Secret scanner for tracked files (`pnpm check:secrets`)
-- Ephemeral signing key generation and local Supabase start
-- Integration suite (`pnpm test:integration`)
-- E2E Playwright tests (`pnpm test:e2e`)
+GitHub Actions workflow `.github/workflows/m1b-ci.yml` run for the M2 branch:
+- **Run ID:** `36068373716`
+- **Triggering Commit:** `63189df` (`docs(m2): complete Milestone 2 design system report and handoff`)
+- **Status:** **SUCCESS / GREEN (3m 24s)**
+- **Job 1 (Static Analysis):** `Lint · typecheck · unit · build · secret scans` (ID 107863325539) — **PASS (38s)**
+  - `pnpm lint` — PASS
+  - `pnpm typecheck` — PASS
+  - `pnpm test:unit` — PASS (41/41 tests passing)
+  - `pnpm build` — PASS
+  - Secret scan browser bundle (`pnpm check:bundle`) — PASS (0 findings)
+  - Secret scan tracked files (`pnpm check:secrets`) — PASS (0 findings)
+  - No committed env or key files — PASS
+- **Job 2 (Integration & Local Supabase):** `Migrations · Option B auth · RLS · browser (local Supabase)` (ID 107863325780) — **PASS (3m 20s)**
+  - Ephemeral signing key generation — PASS
+  - Local Supabase disposable stack — PASS
+  - M1B integration suite (B01–B22, B25, B26, SEC) — PASS
+  - Browser exposure & shell tests (`pnpm test:e2e`) — PASS
+  - Evidence artifact upload — PASS
 
-All steps run and pass locally with 100% success.
+All CI checks are 100% green on GitHub Actions.
 
 ---
 

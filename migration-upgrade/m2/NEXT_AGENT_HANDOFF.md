@@ -19,7 +19,7 @@
 - **Authentication Architecture:** **OPTION B** (App-owned authentication, custom ES256 JWTs signed with `JQ_JWT_PRIVATE_JWK`, Argon2id password hashing, single-use recovery codes, HttpOnly session refresh cookies). Supabase Auth (GoTrue) is permanently superseded and NOT in use.
 - **Hosted Supabase Project:**
   - Project Reference: `xpnkasclquplmrcmhsif` (`jobquest-dev` in `us-east-1`).
-  - Schema: 11 foundation tables (`auth_identities`, `auth_sessions`, `auth_recovery_codes`, `auth_rate_limits`, `workspaces`, `workspace_members`, `workflow_definitions`, `applications`, `contacts`, `interviews`, `tasks`).
+  - Schema: 11 baseline foundation tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`, `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`). Note: `contacts`, `interviews`, `tasks` belong to future milestones.
   - Signing Keys: Public ES256 key registered in Supabase dashboard. Do not rotate or modify without authorization.
 - **Vercel Project & Deployment:**
   - Account: `goutamkrapa11-8565`
@@ -58,6 +58,7 @@ All quality gates are passing:
   - `e2e/capture-m2-screenshots.spec.ts`: PASS (10 baseline PNGs in `migration-upgrade/m2/screenshots/`)
   - `e2e/leak.spec.ts`: PASS (Option B auth, direct PostgREST, RLS own-row/peer-row, no leaks)
   - `e2e/m2-shell.spec.ts`: PASS (Direction D cards, responsive transformations, dialogs, drawers, tabs, toasts, and axe-core accessibility audit with 0 critical/serious violations)
+- **GitHub Actions CI:** PASS (Run ID `36068373716` on commit `63189df`, all jobs green)
 
 ---
 
@@ -75,7 +76,7 @@ Before beginning work on Milestone 3:
 - When user formally approves M2:
   1. Merge `feature/m2-design-system` into `development` using `--no-ff`.
   2. Push updated `development` to `origin`.
-  3. Branch `feature/m3-applications` from updated `development`.
+  3. Branch `feature/m3-applications-workflow` from updated `development`.
 - Never work directly on `development`.
 - Never merge to `main`.
 
@@ -99,7 +100,7 @@ Resume JobQuest 2.0 development following the approved Milestone 2 completion.
 
 Milestone 2 (Design System, App Shell, and Vercel Preview) is COMPLETE.
 Selected Auth Architecture: OPTION B (App-owned auth, custom JWT, hosted Supabase jobquest-dev).
-Current Branch: feature/m2-design-system (or newly branched feature/m3-applications from development upon user approval).
+Current Branch: feature/m2-design-system (or newly branched feature/m3-applications-workflow from development upon user approval).
 
 Before starting, read:
 1. migration-upgrade/m2/NEXT_AGENT_HANDOFF.md

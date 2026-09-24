@@ -262,19 +262,36 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 | **OQ-008** | Browser Extension Scope | Gate 01 / Pre-M1 | **RESOLVED** | Extension updated to Manifest V3 `/api/ext/v1` client with live workflow sync (CR-012, ADR-024). |
 | **OQ-009** | `ui-upgrade` Branch Status | Gate 01 / Pre-M1 | **RESOLVED** | Verified: contains 1 agent-tooling commit only; product-irrelevant. |
 | **OQ-010** | API Rate Limiting | Gate 01 / Pre-M1 | **RESOLVED** | Rate limiting required: per-IP + per-account limits, Vercel WAF / middleware. |
-| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | **PENDING SPIKE** | Test Option A (username alias via dummy email / metadata); fall back to Option B (Node auth façade issuing custom JWTs). |
-| **OQ-012** | Legacy Data Target Workspace | Gate 03 / Database | **PENDING GATE 03** | Recommend default "JobQuest (Migrated)" workspace for all legacy imports. |
+| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | **PENDING M1 SPIKE** | Option A provisionally approved subject to M1 Spike proof; 12-condition test suite; hard-fail on any synthetic identity leakage triggers Option B architectural fallback. |
+| **OQ-012** | Legacy Data Target Workspace | Gate 03 / Database | **RESOLVED (APPROVED)** | Dedicated `"JobQuest (Migrated)"` workspace houses all legacy data with original user attribution (ADR-041). |
 | **OQ-013** | USER Visibility in Shared Workspace | Gate 02B / Design | **RESOLVED** | `USER` sees and exports permitted **own** records only; `MANAGER` sees all records with member attribution (ADR-010). |
 | **OQ-014** | Analytics: Ever-Reached vs Current Stage | Gate 02B / Design | **RESOLVED** | Historical analytics uses ever-reached / event history; current pipeline uses current stage (ADR-011, CR-014). |
 | **OQ-015** | Theme Default & Hierarchy | Gate 02B / Design | **RESOLVED** | Default = SYSTEM, fallback = LIGHT; choices = SYSTEM / LIGHT / DARK; persistent manual override (ADR-014, CR-013). |
-| **OQ-016** | Supabase/Vercel Plan Tiers | Gate 03 / Pre-Prod | **PENDING PROD** | Free/dev tier for development; confirm Pro tier requirements before production. |
+| **OQ-016** | Supabase/Vercel Plan Tiers | Gate 03 / Pre-Prod | **PENDING PRE-PRODUCTION** | Free/dev tier for development; confirm Pro tier requirements before production. |
 | **OQ-017** | Per-User Timezone | Gate 02B / Design | **RESOLVED** | Add `profiles.timezone` column; used across date pickers, reminders, and "today" calculations (CR-015). |
 | **OQ-018** | Email Provider for MVP Recovery | Gate 02B / Design | **RESOLVED** | 10 single-use recovery codes cover 100% of self-sufficient MVP recovery; third-party email deferred (ADR-008). |
 | **OQ-019** | Legacy Account Reclamation | Gate 02B / Design | **RESOLVED** | Operator-issued claim codes verified in design (A10); user establishes new username/password (ADR-017). |
 | **OQ-020** | Member Removal Record Ownership | Gate 02B / Design | **RESOLVED** | Records remain in workspace attributed to member; access revoked; export recommended prior to removal (ADR-010). |
-| **OQ-021** | Production Smoke Account | Post-M1 / Testing | **PENDING PROD** | Dedicated smoke test user in an isolated test workspace. |
+| **OQ-021** | Production Smoke Account | Post-M1 / Testing | **PENDING PRE-PRODUCTION** | Dedicated smoke test user in an isolated test workspace. |
 | **OQ-022** | Inactivity Review Interval | Gate 02B / Final | **RESOLVED** | 31+ days triggers review (aligned with Long Waiting band); explicit Keep/Ghosted/Archive; zero automatic changes (ADR-027). |
 | **OQ-023** | Declined Offer Classification | Gate 02B / Final | **RESOLVED** | Outcome = `WITHDRAWN`, structured closure reason = `OFFER_DECLINED`; human-readable "Offer declined" (ADR-028). |
 | **OQ-024** | Wide Desktop Preview Pane Default | Gate 02B / Final | **RESOLVED** | Viewports ≥ 1680px default to OPEN; user preference persisted; no global Space shortcut conflict (ADR-029). |
+
+---
+
+# Gate 03 Database & Security Resolutions (added 2026-09-24, APPROVED)
+
+### OQ-011: Supabase Auth Option A vs Option B
+- **Status:** **PENDING M1 SPIKE (Provisionally Approved Subject to M1)**
+- **Resolution:** Option A (Node-controlled username/password layered over Supabase Auth via internal synthetic identity `id_<uuid>@auth.jobquest.internal`) is provisionally approved subject to M1 architecture spike verification.
+- **Specification:** Defined in `gate-03/AUTHENTICATION_DESIGN.md` §2–3. The M1 Spike must execute 12 specific test conditions (`gate-03/M1_SPIKE_PLAN.md` §3).
+- **Hard-Fail Leakage Invariant:** If the internal synthetic identity appears anywhere accessible to the browser or user (including session user object, JWT claims, API payload, React state, storage, debug logs, or network response), the zero identity leakage requirement FAILS.
+- **Option B Fallback:** Option B is an architectural fallback evaluated before continued product implementation (not an automatic runtime failover), evaluating currently supported Supabase mechanisms (externally minted JWTs, imported signing keys, 3rd party auth, `supabase-js` `accessToken` injection, and native PostgREST/RLS compatibility).
+
+### OQ-012: Legacy Migration Workspace Assignment
+- **Status:** **RESOLVED (APPROVED)**
+- **Resolution:** Legacy single-tenant data will be migrated into a dedicated, pre-provisioned workspace: **`"JobQuest (Migrated)"`**.
+- **Specification:** Defined in `gate-03/DATA_MIGRATION_DESIGN.md` §2 and ADR-041. All active legacy users are assigned `USER` memberships, and the primary administrator is assigned `MANAGER`. Each user also receives a new, isolated `"Personal Workspace"`. Legacy owner attribution, timestamps, and relationships are preserved.
+
 
 

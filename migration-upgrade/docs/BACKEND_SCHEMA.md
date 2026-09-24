@@ -683,3 +683,15 @@ system, no production system was touched to produce this document.
     defined retention window after cutover; do not decommission Neon until the
     owner explicitly signs off, exactly as `docs/NEON_MIGRATION.md`'s existing
     SQLite retention policy already requires for the *previous* migration.
+
+---
+
+## Gate 03 Target Database Architecture & Schema Specification (APPROVED WITH REQUIRED CORRECTIONS, 2026-09-24)
+
+The comprehensive target PostgreSQL schema, multi-workspace RLS security model, and 33-table migration specifications are formally defined in `migration-upgrade/gate-03/`:
+
+1. **Target Schema Catalog (25 Permanent Tables + 2 Migration Tables):** Complete table definitions, column types, canonical UUIDv4 (`gen_random_uuid()`) primary keys, composite foreign keys, and indexes are detailed in [`../gate-03/TARGET_SCHEMA.md`](../gate-03/TARGET_SCHEMA.md).
+2. **Complete 33-Table Legacy Mapping:** The exhaustive transformation and mapping matrix across all 33 legacy tables is codified in [`../gate-03/LEGACY_TABLE_MAPPING.md`](../gate-03/LEGACY_TABLE_MAPPING.md).
+3. **Multi-Tenant Row Level Security:** The 6-tier classification taxonomy and RLS policy matrix enforcing own-record peer isolation across all user activity tables are defined in [`../gate-03/AUTHORIZATION_RLS_DESIGN.md`](../gate-03/AUTHORIZATION_RLS_DESIGN.md).
+4. **End-to-End Migration Pipeline:** 10-phase migration runner with OQ-012 resolution to `"JobQuest (Migrated)"`, verified 13-stage legacy state decomposition, and verification checks are specified in [`../gate-03/DATA_MIGRATION_DESIGN.md`](../gate-03/DATA_MIGRATION_DESIGN.md).
+5. **M1 Foundational Baseline:** Focused 7-table baseline (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`) detailed in [`../gate-03/M1_SPIKE_PLAN.md`](../gate-03/M1_SPIKE_PLAN.md).

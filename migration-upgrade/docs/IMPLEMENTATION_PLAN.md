@@ -301,3 +301,19 @@ slots that weren't in the original template. This is a deliberate adaptation to
 the real feature set, not a deviation to flag as a problem — see
 `../CURRENT_STATE_AUDIT.md` §10 on why there is no smaller "MVP slice" to target
 first.
+
+---
+
+## Gate 03 Milestone Alignment (APPROVED WITH REQUIRED CORRECTIONS, 2026-09-24)
+
+Based on approved Gate 03 database, authentication, and security architecture specifications (`../gate-03/`):
+
+1. **Milestone 1 (M1) Spike Execution:**
+   - Dedicated specification in [`../gate-03/M1_SPIKE_PLAN.md`](../gate-03/M1_SPIKE_PLAN.md).
+   - Validates Auth Option A (Node-controlled username/password over Supabase Auth synthetic alias) under 12 strict test conditions.
+   - Evaluates native `auth.uid()` RLS binding, personal workspace auto-creation, canonical workflow retrieval from `workflow_definitions`, session cookie transport, and zero synthetic identity leakage hard-fail criteria triggering Option B architectural fallback.
+   - Restricts schema to 7 foundational baseline tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`).
+2. **Milestone 19 (Data Migration) Alignment:**
+   - Detailed in [`../gate-03/DATA_MIGRATION_DESIGN.md`](../gate-03/DATA_MIGRATION_DESIGN.md).
+   - Follows 10-phase execution plan targeting dedicated `"JobQuest (Migrated)"` system team workspace (OQ-012 resolution) using canonical UUIDv4 (`gen_random_uuid()`) primary keys.
+   - Enforces deterministic 13-stage legacy state decomposition into 4 decoupled dimensions (`stage`, `state`, `outcome`, `closure_reason`) verified directly against legacy source code (`Saved` through `Accepted`) and backfilled append-only event sourcing.

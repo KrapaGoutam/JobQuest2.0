@@ -262,7 +262,7 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 | **OQ-008** | Browser Extension Scope | Gate 01 / Pre-M1 | **RESOLVED** | Extension updated to Manifest V3 `/api/ext/v1` client with live workflow sync (CR-012, ADR-024). |
 | **OQ-009** | `ui-upgrade` Branch Status | Gate 01 / Pre-M1 | **RESOLVED** | Verified: contains 1 agent-tooling commit only; product-irrelevant. |
 | **OQ-010** | API Rate Limiting | Gate 01 / Pre-M1 | **RESOLVED** | Rate limiting required: per-IP + per-account limits, Vercel WAF / middleware. |
-| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | **PENDING M1 SPIKE** | Option A provisionally approved subject to M1 Spike proof; 12-condition test suite; hard-fail on any synthetic identity leakage triggers Option B architectural fallback. |
+| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | ~~PENDING M1 SPIKE~~ → **OPTION A RESOLVED: FAIL (M1)**; Option B → M1B spike | Option A provisionally approved subject to M1 Spike proof; 12-condition test suite; hard-fail on any synthetic identity leakage triggers Option B architectural fallback. |
 | **OQ-012** | Legacy Data Target Workspace | Gate 03 / Database | **RESOLVED (APPROVED)** | Dedicated `"JobQuest (Migrated)"` workspace houses all legacy data with original user attribution (ADR-041). |
 | **OQ-013** | USER Visibility in Shared Workspace | Gate 02B / Design | **RESOLVED** | `USER` sees and exports permitted **own** records only; `MANAGER` sees all records with member attribution (ADR-010). |
 | **OQ-014** | Analytics: Ever-Reached vs Current Stage | Gate 02B / Design | **RESOLVED** | Historical analytics uses ever-reached / event history; current pipeline uses current stage (ADR-011, CR-014). |
@@ -282,7 +282,7 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 # Gate 03 Database & Security Resolutions (added 2026-09-24, APPROVED)
 
 ### OQ-011: Supabase Auth Option A vs Option B
-- **Status:** **PENDING M1 SPIKE (Provisionally Approved Subject to M1)**
+- **Status:** ~~PENDING M1 SPIKE (Provisionally Approved Subject to M1)~~ → **Option A resolved: FAIL in M1 (2026-09-24).** Next evaluation: Option B, in the M1B spike. (The original text below is preserved.)
 - **Resolution:** Option A (Node-controlled username/password layered over Supabase Auth via internal synthetic identity `id_<uuid>@auth.jobquest.internal`) is provisionally approved subject to M1 architecture spike verification.
 - **Specification:** Defined in `gate-03/AUTHENTICATION_DESIGN.md` §2–3. The M1 Spike must execute 12 specific test conditions (`gate-03/M1_SPIKE_PLAN.md` §3).
 - **Hard-Fail Leakage Invariant:** If the internal synthetic identity appears anywhere accessible to the browser or user (including session user object, JWT claims, API payload, React state, storage, debug logs, or network response), the zero identity leakage requirement FAILS.
@@ -293,5 +293,18 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 - **Resolution:** Legacy single-tenant data will be migrated into a dedicated, pre-provisioned workspace: **`"JobQuest (Migrated)"`**.
 - **Specification:** Defined in `gate-03/DATA_MIGRATION_DESIGN.md` §2 and ADR-041. All active legacy users are assigned `USER` memberships, and the primary administrator is assigned `MANAGER`. Each user also receives a new, isolated `"Personal Workspace"`. Legacy owner attribution, timestamps, and relationships are preserved.
 
+---
 
+# M1B Open Questions (added 2026-09-24, UPDATED POST-HOSTED VALIDATION)
+
+| ID | Question | Classification | Resolution / Current Status |
+|---|---|---|---|
+| OQ-011 | Auth Option A vs B | Architecture Decision | **Option A: RESOLVED FAIL (M1). Option B: RESOLVED PASS** across Local, CI, and Hosted `jobquest-dev`. Recommended for formal Gate 03 approval. |
+| OQ-025 | Approve importing and rotating to a JobQuest ES256 signing key on `jobquest-dev`? | Infrastructure Action | **RESOLVED (APPROVED & ROTATED)**: Key `a73390b9-56bf-4d1a-a642-efd4479ca0b3` in use; prior key kept trusted in `previously_used`. |
+| OQ-026 | Re-authenticate the Supabase CLI to the JobQuest2.0 account | Access Action | **RESOLVED**: CLI authenticated as `goutam.krapa11@gmail.com` (`059ca115-edbc-4269-894b-77cf4531b18b`). |
+| OQ-027 | Restore the five dev settings changed unintentionally by M1's `config push` | Configuration Action | **RESOLVED**: 4 settings restored (TOTP enroll `true`, TOTP verify `true`, OTP length `8`, email interval `1m0s`). 5th setting (storage analytics) explained (requires paid tier for Iceberg catalog). |
+| OQ-028 | Delete the Option A test identities (alias emails) left in `jobquest-dev` `auth.users` | Cleanup Action | **RESOLVED**: 20 synthetic test accounts inventoried and permanently purged from `auth.users`. Zero remain. |
+| OQ-029 | Signing-key custody for production (Vercel sensitive env vs managed KMS signing) | Production Security | **OPEN (PRE-PRODUCTION)**: Evaluate KMS signing vs Vercel sensitive environment variable before production deployment. |
+| OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | Production Scaling | **OPEN (PRE-PRODUCTION)**: Vercel firewall rules + scheduled Postgres bucket cleanup job before production launch. |
+| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | Audit / Informational | **CAUSE UNKNOWN (Non-blocking)**: Cause cannot be determined from available platform logs; no destructive actions taken; `jobquest-dev` is verified as the active development environment; non-blocking. |
 

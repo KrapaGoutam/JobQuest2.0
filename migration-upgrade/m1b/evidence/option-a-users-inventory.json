@@ -1,0 +1,142 @@
+[
+  {
+    "id": "75463acc-2fd3-4633-8f1d-751f4a7c8994",
+    "email": "id_8a9f5cc8-2da1-433c-8fff-ff962cad91aa@auth.jobquest.internal",
+    "created_at": "2026-09-24T19:07:18.154015Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "da80898b-e2ad-48d7-a604-da6935cadc99",
+    "email": "id_94c09476-6f57-45ea-a17c-90055fbfbfaa@auth.jobquest.internal",
+    "created_at": "2026-09-24T19:05:05.815152Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "5b0a5320-7cbc-44b3-bae4-90b84c4399f7",
+    "email": "id_dbbf1cb9-b4c3-40c8-bfd1-11ab76b39448@auth.jobquest.internal",
+    "created_at": "2026-09-24T19:04:45.397656Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "2a824589-0991-4190-96cf-1e46cfcbd87f",
+    "email": "id_71da3acc-0684-47bb-b8cd-11fb5184190f@auth.jobquest.internal",
+    "created_at": "2026-09-24T19:04:13.876645Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "55471a70-9853-4e00-ad52-f4cc4dd8c1d6",
+    "email": "id_969800a2-ef43-44e4-9fc5-1349d41ac1f8@auth.jobquest.internal",
+    "created_at": "2026-09-24T19:00:21.050776Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "13642367-bce6-4141-af21-b241d3f85bb8",
+    "email": "id_fa43cddf-a4c6-48c9-bd50-826a942085a6@auth.jobquest.internal",
+    "created_at": "2026-09-24T19:00:17.979347Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "c6632184-e634-47e7-8acc-c944b90e4676",
+    "email": "id_fdc5ad92-f706-4e03-8fb7-7892d711c7ba@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:59:55.771788Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "3b5b63bb-0203-40ce-bd5f-249a8a2e7e6c",
+    "email": "id_8b9813d0-8127-4f1b-89c7-aaaf5811628c@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:59:31.159528Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "53118a0d-4dbc-44e1-a935-8eb62db722d1",
+    "email": "id_443f6c79-b1f3-49c6-ac55-a1d8c89419df@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:59:24.965287Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "093e981c-d702-4805-be0e-723941b353a9",
+    "email": "id_58087b24-756e-44dc-9348-9f49ad11f298@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:59:24.084134Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "e4dc117c-3c08-4419-8fe9-5b6e5b390072",
+    "email": "id_ad6453a0-f383-49ab-aaa0-ff2fc11bb8dc@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:59:21.803299Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "9c54df91-6825-425f-8f3d-7a5e9eb3d79c",
+    "email": "id_b554ccc3-0fe6-4f34-9925-441f6e29b118@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:58:27.079168Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "577f3c60-4f3f-45af-aa97-fa99e155d2f6",
+    "email": "id_7814c7d8-b7d3-4dc0-8093-0935ff162558@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:58:26.235458Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "b793d090-c4ed-465a-9e26-426ff5134718",
+    "email": "id_c7dfd861-ace1-4684-a1f7-22b60f88d33e@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:58:25.404437Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "763be4c7-c5b3-4c51-9fba-47e029365875",
+    "email": "id_3f90feb7-d786-4499-9272-ec07fad1c948@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:58:06.580514Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "a4528744-3c17-4929-aaef-5497637dada2",
+    "email": "id_471f4115-d992-4c60-bb97-68902dedbc33@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:58:04.488678Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "9556ba0c-a292-4f2c-9ec4-2a495e05c191",
+    "email": "id_0d211af5-a468-4cdd-963d-42c3091c6a54@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:57:56.574411Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "0f529eda-8299-4cce-895d-bb81eb5a1e2c",
+    "email": "id_51619e68-a589-4b74-b963-a174f70396c4@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:57:52.999367Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "a76012eb-7bbe-4afb-a32b-a5218d3673f3",
+    "email": "id_e20dadd0-ce30-46a8-a3b6-a4d60f8ff549@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:57:51.87237Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  },
+  {
+    "id": "e0f16a0c-fe96-43dd-9925-c1416f9e74ce",
+    "email": "id_12631dfd-07a3-43ce-b2bd-325354eb7d46@auth.jobquest.internal",
+    "created_at": "2026-09-24T18:57:50.923795Z",
+    "is_option_a_synthetic": true,
+    "reason": "Option A M1 test synthetic identity matching id_<uuid>@auth.jobquest.internal created during M1 spike"
+  }
+]

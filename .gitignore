@@ -1,2 +1,29 @@
 
 .playwright-mcp/
+
+# dependencies / build
+node_modules/
+dist/
+.vercel/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# secrets — NEVER commit
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+
+# local evidence artefacts that may contain tokens
+m1-evidence-raw/
+
+# JWT signing keys (Option B) — private key material, NEVER commit
+signing_keys.json
+**/signing_keys.json
+*.jwk
+*.pem
+*.key

@@ -4,6 +4,9 @@
 **Status:** `PROPOSED (Plan Only — Not Implemented in Gate 03)`  
 **Related Documents:** [AUTHENTICATION_DESIGN.md](file:///c:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/gate-03/AUTHENTICATION_DESIGN.md), [AUTHORIZATION_RLS_DESIGN.md](file:///c:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/gate-03/AUTHORIZATION_RLS_DESIGN.md), [TEST_MATRIX.md](file:///c:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/gate-03/TEST_MATRIX.md)
 
+
+> **Outcome (2026-09-24):** M1 ran this plan. Option A **FAILED** (T03 hard fail). The fallback spike is M1B: see [`../m1b/M1B_TEST_PLAN.md`](../m1b/M1B_TEST_PLAN.md) and [`GATE_03_AUTH_OPTION_B_AMENDMENT.md`](GATE_03_AUTH_OPTION_B_AMENDMENT.md).
+
 ---
 
 ## 1. M1 Spike Objectives & Strict Scope Boundaries

@@ -262,7 +262,7 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 | **OQ-008** | Browser Extension Scope | Gate 01 / Pre-M1 | **RESOLVED** | Extension updated to Manifest V3 `/api/ext/v1` client with live workflow sync (CR-012, ADR-024). |
 | **OQ-009** | `ui-upgrade` Branch Status | Gate 01 / Pre-M1 | **RESOLVED** | Verified: contains 1 agent-tooling commit only; product-irrelevant. |
 | **OQ-010** | API Rate Limiting | Gate 01 / Pre-M1 | **RESOLVED** | Rate limiting required: per-IP + per-account limits, Vercel WAF / middleware. |
-| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | **PENDING M1 SPIKE** | Option A provisionally approved subject to M1 Spike proof; 12-condition test suite; hard-fail on any synthetic identity leakage triggers Option B architectural fallback. |
+| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | ~~PENDING M1 SPIKE~~ → **OPTION A RESOLVED: FAIL (M1)**; Option B → M1B spike | Option A provisionally approved subject to M1 Spike proof; 12-condition test suite; hard-fail on any synthetic identity leakage triggers Option B architectural fallback. |
 | **OQ-012** | Legacy Data Target Workspace | Gate 03 / Database | **RESOLVED (APPROVED)** | Dedicated `"JobQuest (Migrated)"` workspace houses all legacy data with original user attribution (ADR-041). |
 | **OQ-013** | USER Visibility in Shared Workspace | Gate 02B / Design | **RESOLVED** | `USER` sees and exports permitted **own** records only; `MANAGER` sees all records with member attribution (ADR-010). |
 | **OQ-014** | Analytics: Ever-Reached vs Current Stage | Gate 02B / Design | **RESOLVED** | Historical analytics uses ever-reached / event history; current pipeline uses current stage (ADR-011, CR-014). |
@@ -282,7 +282,7 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 # Gate 03 Database & Security Resolutions (added 2026-09-24, APPROVED)
 
 ### OQ-011: Supabase Auth Option A vs Option B
-- **Status:** **PENDING M1 SPIKE (Provisionally Approved Subject to M1)**
+- **Status:** ~~PENDING M1 SPIKE (Provisionally Approved Subject to M1)~~ → **Option A resolved: FAIL in M1 (2026-09-24).** Next evaluation: Option B, in the M1B spike. (The original text below is preserved.)
 - **Resolution:** Option A (Node-controlled username/password layered over Supabase Auth via internal synthetic identity `id_<uuid>@auth.jobquest.internal`) is provisionally approved subject to M1 architecture spike verification.
 - **Specification:** Defined in `gate-03/AUTHENTICATION_DESIGN.md` §2–3. The M1 Spike must execute 12 specific test conditions (`gate-03/M1_SPIKE_PLAN.md` §3).
 - **Hard-Fail Leakage Invariant:** If the internal synthetic identity appears anywhere accessible to the browser or user (including session user object, JWT claims, API payload, React state, storage, debug logs, or network response), the zero identity leakage requirement FAILS.

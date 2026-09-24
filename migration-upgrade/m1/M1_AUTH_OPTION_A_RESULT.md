@@ -52,3 +52,13 @@ The goal: the browser holds a token PostgREST accepts, and no GoTrue user record
 - Items to evaluate: key rotation, session and refresh storage (a new table), revocation semantics (`app.session_is_active()` must move off `auth.sessions`), and rate limiting that now sits entirely in Node.
 
 This is a proposal for review only. **Do not implement it without explicit user approval.**
+
+---
+
+## Closure (M1B, 2026-09-24)
+
+**AUTH OPTION A: FAILED. This result is final.** Option A is permanently rejected for the current architecture: the zero-leakage invariant cannot be satisfied while the browser holds a Supabase Auth user token for direct Data API access, because `/auth/v1/user` returns the synthetic email to that token. No cosmetic hiding, response filtering, `getUser()` patching or endpoint blocking will be attempted.
+
+Erratum: `e2e-leak-local-995b06.json` (described above as a superseded false positive) was actually an invalid "PASS" in which the self-check had not run. See the errata in `M1_TEST_RESULTS.md`. The authoritative evidence is unchanged.
+
+Next evaluation: **Option B**, in the M1B spike (`migration-upgrade/m1b/`).

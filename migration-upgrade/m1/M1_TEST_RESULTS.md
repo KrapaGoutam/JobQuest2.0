@@ -36,3 +36,36 @@
 The `check:bundle` failure is a scanner hit on (a) the string `sb_secret_` inside supabase-js's own key-type check, and (b) the harness's alias detection marker, which the minifier folds into a literal. The hit contains **no real key material**; I checked this with masked output. The scanner was **not** relaxed. That is a decision for the user (see `M1_COMPLETION_REPORT.md` §25).
 
 The last harness edits (`apps/web/src/App.tsx`, `e2e/leak.spec.ts`) were exercised by the authoritative Playwright run (which ran to completion and reported the T03 leak) but have not been re-linted or re-typechecked locally.
+
+---
+
+## Errata (added during M1B closeout, 2026-09-24): evidence re-read
+
+The M1B instructions required re-reading the actual evidence files instead of trusting the summary above. The re-read found these discrepancies. The original text above is left unchanged, and these corrections take precedence.
+
+1. **SEC-01/02 PASSED; it did not "FAIL (cascade)".** `evidence/integration-191a31.json` records `SEC-01_02.status = "PASS"` (recover 200, 9 codes remaining after use, replay 401, prior-session rows 0 after recovery, regeneration invalidated an old unused code with 401). CI run `36046698484` (commit `cafd82c`) also passed it.
+2. **T07, T09 and T11 have no evidence file entries.** `record()` runs only after the assertions pass, so failing tests wrote nothing. Their failure evidence is the CI log of run `36046698484`:
+   - T07, `m1.test.ts:245`: `expected 200 to be 401`. The rotated-out refresh token was still accepted 11 s after rotation.
+   - T09, `m1.test.ts:292`: `expected [] to have a length of 1 but got +0`. The caller's own session lost data access after the password change.
+   - T11, `m1.test.ts:341`: `42501`. The session of actor A had been revoked by T09.
+3. **`e2e-leak-local-995b06.json` was not a false-positive run.** It reported `PASS` with an **empty** `harness_self_check`: the spec read the self-check before the asynchronous probe finished. It is therefore invalid as evidence of a pass. Only `e2e-leak-local-5beb0c.json` was the Vite-source false positive. Neither affects the authoritative result (`e2e-leak-local-7e830d.json`: FAIL, `/auth/v1/user` leak).
+4. **Corrected M1 score: 9 PASS / 4 FAIL** (T03, T07, T09, T11). SEC-01/02 is PASS. T12's local result is PASS. In CI, T12 failed only because the harness forces SSL on the local CI database (`The server does not support SSL connections`), which is a harness defect.
+
+### Local quality checks re-run on `cafd82c` (M1B step 5)
+
+| Check | Result |
+|---|---|
+| `pnpm lint` | PASS |
+| `pnpm typecheck` | PASS |
+| `pnpm test:unit` | PASS (4 files, 15 tests) |
+| `pnpm build` | PASS |
+| `pnpm check:bundle` | FAIL: `/sb_secret_/` only (the supabase-js key-prefix literal, a known false positive; see M1B) |
+
+Local note: nested `pnpm` calls inside package scripts need `pnpm` on PATH. They failed when run only through `corepack pnpm`, which is an environment issue and not a code failure.
+
+### CI on `cafd82c`: run `36046698484`
+
+| Job | Result | Reason |
+|---|---|---|
+| Lint · typecheck · unit · build · bundle check | FAIL at `check:bundle` | `/sb_secret_/` false positive; lint, typecheck, unit and build passed |
+| Migrations · RLS · façade integration (local Supabase) | FAIL (8 passed / 5 failed) | T03 (the leak), T07, T09, T11 (Option A findings), T12 (harness SSL defect) |

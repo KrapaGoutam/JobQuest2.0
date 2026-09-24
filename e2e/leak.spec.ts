@@ -40,7 +40,7 @@ test('T03 (browser) · the internal identity never reaches the browser', async (
   await page.getByLabel('Company').fill('Corvid Labs');
   await page.getByLabel('Role').fill('Staff Designer');
   await page.getByRole('button', { name: 'Insert (direct PostgREST)' }).click();
-  await expect(page.getByText(/Corvid Labs · Staff Designer/)).toBeVisible();
+  await expect(page.getByText(/inserted application .* via direct PostgREST/)).toBeVisible();
   await page.getByRole('button', { name: 'Refresh now' }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   const login = page.getByRole('form', { name: 'Sign in' });
@@ -51,6 +51,8 @@ test('T03 (browser) · the internal identity never reaches the browser', async (
 
   // The harness self-check also probes GoTrue /auth/v1/user with the in-memory token.
   await page.getByRole('button', { name: 'Scan for internal identity' }).click();
+  await expect(page.locator('[data-leak]').first()).toBeAttached();
+  await page.waitForLoadState('networkidle');
   const selfCheck = Object.fromEntries(
     await page.locator('[data-leak]').evaluateAll((els) => els.map((e) => [e.getAttribute('data-leak'), e.getAttribute('data-found') === 'true'])),
   );

@@ -68,7 +68,11 @@ d('M1 · Auth Option A architecture spike', () => {
     const weak = await new Actor('203.0.113.98').call('/auth/register', { username: uname('weak'), password: 'password123' });
     expect(weak.status).toBe(422);
 
+    const bypass = await anonDb().auth.signUp({ email: `bypass_${RUN}@example.com`, password: STRONG() });
+    expect(bypass.error).not.toBeNull(); // public GoTrue sign-up is disabled: only the façade creates identities
+
     record('T01', {
+      direct_gotrue_signup_bypass: bypass.error?.code ?? 'rejected',
       status: 'PASS', recovery_codes: 10, code_format: 'XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX (160 bits; 140 secret)',
       stored: 'argon2id verifiers only', personal_workspace: 'PERSONAL', membership_role: 'MANAGER',
       email_optional: true, phone_optional: true, user_accounts_columns: Object.keys(acct.data),

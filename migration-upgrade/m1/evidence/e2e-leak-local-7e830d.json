@@ -1,0 +1,33 @@
+{
+  "status": "FAIL",
+  "base_url": "local",
+  "requests_scanned": 34,
+  "responses_scanned": 34,
+  "network_hits": [
+    "response:/auth/v1/user"
+  ],
+  "harness_self_check": {
+    "localStorage": false,
+    "sessionStorage": false,
+    "readableCookies": false,
+    "reactState": false,
+    "html": false,
+    "jwtClaims": false,
+    "gotrueUserEndpointWithMyToken": true
+  },
+  "surfaces": {
+    "localStorage": false,
+    "sessionStorage": false,
+    "documentCookie": false,
+    "reactState": false,
+    "html": false,
+    "localStorageKeys": [],
+    "sessionStorageKeys": []
+  },
+  "all_cookies_contain_alias": false,
+  "console_contains_alias": false,
+  "cookie_names": [
+    "jq_rt (HttpOnly)",
+    "jq_csrf"
+  ]
+}

@@ -205,7 +205,10 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+# M1 finding (T10b): every login reaches Supabase Auth from the façade's IP (X-Forwarded-For is
+# not honoured), so the default 30/5min would throttle ALL users together. The façade enforces the
+# approved per-account + per-IP limits; this ceiling only bounds the façade as a whole.
+sign_in_sign_ups = 1000
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
@@ -219,7 +222,9 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-enable_signup = false
+# M1 finding: on hosted Supabase `false` here disables the email PROVIDER, which also blocks
+# the façade's password grant. Public sign-up is blocked globally by [auth] enable_signup = false.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

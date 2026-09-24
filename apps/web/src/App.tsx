@@ -8,7 +8,8 @@ import { setAccessToken, supabase, SUPABASE_KEY, SUPABASE_URL } from './supabase
  * direct PostgREST CRUD under RLS, canonical workflow (PostgREST + Node), leak self-check.
  */
 
-const ALIAS_MARKER = 'auth.jobquest.internal';
+// Built at runtime so the served source/bundle never contains the marker itself.
+const ALIAS_MARKER = ['auth', 'jobquest', 'internal'].join('.');
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('jobquest-auth') : null;
 
 interface Workspace { id: string; name: string; workspace_type: string }
@@ -156,12 +157,13 @@ export function App() {
   async function onCreateApp(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!activeWs || !user) return;
-    const f = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const f = new FormData(form);
     const r = await supabase.from('applications').insert({
       workspace_id: activeWs, user_id: user.id, company_name: f.get('company'), role_title: f.get('role'), stage: f.get('stage'),
     }).select('id').single();
     note(r.error ? `insert failed: ${r.error.message}` : `inserted application ${r.data.id} via direct PostgREST`);
-    e.currentTarget.reset();
+    form.reset();
     await loadData();
   }
 

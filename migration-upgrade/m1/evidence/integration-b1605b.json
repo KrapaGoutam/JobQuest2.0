@@ -1,0 +1,11 @@
+{
+  "run": "b1605b",
+  "started_at": "2026-09-24T18:56:59.504Z",
+  "T12": {
+    "status": "PASS",
+    "alias_identities": 0,
+    "identities_with_any_mail_sent_timestamp": 0,
+    "auth_audit_actions_last_3h": [],
+    "mail_triggering_actions": []
+  }
+}

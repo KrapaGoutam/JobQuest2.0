@@ -1,0 +1,72 @@
+{
+  "run": "078461",
+  "started_at": "2026-09-24T18:57:49.599Z",
+  "T10": {
+    "status": "PASS",
+    "per_account": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      429
+    ],
+    "correct_password_while_locked": 429,
+    "per_ip_21st": 429,
+    "different_ip_unaffected": 401,
+    "recovery_attempts": [
+      401,
+      401,
+      401,
+      429
+    ],
+    "shared_ip_probe": {
+      "valid_logins_attempted": 35,
+      "throttled_by_supabase_auth": 30,
+      "statuses": [
+        401,
+        401,
+        401,
+        401,
+        401,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429,
+        429
+      ]
+    }
+  },
+  "T12": {
+    "status": "PASS",
+    "alias_identities": 6,
+    "identities_with_any_mail_sent_timestamp": 0,
+    "auth_audit_actions_last_3h": [],
+    "mail_triggering_actions": []
+  }
+}

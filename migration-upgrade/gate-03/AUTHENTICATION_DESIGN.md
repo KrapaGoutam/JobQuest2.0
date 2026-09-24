@@ -2,6 +2,7 @@
 **Document ID:** `JQ2-GATE03-AUTH-001`  
 **Gate:** `Gate 03 — Database + Authentication + Authorization/RLS Design`  
 **Status:** `PROVISIONALLY APPROVED SUBJECT TO M1 SPIKE (Post-Review Corrections Applied)`  
+**M1 outcome (2026-09-24):** Option A **FAILED** in M1 (T03 synthetic identity leak through `/auth/v1/user`); see `../m1/M1_AUTH_OPTION_A_RESULT.md`. Option A text in this document is kept for history and is **SUPERSEDED**.  
 **Related Documents:** [GATE_03_ARCHITECTURE.md](GATE_03_ARCHITECTURE.md), [TARGET_SCHEMA.md](TARGET_SCHEMA.md), [M1_SPIKE_PLAN.md](M1_SPIKE_PLAN.md)
 
 ---

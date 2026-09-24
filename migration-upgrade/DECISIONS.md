@@ -208,7 +208,7 @@ All entries below are **Status: APPROVED WITH REQUIRED CORRECTIONS** following f
 
 | ADR | Decision | Design Document Reference | Status |
 |---|---|---|---|
-| ADR-030 | Authentication Architecture: Option A Layered Supabase Auth (Provisional subject to M1 Spike). Username + password required, email/phone optional, PIN retired. Hard-fail on any synthetic identity leak to browser; triggers Option B architectural fallback. | `gate-03/AUTHENTICATION_DESIGN.md` §2–3 | APPROVED WITH CONDITION |
+| ADR-030 | Authentication Architecture: Option A Layered Supabase Auth (Provisional subject to M1 Spike). Username + password required, email/phone optional, PIN retired. Hard-fail on any synthetic identity leak to browser; triggers Option B architectural fallback. | `gate-03/AUTHENTICATION_DESIGN.md` §2–3 | ~~APPROVED WITH CONDITION~~ → **SUPERSEDED / FAILED IN M1** (2026-09-24, see below) |
 | ADR-031 | Primary Key Strategy: UUIDv4 (`gen_random_uuid()`) across all 25 permanent target tables with selective `legacy_id INTEGER` retention and centralized `migration_id_mappings`. Previous UUIDv7 proposal marked SUPERSEDED. | `gate-03/TARGET_SCHEMA.md` §2 | APPROVED (DECISION CHANGED) |
 | ADR-032 | Cross-Workspace Integrity: Engine-level composite foreign keys `(parent_id, workspace_id)` referencing compound unique `(id, workspace_id)` on parent tables where they materially prevent tenant leakage. | `gate-03/GATE_03_ARCHITECTURE.md` §4 | APPROVED |
 | ADR-033 | Decoupled Application State: 4-dimension normalized model (`stage`, `state`, `outcome`, `closure_reason`) with verified 13 legacy stages from source code (`Saved` through `Accepted`). `Position Closed` maps to `POSITION_CLOSED`; declined offer maps to `WITHDRAWN` + `OFFER_DECLINED`. | `gate-03/RPC_DOMAIN_OPERATIONS.md` §2 | APPROVED |
@@ -221,3 +221,13 @@ All entries below are **Status: APPROVED WITH REQUIRED CORRECTIONS** following f
 | ADR-040 | Browser Extension Authentication: Scoped, workspace-bound API tokens (`jqe_live_...`) stored as SHA-256 hashes, with on-demand user revocation in settings. | `gate-03/AUTHENTICATION_DESIGN.md` §8 | APPROVED |
 | ADR-041 | Legacy Migration Tenant Isolation: Resolution of OQ-012 by assigning all migrated data to a dedicated `"JobQuest (Migrated)"` system team workspace while provisioning personal workspaces for new work. | `gate-03/DATA_MIGRATION_DESIGN.md` §2 | APPROVED |
 | ADR-042 | Client-to-Database Boundary Contract: Strict 3-tier access routing (Direct Supabase PostgREST for reads/CRUD, Database RPCs for domain mutations, Node Façade for auth/secrets). | `gate-03/RPC_DOMAIN_OPERATIONS.md` §1, §6 | APPROVED |
+
+---
+
+# M1 Outcome: ADR-030 status change (added 2026-09-24)
+
+**ADR-030 (Auth Option A): SUPERSEDED / FAILED IN M1.** The original ADR-030 row above is preserved; only its status changed.
+
+- **Evidence:** `m1/M1_AUTH_OPTION_A_RESULT.md`, `m1/evidence/integration-191a31.json` (T03) and `m1/evidence/e2e-leak-local-7e830d.json` (real Chromium).
+- **Failed invariant:** a Supabase Auth user's access token, held by the browser for direct Data API access, can call `GET /auth/v1/user`, which returns the internal synthetic email.
+- **Consequence:** per ADR-030's own condition, the architectural fallback is Option B. It is evaluated in the M1B spike (`m1b/`) and becomes binding only after that spike passes and the user approves it.

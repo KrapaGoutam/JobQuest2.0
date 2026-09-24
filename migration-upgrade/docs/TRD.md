@@ -229,3 +229,29 @@ Supabase's native observability tooling before adding any third-party APM.
   behavior.
 - **NFR-005**: No secret value is ever logged, screenshotted, or committed —
   carry forward the existing CI secret-scanning gate.
+
+## 22. Gate 01 Target Architecture (PROPOSED, 2026-09-23)
+
+§3 (Target Architecture), §4 (Frontend) and §5 (Backend) above are the
+pre-Gate-01 baseline. The Gate 01 proposal refines them. It resolves OQ-007
+(hybrid boundary), chooses concrete libraries, and adds workspaces, the
+username/password façade, the canonical workflow package and the event model.
+See [`../GATE_01_ARCHITECTURE_PROPOSAL.md`](../GATE_01_ARCHITECTURE_PROPOSAL.md)
+§1–§18. None of it is approved yet.
+
+## 23. Gate 02B Frontend Component & State Architecture (PROPOSED, 2026-09-24)
+
+Based on the completed Gate 02B UI/UX specifications (`../ui-design/gate-02b/`):
+
+- **Component Layering:** Standardized on React 19 + TypeScript + Radix UI primitives (`@radix-ui/*`) styled via semantic Tailwind v4 tokens (`assets/jq.css`).
+- **State Architecture:**
+  - *Server State:* Managed by `@tanstack/react-query` with optimistic cache updates for rapid feedback (e.g. stage moves, task check-off).
+  - *URL State:* Managed by `@tanstack/react-router` binding all table filters, sorts, saved views, and detail drawer IDs directly to URL query parameters.
+  - *Local Form State:* Managed by `react-hook-form` + `zod` for zero-re-render typing performance and immediate client-side validation.
+  - *No Global Store:* Global stores (Redux, Zustand) remain explicitly omitted; server state + router query state handle all cross-cutting data needs.
+- **Accessibility & CSS Architecture:**
+  - Zero inline styles in production React bundle.
+  - Full WCAG 2.2 AA keyboard parity and focus-visible styling (`ACCESSIBILITY_MATRIX.md`).
+  - Strict formula-injection sanitization for CSV/XLSX export generation via `@jobquest/export-utils`.
+- **Extension Architecture:** Vanilla JS / Manifest V3 calling `/api/ext/v1` with scoped, expiring, pepper-hashed tokens and live workflow synchronization.
+

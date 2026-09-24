@@ -186,3 +186,31 @@ for `style-src` without a conscious decision).
 | Navigation | In-memory `go()`, 3 deep-link exceptions | Real router (React Router/Next.js) | ADR-003 |
 | Charts | Dependency-free inline SVG | Evaluate a lightweight charting library vs. keeping the SVG primitives | Decide during Milestone 2 (Design System) |
 | Theme default | Dark-first in shipped CSS, light-first in `DESIGN.md`'s own snippet | Resolve the discrepancy explicitly | Confirm with project owner before Milestone 2 |
+
+---
+
+## Gate 02B Approved UI Direction & Complete Mockup Inventory (2026-09-24)
+
+Direction D · JobQuest Hybrid (`../ui-design/approved/jobquest-approved-mockup.html`) was approved as the master visual foundation. Gate 02B completed the design and specification for all remaining product screens, edge states, and viewports:
+
+- **Master Specification:** [`../ui-design/gate-02b/GATE_02B_UI_SPEC.md`](../ui-design/gate-02b/GATE_02B_UI_SPEC.md)
+- **Interactive Landing Index:** [`../ui-design/gate-02b/mockups/index.html`](../ui-design/gate-02b/mockups/index.html)
+- **Screen Inventory & Frame Map:** [`../ui-design/gate-02b/SCREEN_INVENTORY.md`](../ui-design/gate-02b/SCREEN_INVENTORY.md)
+- **Verified Screenshot Set:** 44 high-resolution captures under `../ui-design/gate-02b/screenshots/`
+
+### Complete 14-Module Mockup Catalog
+1. `01-auth.html` (A1–A13): Username/password sign in, lockout, 3-step registration wizard, 10 recovery codes, recovery flow, legacy account claim.
+2. `02-application-create-edit.html` (C1–C13): 5-section progressive create form, manager creation, `Q` quick add, 3-tier duplicate detection, stage mover, outcome closure, typed hard delete.
+3. `03-contacts.html` (N1–N7): Card grid, manager owner column, 540px detail drawer, contact creator, mobile one-tap communication.
+4. `04-tasks.html` (T1–T6): Unified queue (overdue, today, upcoming), task detail panel, recurring task creator with interval rules, smart date chips.
+5. `05-interviews.html` (I1–I5): Agenda list, detail panel with prep notes & expected questions, schedule modal with explicit stage move prompt, outcome recording dialog.
+6. `06-habits-journal.html` (H1–H3, J1–J3): Daily/weekday/weekly habits with streaks, modal editor (CR-002), 5 note types in markdown journal.
+7. `07-analytics.html` (Y1–Y5): Overview KPIs with explicit ratios, Historical Funnel ("ever reached"), Current Pipeline, Stage Timing report, Aging report.
+8. `08-workspace.html` (W1–W11): Member roster, invite token generator, last-manager safeguard, member removal retention disclosure, workspace settings, audit history log.
+9. `09-settings.html` (S1–S12): Profile with timezone, security with password change & recovery code regeneration, appearance switcher, extension tokens with one-time secret reveal.
+10. `10-extension.html` (X1–X14): Complete 14-state popup matrix, structured extraction, canonical workflow sync, duplicate detection, honest offline/error states.
+11. `11-application-views.html` (V1–V9): Kanban board with keyboard move alternative (`M`), filtered application calendar, global master calendar, timeline view, archive manager, export modal.
+12. `12-import-export.html` (E1–E9): 4-step bulk import wizard with visual column matching (CR-G2B-03), duplicate controls, downloadable error CSV (CR-016), export center.
+13. `13-search-states.html` (G1–G3, Q1–Q5): Global search dropdown (`/`) & results page, table skeleton shimmer, empty states, system errors (404, 403, offline), light/dark component state sheet.
+14. `14-resumes-goals-tablet.html` (R1–R3, TB1–TB3): Resumes list & diff compare, goal pacing, tablet 64px icon rail, condensed table, and single-column detail accordions.
+

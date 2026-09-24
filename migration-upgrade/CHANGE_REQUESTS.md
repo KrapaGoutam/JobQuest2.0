@@ -140,3 +140,38 @@ pre-approved — creating an entry documents an idea, it does not authorize it (
   handling) that doesn't exist in the current test suite at all.
 - **Status**: PROPOSED — explicitly gated on the product owner's answer to
   OQ-006 before this can move to APPROVED.
+
+---
+
+# Gate 01 Change Requests (added 2026-09-23)
+
+The requirement source for CR-007…CR-013 is the **Gate 01 prompt** (the user).
+The designs are **PROPOSED** until Gate 01 is approved. Details:
+[`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md).
+
+**CR-001 update:** superseded by CR-007. The real "change PIN" form becomes a
+password change + recovery codes (Account › Security). Status: PROPOSED
+(resolved by requirement).
+
+| CR | Change | Source | Affected | Proposal § | Status |
+|---|---|---|---|---|---|
+| CR-007 | Replace PIN auth with username + password (email/phone optional), recovery codes, claim flow for legacy users | Gate 01 prompt | FEATURE-AUTH-001, SET-001; `users`, `sessions` | §5 | PROPOSED |
+| CR-008 | Multi-workspace model with workspace-scoped USER/MANAGER roles (replaces the global manager) | Gate 01 prompt | FEATURE-MGR-001; every table | §6, §7 | PROPOSED |
+| CR-009 | Split Stage / Status / Action; canonical workflow package; the extension fetches it live | Gate 01 prompt | FEATURE-APP-001/002, EXT-004 | §9 | PROPOSED |
+| CR-010 | Append-only application event history + timeline; last-activity tracking | Gate 01 prompt | `activities`, `timeline_events`, `stage_history` | §8.2 | PROPOSED |
+| CR-011 | Immutable job-posting snapshots (description, requirements, skills, compensation, IDs) | Gate 01 prompt | FEATURE-EXT-002, APP-001 | §8.3 | PROPOSED |
+| CR-012 | Extension tokens become workspace-bound, scoped, expiring, peppered-hash, rotatable; duplicate levels strong/probable/possible with existing-record details; `external_job_id` as a strong signal | Gate 01 prompt | FEATURE-EXT-001/003 | §12 | PROPOSED |
+| CR-013 | Light + dark + system theme on semantic tokens; WCAG 2.2 AA in both themes | Gate 01 prompt | All UI | §13.5 | PROPOSED |
+| CR-014 | Analytics interview/offer counts use "ever reached" from history instead of current stage (fixes finding F-2) | Gate 01 analysis | FEATURE-ANALYTICS-001, DASH-001, RES-001 | §0, §20 | PROPOSED: needs approval (D-15) |
+| CR-015 | Honour `week_start` everywhere + per-user timezone | Gate 01 analysis (OQ-005) | Calendar, goals, habits | §20 | PROPOSED |
+| CR-016 | Import error-report CSV + cursor pagination for tasks/notes | Gate 01 analysis | FEATURE-IMPEXP-001, TASK-001, NOTE-001 | §20 | PROPOSED |
+| CR-017 | Global search across applications, contacts, notes, tasks (Postgres FTS + trigram) | Gate 01 prompt ("Global Search") | New | §23 M13 | PROPOSED |
+| CR-018 | Visual column-matching step in bulk import wizard with alias auto-matching | Gate 02B design (`12-import-export.html` E3) | FEATURE-IMPEXP-001 | `gate-02b/GATE_02B_UI_SPEC.md` §13.1 | APPROVED |
+| CR-019 | Keyboard "Move to stage..." modal alternative (`M` key) for Kanban drag-and-drop | Gate 02B a11y (`11-application-views.html` V1) | FEATURE-APP-002 | `gate-02b/ACCESSIBILITY_MATRIX.md` §2 | APPROVED |
+| CR-020 | Split-pane master-detail view on Tasks & Follow-ups desktop workbench | Gate 02B design (`04-tasks.html` T2) | FEATURE-TASK-001 | `gate-02b/GATE_02B_UI_SPEC.md` §6 | APPROVED |
+| CR-021 | Typed "DELETE" confirmation modal for permanent deletion of archived applications | Gate 02B safety (`02-application-create-edit.html` C11) | FEATURE-APP-001 | `gate-02b/INTERACTION_SPEC.md` §2.8 | APPROVED |
+| CR-022 | Inactivity review trigger at 31+ days (aligned with Long Waiting aging band; advisory only; no automatic state mutations) | Gate 02B final decision (OQ-022) | FEATURE-DASH-001, APP-001 | `gate-02b/GATE_02B_UI_SPEC.md` §4.5 | APPROVED |
+| CR-023 | Structured closure reason `OFFER_DECLINED` under `Withdrawn` outcome (UI displays "Offer declined"; structured for Gate 03 DB design) | Gate 02B final decision (OQ-023) | FEATURE-APP-001/002 | `gate-02b/GATE_02B_UI_SPEC.md` §4.1 | APPROVED |
+| CR-024 | Applications preview pane defaults to OPEN on wide desktop (≥ 1680px) with persistent user preference and accessible keyboard controls | Gate 02B final decision (OQ-024) | FEATURE-APP-002 | `gate-02b/RESPONSIVE_MATRIX.md` §2 | APPROVED |
+
+

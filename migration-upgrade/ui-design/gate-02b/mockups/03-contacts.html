@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+</head><body><script>
+const { shell, mobile, gallery, pips } = JQ;
+const TYPES = { Recruiter: 'info', 'Hiring manager': 'accent', Referral: 'success', Interviewer: 'muted', Networking: 'muted' };
+const tpill = t => `<span class="pill ${TYPES[t] === 'accent' ? 'accent' : TYPES[t]}">${t}</span>`;
+const due = (d, c) => c === 'danger' ? `<span class="row danger-t b nowrap" style="gap:4px"><i class="icon-triangle-alert"></i>${d}</span>` : c === 'warning' ? `<span class="row warning-t b nowrap" style="gap:4px"><i class="icon-clock"></i>${d}</span>` : d ? `<span class="row muted nowrap" style="gap:4px"><i class="icon-calendar"></i>${d}</span>` : '<span class="muted" style="font-style:italic">None</span>';
+
+const C = [
+  ['Elena Ruiz', 'ER', 'Design Director', 'Corvid Labs', 'Hiring manager', '1 · Final Interview', 'Sep 22', 'Today', 'warning', 'Interviewing', 'MO'],
+  ['Priya Nair', 'PN', 'Technical Recruiter', 'Corvid Labs', 'Recruiter', '1 · Final Interview', 'Sep 16', 'Oct 02', '', 'Engaged', 'MO'],
+  ['Jonah Wells', 'JW', 'Senior Designer', 'Corvid Labs', 'Referral', '2', 'Sep 04', '3d overdue', 'danger', 'Referral given', 'DP'],
+  ['Dana Cole', 'DC', 'Talent Partner', 'Halcyon Health', 'Recruiter', '1 · Recruiter Screen', 'Sep 21', 'Sep 24', '', 'Engaged', 'LK'],
+  ['Omar Haddad', 'OH', 'Head of Design', 'Brightline Freight', 'Interviewer', '1 · Interview', 'Sep 18', '', '', 'Interviewing', 'MO'],
+  ['Ana Liu', 'AL', 'Product Designer', 'Fernway Studio', 'Networking', '—', 'Aug 30', 'Today · 4:30 PM', 'warning', 'Coffee chat', 'SR'],
+  ['Rhea Sato', 'RS', 'Recruiting Lead', 'Tessellate', 'Recruiter', '2 · Offer', 'Sep 20', 'Sep 28', '', 'Engaged', 'MO'],
+  ['Marcus Bell', 'MB', 'Staff Engineer', 'Aster Mobility', 'Networking', '1 · Applied', 'Sep 10', '2d overdue', 'danger', 'Intro requested', 'AN'],
+  ['Sofia Grant', 'SG', 'Recruiter', 'Meridian Bank', 'Recruiter', '1 · Applied', 'Aug 21', '', '', 'Identified', 'DP'],
+  ['Theo Park', 'TP', 'UX Manager', 'Quarry Health', 'Hiring manager', '1 · Recruiter Screen', 'Sep 19', 'Sep 29', '', 'Engaged', 'LK'],
+  ['Nadia Osei', 'NO', 'Design Lead', 'Lumen Civic', 'Interviewer', '1 · Recruiter Screen', 'Sep 12', '', '', 'Interviewing', 'MO'],
+  ['Kai Moreno', 'KM', 'Recruiter', 'Parallax Games', 'Recruiter', '1 · Assessment', 'Sep 17', 'Sep 30', '', 'Engaged', 'SR'],
+  ['Lila Chen', 'LC', 'VP Product', 'Kestrel Insurance', 'Networking', '—', 'Jul 28', '', '', 'Identified', 'AN'],
+  ['Ben Adler', 'BA', 'Design Manager', 'Sable & Co.', 'Hiring manager', '1 · Applied', 'Sep 14', 'Oct 05', '', 'Engaged', 'MO']
+];
+
+function list(mgr) {
+  const cols = mgr ? '16px minmax(0,1.5fr) 120px minmax(0,1fr) 150px 96px 150px 84px' : '16px minmax(0,1.5fr) 120px minmax(0,1fr) 160px 100px 160px 120px';
+  return `<div class="page" style="gap:10px;padding:16px 20px 0 24px">
+  <div class="page-title"><h1>Contacts</h1><span class="muted">${mgr ? '318 across 12 members' : '142 contacts'}</span><span class="spacer"></span><span class="btn"><i class="icon-download"></i>Export</span><span class="btn primary"><i class="icon-user-plus"></i>New contact</span></div>
+  <div class="tabs" role="tablist"><span class="tab sel">All <span class="cnt">${mgr ? 318 : 142}</span></span><span class="tab">Follow-up due <span class="cnt danger">${mgr ? 11 : 3}</span></span><span class="tab">Recruiters <span class="cnt">${mgr ? 96 : 41}</span></span><span class="tab">Hiring managers <span class="cnt">${mgr ? 54 : 22}</span></span><span class="tab">Referrals <span class="cnt">${mgr ? 23 : 9}</span></span><span class="tab">Interviewers <span class="cnt">${mgr ? 61 : 27}</span></span><span class="tab">Networking <span class="cnt">${mgr ? 84 : 43}</span></span></div>
+  <div class="row" style="padding:0 0 2px;gap:6px"><div class="input ph" style="width:220px;height:32px"><i class="icon-search"></i>Filter contacts</div><span class="chip add"><i class="icon-plus"></i>Company</span><span class="chip add"><i class="icon-plus"></i>Relationship</span><span class="chip add"><i class="icon-plus"></i>Linked to application</span>${mgr ? '<span class="chip"><i class="icon-user-round"></i>Owner: All members<i class="icon-chevron-down"></i></span>' : ''}<span class="grow"></span><span class="small muted">Sort</span><span class="chip">Next follow-up<i class="icon-arrow-up"></i></span></div>
+  <div class="tbl" role="grid" aria-rowcount="142">
+    <div class="tr th" style="grid-template-columns:${cols}"><span class="cb"></span><span>Name · Title</span><span>Type</span><span>Company</span><span>Applications</span><span>Last contact</span><span>Next follow-up ↑</span><span>${mgr ? 'Owner' : 'Relationship'}</span></div>
+    ${C.map((c, i) => `<div class="tr ${i === 2 ? 'sel' : ''}" style="grid-template-columns:${cols}"><span class="cb ${i === 2 ? 'on' : ''}">${i === 2 ? '<i class="icon-check"></i>' : ''}</span>
+      <span class="row" style="min-width:0"><span class="av" style="width:26px;height:26px">${c[1]}</span><span class="grow"><div class="b ell">${c[0]}</div><div class="small muted ell">${c[2]}</div></span></span>
+      <span>${tpill(c[4])}</span><span class="row ell" style="min-width:0"><span class="tile" style="width:20px;height:20px;font-size:10px">${c[3][0]}</span><span class="ell">${c[3]}</span></span>
+      <span class="small ell">${c[5] === '—' ? '<span class="muted">Not linked</span>' : c[5]}</span><span class="small muted">${c[6]}</span><span class="small">${due(c[7], c[8])}</span>
+      <span class="small ell">${mgr ? `<span class="row"><span class="av" style="width:22px;height:22px;font-size:9px">${c[10]}</span>${{ MO: 'Maya', DP: 'Dev', LK: 'Lena', SR: 'Sam', AN: 'Ari' }[c[10]]}</span>` : `<span class="muted">${c[9]}</span>`}</span></div>`).join('')}
+  </div>
+  <div class="tfoot" style="border:1px solid var(--border);border-top:0;border-radius:0 0 8px 8px;margin-top:-10px">Rows 1–14 of ${mgr ? 318 : 142}<span class="grow"></span>↑↓ move · Enter open · N new contact</div></div>`;
+}
+
+/* ---------- Contact detail ---------- */
+const act = [
+  ['22', 'SEP', 'calendar-check', 'Final interview · panel', 'Corvid Labs · Staff Product Designer · Elena led the portfolio review', 'Maya · 1:00 PM'],
+  ['16', 'SEP', 'mail', 'Email sent', '"Thanks for the time today…" · follow-up after 1st interview', 'Maya · 10:05 AM'],
+  ['12', 'SEP', 'calendar-plus', 'Interview scheduled', 'Interview · Sep 15, 1:00 PM · with Elena Ruiz', 'Maya · 11:20 AM'],
+  ['05', 'SEP', 'link-2', 'Linked to application', 'Corvid Labs · Staff Product Designer as <b>Hiring manager</b>', 'Maya · 2:15 PM'],
+  ['30', 'AUG', 'user-plus', 'Contact added', 'From the browser extension capture', 'Maya · 9:02 AM']
+];
+const contactDetail = (theme) => `<div style="background:var(--surface);padding:14px 24px 16px;border-bottom:1px solid var(--border)">
+    <div class="row small"><a class="row" style="gap:4px"><i class="icon-arrow-left"></i>Contacts</a><span class="grow"></span><span class="muted">1 of 142</span><span class="ibtn ghost"><i class="icon-chevron-up"></i></span><span class="ibtn ghost"><i class="icon-chevron-down"></i></span></div>
+    <div class="row" style="gap:14px;margin-top:10px"><span class="av xl">ER</span><div class="grow"><div class="row" style="gap:10px"><span style="font-size:24px;font-weight:600;letter-spacing:-.01em">Elena Ruiz</span>${tpill('Hiring manager')}</div><div class="muted">Design Director · <b style="color:var(--fg)">Corvid Labs</b> · Seattle, WA</div></div>
+      <span class="btn"><i class="icon-message-square"></i>Log interaction</span><span class="btn"><i class="icon-bell-plus"></i>Add follow-up</span><span class="btn"><i class="icon-pencil"></i>Edit</span><span class="ibtn"><i class="icon-ellipsis"></i></span></div>
+    <div class="row" style="gap:10px;margin-top:14px">
+      <div class="banner warning" style="flex:1;padding:8px 12px"><i class="icon-clock warning-t"></i><span class="b">Follow-up due today</span><span class="small muted">Thank-you note after final panel</span><span class="grow"></span><span class="btn sm primary"><i class="icon-check"></i>Done, set next</span><span class="btn sm">Snooze</span></div>
+      <div class="card row" style="padding:8px 14px;gap:18px"><span class="small"><span class="muted">Last contact</span> <b>Sep 22</b></span><span class="small"><span class="muted">Relationship</span> <b>Interviewing</b></span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 380px">
+    <div style="padding:12px 24px;overflow:hidden">
+      <div class="row"><div class="tabs grow" role="tablist"><span class="tab sel">Activity <span class="cnt">12</span></span><span class="tab">Notes <span class="cnt">3</span></span></div></div>
+      <div class="input ph" style="margin:12px 0"><i class="icon-message-square"></i>Log a call, email or meeting with Elena…<span class="sfx row" style="gap:10px"><i class="icon-mail"></i><i class="icon-phone"></i><i class="icon-calendar-plus"></i></span></div>
+      ${act.map(a => `<div style="display:grid;grid-template-columns:52px 1fr;border-top:1px solid var(--border);padding:10px 0"><div><div style="font-size:18px;font-weight:600;line-height:1">${a[0]}</div><div class="xs b muted">${a[1]}</div></div>
+        <div style="display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start"><span class="av" style="width:22px;height:22px;background:var(--surface-muted)"><i class="icon-${a[2]}" style="font-size:12px"></i></span><div><b>${a[3]}</b> <span class="muted">— ${a[4]}</span></div><span class="xs muted nowrap">${a[5]}</span></div></div>`).join('')}
+      <div class="row small" style="border-top:1px solid var(--border);padding-top:10px"><a class="row" style="gap:4px"><i class="icon-chevrons-down"></i>Show 7 earlier</a><span class="grow"></span><span class="muted">Includes activity from linked applications</span></div>
+    </div>
+    <div style="border-left:1px solid var(--border);background:var(--surface);overflow:hidden">
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)" class="col"><div class="sec-t" style="margin-bottom:8px">Contact info</div>
+        <div class="kv" style="grid-template-columns:84px 1fr"><span>Email</span><span class="row">elena.ruiz@corvidlabs.example<i class="icon-copy muted"></i></span><span>Phone</span><span class="muted" style="font-style:italic">Not added</span><span>LinkedIn</span><span><a>linkedin.com/in/elenaruiz</a></span><span>Relationship</span><span>Hiring manager · met via referral</span></div></div>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)"><div class="row"><span class="sec-t">Applications</span><span class="small muted">1</span><span class="grow"></span><i class="icon-plus muted"></i></div>
+        <div class="row" style="margin-top:8px"><span class="tile">C</span><div class="grow"><div class="b ell">Staff Product Designer</div><div class="small muted">Corvid Labs · as Hiring manager</div></div><span class="row small nowrap">${pips(4)}Final Interview</span></div></div>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)"><div class="row"><span class="sec-t">Follow-ups & tasks</span><span class="small muted">2 open</span><span class="grow"></span><i class="icon-plus muted"></i></div>
+        <div class="col" style="gap:6px;margin-top:8px"><div class="row"><span class="cb"></span>Send thank-you note<span class="grow"></span><span class="warning-t small b">Today</span></div><div class="row"><span class="cb"></span>Ask about team's timeline<span class="grow"></span><span class="small muted">Oct 02</span></div></div></div>
+      <div style="padding:12px 20px"><div class="sec-t" style="margin-bottom:8px">Networking progress</div>
+        <div class="col small" style="gap:6px">${[['Connection request', 'Aug 31', 1], ['Connection accepted', 'Sep 01', 1], ['First message sent', 'Sep 01', 1], ['Response received', 'Sep 02', 1], ['Referral requested', '', 0], ['Referral received', '', 0]].map(r => `<div class="row"><span class="circ ${r[2] ? 'on' : ''}" style="width:16px;height:16px;font-size:10px">${r[2] ? '<i class="icon-check"></i>' : ''}</span><span class="${r[2] ? '' : 'muted'}">${r[0]}</span><span class="grow"></span><span class="muted">${r[1]}</span></div>`).join('')}</div></div>
+    </div>
+  </div>`;
+
+/* ---------- Create contact dialog ---------- */
+const f = (l, c, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${c}${o.help ? `<div class="help">${o.help}</div>` : ''}${o.err ? `<div class="ferr"><i class="icon-circle-alert"></i>${o.err}</div>` : ''}</div>`;
+const createContact = `<div class="scrim"></div><div class="dialog" style="width:620px;left:410px;top:90px" role="dialog" aria-label="New contact">
+  <div class="dlg-h"><h2>New contact</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">
+      ${f('Name', '<div class="input focus">Dana Cole</div>', { req: true })}
+      ${f('Type', '<div class="input">Recruiter<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>')}
+      ${f('Company', '<div class="input"><span class="tile" style="width:20px;height:20px;font-size:10px">H</span>Halcyon Health<span class="sfx small">Existing</span></div>', { opt: true })}
+      ${f('Title', '<div class="input">Talent Partner</div>', { opt: true })}
+      ${f('Email', '<div class="input err">dana.cole@halcyon</div>', { opt: true, err: 'Enter a full email address, like name@company.com.' })}
+      ${f('Phone', '<div class="input ph">+1 555 010 0000</div>', { opt: true })}
+      ${f('LinkedIn URL', '<div class="input"><i class="icon-link muted"></i>linkedin.com/in/danacole</div>', { opt: true, span: 2 })}
+    </div>
+    <div class="fsec"><div class="fgrid" style="grid-template-columns:1fr 1fr">
+      ${f('Link to application', '<div class="input"><span class="tile" style="width:20px;height:20px;font-size:10px">H</span>Halcyon Health · Senior Product Designer<i class="icon-x muted" style="margin-left:auto"></i></div>', { opt: true, help: 'Pre-filled because you started from this application.' })}
+      ${f('Role on this application', '<div class="input">Recruiter<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>')}
+      ${f('Next follow-up', '<div class="input"><i class="icon-calendar muted"></i>Sep 28, 2026</div>', { opt: true })}
+      ${f('Relationship', '<div class="input ph">e.g. met at meetup, alumni</div>', { opt: true, help: 'Free text with suggestions.' })}
+    </div></div>
+  </div>
+  <div class="dlg-f"><span class="small muted row" style="gap:5px"><i class="icon-info"></i>A contact with this email already exists? We'll suggest merging.</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Save contact</span></div></div>`;
+
+/* ---------- Mobile ---------- */
+const mList = mobile({ tab: 'contacts', title: 'Contacts' }, `
+  <div class="m-input" style="height:44px"><i class="icon-search muted"></i><span class="muted">Search contacts</span></div>
+  <div class="row" style="gap:8px;overflow:hidden;margin:0 -16px;padding:0 16px">${['All 142', 'Follow-up due 3', 'Recruiters 41', 'Referrals 9'].map((t, i) => `<span class="chip ${i === 0 ? 'inv' : ''}" style="height:34px;border-radius:17px;font-size:14px">${t}</span>`).join('')}</div>
+  <div class="m-card" style="margin:0 -16px;border-radius:0;border-left:0;border-right:0">${C.slice(0, 7).map(c => `<div class="m-row"><span class="av lg">${c[1]}</span><div class="grow" style="min-width:0"><div class="row"><b class="ell">${c[0]}</b><span class="grow"></span><span class="small">${c[8] ? due(c[7].replace(' · 4:30 PM', ''), c[8]) : ''}</span></div><div class="small muted ell">${c[4]} · ${c[3]}</div></div></div>`).join('')}</div>`);
+const mDetail = mobile({ back: true, title: 'Contact', noTabs: true, theme: 'dark', actions: '<span class="m-ib"><i class="icon-ellipsis"></i></span>',
+  bottom: `<div style="display:grid;grid-template-columns:1fr 1fr 44px;gap:8px;padding:10px 16px 30px;border-top:1px solid var(--border);background:var(--surface)"><div class="m-btn"><i class="icon-message-square"></i>Log</div><div class="m-btn"><i class="icon-bell-plus"></i>Follow-up</div><div class="m-btn"><i class="icon-ellipsis"></i></div></div>` }, `
+  <div class="row" style="gap:12px"><span class="av xl">ER</span><div><div style="font-size:21px;font-weight:600">Elena Ruiz</div><div class="muted" style="font-size:14px">Design Director · Corvid Labs</div><div style="margin-top:4px">${tpill('Hiring manager')}</div></div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${[['mail', 'Email'], ['phone', 'Call'], ['link', 'LinkedIn']].map((b, i) => `<div class="m-btn ${i === 1 ? 'disabled' : ''}" style="flex-direction:column;height:60px;gap:2px;font-size:13px${i === 1 ? ';opacity:.45' : ''}"><i class="icon-${b[0]}" style="font-size:18px"></i>${b[1]}</div>`).join('')}</div>
+  <div class="banner warning" style="padding:10px 12px;font-size:14px"><i class="icon-clock warning-t"></i><span class="grow"><b>Follow-up today</b><br><span class="muted">Thank-you note</span></span><span class="m-btn primary" style="height:40px;padding:0 12px;font-size:14px">Done</span></div>
+  <div class="seg" style="display:grid;grid-template-columns:1fr 1fr 1fr"><span class="on" style="justify-content:center;height:34px">Activity</span><span style="justify-content:center">Details</span><span style="justify-content:center">Apps 1</span></div>
+  ${act.slice(0, 3).map(a => `<div class="row" style="align-items:flex-start;gap:12px"><span class="av" style="width:28px;height:28px;background:var(--surface-muted)"><i class="icon-${a[2]}"></i></span><div class="grow"><div class="row"><b style="font-size:14px">${a[3]}</b><span class="grow"></span><span class="small muted">${a[1][0] + a[1].slice(1).toLowerCase()} ${a[0]}</span></div><div class="small muted">${a[4]}</div></div></div>`).join('')}`);
+
+gallery('Contacts & networking',
+  'Contacts cover recruiters, hiring managers, referrals, interviewers and networking contacts. They link to companies and to many applications (with a role per application), and carry the legacy networking progress flags and follow-up dates. Activity merges contact interactions with events from linked applications.',
+  [
+    { title: 'Desktop', items: [
+      { cap: 'N1 · Contacts list', sub: '1440 · light', html: shell({ theme: 'light', active: 'contacts', crumb: 'Contacts' }, list(false)) },
+      { cap: 'N2 · Contacts list (manager)', sub: '1440 · dark · Owner column + filter', html: shell({ theme: 'dark', ws: 'lab', active: 'contacts', crumb: 'Contacts' }, list(true)) },
+      { cap: 'N3 · Contact detail', sub: '1440 · light', html: shell({ theme: 'light', active: 'contacts', crumb: 'Contacts / Elena Ruiz' }, contactDetail('light')) },
+      { cap: 'N4 · Contact detail', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'contacts', crumb: 'Contacts / Elena Ruiz' }, contactDetail('dark')) },
+      { cap: 'N5 · New contact', sub: '1440 · light · started from an application; inline validation', html: shell({ theme: 'light', active: 'contacts', crumb: 'Contacts', overlay: createContact }, list(false)) }
+    ]},
+    { title: 'Mobile', items: [
+      { cap: 'N6 · Contacts list', sub: 'mobile · light', html: mList },
+      { cap: 'N7 · Contact detail', sub: 'mobile · dark · one-tap email/call/LinkedIn (disabled when missing)', html: mDetail }
+    ]}
+  ]);
+</script></body></html>

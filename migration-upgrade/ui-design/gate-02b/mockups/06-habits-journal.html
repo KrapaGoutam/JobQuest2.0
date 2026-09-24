@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.hrow{display:grid;grid-template-columns:44px 1fr 180px 150px 260px 32px;gap:14px;align-items:center;min-height:60px;padding:8px 16px;border-bottom:1px solid var(--border)}
+.cnt-btn{width:30px;height:30px;border:1px solid var(--border-strong);border-radius:7px;display:inline-flex;align-items:center;justify-content:center;background:var(--surface)}
+.heat{display:grid;grid-template-columns:repeat(14,14px);gap:3px}.heat i{width:14px;height:14px;border-radius:3px;background:var(--surface-3);display:block;box-shadow:inset 0 0 0 1px var(--border-strong)}
+.heat i.p{background:color-mix(in oklch,var(--primary) 45%,var(--surface))}.heat i.f{background:var(--primary)}.heat i.x{background:transparent;border:1px dashed var(--border-strong)}
+.nitem{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px}.nitem.sel{background:var(--interactive-selected);box-shadow:inset 3px 0 0 var(--primary)}</style>
+</head><body><script>
+const { shell, mobile, gallery } = JQ;
+const f = (l, c, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${c}${o.help ? `<div class="help">${o.help}</div>` : ''}</div>`;
+const H = [
+  ['Apply to 3 roles', 'count', 'Daily', 2, 3, 12, 'Today 2 of 3'],
+  ['Reach out to one new contact', 'bool', 'Weekdays', 1, 1, 6, 'Done today'],
+  ['LeetCode / portfolio practice', 'bool', 'Daily', 0, 1, 0, 'Not yet today'],
+  ['Informational interview', 'count', 'Weekly', 1, 2, 3, 'This week 1 of 2'],
+  ['Review pipeline & next actions', 'bool', 'Weekly', 1, 1, 9, 'Done this week']];
+const heat = (seed) => `<div class="heat" aria-label="Last 14 periods">${Array.from({ length: 14 }, (_, i) => { const v = (i * 7 + seed * 3) % 5; return `<i class="${i === 13 ? (seed % 2 ? 'p' : 'f') : v > 2 ? 'f' : v > 1 ? 'p' : ''}"></i>`; }).join('')}</div>`;
+
+const habits = (tab) => `<div class="page" style="gap:10px;padding:16px 20px 0 24px">
+  <div class="page-title"><h1>Habits</h1><span class="muted">Wed, Sep 23 · 2 of 5 done</span><span class="spacer"></span><span class="btn primary"><i class="icon-plus"></i>New habit</span></div>
+  <div class="tabs"><span class="tab ${tab === 'today' ? 'sel' : ''}">Today <span class="cnt">5</span></span><span class="tab ${tab === 'all' ? 'sel' : ''}">All habits <span class="cnt">7</span></span><span class="tab ${tab === 'hist' ? 'sel' : ''}">History</span></div>
+  <div class="card" style="overflow:hidden">
+    <div class="tr th" style="grid-template-columns:44px 1fr 180px 150px 260px 32px;gap:14px;padding:0 16px"><span></span><span>Habit</span><span>Progress</span><span>Streak</span><span>Last 14 periods</span><span></span></div>
+    ${H.map((h, i) => `<div class="hrow">
+      ${h[1] === 'bool' ? `<span class="circ ${h[3] >= h[4] ? 'on' : ''}" style="width:24px;height:24px;margin-left:6px">${h[3] >= h[4] ? '<i class="icon-check"></i>' : ''}</span>` : `<span class="row" style="gap:0"><span class="tile" style="width:36px;height:36px;font-size:14px">${h[3]}<span class="muted" style="font-size:11px">/${h[4]}</span></span></span>`}
+      <div style="min-width:0"><div class="b ell">${h[0]}</div><div class="small muted">${h[2]}${h[1] === 'count' ? ` · target ${h[4]}` : ''}</div></div>
+      <div class="row small" style="gap:8px">${h[1] === 'count' ? `<span class="cnt-btn" aria-label="Decrease"><i class="icon-minus"></i></span><span class="b" style="min-width:34px;text-align:center">${h[3]} / ${h[4]}</span><span class="cnt-btn" aria-label="Increase"><i class="icon-plus"></i></span>` : `<span class="${h[3] ? 'success-t' : 'muted'}">${h[6]}</span>`}</div>
+      <div class="row small" style="gap:5px">${h[5] ? `<i class="icon-flame warning-t"></i><b>${h[5]}</b> ${h[2] === 'Weekly' ? 'weeks' : 'days'}` : '<span class="muted">No streak</span>'}</div>
+      <div>${heat(i + 1)}</div><span class="ibtn ghost"><i class="icon-ellipsis"></i></span></div>`).join('')}
+  </div>
+  <div class="row small muted" style="gap:14px"><span class="row" style="gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:var(--primary)"></span>Done</span><span class="row" style="gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:color-mix(in oklch,var(--primary) 45%,var(--surface))"></span>Partial</span><span class="row" style="gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:var(--surface-3)"></span>Missed</span><span>Weekly habits use your week start (Monday). Streaks look back up to 365 days.</span></div>
+  </div>`;
+
+const editHabit = `<div class="scrim"></div><div class="dialog" style="width:500px;left:470px;top:150px" role="dialog" aria-label="Edit habit">
+  <div class="dlg-h"><h2>Edit habit</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    ${f('Name', '<div class="input focus">Apply to 3 roles</div>', { req: true })}
+    ${f('Description', '<div class="input ph">Why this matters</div>', { opt: true })}
+    <div class="fgrid" style="grid-template-columns:1.4fr 1fr">
+      ${f('Frequency', '<div class="seg"><span class="on">Daily</span><span>Weekdays</span><span>Weekly</span></div>', { req: true })}
+      ${f('Target per period', '<div class="row" style="gap:6px"><span class="cnt-btn"><i class="icon-minus"></i></span><div class="input" style="width:56px;justify-content:center">3</div><span class="cnt-btn"><i class="icon-plus"></i></span></div>', { help: '1 = simple yes/no habit.' })}
+    </div>
+    <label class="row" style="gap:10px"><span class="switch on"></span><span><b>Active</b><br><span class="small muted">Paused habits keep their history and don't break streaks.</span></span></label>
+    <div class="banner neutral small"><i class="icon-info muted"></i><span>Changing the target doesn't rewrite past days.</span></div>
+  </div>
+  <div class="dlg-f"><span class="btn danger-o"><i class="icon-trash-2"></i>Delete</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Save</span></div></div>`;
+
+/* ---------- Journal ---------- */
+const TYPES = { 'Daily journal': 'notebook-pen', Interview: 'messages-square', 'Company research': 'building-2', Reflection: 'sparkles', General: 'sticky-note' };
+const N = [
+  ['Daily journal', 'Wed, Sep 23', 'Energy low after the panel wait, but…', 'Energy low after the panel wait, but the Corvid conversation felt like the best fit so far.', 1, ''],
+  ['Interview', 'Tue, Sep 22', 'Corvid Labs — final panel debrief', 'Elena pushed on design-system governance. Next time: lead with the adoption metric.', 0, 'Corvid Labs'],
+  ['Company research', 'Mon, Sep 21', 'Halcyon Health', 'Series C, 400 people, patient-facing app rewrite in 2027. Design team of 12 reporting to…', 1, 'Halcyon Health'],
+  ['Reflection', 'Sun, Sep 20', 'Week 12 retro', 'Applied to 14 (target 15). Response rate improving since switching to resume v3.', 0, ''],
+  ['General', 'Fri, Sep 18', 'Salary research notes', 'Levels: Staff product designer bands in Seattle $180–230k base.', 0, ''],
+  ['Daily journal', 'Thu, Sep 17', '(untitled)', 'Two rejections today. Took a walk. Re-read the Lumen feedback — it\'s fair.', 0, '']];
+
+const journal = (empty) => `<div style="flex:1;min-height:0;display:grid;grid-template-columns:380px 1fr">
+  <div style="border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:0">
+    <div class="col" style="padding:14px 14px 10px;gap:10px;border-bottom:1px solid var(--border)">
+      <div class="row"><span style="font-size:22px;font-weight:600;letter-spacing:-.01em">Journal</span><span class="muted">86 entries</span><span class="grow"></span><span class="btn primary sm"><i class="icon-plus"></i>New entry</span></div>
+      <div class="input ph"><i class="icon-search"></i>Search journal</div>
+      <div class="row" style="gap:5px;flex-wrap:wrap"><span class="chip sm inv">All</span>${Object.keys(TYPES).map(t => `<span class="chip sm"><i class="icon-${TYPES[t]}"></i>${t}</span>`).join('')}</div></div>
+    <div style="overflow:hidden">
+      <div class="band neutral" style="height:26px"><i class="icon-pin"></i>PINNED</div>
+      ${N.filter(n => n[4]).map((n, i) => nitem(n, i === 0 && !empty)).join('')}
+      <div class="band neutral" style="height:26px">SEPTEMBER 2026</div>
+      ${N.filter(n => !n[4]).map(n => nitem(n)).join('')}
+    </div></div>
+  ${empty ? editor({}) : editor(N[0])}</div>`;
+const nitem = (n, sel) => `<div class="nitem ${sel ? 'sel' : ''}"><div class="row small muted" style="gap:6px"><i class="icon-${TYPES[n[0]]}"></i>${n[0]} · ${n[1]}${n[5] ? `<span class="grow"></span><span class="row" style="gap:4px"><i class="icon-briefcase"></i>${n[5]}</span>` : ''}</div><div class="b ell">${n[2]}</div><div class="small muted ell">${n[3]}</div></div>`;
+const editor = (n) => `<div class="col" style="min-height:0;padding:16px 28px;gap:12px;background:var(--bg)">
+  <div class="row small muted" style="gap:10px"><span class="row" style="gap:5px">${n[0] ? '<i class="icon-circle-check success-t"></i>Saved · 2 min ago' : '<i class="icon-circle-dot"></i>New entry · not saved yet'}</span><span class="grow"></span><span class="ibtn ghost"><i class="icon-pin"></i></span><span class="ibtn ghost"><i class="icon-ellipsis"></i></span></div>
+  <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip sm"><i class="icon-${TYPES[n[0] || 'Daily journal']}"></i>${n[0] || 'Daily journal'}<i class="icon-chevron-down"></i></span><span class="chip sm"><i class="icon-calendar"></i>${n[1] || 'Wed, Sep 23'}</span><span class="chip sm ${n[5] ? '' : 'add'}"><i class="icon-briefcase"></i>${n[5] || 'Link application'}</span></div>
+  <div style="font-size:26px;font-weight:600;letter-spacing:-.01em;${n[2] ? '' : 'color:var(--muted)'}">${n[2] ? 'Energy low after the panel wait' : 'Title (optional)'}</div>
+  <div style="font-size:14px;line-height:1.65;max-width:760px;white-space:pre-wrap;${n[3] ? '' : 'color:var(--muted)'}">${n[3] ? 'Energy low after the panel wait, but the Corvid conversation felt like the best fit so far.\n\nWhat went well:\n- The migration story landed. Elena asked two follow-ups.\n- I asked about the design-system budget, which they appreciated.\n\nWhat to change:\n- Shorter intro. I spent 6 minutes on background.\n\nTomorrow: thank-you note before noon, then 3 applications.' : 'Write freely. Plain text only; formatting like **this** is kept as typed.'}</div>
+  <span class="grow"></span><div class="small muted">Plain text · autosaves as you type · <span class="kbd">Ctrl</span> <span class="kbd">Enter</span> to finish</div></div>`;
+
+const mHabits = mobile({ tab: 'more', title: 'Habits', actions: '<span class="m-ib"><i class="icon-plus"></i></span>' }, `
+  <div class="row"><div><div class="muted" style="font-size:14px">Wednesday, Sep 23</div><div style="font-size:22px;font-weight:600">2 of 5 done</div></div></div>
+  <div class="m-card">${H.map(h => `<div class="m-row">${h[1] === 'bool' ? `<span class="circ ${h[3] ? 'on' : ''}" style="width:28px;height:28px">${h[3] ? '<i class="icon-check"></i>' : ''}</span>` : `<span class="tile" style="width:32px;height:32px;font-size:14px">${h[3]}</span>`}<div class="grow" style="min-width:0"><div class="b ell">${h[0]}</div><div class="small muted">${h[6]}${h[5] ? ` · <span class="warning-t"><i class="icon-flame"></i> ${h[5]}</span>` : ''}</div></div>${h[1] === 'count' ? '<span class="m-btn" style="width:44px;height:44px"><i class="icon-plus"></i></span>' : ''}</div>`).join('')}</div>`);
+const mJournal = mobile({ back: true, title: 'Journal entry', noTabs: true, theme: 'dark', actions: '<span class="small success-t" style="padding-right:12px">Saved</span>' }, `
+  <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip" style="height:36px"><i class="icon-notebook-pen"></i>Daily journal</span><span class="chip" style="height:36px"><i class="icon-calendar"></i>Sep 23</span></div>
+  <div style="font-size:22px;font-weight:600">Energy low after the panel wait</div>
+  <div style="line-height:1.6;white-space:pre-wrap">Energy low after the panel wait, but the Corvid conversation felt like the best fit so far.
+
+What went well:
+- The migration story landed.
+- I asked about the design-system budget.</div>`);
+
+gallery('Habits & Journal',
+  'Parity with JobQuest 1.0: habits are daily / weekdays / weekly, boolean or counted, with streaks derived at read time and idempotent per-day progress. The native prompt() edit chain is replaced by a real form (CR-002). Journal keeps the 5 note types, plain text only, optional title, optional application link, and search.',
+  [
+    { title: 'Habits', items: [
+      { cap: 'H1 · Habits · Today', sub: '1440 · light', html: shell({ theme: 'light', active: 'habits', crumb: 'Habits' }, habits('today')) },
+      { cap: 'H2 · Edit habit', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'habits', crumb: 'Habits', overlay: editHabit }, habits('today')) },
+      { cap: 'H3 · Habits', sub: 'mobile · light', html: mHabits }
+    ]},
+    { title: 'Journal', items: [
+      { cap: 'J1 · Journal · entry open', sub: '1440 · light', html: shell({ theme: 'light', active: 'journal', crumb: 'Journal' }, journal(false)) },
+      { cap: 'J2 · Journal · new entry', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'journal', crumb: 'Journal' }, journal(true)) },
+      { cap: 'J3 · Journal entry', sub: 'mobile · dark', html: mJournal }
+    ]}
+  ]);
+</script></body></html>

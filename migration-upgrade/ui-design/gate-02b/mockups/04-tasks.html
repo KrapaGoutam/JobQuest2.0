@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.trow{display:grid;grid-template-columns:22px 1fr 110px 90px 130px 72px;gap:12px;align-items:center;min-height:48px;padding:6px 16px;border-bottom:1px solid var(--border)}
+.trow.sel{background:var(--interactive-selected);box-shadow:inset 3px 0 0 var(--primary)}</style>
+</head><body><script>
+const { shell, mobile, gallery } = JQ;
+const TYPE = { Task: ['square-check', ''], 'Follow-up': ['reply', 'info'], Reminder: ['bell-ring', ''], 'Next action': ['flag', 'accent'] };
+const typ = t => `<span class="pill ${TYPE[t][1]}"><i class="icon-${TYPE[t][0]}"></i>${t}</span>`;
+const priTxt = p => `<span class="row small nowrap" style="gap:6px"><span class="pri">${[1, 2, 3].map(i => `<i class="${i <= { High: 3, Medium: 2, Low: 1 }[p] ? 'on' : ''}"></i>`).join('')}</span>${p}</span>`;
+const dueT = (d, c) => c === 'danger' ? `<span class="row danger-t b small nowrap" style="gap:4px;justify-content:flex-end"><i class="icon-triangle-alert"></i>${d}</span>` : c === 'warning' ? `<span class="row warning-t b small nowrap" style="gap:4px;justify-content:flex-end"><i class="icon-clock"></i>${d}</span>` : `<span class="row muted small nowrap" style="gap:4px;justify-content:flex-end">${d ? '<i class="icon-calendar"></i>' + d : '<i>No date</i>'}</span>`;
+
+const OVER = [
+  ['Send 2nd follow-up', 'Northwind Analytics · Applied', 'briefcase', 'Follow-up', 'Medium', '5d overdue', 'danger'],
+  ['Final follow-up or close', 'Meridian Bank · Applied', 'briefcase', 'Next action', 'Medium', '4d overdue', 'danger'],
+  ['Ask Jonah for intro', 'Jonah Wells · Referral', 'user-round', 'Task', 'High', '2d overdue', 'danger'],
+  ['Follow up with hiring manager', 'Lumen Civic · Recruiter Screen', 'briefcase', 'Follow-up', 'Medium', '1d overdue', 'danger']];
+const TODAY = [
+  ['Send thank-you note', 'Corvid Labs · Final Interview', 'briefcase', 'Next action', 'High', 'Today', 'warning'],
+  ['Tailor resume & apply', 'Oakridge Energy · Preparing · posting closes Sep 25', 'briefcase', 'Task', 'Medium', 'Today', 'warning'],
+  ['Coffee chat with Ana Liu', 'Ana Liu · Networking', 'user-round', 'Reminder', 'Low', '4:30 PM', 'warning'],
+  ['Update portfolio case study', 'Recurring weekly · General', 'repeat', 'Task', 'Medium', 'Today', 'warning']];
+
+function rows(list, selIdx) {
+  return list.map((t, i) => `<div class="trow ${i === selIdx ? 'sel' : ''}" role="row"><span class="circ"></span>
+    <div style="min-width:0"><div class="b ell">${t[0]}</div><div class="small muted ell row" style="gap:5px"><i class="icon-${t[2]}"></i>${t[1]}</div></div>
+    <span>${typ(t[3])}</span><span>${priTxt(t[4])}</span><span>${dueT(t[5], t[6])}</span><span class="btn sm"><i class="icon-alarm-clock"></i>Snooze</span></div>`).join('');
+}
+
+function tasksPage(o = {}) {
+  return `<div class="page" style="gap:10px;padding:16px 20px 0 24px;${o.panel ? 'padding-right:0' : ''}">
+  <div class="page-title" style="${o.panel ? 'padding-right:20px' : ''}"><h1>Tasks & Follow-ups</h1><span class="muted">8 need attention · 23 upcoming</span><span class="spacer"></span><span class="btn"><i class="icon-tags"></i>Reminder categories</span><span class="btn primary"><i class="icon-plus"></i>New<i class="icon-chevron-down"></i></span></div>
+  <div class="tabs" role="tablist" style="${o.panel ? 'margin-right:20px' : ''}"><span class="tab ${o.tab === 'over' ? 'sel' : ''}">Overdue <span class="cnt danger">4</span></span><span class="tab ${o.tab ? '' : 'sel'}">Today <span class="cnt">8</span></span><span class="tab">Upcoming <span class="cnt">23</span></span><span class="tab">No date <span class="cnt">12</span></span><span class="tab">Completed</span></div>
+  <div class="row" style="gap:6px;${o.panel ? 'padding-right:20px' : ''}"><span class="chip sm inv">All types</span><span class="chip sm">${TYPE.Task[0] ? '<i class="icon-square-check"></i>' : ''}Tasks 5</span><span class="chip sm"><i class="icon-reply"></i>Follow-ups 2</span><span class="chip sm"><i class="icon-bell-ring"></i>Reminders 1</span><span class="chip sm"><i class="icon-flag"></i>Next actions 2</span><span class="chip sm add"><i class="icon-plus"></i>Linked to</span>${o.mgr ? '<span class="chip sm"><i class="icon-user-round"></i>Owner: Me<i class="icon-chevron-down"></i></span>' : ''}<span class="grow"></span><span class="small muted">Group by</span><span class="chip sm">Due date<i class="icon-chevron-down"></i></span></div>
+  <div style="flex:1;min-height:0;display:flex;gap:0">
+    <div class="card grow" style="overflow:hidden;${o.panel ? 'border-radius:8px 0 0 0' : 'border-radius:8px 8px 0 0'}" role="grid" aria-label="Tasks and follow-ups">
+      <div class="band danger" role="rowgroup"><i class="icon-triangle-alert"></i>OVERDUE · 4</div>${rows(OVER, o.panel ? 1 : -1)}
+      <div class="band warning"><i class="icon-clock"></i>DUE TODAY · 4</div>${rows(TODAY, -1)}
+      <div class="band neutral"><i class="icon-circle-check"></i>COMPLETED TODAY · 2</div>
+      <div class="trow" style="opacity:.75"><span class="circ on"><i class="icon-check"></i></span><div><div class="ell" style="text-decoration:line-through">Prepare panel case study</div><div class="small muted">Corvid Labs · completed 9:14 AM</div></div><span>${typ('Task')}</span><span></span><span></span><span class="btn sm ghost">Undo</span></div>
+    </div>
+    ${o.panel ? taskPanel : ''}
+  </div></div>`;
+}
+
+const taskPanel = `<div style="width:400px;flex:none;border:1px solid var(--border);border-left:0;background:var(--surface);display:flex;flex-direction:column">
+  <div class="row" style="height:44px;padding:0 12px 0 16px;border-bottom:1px solid var(--border)"><span class="xs b" style="letter-spacing:.05em">NEXT ACTION</span><span class="grow"></span><span class="ibtn ghost"><i class="icon-external-link"></i></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="col" style="padding:14px 16px;gap:14px">
+    <div class="row" style="align-items:flex-start;gap:10px"><span class="circ" style="width:20px;height:20px;margin-top:3px"></span><div style="font-size:17px;font-weight:600">Final follow-up or close</div></div>
+    <div class="banner danger small"><i class="icon-triangle-alert danger-t"></i><span><b>4 days overdue.</b> No reply since Sep 02 (21 days).</span></div>
+    <div class="kv" style="grid-template-columns:90px 1fr"><span>Application</span><span class="row"><span class="tile" style="width:20px;height:20px;font-size:10px">M</span><a>Meridian Bank · UX Designer</a></span><span>Stage</span><span>Applied · Open</span><span>Due</span><span>Sep 19 · <a>Reschedule</a></span><span>Priority</span><span>${priTxt('Medium')}</span><span>Contact</span><span>Sofia Grant · Recruiter</span></div>
+    <div class="banner neutral small" style="align-items:flex-start"><i class="icon-info muted" style="margin-top:2px"></i><span>This is the application's <b>next action</b>. Completing it writes to the application timeline and asks for the next one.</span></div>
+    <div class="col" style="gap:8px"><span class="btn primary"><i class="icon-check"></i>Done, set next</span><div class="row" style="gap:8px"><span class="btn grow"><i class="icon-ghost"></i>Mark Ghosted</span><span class="btn grow"><i class="icon-archive"></i>Archive app</span></div></div>
+    <div class="hr"></div>
+    <div class="sec-t">Recent on this application</div>
+    <div class="col small" style="gap:8px"><span class="row"><i class="icon-send muted"></i>2nd follow-up sent<span class="grow"></span><span class="muted">Sep 12</span></span><span class="row"><i class="icon-send muted"></i>Follow-up sent<span class="grow"></span><span class="muted">Sep 07</span></span><span class="row"><i class="icon-send muted"></i>Applied<span class="grow"></span><span class="muted">Sep 02</span></span></div>
+  </div></div>`;
+
+const f = (l, c, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${c}${o.help ? `<div class="help">${o.help}</div>` : ''}</div>`;
+const createTask = (kind) => `<div class="scrim"></div><div class="dialog" style="width:560px;left:440px;top:${kind === 'Follow-up' ? 110 : 130}px" role="dialog" aria-label="New ${kind}">
+  <div class="dlg-h"><h2>New ${kind.toLowerCase()}</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    <div class="seg" style="align-self:flex-start">${['Task', 'Follow-up', 'Reminder'].map(t => `<span class="${t === kind ? 'on' : ''}"><i class="icon-${TYPE[t][0]}"></i>${t}</span>`).join('')}</div>
+    ${kind === 'Task' ? `
+    ${f('Title', '<div class="input focus">Update portfolio case study</div>', { req: true })}
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">
+      ${f('Linked to', '<div class="input"><i class="icon-link-2 muted"></i><span class="muted">Application, contact or nothing</span></div>', { opt: true })}
+      ${f('Priority', '<div class="seg"><span>Low</span><span class="on">Medium</span><span>High</span></div>')}
+      ${f('Due date', '<div class="input"><i class="icon-calendar muted"></i>Wed, Sep 23</div>', { opt: true, help: 'Leave empty to keep it in "No date".' })}
+      ${f('Repeat', '<div class="input">Weekly on Wednesday<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>', { opt: true })}
+    </div>
+    <div class="banner info small" style="align-items:flex-start"><i class="icon-repeat info-t" style="margin-top:2px"></i><span><b>Recurring.</b> When you complete it, the next one is created for <b>Wed, Sep 30</b>. Past occurrences stay in Completed. Options: daily, weekdays, weekly, monthly.</span></div>
+    ${f('Notes', '<div class="input ta ph">Anything to remember</div>', { opt: true })}` : `
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">
+      ${f('Follow up on', '<div class="input"><span class="tile" style="width:20px;height:20px;font-size:10px">H</span>Halcyon Health · Senior Product Designer</div>', { req: true, span: 2, help: 'An application, interview or contact.' })}
+      ${f('With', '<div class="input"><span class="av" style="width:20px;height:20px;font-size:9px">DC</span>Dana Cole · Recruiter</div>', { opt: true })}
+      ${f('Channel', '<div class="input">Email<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>')}
+      ${f('Due date', '<div class="input focus"><i class="icon-calendar muted"></i>Mon, Sep 28</div>', { req: true })}
+      ${f('Status', '<div class="input">Due<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>', { help: 'Due · Sent · Waiting · Responded · No response · Completed · Cancelled' })}
+    </div>
+    <div class="row small" style="gap:6px;flex-wrap:wrap"><span class="muted">Suggested from your settings:</span><span class="chip sm on">1st · Sep 28 <span class="muted">(5 business days)</span></span><span class="chip sm">2nd · Oct 07 <span class="muted">(+7)</span></span></div>
+    <label class="check small"><span class="cb on"><i class="icon-check"></i></span>Also create a reminder at 9:00 AM <span class="muted">(Settings › Follow-ups)</span></label>`}
+  </div>
+  <div class="dlg-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Create ${kind.toLowerCase()}</span></div></div>`;
+
+/* mobile */
+const mTasks = mobile({ tab: 'tasks', title: 'Tasks' }, `
+  <div class="row" style="gap:8px;margin:0 -16px;padding:0 16px;overflow:hidden">${['Today 8', 'Overdue 4', 'Upcoming 23', 'No date 12'].map((t, i) => `<span class="chip ${i === 0 ? 'inv' : ''}" style="height:34px;border-radius:17px;font-size:14px">${t}</span>`).join('')}</div>
+  <div class="m-card"><div class="band danger" style="height:34px;font-size:12px"><i class="icon-triangle-alert"></i>OVERDUE · 4</div>
+  ${OVER.slice(0, 3).map(t => `<div class="m-row"><span class="circ" style="width:24px;height:24px"></span><div class="grow" style="min-width:0"><div class="b ell">${t[0]}</div><div class="small muted ell">${t[1].split(' · ')[0]} · ${t[3]}</div></div><span class="danger-t b small nowrap">${t[5].replace(' overdue', '')}</span></div>`).join('')}
+  <div class="band warning" style="height:34px;font-size:12px"><i class="icon-clock"></i>TODAY · 4</div>
+  ${TODAY.slice(0, 3).map(t => `<div class="m-row"><span class="circ" style="width:24px;height:24px"></span><div class="grow" style="min-width:0"><div class="b ell">${t[0]}</div><div class="small muted ell">${t[1].split(' · ')[0]} · ${t[3]}</div></div><span class="small muted nowrap">${t[5] === 'Today' ? '' : t[5]}</span></div>`).join('')}</div>
+  <div class="small muted" style="text-align:center">Swipe right to complete · left to snooze</div>`);
+const mCreate = mobile({ tab: 'tasks', title: 'Tasks', theme: 'dark', overlay: `<div class="scrim" style="border-radius:28px"></div><div class="m-sheet" style="border-radius:16px 16px 28px 28px;padding-bottom:30px"><div class="m-grab"></div>
+  <div class="row" style="padding:4px 16px 8px"><b style="font-size:17px">New task</b><span class="grow"></span><span class="m-ib" style="width:36px;height:36px"><i class="icon-x"></i></span></div>
+  <div class="col" style="padding:0 16px;gap:12px">
+    <div class="seg" style="display:grid;grid-template-columns:1fr 1fr 1fr"><span class="on" style="justify-content:center;height:34px">Task</span><span style="justify-content:center">Follow-up</span><span style="justify-content:center">Reminder</span></div>
+    <div class="m-input" style="border-color:var(--focus);box-shadow:0 0 0 3px var(--primary-soft)">Ask Jonah for intro</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap">${['Today', 'Tomorrow', 'Next week', 'No date'].map((t, i) => `<span class="chip ${i === 1 ? 'on' : ''}" style="height:40px;border-radius:20px">${t}</span>`).join('')}</div>
+    <div class="m-input"><i class="icon-link-2 muted"></i>Jonah Wells · Referral<i class="icon-chevron-right muted" style="margin-left:auto"></i></div>
+    <div class="m-input"><i class="icon-repeat muted"></i>Doesn't repeat<i class="icon-chevron-right muted" style="margin-left:auto"></i></div>
+    <div class="m-btn primary" style="height:50px">Add task</div></div></div>` }, `<div class="skel" style="height:40px"></div><div class="skel" style="height:200px"></div>`);
+
+gallery('Tasks & Follow-ups',
+  'One queue for everything with a due date: tasks, follow-ups, reminders and application next actions. They stay separate records (legacy domains preserved: tasks may have no date, reminders always do, follow-ups belong to an application, interview or contact), shown with a type pill. Views: Overdue · Today · Upcoming · No date · Completed.',
+  [
+    { title: 'Desktop', items: [
+      { cap: 'T1 · Tasks & Follow-ups · Today', sub: '1440 · light', html: shell({ theme: 'light', active: 'tasks', crumb: 'Tasks & Follow-ups' }, tasksPage()) },
+      { cap: 'T2 · With detail panel', sub: '1440 · dark · next-action item selected', html: shell({ theme: 'dark', active: 'tasks', crumb: 'Tasks & Follow-ups' }, tasksPage({ panel: true })) },
+      { cap: 'T3 · New task (recurring)', sub: '1440 · light', html: shell({ theme: 'light', active: 'tasks', crumb: 'Tasks & Follow-ups', overlay: createTask('Task') }, tasksPage()) },
+      { cap: 'T4 · New follow-up', sub: '1440 · dark · suggested dates from settings', html: shell({ theme: 'dark', active: 'tasks', crumb: 'Tasks & Follow-ups', overlay: createTask('Follow-up') }, tasksPage()) }
+    ]},
+    { title: 'Mobile', items: [
+      { cap: 'T5 · Tasks', sub: 'mobile · light', html: mTasks },
+      { cap: 'T6 · New task sheet', sub: 'mobile · dark', html: mCreate }
+    ]}
+  ]);
+</script></body></html>

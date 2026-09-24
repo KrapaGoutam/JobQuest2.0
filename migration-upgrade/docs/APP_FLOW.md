@@ -275,3 +275,50 @@ flowchart TD
     G -->|Yes| H[renderDetail(id)]
     G -->|No, deleted| I[Redirect to Applications\n+ toast: could not be found]
 ```
+
+### Journey 14 — Workspace Switching & Member Administration (Gate 02B)
+
+```mermaid
+flowchart TD
+    A[Sidebar Top: Workspace Switcher] --> B[Dropdown: Active Memberships + Role Badges]
+    B -->|Select Workspace| C[Context Switch: Theme Accent + Data Scope Updated]
+    B -->|Manager Role| D[Workspace Management Nav Group Visible]
+    D --> E[Members Roster W1]
+    E --> F[Invite Members W2: Multi-use Code Generated]
+    E --> G[Role Change: User <-> Manager]
+    G --> H{Last Manager?}
+    H -->|Yes| I[Last-Manager Safeguard W4: Blocked]
+    H -->|No| J[Role Updated + audit_events logged]
+    E --> K[Remove Member W3: Disclose Records Stay in Workspace]
+```
+
+### Journey 15 — Account Recovery via Single-Use Codes (Gate 02B)
+
+```mermaid
+flowchart TD
+    A[Sign In Screen A1] --> B[Click "Forgot password?"]
+    B --> C[Account Recovery Screen A8]
+    C --> D[Enter Username + 12-char Single-Use Recovery Code]
+    D --> E{Valid Code?}
+    E -->|No| F[Generic Error: Invalid or Used Code]
+    E -->|Yes| G[Code Burned / Consumed]
+    G --> H[Set New Password Form A9]
+    H --> I[Password Updated + Fresh Recovery Code Set Issued]
+    I --> J[Redirect to Dashboard D1]
+```
+
+### Journey 16 — Bulk Import Wizard with Column Matching (Gate 02B)
+
+```mermaid
+flowchart TD
+    A[Sidebar: Bulk Import E1] --> B[Upload CSV or XLSX]
+    B --> C[Step 2: Match Columns E3]
+    C --> D[Header Alias Auto-Matching]
+    D --> E{Required Fields Mapped?}
+    E -->|No| F[Prompt User to Map Company and Role]
+    E -->|Yes| G[Step 3: Review & Duplicates E4]
+    G --> H[Select Duplicate Strategy: Skip / Update / As New]
+    H --> I[Step 4: Commit Batch Transaction]
+    I --> J[Summary Screen E6 + Download import_errors.csv]
+```
+

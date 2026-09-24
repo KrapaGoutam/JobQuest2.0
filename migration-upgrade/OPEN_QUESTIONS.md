@@ -160,3 +160,121 @@ public-facing API surface once the app moves to a platform with a different
 traffic/abuse profile than a single Render service behind no CDN.
 **Migration impact**: Low-to-Medium — a reasonable `docs/IMPLEMENTATION_PLAN.md`
 non-functional hardening item, not a blocker.
+
+---
+
+# Gate 01 Review (added 2026-09-23)
+
+Classification per [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md) §21.
+The original entries above are kept unchanged as the historical record.
+
+| ID | Classification | Resolution / recommendation (PROPOSED) |
+|---|---|---|
+| OQ-001 | RESOLVED BY USER REQUIREMENT | Username + password; PIN retired |
+| OQ-002 | RESOLVED BY USER REQUIREMENT | Scoped, expiring, hashed, workspace-bound extension tokens |
+| OQ-003 | RESOLVED BY USER REQUIREMENT | Workspace-scoped managers → expressible in RLS |
+| OQ-004 | RESOLVED | Worker-thread RPC not ported |
+| OQ-005 | CAN RESOLVE DURING MILESTONE | Recommend honouring `week_start` everywhere (D-16) |
+| OQ-006 | CAN SAFELY DEFER | Architecture keeps Realtime possible |
+| OQ-007 | RESOLVED BY USER REQUIREMENT (hybrid) | Boundary proposed in §4. Approval needed before M1. |
+| OQ-008 | MUST RESOLVE BEFORE IMPLEMENTATION (extension milestone) | Recommend incremental migration |
+| OQ-009 | **RESOLVED (verified)** | `ui-upgrade` has 1 commit not in `main` (`29624a6`): agent tooling only, no product code |
+| OQ-010 | RESOLVED BY USER REQUIREMENT | Per-IP + per-account limits, Vercel WAF |
+
+## New questions raised by Gate 01
+
+| ID | Question | Classification | Recommendation |
+|---|---|---|---|
+| OQ-011 | Does Auth Option A hold up: alias identity accepted, server-proxied sign-in not collectively IP-throttled, `supabase-js` `accessToken` mode works with RLS? | MUST RESOLVE BEFORE IMPLEMENTATION (M1 spike) | Spike in M1; fall back to Option B |
+| OQ-012 | Which workspace(s) receive legacy data? | MUST RESOLVE BEFORE DATABASE WORK | One "JobQuest (migrated)" workspace |
+| OQ-013 | What can a USER see inside a shared workspace? | MUST RESOLVE BEFORE IMPLEMENTATION | Own records only |
+| OQ-014 | Analytics: "ever reached" vs legacy current-stage counting (finding F-2) | MUST RESOLVE BEFORE DATABASE WORK | Ever reached |
+| OQ-015 | Theme default | RESOLVED BY USER REQUIREMENT | System + manual + persisted |
+| OQ-016 | Supabase/Vercel plan tiers (Branching, PITR, leaked-password protection) | CAN RESOLVE DURING MILESTONE (before production) | Free/dev first; confirm before production |
+| OQ-017 | Per-user timezone for "today" calculations | MUST RESOLVE BEFORE DATABASE WORK | Add `profiles.timezone` |
+| OQ-018 | Email provider for verification/recovery | CAN SAFELY DEFER | Recovery codes cover the MVP |
+| OQ-019 | How do legacy users reclaim accounts without PIN migration? | MUST RESOLVE BEFORE DATABASE WORK | Operator-issued claim codes |
+| OQ-020 | Record ownership when a member leaves a shared workspace | CAN RESOLVE DURING MILESTONE | Records stay; export first; transfer later |
+| OQ-021 | Production smoke-test account | CAN RESOLVE DURING MILESTONE | Dedicated smoke user in an isolated workspace |
+
+---
+
+# Gate 02B UI/UX Design Resolutions (added 2026-09-24)
+
+Classification of UI/UX related questions based on the completed Gate 02B specifications and mockups:
+
+| ID | Status | Resolution in Gate 02B Design | Reference |
+|---|---|---|---|
+| OQ-013 | **RESOLVED BY DESIGN** | A USER in a shared workspace can view, edit, and export only their **own** records. They cannot see other members' applications or data. Managers see all member records with member attribution. | `gate-02b/GATE_02B_UI_SPEC.md` §10.1, `08-workspace.html` W1, `12-import-export.html` E9 |
+| OQ-015 | **RESOLVED BY DESIGN** | Default theme = SYSTEM, fallback = LIGHT, user choices = SYSTEM / LIGHT / DARK with persistent manual override in Settings and quick toggle. | `gate-02b/GATE_02B_UI_SPEC.md` §11.1, `09-settings.html` S5 |
+| OQ-017 | **RESOLVED BY DESIGN** | User profile includes an explicit `timezone` preference, localized across date pickers, reminders, and "today" calculations. | `gate-02b/GATE_02B_UI_SPEC.md` §11.1, `09-settings.html` S1, `05-interviews.html` I3 |
+| OQ-018 | **RESOLVED FOR MVP** | 10 single-use recovery codes provide 100% self-sufficient account recovery without requiring a third-party email provider at launch. | `gate-02b/GATE_02B_UI_SPEC.md` §3.1, `01-auth.html` A5–A7 |
+| OQ-019 | **RESOLVED BY DESIGN** | Legacy account claim flow is designed and verified with operator-issued claim code entry, new username, and new password establishment. | `gate-02b/GATE_02B_UI_SPEC.md` §3.1, `01-auth.html` A10 |
+| OQ-020 | **RESOLVED BY DESIGN** | Member removal dialog clearly discloses that existing records remain in the workspace attributed to the member; access is revoked. Export can be run prior to departure. | `gate-02b/GATE_02B_UI_SPEC.md` §10.2, `08-workspace.html` W3 |
+
+## Gate 02B Final User Decisions & Approvals (resolved 2026-09-24)
+
+### OQ-022: Inactivity Review Interval vs. Aging Band
+- **Original Question:** Should the advisory review trigger at 28 days (falls inside the 15–30d Stale band) or at 31 days (matches the Long Waiting band)?
+- **Status:** **RESOLVED BY USER DECISION**
+- **Decision:** Use **31+ DAYS** as the inactivity-review trigger.
+- **Rationale & Specification:**
+  - This aligns the actionable review directly with the existing **Long Waiting** aging band (31+ days) instead of triggering inside the 15–30 day Stale band.
+  - The design distinguishes:
+    - **15–30 days:** Aging/Stale indicator on application rows/cards.
+    - **31+ days:** Long Waiting band; application surfaces in the actionable "Review quiet applications" dashboard queue.
+  - Actionable review options: `Keep Active` (logs a review note, resets inactivity timer), `Mark Ghosted` (closes with outcome Ghosted), `Archive` (soft-archives application).
+  - **Zero Automatic Mutation:** Nothing is automatically ghosted, archived, closed, or changed. All state mutations require explicit user action.
+
+### OQ-023: Offer Declined Status Classification
+- **Original Question:** Is declining an offer classified under outcome `Withdrawn` (legacy convention) or should a distinct `Offer Declined` outcome status be introduced?
+- **Status:** **RESOLVED BY USER DECISION**
+- **Decision:** Do **NOT** introduce a new top-level outcome/status called `Offer Declined`. Use Outcome: **`WITHDRAWN`** with a structured closure reason: **`OFFER_DECLINED`**.
+- **Rationale & Specification:**
+  - The UI displays the human-readable text: `"Offer declined"`.
+  - The closure reason is structured (not solely an unstructured free-text note) so that JobQuest analytics can distinguish and report on general withdrawal, offer declined, and other withdrawal reasons without proliferating top-level pipeline outcomes.
+  - Designed as an input for Gate 03 to determine the appropriate database/enum/relational representation.
+
+### OQ-024: Wide Desktop Preview Pane Default
+- **Original Question:** Should the 440px preview pane be default-on at viewports ≥1680px, or toggle-only?
+- **Status:** **RESOLVED BY USER DECISION**
+- **Decision:** At viewport widths **≥ 1680px**, the Applications preview pane defaults to **OPEN**.
+- **Rationale & Specification:**
+  - Users may close it (`×` button), reopen it, or toggle it via an explicit visible toolbar control.
+  - The user's explicit open/closed preference is persisted.
+  - The preview pane is **not required** (closing it allows the table to expand to 100% width).
+  - **Keyboard & A11y Safety:** Do **NOT** use a global `Space` shortcut for preview toggling, as `Space` directly conflicts with vertical scrolling, table row/checkbox selection, screen-reader interaction, and native browser behavior.
+  - An explicit visible toggle/close control is provided. Any keyboard shortcut must be context-safe, documented, accessible, and non-conflicting (e.g. `P` when a table row has grid focus).
+
+---
+
+## Master Open Questions Status Registry (Post-Gate 02B Approval)
+
+| ID | Topic | Lifecycle Phase | Status | Authoritative Resolution |
+|---|---|---|---|---|
+| **OQ-001** | PIN vs Password Auth | Gate 01 / Pre-M1 | **RESOLVED** | Username + password required; email/phone optional; PIN retired (ADR-008, CR-007). |
+| **OQ-002** | Extension Auth Under Supabase | Gate 01 / Pre-M1 | **RESOLVED** | Scoped, expiring, hashed, workspace-bound tokens stored in `extension_tokens` (ADR-013, CR-012). |
+| **OQ-003** | Manager Multi-User Authorization | Gate 01 / Pre-M1 | **RESOLVED** | Workspace-scoped roles (`USER` / `MANAGER`); RLS + RPC with explicit target auditing (ADR-010, CR-008). |
+| **OQ-004** | Postgres Worker RPC Bridge | Gate 01 / Pre-M1 | **RESOLVED** | Worker-thread RPC retired; standard async client in new backend. |
+| **OQ-005** | `week_start` Preference Consistency | Gate 01 / Pre-M1 | **RESOLVED** | Honor `week_start` consistently across Calendar, Goals, and Habits (CR-015). |
+| **OQ-006** | Real-time / Live Updates | Gate 01 / Pre-M1 | **RESOLVED** | Deferred for MVP; architecture preserves Realtime compatibility. |
+| **OQ-007** | Hybrid Backend Architecture | Gate 01 / Pre-M1 | **RESOLVED** | Hybrid architecture approved: direct Supabase client for simple CRUD + Node/TypeScript API for business logic, extension, import/export, and manager RPCs (ADR-009). |
+| **OQ-008** | Browser Extension Scope | Gate 01 / Pre-M1 | **RESOLVED** | Extension updated to Manifest V3 `/api/ext/v1` client with live workflow sync (CR-012, ADR-024). |
+| **OQ-009** | `ui-upgrade` Branch Status | Gate 01 / Pre-M1 | **RESOLVED** | Verified: contains 1 agent-tooling commit only; product-irrelevant. |
+| **OQ-010** | API Rate Limiting | Gate 01 / Pre-M1 | **RESOLVED** | Rate limiting required: per-IP + per-account limits, Vercel WAF / middleware. |
+| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | **PENDING SPIKE** | Test Option A (username alias via dummy email / metadata); fall back to Option B (Node auth façade issuing custom JWTs). |
+| **OQ-012** | Legacy Data Target Workspace | Gate 03 / Database | **PENDING GATE 03** | Recommend default "JobQuest (Migrated)" workspace for all legacy imports. |
+| **OQ-013** | USER Visibility in Shared Workspace | Gate 02B / Design | **RESOLVED** | `USER` sees and exports permitted **own** records only; `MANAGER` sees all records with member attribution (ADR-010). |
+| **OQ-014** | Analytics: Ever-Reached vs Current Stage | Gate 02B / Design | **RESOLVED** | Historical analytics uses ever-reached / event history; current pipeline uses current stage (ADR-011, CR-014). |
+| **OQ-015** | Theme Default & Hierarchy | Gate 02B / Design | **RESOLVED** | Default = SYSTEM, fallback = LIGHT; choices = SYSTEM / LIGHT / DARK; persistent manual override (ADR-014, CR-013). |
+| **OQ-016** | Supabase/Vercel Plan Tiers | Gate 03 / Pre-Prod | **PENDING PROD** | Free/dev tier for development; confirm Pro tier requirements before production. |
+| **OQ-017** | Per-User Timezone | Gate 02B / Design | **RESOLVED** | Add `profiles.timezone` column; used across date pickers, reminders, and "today" calculations (CR-015). |
+| **OQ-018** | Email Provider for MVP Recovery | Gate 02B / Design | **RESOLVED** | 10 single-use recovery codes cover 100% of self-sufficient MVP recovery; third-party email deferred (ADR-008). |
+| **OQ-019** | Legacy Account Reclamation | Gate 02B / Design | **RESOLVED** | Operator-issued claim codes verified in design (A10); user establishes new username/password (ADR-017). |
+| **OQ-020** | Member Removal Record Ownership | Gate 02B / Design | **RESOLVED** | Records remain in workspace attributed to member; access revoked; export recommended prior to removal (ADR-010). |
+| **OQ-021** | Production Smoke Account | Post-M1 / Testing | **PENDING PROD** | Dedicated smoke test user in an isolated test workspace. |
+| **OQ-022** | Inactivity Review Interval | Gate 02B / Final | **RESOLVED** | 31+ days triggers review (aligned with Long Waiting band); explicit Keep/Ghosted/Archive; zero automatic changes (ADR-027). |
+| **OQ-023** | Declined Offer Classification | Gate 02B / Final | **RESOLVED** | Outcome = `WITHDRAWN`, structured closure reason = `OFFER_DECLINED`; human-readable "Offer declined" (ADR-028). |
+| **OQ-024** | Wide Desktop Preview Pane Default | Gate 02B / Final | **RESOLVED** | Viewports ≥ 1680px default to OPEN; user preference persisted; no global Space shortcut conflict (ADR-029). |
+
+

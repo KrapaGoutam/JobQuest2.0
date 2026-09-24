@@ -156,3 +156,48 @@ codebase).
 ### Consequences
 None negative identified — this is a strict improvement with no migration risk,
 provided it's a deliberate decision rather than an accidental copy-paste.
+
+---
+
+# Gate 01 Architecture Decisions (added 2026-09-23)
+
+All entries below are **Status: Proposed**. Full rationale, alternatives and
+consequences: [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md).
+Where these conflict with ADR-001…006 above, these are the newer proposals.
+
+| ADR | Decision | Proposal § | Decision ID |
+|---|---|---|---|
+| ADR-007 | Hybrid architecture: direct Supabase (RLS) for simple CRUD, Postgres RPC for transactional/aggregate operations, Node API (Hono on Vercel Functions, same origin) for auth, extension, import/export, membership, and secrets | §4 | D-01, D-03 |
+| ADR-008 | Username + password auth: Supabase Auth as the credential/session engine behind a Node username façade (internal alias identity, HttpOnly refresh cookie, in-memory access JWT). Fallback: custom Node auth + Node-only data gateway. PIN retired. | §5 | D-02 |
+| ADR-009 | Recovery without mandatory email/phone: single-use recovery codes. No manager-initiated password resets. | §5.8 | D-27 |
+| ADR-010 | Workspaces from day one. Every business row carries `workspace_id` + `owner_id`. USER = own records; MANAGER = whole workspace (audited). Personal workspace auto-created on registration. | §6, §7 | D-06, D-19 |
+| ADR-011 | Stage ≠ Status ≠ Action. One canonical `@jobquest/workflow` package, seeded to reference tables and served live to the extension. | §9 | D-09 |
+| ADR-012 | `application_events` (append-only) replaces `activities` + `timeline_events` + `stage_history`. Stage intervals become a view. | §8.2 | D-10 |
+| ADR-013 | Immutable `job_posting_snapshots`; owner-scoped `companies`; `documents` generalizes `resumes` | §8.3–8.4 | D-11, D-12, D-13 |
+| ADR-014 | Frontend: React + Vite SPA, TanStack Router/Query, React Hook Form + Zod, Tailwind v4 over semantic tokens, shadcn/ui, Lucide; no global store | §3 | D-04 |
+| ADR-015 | Extension: incremental migration (keep extractors/fixtures; new `/api/ext/v1`, scoped expiring peppered-hash workspace-bound tokens) | §12 | OQ-008 |
+| ADR-016 | UUID primary keys + `legacy_id` traceability columns | §10 | D-07 |
+| ADR-017 | Legacy data → one "JobQuest (migrated)" workspace; legacy accounts reclaimed via operator-issued claim codes; no PIN/password hash migrated | §5.12, §19 | D-17, D-18 |
+| ADR-018 | Analytics use "ever reached" from event history (fixes legacy current-stage counting, finding F-2). A legacy-compatible variant is kept only for migration verification. | §0, §20 | D-15 |
+
+---
+
+# Gate 02B UI/UX Design Decisions (added 2026-09-24, APPROVED)
+
+All entries below are **Status: APPROVED** following formal Gate 02B review and user sign-off. They establish the approved Direction D UI baseline and its complete screen extensions across `migration-upgrade/ui-design/gate-02b/`.
+
+| ADR | Decision | Design Document Reference | Status |
+|---|---|---|---|
+| ADR-019 | Adopt Direction D · JobQuest Hybrid across all 14 mockup modules (117 frames), enforcing semantic tokens, WCAG 2.2 AA in both light & dark themes, and zero horizontal overflow across 4 viewports (Mobile, Tablet, Desktop, Wide). | `gate-02b/GATE_02B_UI_SPEC.md` §1 | APPROVED |
+| ADR-020 | Application Detail architecture: 8-pip stage progress bar, Outcome pill, prominent Next Action card, 3 long-form tabs (Timeline, Job posting, Notes), and structured right rail entity cards (Tasks, Interviews, Contacts, Documents, Details). | `gate-02b/GATE_02B_UI_SPEC.md` §4.3 | APPROVED |
+| ADR-021 | 3-tier duplicate detection (Strong: URL/ReqID; Probable: Co+Role; Possible: Co only) rendered as non-blocking alerts with explicit override ("Save anyway"). API check failures show honest error states, never false negatives. | `gate-02b/GATE_02B_UI_SPEC.md` §4.4 | APPROVED |
+| ADR-022 | Interview model decoupling: Scheduling an interview does not mutate application stage automatically. Checklist replaced with `preparation_notes` and `questions_expected`. Outcome recording prompts for thank-you note and next action. | `gate-02b/GATE_02B_UI_SPEC.md` §7 | APPROVED |
+| ADR-023 | Unified Tasks & Follow-ups queue: Consolidates next actions, follow-ups, reminders, and stand-alone tasks into one workbench with recurrence engine (Daily, Weekdays, Weekly, Monthly) and smart date chips. | `gate-02b/GATE_02B_UI_SPEC.md` §6 | APPROVED |
+| ADR-024 | Browser extension popup 14-state machine: Token authentication, live canonical workflow sync from `/api/workflow`, structured extraction, duplicate prevention, and honest offline/error states. | `gate-02b/GATE_02B_UI_SPEC.md` §12 | APPROVED |
+| ADR-025 | Import wizard with visual column-mapping step (CR-G2B-03), header alias auto-matching, duplicate action controls, and downloadable `import_errors.csv` (CR-016). | `gate-02b/GATE_02B_UI_SPEC.md` §13.1 | APPROVED |
+| ADR-026 | Typed "DELETE" safety confirmation for permanent deletion of archived applications; routine deletion is soft-archive with 10-second undo toast. | `gate-02b/GATE_02B_UI_SPEC.md` §4.1, `INTERACTION_SPEC.md` §2.8 | APPROVED |
+| ADR-027 | Inactivity review trigger set to 31+ days (aligned with Long Waiting aging band). 15–30 days surfaces aging/stale indicator. Actionable review options: Keep Active, Mark Ghosted, Archive. Zero automatic state mutations. | `gate-02b/GATE_02B_UI_SPEC.md` §4.5, `INTERACTION_SPEC.md` §2.4 | APPROVED |
+| ADR-028 | Offer declined represented as Outcome `WITHDRAWN` with structured closure reason `OFFER_DECLINED` (UI displays "Offer declined"). Avoids top-level outcome proliferation; structured for Gate 03 schema design. | `gate-02b/GATE_02B_UI_SPEC.md` §4.1, `FORM_SPEC.md` §3.3 | APPROVED |
+| ADR-029 | Applications preview pane defaults to OPEN on viewports ≥ 1680px. Explicit visible toggle and close controls; user open/closed preference persisted. Prohibits global Space shortcut to prevent a11y conflicts. | `gate-02b/RESPONSIVE_MATRIX.md` §2, `ACCESSIBILITY_MATRIX.md` §3 | APPROVED |
+
+

@@ -27,3 +27,5 @@ signing_keys.json
 *.jwk
 *.pem
 *.key
+.vercel
+.env*

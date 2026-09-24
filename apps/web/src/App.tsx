@@ -1,40 +1,91 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, type PublicSession, type PublicUser } from './api';
 import { setAccessToken, supabase, SUPABASE_KEY, SUPABASE_URL } from './supabase';
-
-/*
- * M1B ENGINEERING HARNESS (Auth Option B), not product UI (Direction D ships in later milestones).
- * Exercises: register, login, session refresh/logout, password change, recovery,
- * direct Data API CRUD under RLS with the Node-minted access token, canonical workflow
- * (Data API + Node), and a browser self-check for credential / identity exposure.
- */
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
+import { WorkspaceProvider } from './context/WorkspaceContext';
+import { ToastContainer } from './components/ui/Toast';
+import { AppShell } from './components/shell/AppShell';
+import { AuthView } from './views/AuthView';
+import { ApplicationsView, type ApplicationRecord, type WorkflowDef } from './views/ApplicationsView';
+import { DesignSystemShowcase } from './views/DesignSystemShowcase';
+import { PlaceholderView } from './views/PlaceholderView';
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Users,
+  Calendar,
+  Video,
+  Flame,
+  BookOpen,
+  FileText,
+  BarChart3,
+  UserPlus,
+  Settings,
+  AlertCircle,
+} from 'lucide-react';
+import './styles/globals.css';
 
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('jobquest-auth') : null;
 
 interface Workspace { id: string; name: string; workspace_type: string }
 interface Membership { workspace_id: string; role: string; workspaces: Workspace | null }
-interface Application { id: string; company_name: string; role_title: string; stage: string; status: string; user_id: string; archived_at: string | null }
-interface WorkflowDef { stages: { id: string; label: string }[]; outcomes: { id: string; label: string }[] }
 
 declare global {
   interface Window { __jqState?: unknown }
 }
 
 export function App() {
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <AppContent />
+        <ToastContainer />
+      </ToastProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [session, setSession] = useState<PublicSession | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [activeWs, setActiveWs] = useState<string | null>(null);
-  const [apps, setApps] = useState<Application[]>([]);
+  const [apps, setApps] = useState<ApplicationRecord[]>([]);
   const [wfDirect, setWfDirect] = useState<WorkflowDef | null>(null);
   const [wfNode, setWfNode] = useState<WorkflowDef | null>(null);
   const [leak, setLeak] = useState<Record<string, boolean> | null>(null);
   const [probe, setProbe] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace(/^#/, '');
+      return hash || window.location.pathname || '/';
+    }
+    return '/';
+  });
+
   const refreshTimer = useRef<number | undefined>(undefined);
 
   const note = (m: string) => setLog((l) => [`${new Date().toLocaleTimeString()} ${m}`, ...l].slice(0, 40));
+
+  const navigate = useCallback((path: string) => {
+    setCurrentPath(path);
+    if (typeof window !== 'undefined') {
+      window.location.hash = `#${path}`;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash) setCurrentPath(hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const adopt = useCallback((s: PublicSession | null, u?: PublicUser | null) => {
     setSession(s);
@@ -48,8 +99,6 @@ export function App() {
   }, []);
 
   const refresh = useCallback(async () => {
-    // Refresh tokens are strictly single use (replay revokes the session), so tabs must
-    // never rotate concurrently: serialize through a cross-tab Web Lock.
     const run = () => api<{ session?: PublicSession }>('/auth/refresh', {});
     const r = navigator.locks ? await navigator.locks.request('jobquest-refresh', run) : await run();
     if (r.status === 200 && r.data.session) {
@@ -61,7 +110,7 @@ export function App() {
     return null;
   }, [adopt]);
 
-  // Restore on load from the HttpOnly refresh cookie; follow other tabs.
+  // Restore on load from HttpOnly refresh cookie; follow other tabs.
   useEffect(() => {
     void (async () => {
       const s = await refresh();
@@ -86,7 +135,6 @@ export function App() {
   const loadData = useCallback(async (ws?: string | null) => {
     const m = await supabase.from('workspace_members').select('workspace_id, role, workspaces(id, name, workspace_type)');
     if (m.error) return note(`workspaces: ${m.error.message}`);
-    // RLS returns every membership row in workspaces I belong to; keep mine for the switcher.
     const mine = (m.data as unknown as Membership[]).filter((x, i, arr) => arr.findIndex((y) => y.workspace_id === x.workspace_id) === i);
     setMemberships(mine);
     const target = ws ?? activeWs ?? user?.active_workspace_id ?? mine[0]?.workspace_id ?? null;
@@ -94,7 +142,7 @@ export function App() {
     if (target) {
       const a = await supabase.from('applications').select('id, company_name, role_title, stage, status, user_id, archived_at').eq('workspace_id', target).order('created_at');
       if (a.error) note(`applications: ${a.error.message}`);
-      else setApps(a.data as Application[]);
+      else setApps(a.data as ApplicationRecord[]);
     }
   }, [activeWs, user]);
 
@@ -102,11 +150,16 @@ export function App() {
 
   async function onRegister(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setAuthError(null);
     const f = new FormData(e.currentTarget);
     const r = await api<{ user: PublicUser; session: PublicSession; recovery_codes: string[]; error?: { message: string } }>('/auth/register', {
       username: f.get('username'), password: f.get('password'), email: f.get('email') || '', phone: f.get('phone') || '',
     });
-    if (r.status !== 201) return note(`register ${r.status}: ${r.data.error?.message ?? ''}`);
+    if (r.status !== 201) {
+      const msg = r.data.error?.message ?? `Register failed with code ${r.status}`;
+      setAuthError(msg);
+      return note(`register ${r.status}: ${msg}`);
+    }
     setCodes(r.data.recovery_codes);
     adopt(r.data.session, r.data.user);
     bc?.postMessage('login');
@@ -115,9 +168,14 @@ export function App() {
 
   async function onLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setAuthError(null);
     const f = new FormData(e.currentTarget);
     const r = await api<{ user: PublicUser; session: PublicSession; error?: { message: string } }>('/auth/login', { username: f.get('username'), password: f.get('password') });
-    if (r.status !== 200) return note(`login ${r.status}: ${r.data.error?.message ?? ''}`);
+    if (r.status !== 200) {
+      const msg = r.data.error?.message ?? `Sign in failed with code ${r.status}`;
+      setAuthError(msg);
+      return note(`login ${r.status}: ${msg}`);
+    }
     adopt(r.data.session, r.data.user);
     bc?.postMessage('login');
     note(`signed in as ${r.data.user.username}`);
@@ -140,11 +198,16 @@ export function App() {
 
   async function onRecover(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setAuthError(null);
     const f = new FormData(e.currentTarget);
     const r = await api<{ session?: PublicSession; remaining_codes?: number; error?: { message: string } }>('/auth/recover', {
       username: f.get('username'), code: f.get('code'), new_password: f.get('password'),
     });
-    if (r.status !== 200) return note(`recover ${r.status}: ${r.data.error?.message ?? ''}`);
+    if (r.status !== 200) {
+      const msg = r.data.error?.message ?? `Recover failed with code ${r.status}`;
+      setAuthError(msg);
+      return note(`recover ${r.status}: ${msg}`);
+    }
     adopt(r.data.session ?? null);
     note(`recovered; ${r.data.remaining_codes} codes left; all other sessions revoked`);
   }
@@ -159,11 +222,12 @@ export function App() {
 
   async function onCreateApp(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!activeWs || !user) return;
+    const wsId = activeWs || user?.active_workspace_id || memberships[0]?.workspace_id;
+    if (!wsId || !user) return;
     const form = e.currentTarget;
     const f = new FormData(form);
     const r = await supabase.from('applications').insert({
-      workspace_id: activeWs, user_id: user.id, company_name: f.get('company'), role_title: f.get('role'), stage: f.get('stage'),
+      workspace_id: wsId, user_id: user.id, company_name: f.get('company'), role_title: f.get('role'), stage: f.get('stage'),
     }).select('id').single();
     note(r.error ? `insert failed: ${r.error.message}` : `inserted application ${r.data.id} via direct PostgREST`);
     form.reset();
@@ -182,12 +246,6 @@ export function App() {
     await loadData();
   }
 
-  async function onCreateWorkspace() {
-    const r = await supabase.rpc('rpc_create_workspace', { p_name: `Team ${Math.floor(Math.random() * 1000)}` });
-    note(r.error ? `create workspace failed: ${r.error.message}` : 'shared workspace created (RPC); you are MANAGER');
-    await loadData(r.data as string);
-  }
-
   async function loadWorkflow() {
     const d = await supabase.from('workflow_definitions').select('stages, outcomes').is('workspace_id', null).maybeSingle();
     setWfDirect(d.data as WorkflowDef | null);
@@ -198,7 +256,7 @@ export function App() {
 
   async function leakCheck() {
     const payload = session ? JSON.parse(atob(session.access_token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown> : {};
-    const probe = session
+    const probeRes = session
       ? await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}` } })
           .then(async (r) => ({ status: r.status, text: await r.text() }))
       : { status: 0, text: '' };
@@ -210,113 +268,284 @@ export function App() {
       accessTokenInWebStorage: storage.includes('eyJ'),
       credentialMaterialInPage: html.includes('$argon2id$') || html.includes('jqr_'),
       identityClaimsInJwt: ['email', 'phone', 'username', 'user_metadata', 'app_metadata'].some((k) => k in payload),
-      supabaseAuthUserEndpointRevealsIdentity: probe.status === 200 || probe.text.includes('@') || probe.text.includes(name),
+      supabaseAuthUserEndpointRevealsIdentity: probeRes.status === 200 || probeRes.text.includes('@') || probeRes.text.includes(name),
     };
-    setLeak(result); // booleans only; never render values
-    setProbe(`${probe.status}`);
+    setLeak(result);
+    setProbe(`${probeRes.status}`);
   }
 
-  const panel: CSSProperties = { border: '1px solid #c7ced9', borderRadius: 8, padding: 12, marginBottom: 12 };
+  // If unauthenticated: allow direct access to Design System Showcase for visual regression / dev
+  if (!session) {
+    if (currentPath === '/design-system') {
+      return (
+        <WorkspaceProvider>
+          <AppShell
+            currentPath={currentPath}
+            onNavigate={navigate}
+            user={{ id: 'dev-user', username: 'alex_chen', display_name: 'Alex Chen', active_workspace_id: 'ws-demo' }}
+            session={{ access_token: 'dev-token', token_type: 'bearer', expires_at: Math.floor(Date.now() / 1000) + 3600 }}
+            onRefreshSession={async () => {}}
+            onLogout={async () => { navigate('/'); }}
+            applicationsCount={5}
+            pageTitle="Design System"
+          >
+            <DesignSystemShowcase />
+          </AppShell>
+        </WorkspaceProvider>
+      );
+    }
+
+    return (
+      <AuthView
+        onRegister={onRegister}
+        onLogin={onLogin}
+        onRecover={onRecover}
+        authError={authError}
+      />
+    );
+  }
+
+  // Route title resolver
+  const getPageTitle = (path: string): string => {
+    switch (path) {
+      case '/':
+      case '/applications':
+        return 'Applications';
+      case '/dashboard':
+        return 'Dashboard';
+      case '/tasks':
+        return 'Tasks & Follow-ups';
+      case '/contacts':
+        return 'Contacts';
+      case '/calendar':
+        return 'Calendar';
+      case '/interviews':
+        return 'Interviews';
+      case '/habits':
+        return 'Habits';
+      case '/journal':
+        return 'Journal';
+      case '/resumes':
+        return 'Resumes';
+      case '/analytics':
+        return 'Analytics';
+      case '/workspace':
+      case '/workspace/members':
+        return 'Workspace Members';
+      case '/workspace/imports':
+        return 'Import & Export';
+      case '/workspace/workflow':
+        return 'Workflow';
+      case '/workspace/audit':
+        return 'Audit History';
+      case '/settings':
+        return 'Settings';
+      case '/design-system':
+        return 'Design System';
+      default:
+        return 'JobQuest 2.0';
+    }
+  };
+
+  // Render active view
+  const renderRouteView = () => {
+    if (currentPath === '/' || currentPath === '/applications') {
+      return (
+        <ApplicationsView
+          user={user}
+          session={session}
+          apps={apps}
+          wfDirect={wfDirect}
+          wfNode={wfNode}
+          recoveryCodes={codes}
+          leakResults={leak}
+          probeStatus={probe}
+          log={log}
+          onRefresh={refresh}
+          onLogout={onLogout}
+          onCreateApp={onCreateApp}
+          onStageChange={onStage}
+          onArchive={onArchive}
+          onLoadWorkflow={loadWorkflow}
+          onPasswordChange={onPassword}
+          onRegenerateCodes={onRegenerate}
+          onLeakCheck={leakCheck}
+          onDismissCodes={() => setCodes(null)}
+        />
+      );
+    }
+
+    if (currentPath === '/design-system') {
+      return <DesignSystemShowcase />;
+    }
+
+    if (currentPath === '/dashboard') {
+      return (
+        <PlaceholderView
+          title="Dashboard"
+          subtitle="Overview of active applications, upcoming interviews, and daily follow-up queues"
+          icon={<LayoutDashboard size={24} />}
+          milestoneOwner="Milestone 4"
+        />
+      );
+    }
+
+    if (currentPath === '/tasks') {
+      return (
+        <PlaceholderView
+          title="Tasks & Follow-ups"
+          subtitle="Next-action engine, reminder queue, and overdue application alerts"
+          icon={<CheckSquare size={24} />}
+          milestoneOwner="Milestone 6"
+        />
+      );
+    }
+
+    if (currentPath === '/contacts') {
+      return (
+        <PlaceholderView
+          title="Contacts & Networking"
+          subtitle="Recruiters, hiring managers, and referral tracking"
+          icon={<Users size={24} />}
+          milestoneOwner="Milestone 5"
+        />
+      );
+    }
+
+    if (currentPath === '/calendar') {
+      return (
+        <PlaceholderView
+          title="Interview Calendar"
+          subtitle="Schedule of recruiter screenings, technical assessments, and panel loops"
+          icon={<Calendar size={24} />}
+          milestoneOwner="Milestone 7"
+        />
+      );
+    }
+
+    if (currentPath === '/interviews') {
+      return (
+        <PlaceholderView
+          title="Interviews & Debriefs"
+          subtitle="Preparation questions, round notes, and outcome tracking"
+          icon={<Video size={24} />}
+          milestoneOwner="Milestone 7"
+        />
+      );
+    }
+
+    if (currentPath === '/habits') {
+      return (
+        <PlaceholderView
+          title="Daily Habits"
+          subtitle="Goal habits, daily outreach volume, and career development streaks"
+          icon={<Flame size={24} />}
+          milestoneOwner="Milestone 8"
+        />
+      );
+    }
+
+    if (currentPath === '/journal') {
+      return (
+        <PlaceholderView
+          title="Job Search Journal"
+          subtitle="Personal reflections, career milestones, and search logs"
+          icon={<BookOpen size={24} />}
+          milestoneOwner="Milestone 8"
+        />
+      );
+    }
+
+    if (currentPath === '/resumes') {
+      return (
+        <PlaceholderView
+          title="Resumes & Goals"
+          subtitle="Target resume variants, portfolio links, and compensation criteria"
+          icon={<FileText size={24} />}
+          milestoneOwner="Milestone 8"
+        />
+      );
+    }
+
+    if (currentPath === '/analytics') {
+      return (
+        <PlaceholderView
+          title="Search Analytics"
+          subtitle="Stage funnel conversion rates, latency to interview, and response distributions"
+          icon={<BarChart3 size={24} />}
+          milestoneOwner="Milestone 9"
+        />
+      );
+    }
+
+    if (currentPath.startsWith('/workspace')) {
+      return (
+        <PlaceholderView
+          title={getPageTitle(currentPath)}
+          subtitle="Team workspace management, CSV/JSON data operations, and stage configuration"
+          icon={<UserPlus size={24} />}
+          milestoneOwner="Milestone 4"
+        />
+      );
+    }
+
+    if (currentPath === '/settings') {
+      return (
+        <PlaceholderView
+          title="Settings"
+          subtitle="User profile, credentials, notifications, and telemetry preferences"
+          icon={<Settings size={24} />}
+          milestoneOwner="Milestone 4"
+        />
+      );
+    }
+
+    return (
+      <PlaceholderView
+        title="404 — Page Not Found"
+        subtitle="The requested view does not exist in JobQuest 2.0"
+        icon={<AlertCircle size={24} />}
+        actionText="Return to Applications"
+        onAction={() => navigate('/applications')}
+      />
+    );
+  };
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1100, margin: '0 auto', padding: 16, fontSize: 14 }}>
-      <h1 style={{ fontSize: 20 }}>JobQuest 2.0 · M1B architecture harness (Auth Option B)</h1>
-      <p style={{ color: '#5f6b7e' }}>Engineering test surface only. Not product UI.</p>
-
-      {!session ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-          <form style={panel} onSubmit={onRegister} aria-label="Register">
-            <h2 style={{ fontSize: 16 }}>Register</h2>
-            <label>Username (required) <input name="username" required autoComplete="username" /></label><br />
-            <label>Password (required) <input name="password" type="password" required autoComplete="new-password" /></label><br />
-            <label>Email (optional) <input name="email" type="email" /></label><br />
-            <label>Phone (optional) <input name="phone" /></label><br />
-            <button>Create account</button>
-          </form>
-          <form style={panel} onSubmit={onLogin} aria-label="Sign in">
-            <h2 style={{ fontSize: 16 }}>Sign in</h2>
-            <label>Username <input name="username" required autoComplete="username" /></label><br />
-            <label>Password <input name="password" type="password" required autoComplete="current-password" /></label><br />
-            <button>Sign in</button>
-          </form>
-          <form style={panel} onSubmit={onRecover} aria-label="Recover account">
-            <h2 style={{ fontSize: 16 }}>Recover with a code</h2>
-            <label>Username <input name="username" required /></label><br />
-            <label>Recovery code <input name="code" required /></label><br />
-            <label>New password <input name="password" type="password" required autoComplete="new-password" /></label><br />
-            <button>Reset password</button>
-          </form>
-        </div>
-      ) : (
-        <>
-          <section style={panel} aria-label="Session">
-            <b>{user?.username}</b> · session expires {session.expires_at ? new Date(session.expires_at * 1000).toLocaleTimeString() : '?'}
-            {' '}<button onClick={() => void refresh()}>Refresh now</button>
-            {' '}<button onClick={() => void onLogout('local')}>Sign out</button>
-            {' '}<button onClick={() => void onLogout('global')}>Sign out everywhere</button>
-          </section>
-          <section style={panel} aria-label="Workspaces">
-            <h2 style={{ fontSize: 16 }}>Workspaces (direct PostgREST)</h2>
-            <select value={activeWs ?? ''} onChange={(e) => void loadData(e.target.value)} aria-label="Active workspace">
-              {memberships.map((m) => <option key={m.workspace_id} value={m.workspace_id}>{m.workspaces?.name} · {m.role}</option>)}
-            </select>{' '}
-            <button onClick={() => void onCreateWorkspace()}>Create shared workspace (RPC)</button>
-          </section>
-          <section style={panel} aria-label="Applications">
-            <h2 style={{ fontSize: 16 }}>Applications in active workspace ({apps.length})</h2>
-            <form onSubmit={onCreateApp}>
-              <input name="company" placeholder="Company" required aria-label="Company" />{' '}
-              <input name="role" placeholder="Role" required aria-label="Role" />{' '}
-              <select name="stage" aria-label="Stage" defaultValue="APPLIED">
-                {(wfDirect?.stages ?? [{ id: 'APPLIED', label: 'Applied' }]).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>{' '}
-              <button>Insert (direct PostgREST)</button>
-            </form>
-            <ul>
-              {apps.map((a) => (
-                <li key={a.id}>
-                  {a.company_name} · {a.role_title} · {a.stage} {a.archived_at ? '· archived' : ''}{' '}
-                  <button onClick={() => void onStage(a.id, 'INTERVIEW')}>→ Interview</button>{' '}
-                  <button onClick={() => void onArchive(a.id)}>Archive</button>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section style={panel} aria-label="Workflow">
-            <h2 style={{ fontSize: 16 }}>Canonical workflow</h2>
-            <button onClick={() => void loadWorkflow()}>Load (PostgREST + Node)</button>
-            <div>PostgREST: {wfDirect?.stages.map((s) => s.label).join(' → ')} | outcomes: {wfDirect?.outcomes.map((o) => o.label).join(', ')}</div>
-            <div>Node API: {wfNode?.stages.map((s) => s.label).join(' → ')}</div>
-          </section>
-          <section style={panel} aria-label="Account security">
-            <form onSubmit={onPassword} style={{ display: 'inline-block', marginRight: 24 }}>
-              <b>Change password</b><br />
-              <input name="current" type="password" placeholder="Current" required aria-label="Current password" autoComplete="current-password" />{' '}
-              <input name="next" type="password" placeholder="New" required aria-label="New password" autoComplete="new-password" />{' '}
-              <button>Change</button>
-            </form>
-            <form onSubmit={onRegenerate} style={{ display: 'inline-block' }}>
-              <b>Regenerate recovery codes</b><br />
-              <input name="password" type="password" placeholder="Password" required aria-label="Password to regenerate codes" />{' '}
-              <button>Regenerate</button>
-            </form>
-          </section>
-          <section style={panel} aria-label="Leak self-check">
-            <h2 style={{ fontSize: 16 }}>B03 exposure self-check</h2>
-            <button onClick={() => void leakCheck()}>Scan for exposed identity or credentials</button>
-            {leak && <ul>{Object.entries(leak).map(([k, v]) => <li key={k} data-leak={k} data-found={String(v)}>{k}: {v ? 'FOUND (exposure)' : 'clean'}</li>)}</ul>}
-            {probe && <div data-testid="auth-user-probe-status">Supabase /auth/v1/user with my token → HTTP {probe}</div>}
-          </section>
-        </>
-      )}
-
-      {codes && (
-        <section style={{ ...panel, borderColor: '#9a5b08' }} aria-label="Recovery codes">
-          <b>Recovery codes: shown once. Save them now.</b>
-          <ol data-testid="recovery-codes">{codes.map((c) => <li key={c}><code>{c}</code></li>)}</ol>
-          <button onClick={() => setCodes(null)}>I saved them</button>
-        </section>
-      )}
-      <section style={panel} aria-label="Log"><b>Log</b><ul>{log.map((l, i) => <li key={i}>{l}</li>)}</ul></section>
-    </main>
+    <WorkspaceProvider userActiveWorkspaceId={user?.active_workspace_id}>
+      <AppShell
+        currentPath={currentPath}
+        onNavigate={navigate}
+        user={user}
+        session={session}
+        onRefreshSession={refresh}
+        onLogout={onLogout}
+        applicationsCount={apps.length}
+        pageTitle={getPageTitle(currentPath)}
+        previewPane={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Application Preview</h3>
+            <p className="muted small" style={{ margin: 0 }}>
+              Persistent Wide-Desktop Preview Rail (≥1680px viewport).
+            </p>
+            {apps[0] ? (
+              <div className="card" style={{ padding: '14px' }}>
+                <div style={{ fontWeight: 600, fontSize: '14px' }}>{apps[0].company_name}</div>
+                <div className="muted small">{apps[0].role_title}</div>
+                <div style={{ marginTop: '8px' }}>
+                  <span className="pill accent">{apps[0].stage}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="empty">
+                <span className="muted small">Select an application to preview details</span>
+              </div>
+            )}
+          </div>
+        }
+      >
+        {renderRouteView()}
+      </AppShell>
+    </WorkspaceProvider>
   );
 }

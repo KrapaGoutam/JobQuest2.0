@@ -140,3 +140,29 @@ pre-approved — creating an entry documents an idea, it does not authorize it (
   handling) that doesn't exist in the current test suite at all.
 - **Status**: PROPOSED — explicitly gated on the product owner's answer to
   OQ-006 before this can move to APPROVED.
+
+---
+
+# Gate 01 Change Requests (added 2026-09-23)
+
+The requirement source for CR-007…CR-013 is the **Gate 01 prompt** (the user).
+The designs are **PROPOSED** until Gate 01 is approved. Details:
+[`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md).
+
+**CR-001 update:** superseded by CR-007. The real "change PIN" form becomes a
+password change + recovery codes (Account › Security). Status: PROPOSED
+(resolved by requirement).
+
+| CR | Change | Source | Affected | Proposal § | Status |
+|---|---|---|---|---|---|
+| CR-007 | Replace PIN auth with username + password (email/phone optional), recovery codes, claim flow for legacy users | Gate 01 prompt | FEATURE-AUTH-001, SET-001; `users`, `sessions` | §5 | PROPOSED |
+| CR-008 | Multi-workspace model with workspace-scoped USER/MANAGER roles (replaces the global manager) | Gate 01 prompt | FEATURE-MGR-001; every table | §6, §7 | PROPOSED |
+| CR-009 | Split Stage / Status / Action; canonical workflow package; the extension fetches it live | Gate 01 prompt | FEATURE-APP-001/002, EXT-004 | §9 | PROPOSED |
+| CR-010 | Append-only application event history + timeline; last-activity tracking | Gate 01 prompt | `activities`, `timeline_events`, `stage_history` | §8.2 | PROPOSED |
+| CR-011 | Immutable job-posting snapshots (description, requirements, skills, compensation, IDs) | Gate 01 prompt | FEATURE-EXT-002, APP-001 | §8.3 | PROPOSED |
+| CR-012 | Extension tokens become workspace-bound, scoped, expiring, peppered-hash, rotatable; duplicate levels strong/probable/possible with existing-record details; `external_job_id` as a strong signal | Gate 01 prompt | FEATURE-EXT-001/003 | §12 | PROPOSED |
+| CR-013 | Light + dark + system theme on semantic tokens; WCAG 2.2 AA in both themes | Gate 01 prompt | All UI | §13.5 | PROPOSED |
+| CR-014 | Analytics interview/offer counts use "ever reached" from history instead of current stage (fixes finding F-2) | Gate 01 analysis | FEATURE-ANALYTICS-001, DASH-001, RES-001 | §0, §20 | PROPOSED: needs approval (D-15) |
+| CR-015 | Honour `week_start` everywhere + per-user timezone | Gate 01 analysis (OQ-005) | Calendar, goals, habits | §20 | PROPOSED |
+| CR-016 | Import error-report CSV + cursor pagination for tasks/notes | Gate 01 analysis | FEATURE-IMPEXP-001, TASK-001, NOTE-001 | §20 | PROPOSED |
+| CR-017 | Global search across applications, contacts, notes, tasks (Postgres FTS + trigram) | Gate 01 prompt ("Global Search") | New | §23 M13 | PROPOSED |

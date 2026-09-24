@@ -229,3 +229,12 @@ Supabase's native observability tooling before adding any third-party APM.
   behavior.
 - **NFR-005**: No secret value is ever logged, screenshotted, or committed —
   carry forward the existing CI secret-scanning gate.
+
+## 22. Gate 01 Target Architecture (PROPOSED, 2026-09-23)
+
+§3 (Target Architecture), §4 (Frontend) and §5 (Backend) above are the
+pre-Gate-01 baseline. The Gate 01 proposal refines them. It resolves OQ-007
+(hybrid boundary), chooses concrete libraries, and adds workspaces, the
+username/password façade, the canonical workflow package and the event model.
+See [`../GATE_01_ARCHITECTURE_PROPOSAL.md`](../GATE_01_ARCHITECTURE_PROPOSAL.md)
+§1–§18. None of it is approved yet.

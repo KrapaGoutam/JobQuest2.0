@@ -156,3 +156,26 @@ codebase).
 ### Consequences
 None negative identified — this is a strict improvement with no migration risk,
 provided it's a deliberate decision rather than an accidental copy-paste.
+
+---
+
+# Gate 01 Architecture Decisions (added 2026-09-23)
+
+All entries below are **Status: Proposed**. Full rationale, alternatives and
+consequences: [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md).
+Where these conflict with ADR-001…006 above, these are the newer proposals.
+
+| ADR | Decision | Proposal § | Decision ID |
+|---|---|---|---|
+| ADR-007 | Hybrid architecture: direct Supabase (RLS) for simple CRUD, Postgres RPC for transactional/aggregate operations, Node API (Hono on Vercel Functions, same origin) for auth, extension, import/export, membership, and secrets | §4 | D-01, D-03 |
+| ADR-008 | Username + password auth: Supabase Auth as the credential/session engine behind a Node username façade (internal alias identity, HttpOnly refresh cookie, in-memory access JWT). Fallback: custom Node auth + Node-only data gateway. PIN retired. | §5 | D-02 |
+| ADR-009 | Recovery without mandatory email/phone: single-use recovery codes. No manager-initiated password resets. | §5.8 | D-27 |
+| ADR-010 | Workspaces from day one. Every business row carries `workspace_id` + `owner_id`. USER = own records; MANAGER = whole workspace (audited). Personal workspace auto-created on registration. | §6, §7 | D-06, D-19 |
+| ADR-011 | Stage ≠ Status ≠ Action. One canonical `@jobquest/workflow` package, seeded to reference tables and served live to the extension. | §9 | D-09 |
+| ADR-012 | `application_events` (append-only) replaces `activities` + `timeline_events` + `stage_history`. Stage intervals become a view. | §8.2 | D-10 |
+| ADR-013 | Immutable `job_posting_snapshots`; owner-scoped `companies`; `documents` generalizes `resumes` | §8.3–8.4 | D-11, D-12, D-13 |
+| ADR-014 | Frontend: React + Vite SPA, TanStack Router/Query, React Hook Form + Zod, Tailwind v4 over semantic tokens, shadcn/ui, Lucide; no global store | §3 | D-04 |
+| ADR-015 | Extension: incremental migration (keep extractors/fixtures; new `/api/ext/v1`, scoped expiring peppered-hash workspace-bound tokens) | §12 | OQ-008 |
+| ADR-016 | UUID primary keys + `legacy_id` traceability columns | §10 | D-07 |
+| ADR-017 | Legacy data → one "JobQuest (migrated)" workspace; legacy accounts reclaimed via operator-issued claim codes; no PIN/password hash migrated | §5.12, §19 | D-17, D-18 |
+| ADR-018 | Analytics use "ever reached" from event history (fixes legacy current-stage counting, finding F-2). A legacy-compatible variant is kept only for migration verification. | §0, §20 | D-15 |

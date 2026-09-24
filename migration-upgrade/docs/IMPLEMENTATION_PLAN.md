@@ -1,5 +1,9 @@
 # Implementation Plan
 
+> **Gate 01 note (2026-09-23):** a revised, PROPOSED milestone roadmap (M1–M16) is in
+> [`../GATE_01_ARCHITECTURE_PROPOSAL.md`](../GATE_01_ARCHITECTURE_PROPOSAL.md) §23–§24.
+> This file stays as the pre-Gate-01 baseline. Nothing in either plan is approved.
+
 All milestones below have status **PROPOSED**. None are approved. The user
 approves each milestone individually, from the JobQuest2.0 repository, per
 `../APPROVAL_GATES.md` Gate 5 — approval of one milestone never implies approval

@@ -216,3 +216,33 @@ below are honestly marked as not measured.
 - Every `OPEN_QUESTIONS.md` item is resolved to an explicit decision before the
   milestone it blocks begins.
 - All 8 `APPROVAL_GATES.md` gates are passed in order before legacy retirement.
+
+## 13. Gate 01 Target Requirement Changes (PROPOSED, 2026-09-23)
+
+The Gate 01 prompt adds or changes these target requirements. Designs:
+[`../GATE_01_ARCHITECTURE_PROPOSAL.md`](../GATE_01_ARCHITECTURE_PROPOSAL.md).
+They override §10's "no team/multi-tenant administration beyond the existing
+single-manager model" exclusion for **workspaces only**.
+
+- **FR-014** Username + password login; email and phone optional; self-service
+  registration; PIN retired (CR-007).
+- **FR-015** Multiple independent workspaces. Registration creates a personal
+  workspace owned by the user as MANAGER. Users can create or join additional
+  workspaces (CR-008).
+- **FR-016** Roles USER / MANAGER, scoped per workspace. A manager of one
+  workspace never gains access to another (CR-008).
+- **FR-017** Current application state **and** a full event history; stage,
+  status and action are distinct concepts from one canonical workflow (CR-009,
+  CR-010).
+- **FR-018** Preserve job-posting snapshots at capture time (CR-011).
+- **FR-019** Duplicate detection warns (strong/probable/possible) and shows the
+  existing application (CR-012).
+- **FR-020** Next action, next-action date, priority, last activity, and days
+  since activity on active applications. The dashboard surfaces what needs
+  attention.
+- **FR-021** Archive-first deletion; hard delete is explicit and audited.
+- **FR-022** Light, dark and system themes with a persistent manual override;
+  WCAG 2.2 AA in both themes (CR-013).
+- **FR-023** Extension authentication is separate from the user's password:
+  scoped, revocable, expiring, hashed, auditable (CR-012).
+- **FR-024** Audit logging for sensitive and privileged actions.

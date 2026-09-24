@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>body{margin:0;background:#e9eaec;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#172033}a{color:#3157d5}a:hover{color:#2849b8}</style>
+</helmet>
+<div style="padding:40px 48px;display:flex;flex-direction:column;gap:28px">
+  <div style="max-width:1100px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:4px;background:#147a55;color:#fff">APPROVED</span><span style="font-size:13px;color:#5f6b7e">JobQuest 2.0 · Approved UI baseline (Direction D · JobQuest Hybrid)</span></div>
+    <h1 style="margin:10px 0 6px;font-size:28px;font-weight:600">JobQuest 2.0 approved mockups</h1>
+    <p style="margin:0;font-size:14px;line-height:1.55;color:#5f6b7e">These are the visual source of truth for implementation, not production code. The data is fictional, and "today" is Wed Sep 23, 2026. Frames are fixed at 1440×960 desktop, 1680×960 wide desktop, and 390×844 mobile.</p>
+  </div>
+  <sc-for list="{{ frames }}" as="f" hint-placeholder-count="13">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:baseline;gap:10px;font-size:13px"><b style="font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:2px 7px;border-radius:4px;background:#172033;color:#fff">{{ f.id }}</b><b style="font-weight:600">{{ f.title }}</b><span style="color:#5f6b7e">{{ f.meta }}</span></div>
+      <div id="{{ f.slug }}" data-screen-label="{{ f.id }} {{ f.title }}" style="width:{{ f.w }};height:{{ f.h }};overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:{{ f.r }};box-shadow:0 1px 3px rgba(0,0,0,.06)">
+        <dc-import name="Direction D" screen="{{ f.screen }}" theme="{{ f.theme }}" hint-size="{{ f.hint }}"></dc-import>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = [
+      ['D1', 'dashboard-desktop-light', 'Dashboard', 'dashboard', 'light', 'Desktop 1440 · Light'],
+      ['D2', 'dashboard-desktop-dark', 'Dashboard', 'dashboard', 'dark', 'Desktop 1440 · Dark'],
+      ['D3', 'applications-desktop-light', 'Applications (table, bulk selection)', 'applications', 'light', 'Desktop 1440 · Light'],
+      ['D4', 'applications-desktop-dark', 'Applications (table, bulk selection)', 'applications', 'dark', 'Desktop 1440 · Dark'],
+      ['D5', 'applications-preview-desktop', 'Applications + preview pane', 'preview', 'light', 'Wide desktop 1680 · Light'],
+      ['D6', 'applications-preview-desktop-dark', 'Applications + preview pane', 'preview', 'dark', 'Wide desktop 1680 · Dark'],
+      ['D7', 'application-detail-desktop-light', 'Application detail', 'detail', 'light', 'Desktop 1440 · Light'],
+      ['D8', 'application-detail-desktop-dark', 'Application detail', 'detail', 'dark', 'Desktop 1440 · Dark'],
+      ['D9', 'dashboard-mobile', 'Dashboard', 'm-dashboard', 'light', 'Mobile 390 · Light'],
+      ['D10', 'applications-mobile', 'Applications', 'm-applications', 'light', 'Mobile 390 · Light'],
+      ['D11', 'application-detail-mobile', 'Application detail', 'm-detail', 'dark', 'Mobile 390 · Dark'],
+      ['D12', 'workspace-switcher', 'Workspace switcher (open)', 'workspace', 'light', 'Desktop 1440 · Light'],
+      ['D13', 'manager-owner-filter', 'Manager context · Owner filter (open)', 'manager', 'light', 'Desktop 1440 · Light']
+    ];
+    const frames = L.map(([id, slug, title, screen, theme, meta]) => {
+      const mob = screen.startsWith('m-'), wide = screen === 'preview';
+      const w = mob ? 390 : wide ? 1680 : 1440, h = mob ? 844 : 960;
+      return { id, slug, title, screen, theme, meta, w: w + 'px', h: h + 'px', hint: w + 'px,' + h + 'px', r: mob ? '24px' : '8px' };
+    });
+    return { frames };
+  }
+}
+</script>
+</body>
+</html>

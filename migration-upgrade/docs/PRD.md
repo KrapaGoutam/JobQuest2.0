@@ -257,3 +257,16 @@ Based on the completed Gate 02B UI/UX design specifications (`../ui-design/gate-
 - **FR-028** Accessible keyboard parity for dragging: Any Kanban card move or drag-and-drop interaction must provide a 100% functional keyboard alternative (`M` key move menu) with visible focus indicators and polite live region announcements (CR-019).
 - **FR-029** Permanent deletion safeguards: Soft-archiving an application must support an immediate 10-second undo toast. Permanent (hard) deletion is restricted to already-archived records and strictly requires typing the confirmation keyword ("DELETE") (CR-021).
 
+## 15. Gate 03 Database, Auth & RLS Requirements (APPROVED WITH REQUIRED CORRECTIONS, 2026-09-24)
+
+Based on the completed and approved Gate 03 database, authentication, and security specifications (`../gate-03/`):
+
+- **FR-030** Emergency account recovery: System must generate 10 single-use cryptographically secure recovery codes upon account registration. Each code must have `>= 128 bits` of CSPRNG entropy before human-safe Crockford Base32 encoding. Stored as salted Argon2id hashes and immediately invalidated upon redemption to allow password reset without third-party email dependencies (ADR-038).
+- **FR-031** Legacy account claim & PIN retirement: Legacy accounts must be staged without credentials. System must support 30-day default single-use claim tokens (`jqc_live_...`) with operator reissue capability, enabling legacy users to establish a username and password; legacy PIN values/hashes are permanently eliminated and never reused (ADR-039).
+- **FR-032** Extension API token management: Browser extension must authenticate using dedicated, high-entropy tokens (`jqe_live_...`) bound to a single user and workspace. Users can view active devices/tokens and revoke them on demand in Settings (ADR-040).
+- **FR-033** Inactivity review queue & telemetry: Applications must maintain an atomic `last_activity_at` timestamp. Applications quiet for 15–30 days display aging indicators; applications quiet for 31+ days surface in the Long Waiting review queue. Users can execute an explicit "Keep Active" action to reset inactivity without changing stage (ADR-034, ADR-027).
+- **FR-034** Durable attribution on member removal: Removing a member from a workspace must immediately revoke workspace access while preserving all historical applications, notes, and activity attribution without cascading deletes or nullified user IDs (ADR-037).
+- **FR-035** Last manager safeguard: Workspaces must be protected against accidental abandonment. The database must prohibit removing or demoting the final active `MANAGER` in any workspace (ADR-036).
+- **FR-036** Legacy data migration tenant isolation: All historical legacy data must be migrated into a dedicated `"JobQuest (Migrated)"` system workspace to preserve multi-user links and shared history, while granting each user an independent personal workspace (ADR-041, OQ-012).
+- **FR-037** Canonical workflow retrieval: Canonical workflow definitions (stages, states, outcomes, closure reasons) must be stored in and served from `workflow_definitions` to ensure web, extension, and mobile clients share identical state semantics.
+

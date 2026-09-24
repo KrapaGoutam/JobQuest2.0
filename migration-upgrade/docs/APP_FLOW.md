@@ -322,3 +322,36 @@ flowchart TD
     I --> J[Summary Screen E6 + Download import_errors.csv]
 ```
 
+### Journey 17 — Inactivity Review & Keep Active Lifecycle (Gate 03)
+
+```mermaid
+flowchart TD
+    A[Dashboard / Applications List] --> B{Aging Check: last_activity_at}
+    B -->|15-30 days| C[Surface Aging / Stale Visual Indicator]
+    B -->|31+ days| D[Surface in Long Waiting Review Queue]
+    D --> E{User Decision}
+    E -->|Keep Active| F[Execute rpc_keep_application_active]
+    F --> G[last_activity_at = NOW + Emit KEEP_ACTIVE event]
+    G --> H[Removed from Review Queue]
+    E -->|Mark Ghosted| I[Execute rpc_set_application_outcome GHOSTED]
+    I --> J[state = CLOSED + Emit OUTCOME_CHANGED event]
+    E -->|Archive| K[Execute rpc_archive_application]
+    K --> L[archived_at = NOW + Emit ARCHIVED event]
+```
+
+### Journey 18 — Legacy Account Claim & PIN Retirement (Gate 03)
+
+```mermaid
+flowchart TD
+    A[User Opens Claim Link /claim-account?token=...] --> B[Validate 30-day Token Hash against legacy_claim_codes]
+    B -->|Expired >30d or Claimed| C[Show Claim Error Screen + Operator Reissue Notice]
+    B -->|Valid Token| D[Render Modern Registration Form]
+    D --> E[User Enters Username + Strong Password]
+    E --> F[Note: Legacy PIN is NEVER used or migrated]
+    F --> G[Provision Supabase Auth Identity]
+    G --> H[Issue 10 Single-Use Recovery Codes >=128-bit entropy]
+    H --> I[Mark Claim Code as Claimed]
+    I --> J[Redirect to Dashboard with Migrated Applications in JobQuest Migrated Workspace]
+```
+
+

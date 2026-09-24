@@ -87,3 +87,18 @@ that change:
 | Browser extension "repoint" | **Incremental migration**: keep extractors/fixtures; replace the API client, auth, workflow and duplicate integration. |
 | Render → Vercel + Supabase | Single Vercel project, same origin: SPA + Node API (Hono) as Vercel Functions at `/api`. |
 | Keep: 13-stage enum | Kept as vocabulary, **split** into 8 stages + statuses (Rejected/Withdrawn/Ghosted/Position Closed/Accepted become statuses). The mapping is total and reported. |
+
+## Gate 03 revisions (APPROVED WITH REQUIRED CORRECTIONS, 2026-09-24)
+
+Comprehensive Gate 03 database, authentication, and migration designs are codified across `migration-upgrade/gate-03/`.
+
+1. **Full 33-Table Legacy Mapping:** See [`gate-03/LEGACY_TABLE_MAPPING.md`](gate-03/LEGACY_TABLE_MAPPING.md) for the exhaustive classification of all 33 tables:
+   - **16 Keep / Modify:** Core entities adapted to target schema with `workspace_id` tenancy and UUIDv4 (`gen_random_uuid()`) primary keys.
+   - **2 Split:** `users` (split into `user_accounts` + `profiles` + `workspaces`) and `applications` (split into `applications` + `job_snapshots`).
+   - **11 Merge:** Redundant goal, task, tag, preference, and resume history tables consolidated into unified target entities.
+   - **4 Replace / Retire:** Legacy sessions, rejections table, reminder categories, and UI preference tables replaced by native Supabase/schema constructs; legacy PIN hashes permanently eliminated.
+2. **Definitive 13-Stage Decomposition:** Full deterministic state transformation specified in [`gate-03/DATA_MIGRATION_DESIGN.md`](gate-03/DATA_MIGRATION_DESIGN.md) §3, verified against legacy source code (`Saved` through `Accepted`). `Position Closed` maps to `POSITION_CLOSED`; modern candidate offer declined maps to `WITHDRAWN` + `OFFER_DECLINED`.
+3. **Dedicated Migration Workspace:** OQ-012 resolved with target workspace `"JobQuest (Migrated)"` (`gate-03/DATA_MIGRATION_DESIGN.md` §2, ADR-041).
+4. **Target Schema Catalog:** Complete 25 permanent target tables + 2 migration tracking tables (**27 total tables**) detailed in [`gate-03/TARGET_SCHEMA.md`](gate-03/TARGET_SCHEMA.md).
+5. **M1 Foundational Baseline:** Focused 7-table baseline (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`) detailed in [`gate-03/M1_SPIKE_PLAN.md`](gate-03/M1_SPIKE_PLAN.md).
+

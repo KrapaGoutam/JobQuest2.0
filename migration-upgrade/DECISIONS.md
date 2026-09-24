@@ -200,4 +200,24 @@ All entries below are **Status: APPROVED** following formal Gate 02B review and 
 | ADR-028 | Offer declined represented as Outcome `WITHDRAWN` with structured closure reason `OFFER_DECLINED` (UI displays "Offer declined"). Avoids top-level outcome proliferation; structured for Gate 03 schema design. | `gate-02b/GATE_02B_UI_SPEC.md` §4.1, `FORM_SPEC.md` §3.3 | APPROVED |
 | ADR-029 | Applications preview pane defaults to OPEN on viewports ≥ 1680px. Explicit visible toggle and close controls; user open/closed preference persisted. Prohibits global Space shortcut to prevent a11y conflicts. | `gate-02b/RESPONSIVE_MATRIX.md` §2, `ACCESSIBILITY_MATRIX.md` §3 | APPROVED |
 
+---
 
+# Gate 03 Database, Auth & RLS Decisions (added 2026-09-24, APPROVED WITH REQUIRED CORRECTIONS)
+
+All entries below are **Status: APPROVED WITH REQUIRED CORRECTIONS** following formal Gate 03 architectural review. They establish the target PostgreSQL schema (25 permanent tables + 2 migration tables), hybrid Supabase/Node architecture, and RLS security model across `migration-upgrade/gate-03/`.
+
+| ADR | Decision | Design Document Reference | Status |
+|---|---|---|---|
+| ADR-030 | Authentication Architecture: Option A Layered Supabase Auth (Provisional subject to M1 Spike). Username + password required, email/phone optional, PIN retired. Hard-fail on any synthetic identity leak to browser; triggers Option B architectural fallback. | `gate-03/AUTHENTICATION_DESIGN.md` §2–3 | APPROVED WITH CONDITION |
+| ADR-031 | Primary Key Strategy: UUIDv4 (`gen_random_uuid()`) across all 25 permanent target tables with selective `legacy_id INTEGER` retention and centralized `migration_id_mappings`. Previous UUIDv7 proposal marked SUPERSEDED. | `gate-03/TARGET_SCHEMA.md` §2 | APPROVED (DECISION CHANGED) |
+| ADR-032 | Cross-Workspace Integrity: Engine-level composite foreign keys `(parent_id, workspace_id)` referencing compound unique `(id, workspace_id)` on parent tables where they materially prevent tenant leakage. | `gate-03/GATE_03_ARCHITECTURE.md` §4 | APPROVED |
+| ADR-033 | Decoupled Application State: 4-dimension normalized model (`stage`, `state`, `outcome`, `closure_reason`) with verified 13 legacy stages from source code (`Saved` through `Accepted`). `Position Closed` maps to `POSITION_CLOSED`; declined offer maps to `WITHDRAWN` + `OFFER_DECLINED`. | `gate-03/RPC_DOMAIN_OPERATIONS.md` §2 | APPROVED |
+| ADR-034 | Inactivity & Aging Telemetry: Persisted `last_activity_at TIMESTAMPTZ` column updated atomically via events, with explicit `rpc_keep_application_active` reset. Zero automatic mutations. | `gate-03/RPC_DOMAIN_OPERATIONS.md` §4 | APPROVED |
+| ADR-035 | Append-Only Application Event Sourcing: Immutable `application_events` table with versioned JSONB payloads powering historical funnel analytics independently of current pipeline state. | `gate-03/RPC_DOMAIN_OPERATIONS.md` §3 | APPROVED |
+| ADR-036 | Last Manager Protection: Database `BEFORE DELETE OR UPDATE` trigger on `workspace_members` preventing removal or demotion of a workspace's final manager. | `gate-03/AUTHORIZATION_RLS_DESIGN.md` §6 | APPROVED |
+| ADR-037 | Durable Member Removal: Access revoked by deleting `workspace_members` record; historical records retain attribution with `ON DELETE RESTRICT` foreign keys. | `gate-03/AUTHORIZATION_RLS_DESIGN.md` §5 | APPROVED |
+| ADR-038 | Emergency Recovery Architecture: 10 single-use recovery codes with >=128 bits of CSPRNG entropy per code before Crockford Base32 encoding, stored as Argon2id hashes with immediate invalidation. | `gate-03/AUTHENTICATION_DESIGN.md` §6 | APPROVED WITH CORRECTION |
+| ADR-039 | Legacy Account Claim Architecture: 30-day default expiry claim tokens (`jqc_live_...`) with operator reissue capability, complete retirement and zero reuse of legacy PIN values/hashes. | `gate-03/AUTHENTICATION_DESIGN.md` §7 | APPROVED WITH CORRECTION |
+| ADR-040 | Browser Extension Authentication: Scoped, workspace-bound API tokens (`jqe_live_...`) stored as SHA-256 hashes, with on-demand user revocation in settings. | `gate-03/AUTHENTICATION_DESIGN.md` §8 | APPROVED |
+| ADR-041 | Legacy Migration Tenant Isolation: Resolution of OQ-012 by assigning all migrated data to a dedicated `"JobQuest (Migrated)"` system team workspace while provisioning personal workspaces for new work. | `gate-03/DATA_MIGRATION_DESIGN.md` §2 | APPROVED |
+| ADR-042 | Client-to-Database Boundary Contract: Strict 3-tier access routing (Direct Supabase PostgREST for reads/CRUD, Database RPCs for domain mutations, Node Façade for auth/secrets). | `gate-03/RPC_DOMAIN_OPERATIONS.md` §1, §6 | APPROVED |

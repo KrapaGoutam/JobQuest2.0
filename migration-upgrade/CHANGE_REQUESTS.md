@@ -174,4 +174,17 @@ password change + recovery codes (Account › Security). Status: PROPOSED
 | CR-023 | Structured closure reason `OFFER_DECLINED` under `Withdrawn` outcome (UI displays "Offer declined"; structured for Gate 03 DB design) | Gate 02B final decision (OQ-023) | FEATURE-APP-001/002 | `gate-02b/GATE_02B_UI_SPEC.md` §4.1 | APPROVED |
 | CR-024 | Applications preview pane defaults to OPEN on wide desktop (≥ 1680px) with persistent user preference and accessible keyboard controls | Gate 02B final decision (OQ-024) | FEATURE-APP-002 | `gate-02b/RESPONSIVE_MATRIX.md` §2 | APPROVED |
 
+---
 
+# Gate 03 Database, Auth & RLS Change Requests (added 2026-09-24, APPROVED)
+
+The requirement source for CR-025…CR-029 is the **Gate 03 prompt and architecture design**.
+All items below are **APPROVED WITH REQUIRED CORRECTIONS** following formal Gate 03 review.
+
+| CR | Change | Source | Affected | Proposal § | Status |
+|---|---|---|---|---|---|
+| CR-025 | Dedicated system workspace `"JobQuest (Migrated)"` for legacy single-tenant data isolation and coherent multi-user history (OQ-012 resolution) | Gate 03 prompt | Tenancy model; all migrated tables | `gate-03/DATA_MIGRATION_DESIGN.md` §2 | APPROVED |
+| CR-026 | Canonical UUIDv4 (`gen_random_uuid()`) primary keys across all 25 permanent target tables with selective `legacy_id INTEGER` retention for deterministic audit (UUIDv7 proposal SUPERSEDED) | Gate 03 review | All 25 target tables | `gate-03/TARGET_SCHEMA.md` §2 | APPROVED (DECISION CHANGED) |
+| CR-027 | Engine-enforced composite foreign keys `(id, workspace_id)` on child tables to prevent cross-workspace reference leakage at the DB level | Gate 03 analysis | All workspace-scoped child tables | `gate-03/GATE_03_ARCHITECTURE.md` §4 | APPROVED |
+| CR-028 | Persisted `last_activity_at TIMESTAMPTZ` column on applications maintained atomically by domain RPCs, with explicit `rpc_keep_application_active` | Gate 03 analysis | `applications`, `application_events` | `gate-03/RPC_DOMAIN_OPERATIONS.md` §4 | APPROVED |
+| CR-029 | Database trigger `trg_protect_last_manager` on `workspace_members` preventing accidental or malicious removal/demotion of a workspace's final manager | Gate 03 prompt | `workspace_members` | `gate-03/AUTHORIZATION_RLS_DESIGN.md` §6 | APPROVED |

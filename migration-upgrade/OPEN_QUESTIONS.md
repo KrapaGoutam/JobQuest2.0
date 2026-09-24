@@ -293,5 +293,17 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 - **Resolution:** Legacy single-tenant data will be migrated into a dedicated, pre-provisioned workspace: **`"JobQuest (Migrated)"`**.
 - **Specification:** Defined in `gate-03/DATA_MIGRATION_DESIGN.md` §2 and ADR-041. All active legacy users are assigned `USER` memberships, and the primary administrator is assigned `MANAGER`. Each user also receives a new, isolated `"Personal Workspace"`. Legacy owner attribution, timestamps, and relationships are preserved.
 
+---
 
+# M1B Open Questions (added 2026-09-24)
 
+| ID | Question | Classification | Recommendation |
+|---|---|---|---|
+| OQ-011 | Auth Option A vs B | **Option A: RESOLVED FAIL (M1).** Option B: local-stack spike PASS; hosted-dev verification pending | Approve the `jobquest-dev` signing-key import and rotation checkpoint |
+| OQ-025 | Approve importing and rotating to a JobQuest ES256 signing key on `jobquest-dev`? (key-state transition) | MUST RESOLVE BEFORE HOSTED VERIFICATION | Yes (dev only). See `m1b/M1B_INFRASTRUCTURE.md` §3 |
+| OQ-026 | Re-authenticate the Supabase CLI to the JobQuest2.0 account (the current CLI and connector see a different account) | MUST RESOLVE BEFORE HOSTED WORK | User action |
+| OQ-027 | Restore the five dev settings changed unintentionally by M1's `config push` (TOTP enroll/verify, OTP length 8, email max_frequency 1m, storage analytics) | CAN RESOLVE WITH OQ-026 | Yes: verified prior values, narrow change |
+| OQ-028 | Delete the Option A test identities (alias emails) left in `jobquest-dev` `auth.users` | CAN RESOLVE DURING M1B CLOSE | Yes (dev only, destructive: needs approval) |
+| OQ-029 | Signing-key custody for production (Vercel sensitive env vs managed KMS signing) | MUST RESOLVE BEFORE PRODUCTION | Evaluate KMS signing before production |
+| OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | MUST RESOLVE BEFORE PRODUCTION | Vercel firewall rules + scheduled cleanup |
+| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | INFORMATIONAL | CAUSE UNKNOWN; check the owning account's audit log |

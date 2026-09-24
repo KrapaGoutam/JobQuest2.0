@@ -4,6 +4,9 @@
 **Status:** `APPROVED (Post-Review Corrections Applied)`  
 **Related Documents:** [GATE_03_ARCHITECTURE.md](GATE_03_ARCHITECTURE.md), [AUTHENTICATION_DESIGN.md](AUTHENTICATION_DESIGN.md), [AUTHORIZATION_RLS_DESIGN.md](AUTHORIZATION_RLS_DESIGN.md), [LEGACY_TABLE_MAPPING.md](LEGACY_TABLE_MAPPING.md)
 
+
+> **M1B amendment note (2026-09-24):** Auth Option B adds `user_credentials`, `auth_sessions`, `auth_refresh_tokens` and `auth_rate_limits`, and removes the `user_accounts.user_id → auth.users` foreign key. It also changes the Option A statement that `user_accounts` stores no password (the verifier now lives in the separate `user_credentials`). See [`GATE_03_AUTH_OPTION_B_AMENDMENT.md`](GATE_03_AUTH_OPTION_B_AMENDMENT.md) §14 (PROPOSED).
+
 ---
 
 ## 1. Metadata & Architectural Standards

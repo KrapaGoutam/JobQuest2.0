@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": { "types": ["node"], "noEmit": true },
-  "include": ["tests", "e2e", "playwright.config.ts", "vitest.config.mts"]
+  "include": ["api/**/*", "apps/api/src/**/*", "tests", "e2e", "playwright.config.ts", "vitest.config.mts"]
 }

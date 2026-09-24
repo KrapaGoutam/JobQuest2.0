@@ -246,3 +246,14 @@ single-manager model" exclusion for **workspaces only**.
 - **FR-023** Extension authentication is separate from the user's password:
   scoped, revocable, expiring, hashed, auditable (CR-012).
 - **FR-024** Audit logging for sensitive and privileged actions.
+
+## 14. Gate 02B UI/UX Design Requirements (PROPOSED, 2026-09-24)
+
+Based on the completed Gate 02B UI/UX design specifications (`../ui-design/gate-02b/`):
+
+- **FR-025** Import column-mapping wizard: Bulk import must provide a visual mapping interface that auto-matches known header aliases, validates required fields (`Company`, `Role`), previews duplicates, and produces a downloadable `import_errors.csv` file detailing rejected rows with specific failure reasons (CR-016, CR-018).
+- **FR-026** Task recurrence engine: Tasks must support configurable recurrence cadences (daily, weekdays, weekly, monthly). Completing an active instance must immediately compute and schedule the subsequent due instance without cluttering the active backlog view (CR-015, CR-020).
+- **FR-027** Structured interview preparation: Interviews must provide dedicated, searchable fields for preparation notes (`preparation_notes`) and expected questions (`questions_expected`). Scheduling an interview must not automatically mutate the application's pipeline stage without explicit user election.
+- **FR-028** Accessible keyboard parity for dragging: Any Kanban card move or drag-and-drop interaction must provide a 100% functional keyboard alternative (`M` key move menu) with visible focus indicators and polite live region announcements (CR-019).
+- **FR-029** Permanent deletion safeguards: Soft-archiving an application must support an immediate 10-second undo toast. Permanent (hard) deletion is restricted to already-archived records and strictly requires typing the confirmation keyword ("DELETE") (CR-021).
+

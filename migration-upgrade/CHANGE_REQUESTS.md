@@ -166,3 +166,12 @@ password change + recovery codes (Account › Security). Status: PROPOSED
 | CR-015 | Honour `week_start` everywhere + per-user timezone | Gate 01 analysis (OQ-005) | Calendar, goals, habits | §20 | PROPOSED |
 | CR-016 | Import error-report CSV + cursor pagination for tasks/notes | Gate 01 analysis | FEATURE-IMPEXP-001, TASK-001, NOTE-001 | §20 | PROPOSED |
 | CR-017 | Global search across applications, contacts, notes, tasks (Postgres FTS + trigram) | Gate 01 prompt ("Global Search") | New | §23 M13 | PROPOSED |
+| CR-018 | Visual column-matching step in bulk import wizard with alias auto-matching | Gate 02B design (`12-import-export.html` E3) | FEATURE-IMPEXP-001 | `gate-02b/GATE_02B_UI_SPEC.md` §13.1 | APPROVED |
+| CR-019 | Keyboard "Move to stage..." modal alternative (`M` key) for Kanban drag-and-drop | Gate 02B a11y (`11-application-views.html` V1) | FEATURE-APP-002 | `gate-02b/ACCESSIBILITY_MATRIX.md` §2 | APPROVED |
+| CR-020 | Split-pane master-detail view on Tasks & Follow-ups desktop workbench | Gate 02B design (`04-tasks.html` T2) | FEATURE-TASK-001 | `gate-02b/GATE_02B_UI_SPEC.md` §6 | APPROVED |
+| CR-021 | Typed "DELETE" confirmation modal for permanent deletion of archived applications | Gate 02B safety (`02-application-create-edit.html` C11) | FEATURE-APP-001 | `gate-02b/INTERACTION_SPEC.md` §2.8 | APPROVED |
+| CR-022 | Inactivity review trigger at 31+ days (aligned with Long Waiting aging band; advisory only; no automatic state mutations) | Gate 02B final decision (OQ-022) | FEATURE-DASH-001, APP-001 | `gate-02b/GATE_02B_UI_SPEC.md` §4.5 | APPROVED |
+| CR-023 | Structured closure reason `OFFER_DECLINED` under `Withdrawn` outcome (UI displays "Offer declined"; structured for Gate 03 DB design) | Gate 02B final decision (OQ-023) | FEATURE-APP-001/002 | `gate-02b/GATE_02B_UI_SPEC.md` §4.1 | APPROVED |
+| CR-024 | Applications preview pane defaults to OPEN on wide desktop (≥ 1680px) with persistent user preference and accessible keyboard controls | Gate 02B final decision (OQ-024) | FEATURE-APP-002 | `gate-02b/RESPONSIVE_MATRIX.md` §2 | APPROVED |
+
+

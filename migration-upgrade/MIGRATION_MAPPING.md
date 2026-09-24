@@ -71,3 +71,19 @@
   re-verifying (the Round 3 "callerless `GET /api/applications`" claim was false
   when checked — see `brain/AGENT_HANDOFF_LOG.md` Round 10 entry — the same
   discipline applies here).
+
+## Gate 01 revisions (PROPOSED, 2026-09-23)
+
+See [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md) for the
+full, per-table mapping (§10: all **33** legacy tables; the "23" count elsewhere
+in this package is wrong) and the per-API-group classification (§11). Rows above
+that change:
+
+| Row above | Gate 01 proposal |
+|---|---|
+| Custom PIN+session auth → Supabase Auth | Username + password via a Node façade over Supabase Auth. PIN retired; no PIN/password hashes migrated; legacy users reclaim via claim codes. |
+| Extension bearer tokens | Redesigned: workspace-bound, scoped, expiring, peppered hash, rotatable. Legacy tokens migrated as revoked history only. |
+| Manager oversight → RLS + SECURITY DEFINER RPC | Managers are now **workspace-scoped**, so plain membership-based RLS expresses access. RPCs remain for multi-row operations. Cross-owner manager writes are audited by trigger. |
+| Browser extension "repoint" | **Incremental migration**: keep extractors/fixtures; replace the API client, auth, workflow and duplicate integration. |
+| Render → Vercel + Supabase | Single Vercel project, same origin: SPA + Node API (Hono) as Vercel Functions at `/api`. |
+| Keep: 13-stage enum | Kept as vocabulary, **split** into 8 stages + statuses (Rejected/Withdrawn/Ghosted/Position Closed/Accepted become statuses). The mapping is total and reported. |

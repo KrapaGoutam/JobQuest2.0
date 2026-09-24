@@ -295,15 +295,16 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 
 ---
 
-# M1B Open Questions (added 2026-09-24)
+# M1B Open Questions (added 2026-09-24, UPDATED POST-HOSTED VALIDATION)
 
-| ID | Question | Classification | Recommendation |
+| ID | Question | Classification | Resolution / Current Status |
 |---|---|---|---|
-| OQ-011 | Auth Option A vs B | **Option A: RESOLVED FAIL (M1).** Option B: local-stack spike PASS; hosted-dev verification pending | Approve the `jobquest-dev` signing-key import and rotation checkpoint |
-| OQ-025 | Approve importing and rotating to a JobQuest ES256 signing key on `jobquest-dev`? (key-state transition) | MUST RESOLVE BEFORE HOSTED VERIFICATION | Yes (dev only). See `m1b/M1B_INFRASTRUCTURE.md` §3 |
-| OQ-026 | Re-authenticate the Supabase CLI to the JobQuest2.0 account (the current CLI and connector see a different account) | MUST RESOLVE BEFORE HOSTED WORK | User action |
-| OQ-027 | Restore the five dev settings changed unintentionally by M1's `config push` (TOTP enroll/verify, OTP length 8, email max_frequency 1m, storage analytics) | CAN RESOLVE WITH OQ-026 | Yes: verified prior values, narrow change |
-| OQ-028 | Delete the Option A test identities (alias emails) left in `jobquest-dev` `auth.users` | CAN RESOLVE DURING M1B CLOSE | Yes (dev only, destructive: needs approval) |
-| OQ-029 | Signing-key custody for production (Vercel sensitive env vs managed KMS signing) | MUST RESOLVE BEFORE PRODUCTION | Evaluate KMS signing before production |
-| OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | MUST RESOLVE BEFORE PRODUCTION | Vercel firewall rules + scheduled cleanup |
-| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | INFORMATIONAL | CAUSE UNKNOWN; check the owning account's audit log |
+| OQ-011 | Auth Option A vs B | Architecture Decision | **Option A: RESOLVED FAIL (M1). Option B: RESOLVED PASS** across Local, CI, and Hosted `jobquest-dev`. Recommended for formal Gate 03 approval. |
+| OQ-025 | Approve importing and rotating to a JobQuest ES256 signing key on `jobquest-dev`? | Infrastructure Action | **RESOLVED (APPROVED & ROTATED)**: Key `a73390b9-56bf-4d1a-a642-efd4479ca0b3` in use; prior key kept trusted in `previously_used`. |
+| OQ-026 | Re-authenticate the Supabase CLI to the JobQuest2.0 account | Access Action | **RESOLVED**: CLI authenticated as `goutam.krapa11@gmail.com` (`059ca115-edbc-4269-894b-77cf4531b18b`). |
+| OQ-027 | Restore the five dev settings changed unintentionally by M1's `config push` | Configuration Action | **RESOLVED**: 4 settings restored (TOTP enroll `true`, TOTP verify `true`, OTP length `8`, email interval `1m0s`). 5th setting (storage analytics) explained (requires paid tier for Iceberg catalog). |
+| OQ-028 | Delete the Option A test identities (alias emails) left in `jobquest-dev` `auth.users` | Cleanup Action | **RESOLVED**: 20 synthetic test accounts inventoried and permanently purged from `auth.users`. Zero remain. |
+| OQ-029 | Signing-key custody for production (Vercel sensitive env vs managed KMS signing) | Production Security | **OPEN (PRE-PRODUCTION)**: Evaluate KMS signing vs Vercel sensitive environment variable before production deployment. |
+| OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | Production Scaling | **OPEN (PRE-PRODUCTION)**: Vercel firewall rules + scheduled Postgres bucket cleanup job before production launch. |
+| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | Audit / Informational | **RESOLVED: CAUSE UNKNOWN**; no destructive actions taken; `jobquest-dev` verified. |
+

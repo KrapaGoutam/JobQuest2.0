@@ -191,10 +191,11 @@ All items below are **APPROVED WITH REQUIRED CORRECTIONS** following formal Gate
 
 ---
 
-# M1B Change Requests (added 2026-09-24, PROPOSED pending user review)
+# M1B Change Requests (added 2026-09-24, APPROVED based on M1B proof)
 
 | CR | Change | Source | Affected | Reference | Status |
 |---|---|---|---|---|---|
-| CR-030 | Replace Auth Option A with Option B: app-owned credentials and sessions, Node-minted ES256 access JWTs trusted by the Supabase Data API, no Supabase Auth identities | M1 T03 hard fail (Option A leaked the synthetic email through `/auth/v1/user`) | `AUTHENTICATION_DESIGN.md`; ADR-030 → ADR-043 | `gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md` | PROPOSED |
-| CR-031 | Add auth system tables `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`; drop the `user_accounts.user_id → auth.users` FK | Option B | `TARGET_SCHEMA.md` (25 → 29 permanent tables once approved) | Amendment §14 | PROPOSED |
-| CR-032 | Import a JobQuest ES256 signing key into each Supabase project and rotate to it (key-management procedure) | Option B trust configuration | Infrastructure, environments, secrets | Amendment §7 | PROPOSED: needs explicit approval per project |
+| CR-030 | Replace Auth Option A with Option B: app-owned credentials and sessions, Node-minted ES256 access JWTs trusted by the Supabase Data API, no Supabase Auth identities | M1 T03 hard fail (Option A leaked the synthetic email through `/auth/v1/user`) | `AUTHENTICATION_DESIGN.md`; ADR-030 → ADR-043 | `gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md` | **APPROVED BASED ON M1B PROOF** |
+| CR-031 | Add auth system tables `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`; drop the `user_accounts.user_id → auth.users` FK | Option B | `TARGET_SCHEMA.md` (25 → 29 permanent tables once approved) | Amendment §14 | **APPROVED BASED ON M1B PROOF** |
+| CR-032 | Import a JobQuest ES256 signing key into each Supabase project and rotate to it (key-management procedure) | Option B trust configuration | Infrastructure, environments, secrets | Amendment §7 | **APPROVED & EXECUTED ON DEV** (`jobquest-dev` rotated; production pending launch) |
+

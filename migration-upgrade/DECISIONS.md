@@ -234,14 +234,15 @@ All entries below are **Status: APPROVED WITH REQUIRED CORRECTIONS** following f
 
 ---
 
-# M1B Auth Option B decisions (added 2026-09-24, PROPOSED pending user review)
+# M1B Auth Option B decisions (added 2026-09-24, VERIFIED & APPROVED based on M1B proof)
 
 | ADR | Decision | Reference | Status |
 |---|---|---|---|
-| ADR-043 | Authentication Option B: the Node API owns credentials (Argon2id, `user_credentials`) and sessions (`auth_sessions` plus single-use rotating refresh tokens), and mints 15-minute ES256 access JWTs (`sub`, `role=authenticated`, `session_id`). The Supabase Data API verifies them through an imported signing key. No Supabase Auth user identities; no synthetic email. Replaces ADR-030. | `gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md` | **PROPOSED**: local-stack spike PASS; hosted-dev verification pending the signing-key checkpoint and user approval |
-| ADR-044 | Refresh-token replay policy: strictly single use with **no grace window**. Reuse of a consumed token revokes the whole session. The SPA serializes refresh across tabs with the Web Locks API. | Amendment §6 | PROPOSED |
-| ADR-045 | Password change keeps the current session and revokes all others. Recovery-code reset revokes every session. | Amendment §11 | PROPOSED |
-| ADR-046 | Per-IP and per-user auth rate limits use a shared Postgres fixed-window limiter (`auth_rate_limits` / `rpc_rate_limit_hit`), replacing the per-instance in-memory store. Edge/WAF limits are still required before production. | Amendment §12 | PROPOSED |
-| ADR-047 | Workspace roles are never placed in access tokens. MANAGER authority is always read from `workspace_members` at query time. | Amendment §8 | PROPOSED |
+| ADR-043 | Authentication Option B: the Node API owns credentials (Argon2id, `user_credentials`) and sessions (`auth_sessions` plus single-use rotating refresh tokens), and mints 15-minute ES256 access JWTs (`sub`, `role=authenticated`, `session_id`). The Supabase Data API verifies them through an imported signing key. No Supabase Auth user identities; no synthetic email. Replaces ADR-030. | `gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md` | **APPROVED BASED ON M1B PROOF** (PASS across local stack, CI, and hosted `jobquest-dev`) |
+| ADR-044 | Refresh-token replay policy: strictly single use with **no grace window**. Reuse of a consumed token revokes the whole session. The SPA serializes refresh across tabs with the Web Locks API. | Amendment §6 | **APPROVED BASED ON M1B PROOF** |
+| ADR-045 | Password change keeps the current session and revokes all others. Recovery-code reset revokes every session. | Amendment §11 | **APPROVED BASED ON M1B PROOF** |
+| ADR-046 | Per-IP and per-user auth rate limits use a shared Postgres fixed-window limiter (`auth_rate_limits` / `rpc_rate_limit_hit`), replacing the per-instance in-memory store. Edge/WAF limits are still required before production. | Amendment §12 | **APPROVED BASED ON M1B PROOF** |
+| ADR-047 | Workspace roles are never placed in access tokens. MANAGER authority is always read from `workspace_members` at query time. | Amendment §8 | **APPROVED BASED ON M1B PROOF** |
 
 ADR-030 remains **SUPERSEDED / FAILED IN M1** (see above). ADR-038 (recovery codes) and ADR-042 (3-tier boundary) are unchanged and re-verified under Option B.
+

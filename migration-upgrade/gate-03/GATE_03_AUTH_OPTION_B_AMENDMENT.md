@@ -2,9 +2,9 @@
 
 **Document ID:** `JQ2-GATE03-AUTH-002`
 **Amends:** `AUTHENTICATION_DESIGN.md` (authentication only; no other part of Gate 03 changes)
-**Status:** `PROPOSED: SPIKE-VERIFIED ON A LOCAL SUPABASE STACK; HOSTED-DEV VERIFICATION PENDING (signing-key checkpoint)`
+**Status:** `VERIFIED: SPIKE-VERIFIED ACROSS LOCAL SUPABASE STACK, CI, AND HOSTED JOBQUEST-DEV (RECOMMENDED FOR FORMAL USER APPROVAL)`
 **Date:** 2026-09-24
-**Evidence:** `../m1b/M1B_AUTH_OPTION_B_RESULT.md`, `../m1b/evidence/`
+**Evidence:** `../m1b/M1B_AUTH_OPTION_B_RESULT.md`, `../m1b/M1B_TEST_RESULTS.md`, `../m1b/evidence/`
 
 This amendment becomes binding only after the user reviews M1B and approves it. The Option A text in `AUTHENTICATION_DESIGN.md` is kept for history and marked **SUPERSEDED / FAILED IN M1**.
 

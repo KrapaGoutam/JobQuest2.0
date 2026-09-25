@@ -223,5 +223,8 @@ test.describe('Milestone 4 — Contacts & Networking E2E', () => {
       JSON.stringify({ evidence, a11y }, null, 2),
       'utf8'
     );
+    // M5: the audit results were recorded but never asserted; 0 critical/serious is required.
+    const blocking = (a11y as { blocking: number }[]).reduce((n, a) => n + a.blocking, 0);
+    expect(blocking, JSON.stringify(a11y, null, 2)).toBe(0);
   });
 });

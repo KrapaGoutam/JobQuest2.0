@@ -22,6 +22,8 @@ import { describeEvent } from './eventText';
 import { outcomeLabel } from './ApplicationsTable';
 import { calculateDaysInactive, computeAgingBand } from '../../types/applications';
 import type { Application, ApplicationEvent, CanonicalWorkflow } from '../../types/applications';
+import { ApplicationInterviewsSection } from '../interviews/ApplicationInterviewsSection';
+import { useProfileTimeZone } from '../../hooks/useProfileTimeZone';
 
 export interface ApplicationDetailDrawerProps {
   isOpen: boolean;
@@ -38,6 +40,8 @@ export interface ApplicationDetailDrawerProps {
   historyVersion: number;
   members: WorkspaceMemberInfo[];
   currentUserId: string | null;
+  /** M5: called after an interview is scheduled or debriefed from the drawer. */
+  onApplicationChanged?: () => void;
 }
 
 export function ApplicationDetailDrawer({
@@ -54,7 +58,9 @@ export function ApplicationDetailDrawer({
   historyVersion,
   members,
   currentUserId,
+  onApplicationChanged,
 }: ApplicationDetailDrawerProps) {
+  const { timeZone, setTimeZone } = useProfileTimeZone(currentUserId);
   const [events, setEvents] = useState<ApplicationEvent[]>([]);
   /** `${appId}:${historyVersion}` whose history is currently loaded; anything else is still loading. */
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
@@ -257,6 +263,16 @@ export function ApplicationDetailDrawer({
           </div>
         )}
 
+        {/* M5: interviews for this application */}
+        <ApplicationInterviewsSection
+          application={application}
+          workflow={workflow}
+          timeZone={timeZone}
+          onChangeTimeZone={setTimeZone}
+          onChanged={() => onApplicationChanged?.()}
+          version={historyVersion}
+        />
+
         {/* Main Tabs */}
         <div>
           <Tabs id="app-drawer-tabs" activeTab={activeTab} onTabChange={setActiveTab}>
@@ -283,7 +299,7 @@ export function ApplicationDetailDrawer({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {events.map((ev) => {
-                      const { label, detail } = describeEvent(ev, workflow);
+                      const { label, detail } = describeEvent(ev, workflow, timeZone);
                       return (
                         <div
                           key={ev.id}

@@ -810,6 +810,7 @@ export function ApplicationsView({
         historyVersion={historyVersion}
         members={members}
         currentUserId={user?.id ?? null}
+        onApplicationChanged={() => void afterMutation()}
         onOpenStageMove={(app) => {
           setStageMoveTarget(app);
           setIsStageMoveOpen(true);

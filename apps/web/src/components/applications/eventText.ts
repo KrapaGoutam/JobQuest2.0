@@ -1,4 +1,6 @@
 import type { ApplicationEvent, CanonicalWorkflow } from '../../types/applications';
+import { resultLabel, typeLabel } from '../../types/interviews';
+import { formatSlot } from '../../lib/time';
 
 const CLOSURE_LABELS: Record<string, string> = {
   OFFER_DECLINED: 'Offer declined',
@@ -18,8 +20,9 @@ function outcomeName(workflow: CanonicalWorkflow | null, id: unknown): string {
   return workflow?.outcomes.find((x) => x.id === s)?.label ?? s;
 }
 
-/** Human-readable timeline text for an application_events row (Gate 02B §4.3 Timeline tab). */
-export function describeEvent(ev: ApplicationEvent, workflow: CanonicalWorkflow | null): { label: string; detail: string } {
+/** Human-readable timeline text for an application_events row (Gate 02B §4.3 Timeline tab).
+ *  Interview times render in `timeZone` (the viewer's profile zone). */
+export function describeEvent(ev: ApplicationEvent, workflow: CanonicalWorkflow | null, timeZone = 'UTC'): { label: string; detail: string } {
   const p = ev.payload ?? {};
   switch (ev.event_type) {
     case 'CREATED':
@@ -39,6 +42,20 @@ export function describeEvent(ev: ApplicationEvent, workflow: CanonicalWorkflow 
     }
     case 'KEEP_ACTIVE':
       return { label: 'Reviewed application (Keep Active)', detail: 'Inactivity timer reset; stage and state unchanged.' };
+    case 'INTERVIEW_SCHEDULED':
+      return {
+        label: `Interview scheduled: ${typeLabel(String(p.interview_type ?? ''))} · round ${String(p.round_number ?? 1)}`,
+        detail: typeof p.scheduled_at === 'string' ? formatSlot(p.scheduled_at, Number(p.duration_minutes ?? 45), timeZone) : '',
+      };
+    case 'INTERVIEW_COMPLETED': {
+      const parts: string[] = [];
+      if (p.next_step) parts.push(`Next step: ${String(p.next_step)}`);
+      if (p.notes) parts.push(String(p.notes));
+      return {
+        label: `${typeLabel(String(p.interview_type ?? ''))} completed: ${resultLabel(String(p.outcome ?? ''))}`,
+        detail: parts.join(' — '),
+      };
+    }
     case 'ARCHIVED':
       return { label: 'Archived', detail: '' };
     case 'RESTORED':

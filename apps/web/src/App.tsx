@@ -9,13 +9,13 @@ import { AppShell } from './components/shell/AppShell';
 import { AuthView } from './views/AuthView';
 import { ApplicationsView, type ApplicationRecord, type WorkflowDef } from './views/ApplicationsView';
 import { ContactsView } from './views/ContactsView';
+import { InterviewsView } from './views/InterviewsView';
 import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   LayoutDashboard,
   CheckSquare,
   Calendar,
-  Video,
   Flame,
   BookOpen,
   FileText,
@@ -426,11 +426,10 @@ function AppContent() {
 
     if (currentPath === '/interviews') {
       return (
-        <PlaceholderView
-          title="Interviews & Debriefs"
-          subtitle="Preparation questions, round notes, and outcome tracking"
-          icon={<Video size={24} />}
-          milestoneOwner="Milestone 7"
+        <InterviewsView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          currentUserId={user?.id ?? null}
         />
       );
     }
@@ -513,7 +512,12 @@ function AppContent() {
   };
 
   return (
-    <WorkspaceProvider userActiveWorkspaceId={user?.active_workspace_id}>
+    <WorkspaceProvider
+      userActiveWorkspaceId={user?.active_workspace_id}
+      memberships={memberships}
+      activeWorkspaceId={activeWs}
+      onSelectWorkspace={(id) => loadData(id)}
+    >
       <AppShell
         currentPath={currentPath}
         onNavigate={navigate}

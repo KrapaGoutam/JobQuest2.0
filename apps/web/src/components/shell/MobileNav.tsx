@@ -39,7 +39,7 @@ export function MobileNav({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const tabs = [
-    { id: 'today', path: '/', label: 'Today', icon: CalendarDays },
+    { id: 'today', path: '/dashboard', label: 'Today', icon: CalendarDays },
     { id: 'apps', path: '/applications', label: 'Apps', icon: Briefcase },
     { id: 'tasks', path: '/tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'contacts', path: '/contacts', label: 'Contacts', icon: Users },

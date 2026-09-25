@@ -4,10 +4,10 @@ This is for any incoming agent (Antigravity, Claude Code, Codex or another). No 
 
 ## 1. Result
 
-**M6 Tasks, Habits & Unified Queue is complete and awaiting user review.**
+**M6 Tasks, Habits & Unified Queue is complete and APPROVED FOR INTEGRATION.**
 
-- **Not merged.** M7 has not started.
-- **Review first:** `M6_COMPLETION_REPORT.md` §33 lists the open questions.
+- Ready for `--no-ff` merge into `development`.
+- M7 (Documents & Resumes) to begin immediately following integration.
 
 ## 2. Branch and git
 
@@ -15,12 +15,14 @@ This is for any incoming agent (Antigravity, Claude Code, Codex or another). No 
 |---|---|
 | Work branch | `feature/m6-tasks-habits-queue` (pushed) |
 | Base | `development` at `0b8f0c9` (`merge: approve M5 interviews and debriefs`); M4 was `caf9f33` |
-| Code HEAD | `b1ad12f`; the docs commit follows it |
+| Code HEAD | `b1ad12f` |
+| Docs Commit | `5a5919c` |
+| Final CI | Run `36151776339` (Green on `b1ad12f`) |
 | `main` | untouched |
 
 **Rules:**
 - no reset, rebase or force-push
-- merge `--no-ff` only after explicit approval
+- merge `--no-ff` into `development`
 - never stage `.env*`, `supabase/signing_keys.json`, `.vercel/`, `test-results/` or `apps/web/dist/`
 
 ## 3. Architecture to preserve

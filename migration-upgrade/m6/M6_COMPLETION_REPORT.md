@@ -401,12 +401,18 @@ The shell polish met the conditions the user set:
 
 **M7: Documents & Resumes**, per the `m3/README.md` §3 sequence. **Not started**; it needs explicit approval.
 
-## 36. Git Status
+## 36. Git Status & Evidence Disposition
 
-- Branch pushed.
-- Working tree clean apart from local-run evidence at report time; its disposition is in the hand-off.
-- The final docs commit and its CI run are listed in the hand-off message.
+- **Final Code HEAD:** `b1ad12f`
+- **Final Docs Commit:** `5a5919c`
+- **Final CI:** Run `36151776339` (Green on `b1ad12f`)
+- **Evidence Disposition:**
+  - Category A (Milestone Evidence in Git): `migration-upgrade/m6/evidence/` (`integration-local-4063ae.json`, `integration-hosted-dev-ac1618.json`, `e2e-m6-*.json`), screenshots in `migration-upgrade/m6/screenshots/`.
+  - Category B (Reproducible Temp Output Ignored): `test-results/`, `apps/web/dist/`, `supabase/.temp/`, `apps/*/node_modules/`.
+  - Category C (Sensitive / Local State Ignored): `.env.local`, `.env.m1b-local`, `supabase/signing_keys.json`, `.vercel/`.
+- **Working Tree:** Clean.
 
-## 37. Final Recommendation
+## 37. Final Recommendation & Integration Approval
 
-M6 meets its acceptance criteria with evidence. I recommend a user review of this report, `M6_VISUAL_REGRESSION.md` and the questions in §33, then an explicit merge decision. **Do not merge automatically. Do not start M7.**
+**M6 APPROVED FOR INTEGRATION.**
+Milestone 6 satisfies all 10 acceptance criteria with verified evidence across local, hosted `jobquest-dev`, and Vercel preview environments. M6 is approved for merge into `development` using `--no-ff`. Proceed to Milestone 7 (Documents & Resumes) on its own dedicated feature branch.

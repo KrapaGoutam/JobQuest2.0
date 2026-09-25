@@ -120,3 +120,14 @@ Evidence: local `e2e-local-*.json` (latest PASS). The browser runs in Europe/Ber
 | **`jobquest2-8lhec046i`: M6 E2E** | **PASS**: `e2e-vercel-preview-6df3fd.json` (16:12:29–16:13:28 UTC). All steps pass, including the reminder at "Tomorrow · 1:30 PM" in the profile zone, the D1 Long Waiting review, habits and mobile. a11y: **0 violations in all 9 contexts** |
 
 A background run scheduled for this check was interrupted when the previous session ended: it had printed only "Running 1 test" and wrote no evidence. The check was run once more in the foreground. An orphaned copy of the interrupted run was still running then and wrote an unrelated failure (a navigation-click timeout) into the same log file. That run left no evidence, and every screenshot's timestamp (16:12–16:13 UTC) belongs to the passing run.
+
+## 8. Final Closeout & Evidence Disposition
+
+- **Final Code HEAD:** `b1ad12f`
+- **Final Docs Commit:** `5a5919c`
+- **Final CI:** Run `36151776339` (Green on `b1ad12f`)
+- **Evidence Disposition:**
+  - Category A (Committed Milestone Evidence): `migration-upgrade/m6/evidence/` (`integration-local-4063ae.json`, `integration-hosted-dev-ac1618.json`, `e2e-m6-*.json`), screenshots in `migration-upgrade/m6/screenshots/`.
+  - Category B (Reproducible Temp Output Ignored): `test-results/`, `apps/web/dist/`, `supabase/.temp/`, `node_modules/`.
+  - Category C (Sensitive / Local-Only State Ignored): `.env.local`, `.env.m1b-local`, `supabase/signing_keys.json`, `.vercel/`.
+- **Status:** **M6 APPROVED FOR INTEGRATION.** Validated across all static, unit, integration (101/101), E2E, a11y, and cloud preview checks. Ready for `--no-ff` merge into `development`.

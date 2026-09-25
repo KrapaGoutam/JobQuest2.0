@@ -108,6 +108,7 @@ test.describe('Milestone 6 — Tasks, Habits & Unified Queue E2E', () => {
     const idlg = page.getByRole('dialog', { name: 'Schedule interview' });
     await idlg.getByRole('button', { name: 'Change' }).click();
     await idlg.getByLabel('Profile time zone').selectOption(TZ);
+    await expect(idlg.getByTestId('profile-timezone')).toContainText(TZ); // the zone change has been saved
     // Interview tomorrow with the M6 reminder (canonical REMINDER task).
     await idlg.getByLabel(/^Application\*?$/).selectOption({ label: `${meridian} · UX Designer (Applied)` });
     await idlg.getByLabel(/^Date\*?$/).fill(dayIn(1));

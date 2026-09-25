@@ -1,0 +1,97 @@
+{
+  "evidence": {
+    "target": "local",
+    "run": "7283c4",
+    "started_at": "2026-09-25T04:48:53.743Z",
+    "E2E-01-create-contact": "PASS",
+    "E2E-02-filter-tabs": "PASS",
+    "E2E-03-search": "PASS",
+    "E2E-04-log-interaction": "PASS",
+    "E2E-05-mobile": "PASS",
+    "completed_at": "2026-09-25T04:49:03.529Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "contacts-list-initial",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contact-create-modal",
+      "total": 1,
+      "critical": 0,
+      "serious": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 10,
+          "targets": [
+            ".ferr",
+            "label[for=\"contact-company\"] > .opt.small.muted",
+            "label[for=\"contact-title\"] > .opt.small.muted",
+            "label[for=\"contact-email\"] > .opt.small.muted",
+            "label[for=\"contact-phone\"] > .opt.small.muted",
+            "label[for=\"contact-linkedin\"] > .opt.small.muted",
+            "label[for=\"link-app\"] > .opt.small.muted",
+            "label[for=\"next-follow-up\"] > .opt.small.muted"
+          ]
+        }
+      ],
+      "blocking": 1
+    },
+    {
+      "context": "contact-detail-drawer",
+      "total": 2,
+      "critical": 1,
+      "serious": 1,
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "nodes": 1,
+          "targets": [
+            ".focused"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 15,
+          "targets": [
+            ".row.muted[type=\"button\"]",
+            ".small.muted > span:nth-child(1)",
+            "strong",
+            ".banner > .col > .small.muted",
+            "div:nth-child(2) > div:nth-child(1) > .tabs[role=\"tablist\"] > .tab[role=\"tab\"][type=\"button\"]:nth-child(2)",
+            ".drawer > div:nth-child(2) > div:nth-child(1) > .small.muted",
+            ".drawer > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > .sec-t.b.small",
+            ".muted:nth-child(5)"
+          ]
+        }
+      ],
+      "blocking": 2
+    },
+    {
+      "context": "contacts-mobile-layout",
+      "total": 1,
+      "critical": 1,
+      "serious": 0,
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "nodes": 1,
+          "targets": [
+            ".focused"
+          ]
+        }
+      ],
+      "blocking": 1
+    }
+  ]
+}

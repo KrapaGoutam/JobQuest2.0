@@ -1,0 +1,58 @@
+{
+  "evidence": {
+    "target": "local",
+    "run": "5617ff",
+    "started_at": "2026-09-25T04:59:39.411Z",
+    "E2E-01-create-contact": "PASS",
+    "E2E-02-filter-tabs": "PASS",
+    "E2E-03-search": "PASS",
+    "E2E-04-log-interaction": "PASS",
+    "E2E-05-mobile": "PASS",
+    "completed_at": "2026-09-25T04:59:48.969Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "contacts-list-initial",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contact-create-modal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contact-detail-drawer",
+      "total": 1,
+      "critical": 0,
+      "serious": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 2,
+          "targets": [
+            "div:nth-child(2) > div:nth-child(1) > .muted.small",
+            "a[target=\"_blank\"] > .ell"
+          ]
+        }
+      ],
+      "blocking": 1
+    },
+    {
+      "context": "contacts-mobile-layout",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ]
+}

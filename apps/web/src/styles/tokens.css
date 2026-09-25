@@ -13,16 +13,22 @@
 
   /* Typography Colors */
   --color-text: #172033;
-  --color-text-muted: #5f6b7e; /* calibrated for >=5.3:1 contrast on canvas */
-  --color-text-subtle: #7d8799;
+  --color-text-muted: #475569; /* calibrated for >=5.3:1 contrast on canvas and surface-2 */
+  --color-text-subtle: #64748b;
+
+  /* Aliases & Fallbacks */
+  --color-surface: var(--color-surface-1);
+  --color-surface-muted: var(--color-surface-2);
+  --color-text-secondary: var(--color-text-muted);
+  --color-fg: var(--color-text);
 
   /* Borders & Dividers */
   --color-border: #dfe3ea;
   --color-border-strong: #c7ced9;
 
   /* Accent & Primary Actions */
-  --color-accent: #3157d5;
-  --color-accent-hover: #2849b8;
+  --color-accent: #2554d7;
+  --color-accent-hover: #1e45b5;
   --color-on-accent: #ffffff;
   --color-accent-soft: #e9edff;
   --color-focus: #5076f2;
@@ -142,6 +148,12 @@
   --color-text: #edf1f7;
   --color-text-muted: #b1bbca;
   --color-text-subtle: #828e9e;
+
+  /* Aliases & Fallbacks */
+  --color-surface: var(--color-surface-1);
+  --color-surface-muted: var(--color-surface-2);
+  --color-text-secondary: var(--color-text-muted);
+  --color-fg: var(--color-text);
 
   --color-border: #273247;
   --color-border-strong: #35425a;

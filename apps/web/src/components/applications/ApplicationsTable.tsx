@@ -184,7 +184,7 @@ export function ApplicationsTable({
 
   if (loading && applications.length === 0) {
     return (
-      <div aria-busy="true" aria-label="Loading applications" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 0' }}>
+      <div role="status" aria-busy="true" aria-label="Loading applications" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 0' }}>
         {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} height="36px" width="100%" />
         ))}

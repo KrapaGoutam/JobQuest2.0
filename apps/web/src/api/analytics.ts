@@ -27,6 +27,44 @@ export async function fetchAnalyticsOverview(
   return data as AnalyticsOverview;
 }
 
+interface RawTransition {
+  transition?: string;
+  median_days?: number | null;
+  min_days?: number | null;
+  max_days?: number | null;
+  sample_size?: number;
+  sample_count?: number;
+}
+
+interface RawStuckApp {
+  id: string;
+  company_name: string;
+  role_title: string;
+  stage: string;
+  days_in_stage?: number;
+}
+
+interface RawFollowUpGroup {
+  count?: number;
+  responses?: number;
+  response_count?: number;
+}
+
+interface RawStageTimingPayload {
+  transitions?: RawTransition[];
+  stuck_applications?: RawStuckApp[];
+  follow_up_impact?: {
+    with_follow_up?: RawFollowUpGroup;
+    without_follow_up?: RawFollowUpGroup;
+    total_follow_ups?: number;
+  };
+  follow_up_correlation?: {
+    with_follow_up?: RawFollowUpGroup;
+    without_follow_up?: RawFollowUpGroup;
+    total_follow_ups?: number;
+  };
+}
+
 export async function fetchStageTiming(
   workspaceId: string,
   options: AnalyticsQueryOptions = {}
@@ -39,20 +77,20 @@ export async function fetchStageTiming(
   });
 
   if (error) throw error;
-  const raw = (data ?? {}) as Record<string, any>;
-  const fup = (raw.follow_up_impact || raw.follow_up_correlation || {}) as Record<string, any>;
-  const withFup = (fup.with_follow_up || {}) as Record<string, any>;
-  const withoutFup = (fup.without_follow_up || {}) as Record<string, any>;
+  const raw = (data ?? {}) as RawStageTimingPayload;
+  const fup = raw.follow_up_impact || raw.follow_up_correlation || {};
+  const withFup = fup.with_follow_up || {};
+  const withoutFup = fup.without_follow_up || {};
 
   return {
-    transitions: (raw.transitions || []).map((t: any) => ({
+    transitions: (raw.transitions || []).map((t) => ({
       transition: t.transition || '',
       median_days: t.median_days ?? null,
       min_days: t.min_days ?? null,
       max_days: t.max_days ?? null,
       sample_size: t.sample_size ?? t.sample_count ?? 0,
     })),
-    stuck_applications: (raw.stuck_applications || []).map((s: any) => ({
+    stuck_applications: (raw.stuck_applications || []).map((s) => ({
       id: s.id,
       company_name: s.company_name,
       role_title: s.role_title,

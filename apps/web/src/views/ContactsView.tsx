@@ -1,3 +1,4 @@
+import { completeContactFollowUp, setContactFollowUp } from '../api/tasks';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -366,7 +367,9 @@ export function ContactsView({
 
   const handleUpdateFollowUp = async (contactId: string, nextDate: string | null) => {
     try {
-      await updateContact(contactId, { next_follow_up_date: nextDate });
+      // M6: follow-ups are canonical tasks; the contact date is their projection.
+      if (nextDate) await setContactFollowUp(contactId, nextDate);
+      else await completeContactFollowUp(contactId);
       showToast(nextDate ? 'Follow-up updated' : 'Follow-up completed');
       if (selectedContact?.id === contactId) {
         await refreshSelectedContact(contactId);

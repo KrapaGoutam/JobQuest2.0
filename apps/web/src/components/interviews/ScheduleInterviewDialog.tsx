@@ -79,6 +79,7 @@ export function ScheduleInterviewDialog({
   const [prep, setPrep] = useState('');
   const [questions, setQuestions] = useState('');
   const [stageChoice, setStageChoice] = useState<'keep' | 'move'>('keep');
+  const [remind, setRemind] = useState(true);
   const [candidates, setCandidates] = useState<{ id: string; full_name: string; relationship_type: string }[]>([]);
   const [contactIds, setContactIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -89,6 +90,7 @@ export function ScheduleInterviewDialog({
     if (!isOpen) return;
     setErrors({});
     setStageChoice('keep');
+    setRemind(true);
     if (editing) {
       const wall = utcIsoToZonedWallTime(editing.scheduled_at, timeZone);
       setAppId(editing.application_id);
@@ -207,6 +209,7 @@ export function ScheduleInterviewDialog({
           questionsExpected: questions.trim(),
           contactIds,
           moveToStage: stageChoice === 'move' && suggestion ? suggestion.id : null,
+          remindBeforeMinutes: remind ? 60 : null,
         });
         onSaved(stageChoice === 'move' && suggestion ? `Interview scheduled · stage moved to ${suggestion.label}` : 'Interview scheduled');
       }
@@ -363,6 +366,16 @@ export function ScheduleInterviewDialog({
         <FormField label="Questions expected" optional error={errors.questions}>
           {(p) => <Textarea {...p} rows={3} value={questions} onChange={(e) => setQuestions(e.target.value)} placeholder="Anticipated technical or behavioral questions…" />}
         </FormField>
+
+        {!isEdit && (
+          <label className="row small" style={{ gap: 8, alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>
+              Remind me 1 hour before
+              <span className="help" style={{ display: 'block' }}>Adds a reminder to Tasks. After the interview starts, it also appears in your queue until you record the outcome.</span>
+            </span>
+          </label>
+        )}
 
         {selectedApp && suggestion && (
           <div className="field">

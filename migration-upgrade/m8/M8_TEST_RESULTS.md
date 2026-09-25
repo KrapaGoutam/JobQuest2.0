@@ -1,92 +1,73 @@
-# Milestone 8 · Test Results — Analytics, Reports & Search Goals
+# M8 Test Results - Analytics, Reports & Search Goals
 
-**Date:** 2026-09-25  
-**Branch:** `feature/m8-analytics-reports`  
-**Commit:** Working tree / pre-push  
-**Target Environments:**
-- Local PostgreSQL (`55322`) + PostgREST (`55321`)
-- Remote Development Supabase (`jobquest-dev` ref `xpnkasclquplmrcmhsif`)
-- Local Vitest + Playwright Chromium browser
+Date: 2026-09-25
+Executable SHA: `7757b06e9b72f09309823240af8059b418598934`
 
----
+## Final matrix
 
-## 1. Executive Summary
+| Gate | Local | Hosted `jobquest-dev` | CI / Preview |
+| --- | --- | --- | --- |
+| Lint | PASS | n/a | PASS |
+| Typecheck | PASS | n/a | PASS |
+| Unit | 13 files, 103/103 | n/a | 103/103 |
+| Integration regression | 8 files, 119/119 | 8 files, 119/119 | 119/119 |
+| M8 integration | 8/8 | 8/8 | PASS in full suite |
+| Build | PASS | n/a | PASS |
+| Database lint | no schema errors | migration ledger matched | migrations applied in CI |
+| M8 Playwright | 1/1 | n/a | Preview 1/1 |
+| Option B browser | covered in CI | n/a | Preview 1/1 |
+| Accessibility | 5 audits, 0 blocking | n/a | Preview 5 audits, 0 blocking |
+| Bundle scan | 3 built files, 0 | n/a | 4 deployed files, 0 |
+| Tracked-file secret scan | 554 files, 0 | n/a | 554 files, 0 |
 
-Milestone 8 delivers the complete **Analytics, Reports & Search Goals** domain:
-- New `goals` table (weekly and monthly activity targets per workspace user, manager audited).
-- High-performance, multi-aggregation database RPCs:
-  - `rpc_upsert_goal`: Upsert goal targets with automatic conflict handling on `(workspace_id, user_id, period_type, effective_date)`.
-  - `rpc_get_analytics_overview`: Computes search summary KPIs, 12-week pacing history, current pipeline distribution, historical funnel ("ever reached"), sources breakdown, resumes breakdown, outcomes breakdown, and active weekly target.
-  - `rpc_get_stage_timing`: Stage-to-stage transition metrics (median/min/max days, sample size floor), stuck applications (14+ days in stage), and follow-up correlation/impact.
-- Client-side Aging Report engine with 5 distinct aging bands, quiet review triage actions, and next action integration.
-- Formula-injection-sanitized CSV export and full JSON analytics export.
-- Gate 02B 07-analytics UI with 4 accessible tabs (`Overview`, `Stage timing`, `Aging`, `Goals`).
+GitHub Actions run `36180204706` completed successfully for the executable SHA. Its two jobs were:
 
-All automated test suites executed with **100% pass rate** and **zero regressions**:
-- **Unit Tests:** 13 passed files, 103 passed tests (including 7 new M8 unit tests).
-- **Integration Tests:** 8 passed files, 119 passed tests (including 8 new comprehensive M8 integration tests).
-- **Playwright E2E Suite:** 1 passed test (full user lifecycle with 5 screenshot captures and 4 automated axe-core accessibility audits).
-- **Accessibility Audits:** 0 critical, 0 serious, 0 moderate violations across all M8 surfaces (`analytics-overview-light`, `analytics-stage-timing-light`, `analytics-aging-dark`, `analytics-goals-light`).
-- **Secret & Bundle Scans:** 0 findings across built bundle assets and 527 tracked repository files.
+1. `Lint / typecheck / unit / build / secret scans` - PASS.
+2. `Migrations / Option B auth / RLS / browser (local Supabase)` - PASS, including 119 integration and 12 browser tests.
 
----
+## M8 integration coverage
 
-## 2. Test Execution Breakdown
+1. Goal upsert/defaults/uniqueness and direct-delete denial.
+2. Same-workspace peer read and mutation isolation.
+3. Manager member-goal mutation through the audited RPC.
+4. Exact historical funnel milestones from `application_events`.
+5. Current open pipeline separated from historical closed outcomes.
+6. First-event stage timing with duplicate and reopened event fixtures, exact averages/medians/ranges, and current-stage age.
+7. Manager aggregate versus member-filtered analytics.
+8. Anonymous and cross-workspace denial.
 
-### A. Unit Tests (`pnpm test:unit`)
-**Result:** 13 files passed, 103 tests passed (Duration: 1.02s)
-- `tests/unit/m8-analytics.test.ts` (7 tests)
-  - `sanitizeCsvField`: prepends single quote to cells beginning with formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`).
-  - `sanitizeCsvField`: wraps in quotes if cell contains commas, quotes, or newlines, properly escaping inner double quotes.
-  - `sanitizeCsvField`: leaves alphanumeric and normal text untouched.
-  - `sanitizeCsvField`: handles null and undefined safely.
-  - Stage Timing Sample Size Floor (<5): flags transitions with low sample counts (<5) with sample size indicators.
-  - Aging Bands: categorizes 0-3 days as `NEW`, 4-7 days as `WAITING`, 8-14 days as `FOLLOW_UP_RECOMMENDED`, 15-30 days as `STALE`, and >30 days as `LONG_WAITING`.
-  - Aging Bands: respects future-scheduled tasks and completed status.
-- `tests/unit/m1b` to `m7` suites: 96 tests passed with no regressions.
+Evidence:
 
-### B. M8 Integration Tests (`tests/integration/m8-analytics.test.ts`)
-**Result:** 8/8 passed against both local PostgreSQL and remote `jobquest-dev`.
-- `M8-01 · Goals table RLS & unique index`: User can create and read own goals; duplicate effective dates conflict/upsert cleanly.
-- `M8-02 · Peer goal isolation`: User B cannot select or mutate User A's goals (RLS rejection).
-- `M8-03 · Manager goal inspection & audit`: Workspace manager can inspect member goals; manager updates trigger `manager_audit_log` events.
-- `M8-04 · rpc_get_analytics_overview`: Computes valid KPIs, 12-week pacing points, current pipeline, historical funnel ("ever reached"), sources, and resumes breakdown.
-- `M8-05 · rpc_get_stage_timing`: Returns transitions with median days, stuck applications (14+ days in stage), and follow-up impact rates.
-- `M8-06 · Manager aggregate vs member view`: Manager can view aggregate workspace analytics or filter by individual member; non-manager cannot query peers.
-- `M8-07 · Date range bounds`: Analytics RPCs respect start and end date filtering accurately.
-- `M8-08 · Anonymous access rejection`: Unauthenticated requests to goals and analytics RPCs fail with `42501` / unauthorized.
+- `evidence/integration-local-dc2379.json`
+- `evidence/integration-hosted-dev-343149.json`
 
-### C. Full Integration Regression Suite (`pnpm test:integration`)
-**Result:** 8 test files passed, 119 total tests passed (Duration: 90.39s)
-1. `tests/integration/m1b.test.ts` (17 tests) — PASS
-2. `tests/integration/m3-applications.test.ts` (38 tests) — PASS
-3. `tests/integration/m4-contacts.test.ts` (10 tests) — PASS
-4. `tests/integration/m4-closeout.test.ts` (9 tests) — PASS
-5. `tests/integration/m5-interviews.test.ts` (14 tests) — PASS
-6. `tests/integration/m6-tasks-habits.test.ts` (13 tests) — PASS
-7. `tests/integration/m7-documents.test.ts` (10 tests) — PASS
-8. `tests/integration/m8-analytics.test.ts` (8 tests) — PASS
+## M8 Preview browser coverage
 
-### D. Playwright E2E & Accessibility Suite (`e2e/m8-analytics.spec.ts`)
-**Result:** 1 passed test (Duration: 14.5s overall)
-- Complete user registration and onboarding flow.
-- Created sample applications in diverse pipeline stages.
-- Navigated to `/analytics` via primary sidebar navigation.
-- Verified Overview tab cards, 12-week pacing SVG chart, current pipeline, historical funnel, and breakdowns.
-- Verified Dark Mode toggle and visual rendering.
-- Navigated to Stage Timing tab, verified step timing table, stuck applications table, and follow-up impact stats.
-- Navigated to Aging Report tab in dark mode, verified 5 aging bands and quiet review banner.
-- Navigated to Goals tab, opened Edit Goals modal, updated target to 18 applications, and saved successfully.
-- Generated 5 visual evidence screenshots and `m8-e2e.json` evidence file.
-- Executed 4 automated Axe-core audits:
-  - `analytics-overview-light`: 0 critical, 0 serious, 0 blocking.
-  - `analytics-stage-timing-light`: 0 critical, 0 serious, 0 blocking.
-  - `analytics-aging-dark`: 0 critical, 0 serious, 0 blocking.
-  - `analytics-goals-light`: 0 critical, 0 serious, 0 blocking.
+Preview: `https://jobquest2-ke8qoar7s-one-piece-5779.vercel.app`
 
-### E. Code Quality & Security Verification
-- `pnpm lint`: Clean (0 errors, 0 warnings).
-- `pnpm typecheck`: Clean (0 errors across workspace).
-- `pnpm build`: Production build succeeded (`@jobquest/web` client bundle).
-- `pnpm check:bundle`: 0 secrets found in dist bundles.
-- `pnpm check:secrets`: 0 secrets found across 527 tracked files.
+- registered a new Option B account and completed recovery-code onboarding;
+- created two applications with first-class source values;
+- asserted exact application totals and source breakdown values;
+- changed the range preset to 30d and verified reload behavior;
+- downloaded and parsed CSV and JSON exports;
+- verified a formula-leading source is neutralized in CSV;
+- exercised Overview, Stage Timing, Aging, and Goals;
+- selected a workspace member before manager goal mutation;
+- verified light, dark, desktop, and 390x844 mobile rendering;
+- ran axe on Overview, Stage Timing, Aging, Goals, and mobile Goals with 0 critical/serious violations.
+
+The separate Option B Preview test scanned 125 requests and 38 non-code responses, found no forbidden identity/credential material, verified the refresh token remained HttpOnly/Secure/SameSite=Strict, and proved direct PostgREST read/write still works.
+
+Evidence:
+
+- `evidence/m8-e2e.json`
+- `evidence/option-b-preview-ke8qoar7s.json`
+- `evidence/preview-bundle-scan-ke8qoar7s.json`
+
+## CSV formula-injection cases
+
+Unit and Preview E2E cover values beginning with `=`, `+`, `-`, `@`, tab, and carriage return. Dangerous leading characters receive a single-quote prefix; commas, quotes, LF, and CR trigger correct CSV quoting.
+
+## Notes
+
+The production build passes. Vite emits a non-blocking large-chunk advisory for the approximately 883 kB minified application bundle; secret and bundle policy checks are green.

@@ -1,0 +1,9 @@
+{
+  "base": "https://jobquest2-ke8qoar7s-one-piece-5779.vercel.app",
+  "deployment_id": "dpl_56ZnCFUwHXsJnZ1rY5Wir2rRDFTc",
+  "executable_sha": "7757b06e9b72f09309823240af8059b418598934",
+  "files": 4,
+  "knownSecretValues": 3,
+  "findings": 0,
+  "at": "2026-09-25T19:41:38.080Z"
+}

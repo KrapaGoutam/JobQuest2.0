@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "preview_url": "https://jobquest2-ke8qoar7s-one-piece-5779.vercel.app",
+  "supabase_target": "jobquest-dev",
+  "executable_sha": "7757b06e9b72f09309823240af8059b418598934",
+  "requests_scanned": 125,
+  "data_responses_scanned": 38,
+  "network_hits": [],
+  "browser_storage_leaks": false,
+  "console_contains_forbidden": false,
+  "auth_user_probe_status": 403,
+  "refresh_cookie": {
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Strict",
+    "path": "/api/auth"
+  },
+  "direct_postgrest_read_write": true,
+  "registration_login_refresh_logout": true,
+  "at": "2026-09-25T19:42:23Z"
+}

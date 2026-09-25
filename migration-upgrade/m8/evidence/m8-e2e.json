@@ -1,6 +1,10 @@
 {
-  "run": "a48f40",
-  "started_at": "2026-09-25T19:23:24.592Z",
+  "run": "7edb0b",
+  "started_at": "2026-09-25T19:39:25.020Z",
+  "target": "vercel-preview",
+  "preview_url": "https://jobquest2-ke8qoar7s-one-piece-5779.vercel.app",
+  "deployment_id": "dpl_56ZnCFUwHXsJnZ1rY5Wir2rRDFTc",
+  "executable_sha": "7757b06e9b72f09309823240af8059b418598934",
   "Y1_screenshot": "Y1-analytics-light.png",
   "a11y_overview": {
     "context": "analytics-overview-light",
@@ -47,5 +51,5 @@
     "violations": [],
     "blocking": 0
   },
-  "completed_at": "2026-09-25T19:23:34.632Z"
+  "completed_at": "2026-09-25T19:39:49.976Z"
 }

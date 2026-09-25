@@ -10,31 +10,31 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`e79d9b57c118480b705521a6608d80d64afba971`
+`7e479ab` (resolve with `git rev-parse HEAD` if more checkpoints exist)
 
 ## Last Pushed Commit
 
-`e79d9b57c118480b705521a6608d80d64afba971` (branch creation point; same executable as green `development`).
+`7e479ab` — M9 planning and crash-recovery package.
 
 ## Working Tree State
 
-Planning checkpoint files are being authored. No product code or database migration has been changed yet.
+Clean after the pushed planning checkpoint. This file is being updated immediately before creating the M9 database migration and beginning the preference/dashboard refactor.
 
 ## Last Completed Step
 
-Verified M8 is merged into `development`, `development` equals `origin/development`, and GitHub Actions run `36183012517` passed for merge SHA `e79d9b57c118480b705521a6608d80d64afba971`. Reconciled the repository roadmaps and created/pushed the M9 branch.
+Completed the M9 preference foundation: additive `profiles.ui_preferences` migration, exact 30-widget typed registry, user/manager legacy defaults, defensive layout normalization, workspace/type persistence helpers, direct RLS-scoped profile API, and 5 focused unit tests. Web typecheck and the focused tests pass.
 
 ## Current Step
 
-Create and checkpoint the repository-derived M9 planning package before implementation.
+Checkpoint and push the preference foundation, then implement the dashboard data composition and UI.
 
 ## Next Exact Step
 
-Inspect the existing analytics, tasks, interviews, applications, profile RLS, and UI primitives; then create an additive migration for `profiles.ui_preferences` and implement the 30-ID dashboard registry/layout model.
+Refactor `DashboardView.tsx` to load saved layout and existing M6/M8 data in parallel, render the enabled three-tier widget grid, and add the accessible customization dialog without changing the existing action queue behavior.
 
 ## Database State
 
-No M9 database change has been created or applied. The latest verified development migration is `20260928110000_m8_analytics_integrity.sql`.
+M9 migration `20260929100000_m9_dashboard_preferences.sql` is authored and locally reviewed but not yet applied. It adds one owner-private JSONB column and an object-shape constraint; existing profile RLS/grants remain authoritative.
 
 ## Supabase Project
 
@@ -43,7 +43,7 @@ Development only: `jobquest-dev` (`xpnkasclquplmrcmhsif`). Production is out of 
 ## Applied/Pending Migrations
 
 - Applied locally and hosted before this branch: through `20260928110000`.
-- Pending M9: none yet.
+- Pending M9: `20260929100000_m9_dashboard_preferences.sql` (not applied locally or hosted yet).
 
 ## Vercel Preview State
 
@@ -55,7 +55,7 @@ Development run `36183012517`: success at `e79d9b57c118480b705521a6608d80d64afba
 
 ## Local Test State
 
-No M9 changes yet. M8 closeout evidence remains authoritative; do not repeat expensive M8 suites unless shared behavior changes.
+M9 focused unit: 5/5. Web TypeScript check: PASS. No database or browser run yet.
 
 ## Hosted Test State
 
@@ -67,11 +67,11 @@ None.
 
 ## Files Currently Modified
 
-Planning/recovery documentation under `migration-upgrade/`; inspect `git status --short` for the exact list.
+Preference foundation files plus this recovery update; inspect `git status --short` for exact state. These form a coherent checkpoint and should be committed together.
 
 ## Untracked Files Classification
 
-Expected milestone planning files only. No runtime evidence or user files are expected.
+Expected M9 source, test, and migration files only. No runtime evidence or user files are expected.
 
 ## Known Failures
 

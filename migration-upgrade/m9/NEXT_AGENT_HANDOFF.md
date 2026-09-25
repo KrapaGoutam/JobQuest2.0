@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. The M9 branch has been created and pushed. The repository-derived scope is Dashboard Parity: finish the dashboard portion of formal M9 without reopening the Goals/Analytics work delivered by M8.
+M8 is merged and development CI is green. M9 planning is pushed. The preference foundation is implemented: additive profile JSON preferences, exact registry/default layouts, normalization/persistence helpers, and focused tests. Focused tests and web typecheck pass.
 
 ## Next action
 
-Finish and commit the planning package, then implement the additive profile preference foundation described in `IMPLEMENTATION_PLAN.md`. Update both this file and `CURRENT_AGENT_STATE.md` before any long test, hosted migration, deployment, CI wait, or branch merge.
+Confirm the preference-foundation commit is pushed, then refactor `DashboardView.tsx` to compose existing M6/M8 data and render/customize the tiered widget layout. Update both this file and `CURRENT_AGENT_STATE.md` before any long test, hosted migration, deployment, CI wait, or branch merge.
 
 ## Guardrails
 

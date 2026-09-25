@@ -1,0 +1,337 @@
+{
+  "run": "785166",
+  "started_at": "2026-09-25T06:10:52.819Z",
+  "target": "local",
+  "B01": {
+    "status": "PASS",
+    "http": 201,
+    "recovery_codes": 10,
+    "code_format": "8 groups of 4 Crockford Base32 (160 bits; 140 secret)",
+    "credential_store": "user_credentials.password_hash",
+    "password_algorithm": "argon2id",
+    "argon2_params": "m=19456,t=2,p=1",
+    "recovery_code_verifiers": "argon2id",
+    "personal_workspace": "PERSONAL",
+    "membership_role": "MANAGER",
+    "supabase_auth_user_exists": false,
+    "duplicate_username_case_insensitive": 409,
+    "weak_password": 422,
+    "invalid_email": 422,
+    "optional_email_and_phone_accepted": 201
+  },
+  "B02": {
+    "status": "PASS",
+    "http": 200,
+    "body_keys": [
+      "session",
+      "user"
+    ],
+    "user_keys": [
+      "active_workspace_id",
+      "display_name",
+      "id",
+      "username"
+    ],
+    "session_keys": [
+      "access_token",
+      "expires_at",
+      "token_type"
+    ],
+    "refresh_cookie": "HttpOnly; Secure; SameSite=Strict; Path=/api/auth",
+    "wrong_vs_unknown_identical": true
+  },
+  "B04": {
+    "status": "PASS",
+    "header_alg": "ES256",
+    "header_has_kid": true,
+    "claim_keys": [
+      "aud",
+      "exp",
+      "iat",
+      "iss",
+      "jti",
+      "role",
+      "session_id",
+      "sub"
+    ],
+    "role_claim": "authenticated",
+    "ttl_seconds": 900,
+    "data_api_http": 200,
+    "data_api_rows": 1,
+    "rejected": {
+      "forged_other_key": 401,
+      "tampered_sub": 401,
+      "alg_none": 401
+    }
+  },
+  "B05": {
+    "status": "PASS",
+    "rls_profile_row_equals_sub": true,
+    "rpc_created_by_equals_sub": true,
+    "insert_with_other_owner": "42501",
+    "auth_users_row_for_sub": "none"
+  },
+  "B06": {
+    "status": "PASS",
+    "user_rows_all_own": true,
+    "own_insert": "allowed",
+    "own_update_rows": 1,
+    "own_direct_stage_write": "42501",
+    "own_stage_via_rpc": "allowed"
+  },
+  "B07": {
+    "status": "PASS",
+    "peer_row_visible": 0,
+    "peer_update_rows": 0,
+    "insert_for_peer": "42501",
+    "user_adds_member": "42501"
+  },
+  "B08": {
+    "status": "PASS",
+    "outsider_rows_in_W": 0,
+    "outsider_insert_into_W": "42501",
+    "member_rows_in_foreign_personal": 0,
+    "outsider_membership_rows": 0
+  },
+  "B09": {
+    "status": "PASS",
+    "manager_sees_owners": "A and B",
+    "manager_update_rows": 1,
+    "manager_insert_for_member": "allowed"
+  },
+  "B10": {
+    "status": "PASS",
+    "manager_rows_in_foreign_ws": 0,
+    "manager_update_foreign_rows": 0,
+    "manager_insert_foreign": "42501",
+    "manager_self_add_foreign": "42501",
+    "last_manager_demotion": "blocked"
+  },
+  "B11": {
+    "status": "PASS",
+    "client": "supabase-js createClient({ accessToken })",
+    "select_http": 200,
+    "row_found": true
+  },
+  "B12": {
+    "status": "PASS",
+    "insert_http": 201,
+    "update_http": 200,
+    "stage_via_rpc": "allowed",
+    "delete": "denied (42501)",
+    "check_constraint": "23514"
+  },
+  "B13": {
+    "status": "PASS",
+    "session_row": true,
+    "session_absolute_days": 30,
+    "refresh_token_entropy_bits": 256,
+    "stored_verifier": "sha256 hex (64)",
+    "raw_token_stored": false,
+    "ip_stored": "sha256 only",
+    "user_agent_stored": true
+  },
+  "B14": {
+    "status": "PASS",
+    "default_access_ttl_seconds": 900,
+    "short_token_before_expiry_rows": 1,
+    "data_api_2_5s_after_exp_http": 200,
+    "data_api_32_5s_after_exp_http": 401,
+    "data_api_error_code": "PGRST303",
+    "node_me_after_expiry": 401,
+    "note": "The Data API accepted the token for a short clock-skew leeway after exp; it was rejected within 32.5 s."
+  },
+  "B15": {
+    "status": "PASS",
+    "rotated": true,
+    "new_access_token": true,
+    "old_verifier_consumed": true,
+    "child_links_parent": true,
+    "missing_csrf": 403,
+    "foreign_origin": 403
+  },
+  "B16": {
+    "status": "PASS",
+    "immediate_replay_http": 401,
+    "replay_code": "REFRESH_REUSED",
+    "session_revoked_reason": "REFRESH_REUSE",
+    "legit_holder_after_replay": 401,
+    "access_token_rows_after_replay": 0,
+    "grace_window_seconds": 0,
+    "concurrent_same_token": {
+      "attempts": 5,
+      "succeeded": 1,
+      "statuses": [
+        200,
+        401,
+        401,
+        401,
+        401
+      ]
+    }
+  },
+  "B17": {
+    "status": "PASS",
+    "local_logout_http": 200,
+    "cookies_cleared": true,
+    "revoked_token_rows": 0,
+    "revoked_token_http": 200,
+    "old_refresh_token_after_logout": 401,
+    "other_session_unaffected_rows": 1,
+    "global_logout_revoked": 4,
+    "other_device_after_global": {
+      "rows": 0,
+      "refresh": 401
+    },
+    "note": "A revoked session’s unexpired JWT still verifies, but RLS (app.session_is_active) returns 0 rows; PostgREST answers 200 []."
+  },
+  "B18": {
+    "status": "PASS",
+    "policy": "current session kept; all other sessions revoked",
+    "wrong_current": 401,
+    "missing_csrf": 403,
+    "change": 200,
+    "other_sessions_revoked": 3,
+    "old_password_login": 401,
+    "new_password_login": 200,
+    "current_session_rows": 1,
+    "current_session_refresh": 200,
+    "other_session_rows": 0,
+    "other_session_refresh": 401
+  },
+  "B19": {
+    "status": "PASS",
+    "weak_new_password": 422,
+    "recover": 200,
+    "code_input_case_insensitive": true,
+    "remaining_after_use": 9,
+    "replay_same_code": 401,
+    "old_password_login": 401,
+    "new_password_login": 200,
+    "used_at_tracked": true,
+    "regenerate": 200,
+    "old_unused_code_after_regeneration": 401,
+    "new_code_works": 200
+  },
+  "B20": {
+    "status": "PASS",
+    "sessions_before_recovery": 3,
+    "all_revoked": [
+      {
+        "rows": 0,
+        "refresh": 401
+      },
+      {
+        "rows": 0,
+        "refresh": 401
+      },
+      {
+        "rows": 0,
+        "refresh": 401
+      }
+    ],
+    "recovering_client_new_session_rows": 1
+  },
+  "B21": {
+    "status": "PASS",
+    "per_account": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      429
+    ],
+    "correct_password_while_locked": 429,
+    "failed_login_count": 5,
+    "lock_store": "user_accounts (Postgres)",
+    "recovery_attempts": [
+      401,
+      401,
+      401,
+      429
+    ]
+  },
+  "B22": {
+    "status": "PASS",
+    "store": "Postgres auth_rate_limits via rpc_rate_limit_hit (shared across instances)",
+    "limit": 20,
+    "twenty_first_from_same_ip": 429,
+    "different_ip_unaffected": 401,
+    "stored_key": "sha256(ip), raw IP not stored",
+    "cross_client_shared_counter": [
+      "allowed",
+      "allowed",
+      "allowed",
+      "blocked"
+    ]
+  },
+  "B25": {
+    "status": "PASS",
+    "auth_v1_user_http": 403,
+    "auth_v1_user_error_code": "user_not_found",
+    "body_keys": [
+      "code",
+      "error_code",
+      "msg"
+    ],
+    "body_contains_email_or_username": false,
+    "supabase_auth_users_for_test_accounts": 0,
+    "gotrue_signup_http": 422,
+    "gotrue_password_grant_http": 422
+  },
+  "B26": {
+    "status": "PASS",
+    "stages": [
+      "SAVED",
+      "PREPARING",
+      "APPLIED",
+      "ASSESSMENT",
+      "RECRUITER_SCREEN",
+      "INTERVIEW",
+      "FINAL_INTERVIEW",
+      "OFFER"
+    ],
+    "outcomes": [
+      "ACCEPTED",
+      "REJECTED",
+      "WITHDRAWN",
+      "GHOSTED",
+      "POSITION_CLOSED"
+    ],
+    "closure_reasons": 5,
+    "node_equals_data_api": true,
+    "client_update_rows": 0,
+    "node_without_token": 401
+  },
+  "SEC": {
+    "status": "PASS",
+    "system_tables_with_user_token": {
+      "user_accounts": "42501",
+      "user_credentials": "42501",
+      "auth_sessions": "42501",
+      "auth_refresh_tokens": "42501",
+      "auth_rate_limits": "42501",
+      "auth_recovery_codes": "42501"
+    },
+    "privileged_rpcs_with_user_token": {
+      "rpc_create_session": "42501",
+      "rpc_change_password": "42501",
+      "rpc_rate_limit_hit": "42501",
+      "rpc_register_account": "42501"
+    }
+  },
+  "B03-api": {
+    "status": "PASS",
+    "target": "local",
+    "api_responses_scanned": 97,
+    "findings": {
+      "argon2_verifier_in_body": false,
+      "password_hash_field_in_body": false,
+      "refresh_token_in_body": false,
+      "refresh_token_outside_set_cookie": false,
+      "synthetic_email_pattern": false,
+      "private_key_material": false
+    }
+  }
+}

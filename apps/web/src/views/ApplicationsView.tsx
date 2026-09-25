@@ -74,7 +74,7 @@ export interface ApplicationsViewProps {
   probeStatus?: string;
   log?: string[];
   activeWorkspaceId?: string | null;
-  userRole?: string;
+  userRole?: 'USER' | 'MANAGER';
   onRefresh: () => Promise<unknown>;
   onLogout: (scope: 'local' | 'global') => Promise<void>;
   onCreateApp?: (e: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -121,7 +121,7 @@ export function ApplicationsView({
   probeStatus = '',
   log = [],
   activeWorkspaceId,
-  userRole = 'MEMBER',
+  userRole = 'USER',
   onRefresh,
   onLogout,
   onCreateApp,
@@ -136,7 +136,7 @@ export function ApplicationsView({
 
   const wsId = activeWorkspaceId || user?.active_workspace_id || '';
   // UX only: MANAGER sees owner columns/filters. Authorization is enforced by RLS.
-  const isManager = userRole === 'MANAGER' || userRole === 'OWNER';
+  const isManager = userRole === 'MANAGER';
 
   // ---------------------------------------------------------------------------
   // Data state

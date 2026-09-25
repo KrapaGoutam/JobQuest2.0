@@ -9,7 +9,7 @@ export interface WorkspaceRecord {
 
 export interface WorkspaceMembership {
   workspace_id: string;
-  role: string;
+  role: 'USER' | 'MANAGER';
   workspaces: WorkspaceRecord | null;
 }
 
@@ -103,8 +103,8 @@ export function WorkspaceProvider({
 
   const activeMembership = memberships.find((m) => m.workspace_id === activeWorkspaceId);
   const activeWorkspace = activeMembership?.workspaces ?? null;
-  const activeRole = activeMembership?.role?.toUpperCase() ?? 'MEMBER';
-  const isManager = activeRole === 'MANAGER' || activeRole === 'OWNER';
+  const activeRole = activeMembership?.role?.toUpperCase() ?? 'USER';
+  const isManager = activeRole === 'MANAGER';
   const workspaceColor = getWorkspaceColor(activeWorkspaceId);
 
   return (

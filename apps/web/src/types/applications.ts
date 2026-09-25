@@ -184,7 +184,11 @@ export function agingRange(filter: Exclude<AgingFilter, 'ALL'>, now: Date): { fr
 // ---------------------------------------------------------------------------------
 export const SEARCH_COLUMNS = ['company_name', 'role_title', 'location', 'notes'] as const;
 
-export function buildSearchFilter(raw: string): string | null {
+export function buildSearchFilter(
+  raw: string,
+  columns: readonly string[] = SEARCH_COLUMNS,
+  tagColumn: string | null = 'tags',
+): string | null {
   const term = raw.trim().replace(/\s+/g, ' ').slice(0, 100);
   if (!term) return null;
   // 1) LIKE escaping: the user's % and _ are literal characters.
@@ -192,8 +196,8 @@ export function buildSearchFilter(raw: string): string | null {
   // 2) PostgREST quoted value: escape backslash and double quote; the quotes keep
   //    commas, parentheses and dots from being parsed as filter syntax.
   const quoted = like.replace(/[\\"]/g, (c) => `\\${c}`);
-  const clauses = SEARCH_COLUMNS.map((col) => `${col}.ilike."*${quoted}*"`);
+  const clauses = columns.map((col) => `${col}.ilike."*${quoted}*"`);
   // Tags are an array: exact tag match for single safe tokens.
-  if (/^[A-Za-z0-9_.+#-]{1,40}$/.test(term)) clauses.push(`tags.cs.{${term}}`);
+  if (tagColumn && /^[A-Za-z0-9_.+#-]{1,40}$/.test(term)) clauses.push(`${tagColumn}.cs.{${term}}`);
   return clauses.join(',');
 }

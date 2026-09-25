@@ -8,12 +8,12 @@ import { ToastContainer } from './components/ui/Toast';
 import { AppShell } from './components/shell/AppShell';
 import { AuthView } from './views/AuthView';
 import { ApplicationsView, type ApplicationRecord, type WorkflowDef } from './views/ApplicationsView';
+import { ContactsView } from './views/ContactsView';
 import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   LayoutDashboard,
   CheckSquare,
-  Users,
   Calendar,
   Video,
   Flame,
@@ -29,7 +29,7 @@ import './styles/globals.css';
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('jobquest-auth') : null;
 
 interface Workspace { id: string; name: string; workspace_type: string }
-interface Membership { workspace_id: string; role: string; workspaces: Workspace | null }
+interface Membership { workspace_id: string; role: 'USER' | 'MANAGER'; workspaces: Workspace | null }
 
 declare global {
   interface Window { __jqState?: unknown }
@@ -363,7 +363,7 @@ function AppContent() {
           probeStatus={probe}
           log={log}
           activeWorkspaceId={activeWs}
-          userRole={memberships.find((m) => m.workspace_id === activeWs)?.role ?? 'MEMBER'}
+          userRole={memberships.find((m) => m.workspace_id === activeWs)?.role ?? 'USER'}
           onRefresh={refresh}
           onLogout={onLogout}
           onCreateApp={onCreateApp}
@@ -406,11 +406,9 @@ function AppContent() {
 
     if (currentPath === '/contacts') {
       return (
-        <PlaceholderView
-          title="Contacts & Networking"
-          subtitle="Recruiters, hiring managers, and referral tracking"
-          icon={<Users size={24} />}
-          milestoneOwner="Milestone 5"
+        <ContactsView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
         />
       );
     }

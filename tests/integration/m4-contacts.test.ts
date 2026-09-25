@@ -54,7 +54,7 @@ describe.skipIf(!ready)('Milestone 4 — Contacts & Networking Integration Suite
       expect(a.userId).toBeTruthy();
     }
 
-    // Charlie creates shared workspace (Charlie = MANAGER); Alice & Bob join as USER/MEMBER
+    // Charlie creates shared workspace (Charlie = MANAGER); Alice & Bob join as USER
     const { data: wsData, error: wsErr } = await managerCharlie.db().rpc('rpc_create_workspace', { p_name: `M4 Shared WS ${run}` });
     expect(wsErr).toBeNull();
     sharedWsId = wsData as string;
@@ -173,20 +173,21 @@ describe.skipIf(!ready)('Milestone 4 — Contacts & Networking Integration Suite
     expect(updErr).toBeNull();
     expect(updData).toHaveLength(0); // 0 rows updated
 
-    // Alice attempts to delete Bob's contact
+    // Alice attempts to delete Bob's contact: hard DELETE is not granted at all
+    // (archive-first, 20260925100000), so the request fails before RLS is consulted.
     const { data: delData, error: delErr } = await alice.db()
       .from('contacts')
       .delete()
       .eq('id', bobContactId)
       .select();
-    expect(delErr).toBeNull();
-    expect(delData).toHaveLength(0);
+    expect(delErr?.code).toBe('42501');
+    expect(delData).toBeNull();
 
     // Verify Bob's contact is unchanged
     const { data: checkBob } = await bob.db().from('contacts').select('*').eq('id', bobContactId).single();
     expect(checkBob.full_name).toBe('Bob Confidential Recruiter');
 
-    record('m4-03-peer-mutation-denied', { updatedRows: updData?.length, deletedRows: delData?.length });
+    record('m4-03-peer-mutation-denied', { updatedRows: updData?.length, deleteError: delErr?.code });
   });
 
   it('M4-04 · RLS: MANAGER can read and manage all contacts in their workspace, but DENIED in foreign workspace', async () => {

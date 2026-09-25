@@ -56,16 +56,6 @@ export function ContactDetailDrawer({
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
 
-  // Networking checklist progression state (stored in relationship_notes or local progression)
-  const [progressState, setProgressState] = useState<Record<string, boolean>>({
-    'Connection request': true,
-    'Connection accepted': true,
-    'First message sent': true,
-    'Response received': false,
-    'Referral requested': false,
-    'Referral received': false,
-  });
-
   if (!isOpen || !contact) return null;
 
   const followUp = computeFollowUpStatus(contact.next_follow_up_date);
@@ -106,9 +96,6 @@ export function ContactDetailDrawer({
     await onUpdateFollowUp(contact.id, dateStr);
   };
 
-  const toggleProgress = (key: string) => {
-    setProgressState((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   return (
     <>
@@ -195,7 +182,6 @@ export function ContactDetailDrawer({
                 {contact.company_name && (
                   <strong style={{ color: 'var(--color-fg)' }}>{contact.company_name}</strong>
                 )}
-                {contact.location && <span> · {contact.location}</span>}
               </div>
             </div>
 
@@ -417,15 +403,6 @@ export function ContactDetailDrawer({
                                 {int.notes}
                               </p>
                             )}
-                            {int.next_follow_up_date && (
-                              <div
-                                className="row small"
-                                style={{ gap: '4px', marginTop: '4px', fontSize: '11px', alignItems: 'center', color: 'var(--color-text-secondary)' }}
-                              >
-                                <Clock size={11} />
-                                Follow-up scheduled: {int.next_follow_up_date}
-                              </div>
-                            )}
                           </div>
                         </div>
                       );
@@ -447,7 +424,7 @@ export function ContactDetailDrawer({
                     background: 'var(--color-surface-muted)',
                   }}
                 >
-                  {contact.notes || contact.relationship_notes || (
+                  {contact.notes || (
                     <span className="muted" style={{ fontStyle: 'italic' }}>
                       No notes recorded. Click "Edit" to add relationship background or details.
                     </span>
@@ -585,46 +562,8 @@ export function ContactDetailDrawer({
               )}
             </div>
 
-            {/* Networking Progress Checklist matching 03-contacts.html */}
-            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
-              <div className="sec-t small b" style={{ marginBottom: '10px', color: 'var(--color-text-secondary)' }}>
-                Networking Progress
-              </div>
-              <div className="col" style={{ gap: '6px' }}>
-                {Object.entries(progressState).map(([key, isDone]) => (
-                  <div
-                    key={key}
-                    className="row"
-                    style={{
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
-                    onClick={() => toggleProgress(key)}
-                  >
-                    <span
-                      className={`circ ${isDone ? 'on' : ''}`}
-                      style={{
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        border: isDone ? 'none' : '1px solid var(--color-border)',
-                        background: isDone ? 'var(--color-accent)' : 'transparent',
-                        color: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '9px',
-                      }}
-                    >
-                      {isDone && <Check size={10} />}
-                    </span>
-                    <span style={{ color: isDone ? 'var(--color-fg)' : 'var(--color-text-secondary)' }}>{key}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Networking progress checklist (03-contacts.html) is deferred: the legacy
+                progress flags are not in the approved schema (M4 closeout, OPEN_QUESTIONS). */}
           </div>
         </div>
       </div>

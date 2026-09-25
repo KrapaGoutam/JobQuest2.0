@@ -1,13 +1,21 @@
 import { supabase } from '../supabase';
-import type {
-  Contact,
-  Company,
-  ContactInteraction,
-  ContactFilters,
-  ContactSort,
-  ContactRelationshipType,
-  ContactInteractionType,
+import {
+  CONTACT_EDITABLE_FIELDS,
+  CONTACT_SEARCH_COLUMNS,
+  type Contact,
+  type Company,
+  type ContactFilters,
+  type ContactSort,
+  type ContactRelationshipType,
+  type ContactInteractionType,
+  type ContactUpdate,
 } from '../types/contacts';
+import { buildSearchFilter } from '../types/applications';
+
+/** Most recent interaction date from an embedded, newest-first interaction list. */
+function withLastContact(c: Contact): Contact {
+  return { ...c, last_contact_at: c.contact_interactions?.[0]?.interaction_date ?? null };
+}
 
 export interface FetchContactsResult {
   contacts: Contact[];
@@ -39,11 +47,15 @@ export async function fetchContacts(
         role_in_process,
         created_at,
         applications(id, company_name, role_title, stage, status)
-      )
+      ),
+      contact_interactions(interaction_date)
     `,
       { count: 'exact' }
     )
-    .eq('workspace_id', workspaceId);
+    .eq('workspace_id', workspaceId)
+    // Last contact = newest interaction (one row per contact, server-side).
+    .order('interaction_date', { referencedTable: 'contact_interactions', ascending: false })
+    .limit(1, { referencedTable: 'contact_interactions' });
 
   // Archive state filter
   if (filters.archiveState === 'archived') {
@@ -58,8 +70,9 @@ export async function fetchContacts(
   }
 
   // Company name
-  if (filters.company) {
-    query = query.ilike('company_name', `%${filters.company}%`);
+  if (filters.company && filters.company.trim()) {
+    const literal = filters.company.trim().slice(0, 100).replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    query = query.ilike('company_name', `%${literal}%`);
   }
 
   // Follow-up due only: due on or before today
@@ -73,10 +86,11 @@ export async function fetchContacts(
     query = query.eq('user_id', filters.ownerId);
   }
 
-  // Search filter across name, company, email, job title
-  if (filters.search && filters.search.trim()) {
-    const s = filters.search.trim();
-    query = query.or(`full_name.ilike.%${s}%,company_name.ilike.%${s}%,email.ilike.%${s}%,job_title.ilike.%${s}%`);
+  // Search across name, company, email, job title and exact tag. Untrusted input is
+  // quoted and LIKE-escaped so it cannot add filter clauses (see buildSearchFilter).
+  const searchFilter = filters.search ? buildSearchFilter(filters.search, CONTACT_SEARCH_COLUMNS) : null;
+  if (searchFilter) {
+    query = query.or(searchFilter);
   }
 
   // Sorting
@@ -94,7 +108,7 @@ export async function fetchContacts(
   }
 
   return {
-    contacts: (data || []) as Contact[],
+    contacts: ((data || []) as Contact[]).map(withLastContact),
     totalCount: count ?? (data?.length || 0),
   };
 }
@@ -134,7 +148,7 @@ export async function fetchContactDetail(contactId: string): Promise<Contact> {
     );
   }
 
-  return contact;
+  return withLastContact(contact);
 }
 
 export interface CreateContactParams {
@@ -180,12 +194,17 @@ export async function createContact(params: CreateContactParams): Promise<Contac
 }
 
 /**
- * Direct update on contacts under RLS.
+ * Direct update of simple contact fields under RLS. Only whitelisted columns are sent;
+ * archive state and ownership change through RPCs (the database also enforces this).
  */
-export async function updateContact(contactId: string, updates: Partial<Contact>): Promise<Contact> {
+export async function updateContact(contactId: string, updates: ContactUpdate): Promise<Contact> {
+  const payload: Record<string, unknown> = {};
+  for (const key of CONTACT_EDITABLE_FIELDS) {
+    if (key in updates) payload[key] = updates[key];
+  }
   const { data, error } = await supabase
     .from('contacts')
-    .update(updates)
+    .update(payload)
     .eq('id', contactId)
     .select()
     .single();
@@ -238,11 +257,11 @@ export interface LogInteractionParams {
 /**
  * Log an interaction with a contact via RPC.
  */
-export async function logContactInteraction(params: LogInteractionParams): Promise<ContactInteraction> {
+export async function logContactInteraction(params: LogInteractionParams): Promise<string> {
   const { data, error } = await supabase.rpc('rpc_log_contact_interaction', {
     p_contact_id: params.contact_id,
     p_interaction_type: params.interaction_type,
-    p_interaction_date: params.interaction_date || new Date().toISOString().split('T')[0],
+    p_interaction_date: params.interaction_date || new Date().toISOString(),
     p_notes: params.notes || null,
     p_next_follow_up_date: params.next_follow_up_date || null,
   });
@@ -251,7 +270,7 @@ export async function logContactInteraction(params: LogInteractionParams): Promi
     throw new Error(`rpc_log_contact_interaction failed: ${error.message}`);
   }
 
-  return data as ContactInteraction;
+  return data as string; // new interaction id
 }
 
 /**

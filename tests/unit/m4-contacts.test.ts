@@ -4,7 +4,10 @@ import {
   formatRelationshipType,
   getRelationshipPillVariant,
   getInitials,
+  CONTACT_EDITABLE_FIELDS,
+  CONTACT_SEARCH_COLUMNS,
 } from '../../apps/web/src/types/contacts';
+import { buildSearchFilter } from '../../apps/web/src/types/applications';
 
 describe('Milestone 4 — Contacts & Networking Unit Tests', () => {
   describe('computeFollowUpStatus', () => {
@@ -78,5 +81,23 @@ describe('Milestone 4 — Contacts & Networking Unit Tests', () => {
       expect(getInitials('Cher')).toBe('CH');
       expect(getInitials('')).toBe('??');
     });
+  });
+});
+
+describe('M4 closeout — contact search filter (PostgREST injection safety)', () => {
+  it('quotes the term into exactly the contact columns plus one exact tag clause', () => {
+    const f = buildSearchFilter('x),user_id.neq.0,(email.eq.x', CONTACT_SEARCH_COLUMNS)!;
+    const clauses = f.split(/,(?=[a-z_]+\.(?:ilike|cs)\.)/);
+    expect(clauses).toHaveLength(4);
+    for (const c of clauses) expect(c).toMatch(/^(full_name|company_name|email|job_title)\.ilike\."\*.*\*"$/);
+  });
+  it('adds an exact tag clause only for safe single tokens', () => {
+    expect(buildSearchFilter('recruiter', CONTACT_SEARCH_COLUMNS)).toContain('tags.cs.{recruiter}');
+    expect(buildSearchFilter('a,b', CONTACT_SEARCH_COLUMNS)).not.toContain('tags.cs');
+  });
+  it('the editable-field whitelist excludes ownership, tenancy and archive state', () => {
+    for (const f of ['user_id', 'workspace_id', 'archived_at', 'id', 'created_at']) {
+      expect(CONTACT_EDITABLE_FIELDS as readonly string[]).not.toContain(f);
+    }
   });
 });

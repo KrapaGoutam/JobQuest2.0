@@ -29,7 +29,7 @@ import './styles/globals.css';
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('jobquest-auth') : null;
 
 interface Workspace { id: string; name: string; workspace_type: string }
-interface Membership { workspace_id: string; role: string; workspaces: Workspace | null }
+interface Membership { workspace_id: string; role: 'USER' | 'MANAGER'; workspaces: Workspace | null }
 
 declare global {
   interface Window { __jqState?: unknown }
@@ -363,7 +363,7 @@ function AppContent() {
           probeStatus={probe}
           log={log}
           activeWorkspaceId={activeWs}
-          userRole={memberships.find((m) => m.workspace_id === activeWs)?.role ?? 'MEMBER'}
+          userRole={memberships.find((m) => m.workspace_id === activeWs)?.role ?? 'USER'}
           onRefresh={refresh}
           onLogout={onLogout}
           onCreateApp={onCreateApp}

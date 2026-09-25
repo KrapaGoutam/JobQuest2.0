@@ -215,7 +215,6 @@ export function ContactsToolbar({
             <option value="next_follow_up_date">Next follow-up {sort.field === 'next_follow_up_date' ? (sort.direction === 'asc' ? '↑' : '↓') : ''}</option>
             <option value="full_name">Name {sort.field === 'full_name' ? (sort.direction === 'asc' ? '↑' : '↓') : ''}</option>
             <option value="company_name">Company {sort.field === 'company_name' ? (sort.direction === 'asc' ? '↑' : '↓') : ''}</option>
-            <option value="last_contact_date">Last contact {sort.field === 'last_contact_date' ? (sort.direction === 'asc' ? '↑' : '↓') : ''}</option>
             <option value="created_at">Date added {sort.field === 'created_at' ? (sort.direction === 'asc' ? '↑' : '↓') : ''}</option>
           </select>
         </div>

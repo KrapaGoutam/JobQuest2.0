@@ -276,8 +276,8 @@ export function ContactsTable({
 
               {/* Last contact */}
               <span role="gridcell" className="small muted">
-                {c.last_contact_date
-                  ? new Date(c.last_contact_date).toLocaleDateString('en-US', {
+                {c.last_contact_at
+                  ? new Date(c.last_contact_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: '2-digit',
                     })
@@ -322,7 +322,7 @@ export function ContactsTable({
                   </span>
                 ) : (
                   <span className="muted">
-                    {c.archived_at ? 'Archived' : c.last_contact_date ? 'Active' : 'New'}
+                    {c.archived_at ? 'Archived' : c.last_contact_at ? 'Active' : 'New'}
                   </span>
                 )}
               </span>

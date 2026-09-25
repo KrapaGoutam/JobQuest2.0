@@ -33,9 +33,7 @@ export interface ContactInteraction {
   interaction_type: ContactInteractionType;
   interaction_date: string;
   notes: string | null;
-  next_follow_up_date: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface ApplicationContactJoin {
@@ -66,10 +64,10 @@ export interface Contact {
   email: string | null;
   phone: string | null;
   linkedin_url: string | null;
-  location: string | null;
   notes: string | null;
-  relationship_notes?: string | null;
-  last_contact_date: string | null;
+  tags: string[];
+  /** Derived client-side from the most recent interaction; there is no stored column. */
+  last_contact_at?: string | null;
   next_follow_up_date: string | null;
   archived_at: string | null;
   created_at: string;
@@ -79,6 +77,24 @@ export interface Contact {
   application_contacts?: ApplicationContactJoin[] | null;
   contact_interactions?: ContactInteraction[] | null;
 }
+
+/** Fields a client may change with a direct update (hybrid boundary; archive/ownership go through RPCs). */
+export const CONTACT_EDITABLE_FIELDS = [
+  'full_name',
+  'relationship_type',
+  'company_name',
+  'job_title',
+  'email',
+  'phone',
+  'linkedin_url',
+  'notes',
+  'tags',
+  'next_follow_up_date',
+] as const;
+export type ContactUpdate = Partial<Pick<Contact, (typeof CONTACT_EDITABLE_FIELDS)[number]>>;
+
+/** Columns searched by the contacts list (see buildSearchFilter). */
+export const CONTACT_SEARCH_COLUMNS = ['full_name', 'company_name', 'email', 'job_title'] as const;
 
 export interface ContactFilters {
   relationshipType?: ContactRelationshipType | 'ALL';
@@ -93,7 +109,6 @@ export type ContactSortField =
   | 'full_name'
   | 'company_name'
   | 'relationship_type'
-  | 'last_contact_date'
   | 'next_follow_up_date'
   | 'created_at';
 

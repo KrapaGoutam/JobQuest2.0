@@ -320,7 +320,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   white-space: nowrap;
@@ -432,7 +432,7 @@ a:hover {
 .opt {
   font-size: var(--font-size-xs);
   font-weight: 400;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 .input {
   height: 34px;
@@ -493,7 +493,7 @@ a:hover {
 }
 .ferr {
   font-size: var(--font-size-sm);
-  color: #b91c1c;
+  color: var(--color-danger);
   display: flex;
   gap: 5px;
   align-items: center;

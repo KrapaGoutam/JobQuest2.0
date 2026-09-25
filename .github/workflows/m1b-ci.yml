@@ -55,12 +55,12 @@ jobs:
         run: pnpm exec supabase start -x studio,imgproxy,vector,logflare,realtime,storage-api,edge-runtime,postgres-meta,supavisor
       - name: Write local env (local stack only; nothing leaves the runner)
         run: pnpm local:env
-      - name: M1B integration suite (B01–B22, B25, B26, SEC)
+      - name: Integration suites · M1B (B01–B22, B25, B26, SEC) · M3 · M4 · M4 closeout
         run: pnpm test:integration
         env:
           M1B_ENV_FILE: .env.m1b-local
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Browser exposure test (B03, B11, B12)
+      - name: Browser E2E + axe (B03/B11/B12 exposure · M2 shell · M3 · M4)
         run: pnpm test:e2e
         env:
           M1B_ENV_FILE: .env.m1b-local
@@ -68,10 +68,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m1b-m3-evidence
+          name: m1b-m3-m4-evidence
           path: |
             migration-upgrade/m1b/evidence/
             migration-upgrade/m3/evidence/
+            migration-upgrade/m4/evidence/
           if-no-files-found: ignore
       - if: always()
         run: pnpm exec supabase stop --no-backup

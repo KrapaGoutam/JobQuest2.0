@@ -64,7 +64,7 @@ export function CreateContactModal({
       setEmail(contactToEdit.email || '');
       setPhone(contactToEdit.phone || '');
       setLinkedinUrl(contactToEdit.linkedin_url || '');
-      setRelationshipNotes(contactToEdit.notes || contactToEdit.relationship_notes || '');
+      setRelationshipNotes(contactToEdit.notes || '');
       setNextFollowUpDate(contactToEdit.next_follow_up_date || '');
       setSelectedApplicationId('');
     } else {

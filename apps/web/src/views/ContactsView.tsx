@@ -35,6 +35,13 @@ export interface ContactsViewProps {
   isManager?: boolean;
 }
 
+/** One CSV cell: quoted, and neutralised against spreadsheet formula injection. */
+function csvCell(value: string | null | undefined): string {
+  let v = value ?? '';
+  if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`;
+  return `"${v.replace(/"/g, '""')}"`;
+}
+
 export function ContactsView({
   activeWorkspaceId: propWorkspaceId,
   isManager: propIsManager,
@@ -378,18 +385,20 @@ export function ContactsView({
       'Created At',
     ];
 
-    const rows = contacts.map((c) => [
-      `"${(c.full_name || '').replace(/"/g, '""')}"`,
-      `"${c.relationship_type}"`,
-      `"${(c.company_name || '').replace(/"/g, '""')}"`,
-      `"${(c.job_title || '').replace(/"/g, '""')}"`,
-      `"${(c.email || '').replace(/"/g, '""')}"`,
-      `"${(c.phone || '').replace(/"/g, '""')}"`,
-      `"${(c.linkedin_url || '').replace(/"/g, '""')}"`,
-      `"${c.last_contact_date || ''}"`,
-      `"${c.next_follow_up_date || ''}"`,
-      `"${c.created_at || ''}"`,
-    ]);
+    const rows = contacts.map((c) =>
+      [
+        c.full_name,
+        c.relationship_type,
+        c.company_name,
+        c.job_title,
+        c.email,
+        c.phone,
+        c.linkedin_url,
+        c.last_contact_at,
+        c.next_follow_up_date,
+        c.created_at,
+      ].map(csvCell)
+    );
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

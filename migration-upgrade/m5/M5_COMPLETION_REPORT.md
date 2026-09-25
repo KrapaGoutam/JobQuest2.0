@@ -2,7 +2,7 @@
 
 ## 1. Status
 
-**M5 Interviews & Debriefs is IMPLEMENTED, TESTED, DEPLOYED TO PREVIEW and awaiting user review.** It is not merged, and M6 has not started.
+**M5 Interviews & Debriefs is APPROVED FOR INTEGRATION** (see "Final closeout" at the end of this report). Implemented, tested and deployed to preview.
 
 | Item | State |
 |---|---|
@@ -333,3 +333,33 @@ The final docs-commit run is reported in the M5 hand-off message.
 ## 36. Final Recommendation
 
 M5 meets its acceptance criteria with evidence (`ACCEPTANCE_CRITERIA.md`). I recommend a user review of this report and `M5_VISUAL_REGRESSION.md`, and then an explicit decision on merging into `development`. **Do not merge automatically. Do not start M6.**
+
+---
+
+## Final closeout (M5 approved for integration, 2026-09-25)
+
+**Status: APPROVED FOR INTEGRATION** into `development` after the final verification below.
+
+| Item | Value |
+|---|---|
+| Final HEAD (= origin) | `2e4e641` (docs). Last executable commit: `6a469ed` |
+| Final CI | `36108058074` on `2e4e641`: **success**. Both jobs, including integration 88 and E2E 9, re-ran on the docs commit. `36106977932` on `6a469ed`: success |
+| Changes after `6a469ed` | Only `migration-upgrade/**` (reports, evidence, screenshots); no executable, migration, test, CI or security file |
+| Working tree | Clean. **0 untracked files** |
+
+**Disposition of local-run evidence and other local files:**
+
+| Class | Files | Disposition |
+|---|---|---|
+| A. Required milestone evidence | the local, hosted and preview evidence JSON, the EXPLAIN output, the bundle scans, the screenshots | All committed in `2e4e641`; nothing outstanding |
+| B. Reproducible temporary output | `apps/web/dist/`, `test-results/`, `.playwright-mcp/`, `supabase/.temp/`, `supabase/.branches/` | Git-ignored; not committed |
+| C. Sensitive / local-only | `.env.local`, `.env.m1b-local`, `supabase/signing_keys.json`, `.vercel/` | Git-ignored; never staged |
+
+**User decisions from the M5 review:**
+
+1. **Interview reminders: APPROVED TO MOVE INTO M6.** They are implemented through the canonical Tasks architecture. There is no separate interview-only reminder system.
+2. **Typed participant names → Contacts: DEFERRED.** Free-text names remain valid, and no draft contacts are created automatically. Any future conversion is an explicit user action.
+3. **Manager audit viewer / read-audit: DEFERRED.** Mutation auditing stays as it is.
+4. **Networking progress checklist: DEFERRED.** The fake checklist is not restored; it needs a persisted model and approved UX first.
+5. **M2 shell styling: NON-BLOCKING.** It may be fixed in M6 only if the change is small, cosmetic, Direction-D-faithful and regression-covered.
+6. **Legacy interview types: KEEP** Behavioral, Coding and Final. Any normalization happens explicitly during legacy-data migration.

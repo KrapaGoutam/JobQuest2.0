@@ -8,6 +8,8 @@ import { DuplicateWarningCard } from './DuplicateWarningCard';
 import { UnsavedChangesBar } from './UnsavedChangesBar';
 import { validateApplicationFields } from './validation';
 import { checkApplicationDuplicate, type CreateApplicationPayload } from '../../api/applications';
+import { fetchResumes } from '../../api/documents';
+import type { ResumeRecord } from '../../types/documents';
 import type {
   ApplicationStage,
   ApplicationPriority,
@@ -62,6 +64,21 @@ export function CreateApplicationModal({
   // Next action
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
+
+  // Documents / Resume selection
+  const [availableResumes, setAvailableResumes] = useState<ResumeRecord[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>('');
+
+  useEffect(() => {
+    if (!isOpen || !workspaceId) return;
+    fetchResumes(workspaceId, { includeArchived: false })
+      .then((records) => {
+        setAvailableResumes(records);
+        const defaultDoc = records.find((r) => r.is_default && r.document_type === 'RESUME');
+        if (defaultDoc) setSelectedResumeId(defaultDoc.id);
+      })
+      .catch(() => setAvailableResumes([]));
+  }, [isOpen, workspaceId]);
 
   // Duplicate state
   const [duplicateResult, setDuplicateResult] = useState<DuplicateCheckResult | null>(null);
@@ -174,6 +191,7 @@ export function CreateApplicationModal({
         next_action: nextAction.trim() || null,
         next_action_date: nextActionDate || null,
         duplicate_override_flag: overrideDuplicate,
+        resume_id: selectedResumeId || null,
         snapshot:
           showSnapshot && (jobDescription || requirements || skills)
             ? {
@@ -405,6 +423,25 @@ export function CreateApplicationModal({
                 <option value="Part-time">Part-time</option>
               </Select>
             </div>
+            {availableResumes.length > 0 && (
+              <div>
+                <label htmlFor="app-resume-select" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
+                  Resume Version
+                </label>
+                <Select
+                  id="app-resume-select"
+                  value={selectedResumeId}
+                  onChange={(e) => setSelectedResumeId(e.target.value)}
+                >
+                  <option value="">None / Attach later</option>
+                  {availableResumes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.version_label}){r.is_default ? ' ★ Default' : ''}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Location & Compensation */}

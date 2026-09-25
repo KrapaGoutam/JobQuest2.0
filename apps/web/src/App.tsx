@@ -14,11 +14,11 @@ import { TasksView } from './views/TasksView';
 import { HabitsView } from './views/HabitsView';
 import { DashboardView } from './views/DashboardView';
 import { DesignSystemShowcase } from './views/DesignSystemShowcase';
+import { ResumesView } from './views/ResumesView';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   Calendar,
   BookOpen,
-  FileText,
   BarChart3,
   UserPlus,
   Settings,
@@ -456,11 +456,9 @@ function AppContent() {
 
     if (currentPath === '/resumes') {
       return (
-        <PlaceholderView
-          title="Resumes & Goals"
-          subtitle="Target resume variants, portfolio links, and compensation criteria"
-          icon={<FileText size={24} />}
-          milestoneOwner="Milestone 8"
+        <ResumesView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
         />
       );
     }

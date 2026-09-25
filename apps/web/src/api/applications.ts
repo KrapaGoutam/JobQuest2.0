@@ -195,6 +195,7 @@ export interface CreateApplicationPayload {
   next_action?: string | null;
   next_action_date?: string | null;
   duplicate_override_flag?: boolean;
+  resume_id?: string | null;
   snapshot?: {
     job_description?: string;
     requirements?: string;
@@ -213,7 +214,7 @@ export interface CreateApplicationResult {
  * CREATED event, and a CAPTURED event when a posting snapshot is stored.
  */
 export async function createApplication(payload: CreateApplicationPayload): Promise<CreateApplicationResult> {
-  const { snapshot, ...appData } = payload;
+  const { snapshot, resume_id, ...appData } = payload;
 
   const { data, error } = await supabase
     .from('applications')
@@ -243,6 +244,18 @@ export async function createApplication(payload: CreateApplicationPayload): Prom
       .single();
     if (snap.error) snapshotError = snap.error.message;
     else application.job_snapshot = snap.data;
+  }
+
+  if (resume_id) {
+    try {
+      await supabase.rpc('rpc_link_application_document', {
+        p_application_id: application.id,
+        p_resume_id: resume_id,
+        p_document_type: 'RESUME',
+      });
+    } catch {
+      // non-fatal
+    }
   }
 
   return { application, snapshotError };

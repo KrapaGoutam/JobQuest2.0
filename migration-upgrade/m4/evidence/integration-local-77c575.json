@@ -1,0 +1,47 @@
+{
+  "run": "77c575",
+  "started_at": "2026-09-25T14:41:32.401Z",
+  "target": "local",
+  "m4-01-create-contact": {
+    "directContactId": "8a184311-a692-4d65-83de-fa458279b23c",
+    "rpcContactId": "e33e3096-0507-41ca-8862-0df8e60aa8a7"
+  },
+  "m4-02-rls-peer-isolation": {
+    "aliceCount": 2,
+    "bobCount": 1
+  },
+  "m4-03-peer-mutation-denied": {
+    "updatedRows": 0,
+    "deleteError": "42501"
+  },
+  "m4-04-manager-access": {
+    "sharedVisible": 3,
+    "foreignVisible": 0
+  },
+  "m4-05-contact-interactions": {
+    "interactionId": "dc6b5141-2647-41a7-a391-f5f5e28feac0",
+    "bobVisible": 0,
+    "managerVisible": 1
+  },
+  "m4-06-application-contact-linkage": {
+    "linked": true,
+    "unlinked": true
+  },
+  "m4-07-cross-workspace-integrity": {
+    "rpcCrossError": "CROSS_WORKSPACE_LINK_FORBIDDEN",
+    "fkError": "23503"
+  },
+  "m4-08-companies-shared": {
+    "companyId": "93400318-c0a0-4526-8202-d3699c63bbe5",
+    "bobCanRead": true,
+    "daveBlocked": true
+  },
+  "m4-09-archive-restore": {
+    "archived": true,
+    "restored": true
+  },
+  "m4-10-anon-denial": {
+    "tablesBlocked": true,
+    "rpcsBlocked": true
+  }
+}

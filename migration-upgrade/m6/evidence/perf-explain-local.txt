@@ -1,0 +1,128 @@
+M6 performance fixture: 50 applications x 200 tasks = 10000 tasks; 1 habit per owner x 365 logs (local stack; removed afterwards)
+ fixture_tasks | fixture_habit_logs 
+---------------+--------------------
+         10000 |              10950
+(1 row)
+
+--- overdue tab (workspace, pending, due_date < today OR due_at < now)
+                                                                                                                 QUERY PLAN                                                                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.137..0.140 rows=50 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.004..0.004 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.003..0.004 rows=1 loops=1)
+   ->  Sort (actual time=0.136..0.137 rows=50 loops=1)
+         Sort Key: tasks.due_date
+         Sort Method: top-N heapsort  Memory: 38kB
+         ->  Bitmap Heap Scan on tasks (actual time=0.029..0.118 rows=241 loops=1)
+               Recheck Cond: (((workspace_id = (InitPlan 1).col1) AND (due_date < CURRENT_DATE) AND ((status)::text = 'PENDING'::text)) OR ((workspace_id = (InitPlan 1).col1) AND (due_at < now()) AND ((status)::text = 'PENDING'::text)))
+               Filter: ((due_date < CURRENT_DATE) OR (due_at < now()))
+               Heap Blocks: exact=121
+               ->  BitmapOr (actual time=0.020..0.020 rows=0 loops=1)
+                     ->  Bitmap Index Scan on idx_tasks_ws_due_date (actual time=0.015..0.015 rows=181 loops=1)
+                           Index Cond: ((workspace_id = (InitPlan 1).col1) AND (due_date < CURRENT_DATE))
+                     ->  Bitmap Index Scan on idx_tasks_ws_due_at (actual time=0.005..0.005 rows=60 loops=1)
+                           Index Cond: ((workspace_id = (InitPlan 1).col1) AND (due_at < now()))
+ Planning Time: 0.168 ms
+ Execution Time: 0.158 ms
+(18 rows)
+
+--- today tab
+                                                                                                                                    QUERY PLAN                                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.009..0.011 rows=4 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.002..0.002 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.001..0.002 rows=1 loops=1)
+   ->  Bitmap Heap Scan on tasks (actual time=0.009..0.011 rows=4 loops=1)
+         Recheck Cond: (((workspace_id = (InitPlan 1).col1) AND (due_date = CURRENT_DATE) AND ((status)::text = 'PENDING'::text)) OR ((workspace_id = (InitPlan 1).col1) AND (due_at >= now()) AND (due_at < (now() + '1 day'::interval)) AND ((status)::text = 'PENDING'::text)))
+         Filter: ((due_date = CURRENT_DATE) OR ((due_at >= now()) AND (due_at < (now() + '1 day'::interval))))
+         Heap Blocks: exact=2
+         ->  BitmapOr (actual time=0.006..0.007 rows=0 loops=1)
+               ->  Bitmap Index Scan on idx_tasks_ws_due_date (actual time=0.004..0.004 rows=2 loops=1)
+                     Index Cond: ((workspace_id = (InitPlan 1).col1) AND (due_date = CURRENT_DATE))
+               ->  Bitmap Index Scan on idx_tasks_ws_due_at (actual time=0.002..0.003 rows=2 loops=1)
+                     Index Cond: ((workspace_id = (InitPlan 1).col1) AND (due_at >= now()) AND (due_at < (now() + '1 day'::interval)))
+ Planning Time: 0.068 ms
+ Execution Time: 0.023 ms
+(15 rows)
+
+--- USER-scoped open tasks (RLS owner predicate)
+                                                                  QUERY PLAN                                                                   
+-----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.135..0.138 rows=50 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.002..0.002 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.001..0.002 rows=1 loops=1)
+   InitPlan 2
+     ->  Limit (actual time=0.001..0.001 rows=1 loops=1)
+           ->  Seq Scan on fx fx_1 (actual time=0.001..0.001 rows=1 loops=1)
+   ->  Sort (actual time=0.135..0.136 rows=50 loops=1)
+         Sort Key: tasks.due_date
+         Sort Method: top-N heapsort  Memory: 39kB
+         ->  Bitmap Heap Scan on tasks (actual time=0.028..0.112 rows=405 loops=1)
+               Recheck Cond: ((workspace_id = (InitPlan 1).col1) AND (user_id = (InitPlan 2).col1) AND ((status)::text = 'PENDING'::text))
+               Heap Blocks: exact=204
+               ->  Bitmap Index Scan on idx_tasks_user_queue (actual time=0.016..0.016 rows=405 loops=1)
+                     Index Cond: ((workspace_id = (InitPlan 1).col1) AND (user_id = (InitPlan 2).col1) AND ((status)::text = 'PENDING'::text))
+ Planning Time: 0.050 ms
+ Execution Time: 0.149 ms
+(17 rows)
+
+--- application-linked tasks (drawer card)
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Limit (actual time=0.021..0.035 rows=50 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.002..0.002 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.001..0.001 rows=1 loops=1)
+   ->  Bitmap Heap Scan on tasks (actual time=0.021..0.033 rows=50 loops=1)
+         Recheck Cond: (application_id = (InitPlan 1).col1)
+         Filter: ((status)::text = 'PENDING'::text)
+         Heap Blocks: exact=50
+         ->  Bitmap Index Scan on idx_tasks_application (actual time=0.009..0.009 rows=200 loops=1)
+               Index Cond: (application_id = (InitPlan 1).col1)
+ Planning Time: 0.038 ms
+ Execution Time: 0.043 ms
+(12 rows)
+
+--- completed tab
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Limit (actual time=0.005..0.005 rows=1 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.002..0.002 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.001..0.002 rows=1 loops=1)
+   ->  Index Scan using idx_tasks_ws_completed on tasks (actual time=0.005..0.005 rows=1 loops=1)
+         Index Cond: (workspace_id = (InitPlan 1).col1)
+ Planning Time: 0.042 ms
+ Execution Time: 0.012 ms
+(8 rows)
+
+--- habit logs for the 365-day window
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.400..0.503 rows=1825 loops=1)
+   ->  Sort (actual time=0.400..0.442 rows=1825 loops=1)
+         Sort Key: habit_logs.log_date
+         Sort Method: quicksort  Memory: 291kB
+         ->  Nested Loop (actual time=0.023..0.251 rows=1825 loops=1)
+               ->  HashAggregate (actual time=0.006..0.007 rows=5 loops=1)
+                     Group Key: habits.id
+                     Batches: 1  Memory Usage: 24kB
+                     ->  Limit (actual time=0.004..0.005 rows=5 loops=1)
+                           ->  Seq Scan on habits (actual time=0.004..0.004 rows=5 loops=1)
+                                 Filter: (legacy_id = '-1'::integer)
+                                 Rows Removed by Filter: 18
+               ->  Bitmap Heap Scan on habit_logs (actual time=0.011..0.029 rows=365 loops=5)
+                     Recheck Cond: ((habit_id = habits.id) AND (log_date >= (CURRENT_DATE - 365)))
+                     Heap Blocks: exact=35
+                     ->  Bitmap Index Scan on uq_habit_logs_date (actual time=0.009..0.009 rows=365 loops=5)
+                           Index Cond: ((habit_id = habits.id) AND (log_date >= (CURRENT_DATE - 365)))
+ Planning Time: 0.100 ms
+ Execution Time: 0.547 ms
+(19 rows)
+
+DELETE 10950
+DELETE 30
+DELETE 10000

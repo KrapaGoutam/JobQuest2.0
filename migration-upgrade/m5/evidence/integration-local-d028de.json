@@ -1,0 +1,87 @@
+{
+  "run": "d028de",
+  "started_at": "2026-09-25T14:16:30.351Z",
+  "target": "local",
+  "m5-01-schedule": {
+    "stageUnchanged": true,
+    "scheduledUtc": "2026-10-15T19:30:00.000Z",
+    "events": 1,
+    "participants": 1,
+    "nextRound": 2
+  },
+  "m5-02-own-edit-boundary": {
+    "select": 1,
+    "simpleUpdate": "OK",
+    "noEventOnTextEdit": true,
+    "invariants": "42501",
+    "insert": "42501",
+    "delete": "42501"
+  },
+  "m5-03-peer-denied": {
+    "select": 0,
+    "update": 0,
+    "scheduleRpc": "42501",
+    "outcomeRpc": "42501",
+    "linkParticipant": "42501"
+  },
+  "m5-04-manager-same-ws": {
+    "read": true,
+    "edit": true,
+    "scheduleForMember": true,
+    "ownerKept": true,
+    "audit": [
+      "INTERVIEW:RECORD_CREATED",
+      "INTERVIEW:RECORD_UPDATED"
+    ]
+  },
+  "m5-05-foreign-denied": {
+    "select": 0,
+    "scheduleEitherWay": "42501",
+    "outcome": "42501"
+  },
+  "m5-06-cross-workspace": {
+    "forgedInterview": "23503",
+    "forgedParticipant": "23503",
+    "peerContactRpc": "42501 + rollback",
+    "peerContactDirect": "42501",
+    "managerOwnContact": "42501"
+  },
+  "m5-07-removed-member": {
+    "select": 0,
+    "update": 0,
+    "schedule": "42501"
+  },
+  "m5-08-debrief": {
+    "completedEvents": 2,
+    "stageUnchanged": true,
+    "nextActionReplaced": true,
+    "resaveNoEvent": true
+  },
+  "m5-09-explicit-stage": {
+    "schedule": "RECRUITER_SCREEN→INTERVIEW",
+    "debrief": "INTERVIEW→FINAL_INTERVIEW",
+    "viaWorkflowRpc": true
+  },
+  "m5-10-rollback": {
+    "stageUnchangedRollsBackSchedule": true,
+    "invalidType": "23514",
+    "notYetHeld": true,
+    "invalidStageRollsBackOutcome": true,
+    "cancelNoEvent": true
+  },
+  "m5-11-archived": {
+    "schedule": "APPLICATION_NOT_ACTIVE"
+  },
+  "m5-12-timezone": {
+    "validZone": "America/Chicago",
+    "invalidZone": "22023",
+    "dstAmbiguousStoredUtc": "2026-11-01T06:30:00.000Z"
+  },
+  "m5-13-audit": {
+    "ownerAudited": false,
+    "managerAudited": true
+  },
+  "m5-14-anon": {
+    "denied": true
+  }
+}

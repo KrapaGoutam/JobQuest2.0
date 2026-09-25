@@ -5,6 +5,8 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { DuplicateWarningCard } from './DuplicateWarningCard';
+import { UnsavedChangesBar } from './UnsavedChangesBar';
+import { validateApplicationFields } from './validation';
 import { checkApplicationDuplicate, type CreateApplicationPayload } from '../../api/applications';
 import type {
   ApplicationStage,
@@ -69,6 +71,23 @@ export function CreateApplicationModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  const isDirty =
+    [companyName, roleTitle, jobUrl, externalJobId, location, salaryMin, salaryMax, tagsInput, notes, jobDescription, requirements, skills, nextAction, nextActionDate]
+      .some((v) => v.trim() !== '') ||
+    stage !== 'APPLIED' || priority !== 'MEDIUM' || workArrangement !== 'Remote' || employmentType !== 'Full-time' || salaryCurrency !== 'USD';
+
+  /** AC-CREATE-02: closing with unsaved input asks first (Esc, backdrop, ×, Cancel). */
+  const requestClose = () => {
+    if (submitting) return;
+    if (isDirty && !confirmDiscard) {
+      setConfirmDiscard(true);
+      return;
+    }
+    handleReset();
+    onClose();
+  };
 
   // Debounced duplicate detection
   const checkTimerRef = useRef<number | undefined>(undefined);
@@ -111,12 +130,9 @@ export function CreateApplicationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName.trim()) {
-      setValidationError('Company name is required');
-      return;
-    }
-    if (!roleTitle.trim()) {
-      setValidationError('Role title is required');
+    const problem = validateApplicationFields({ companyName, roleTitle, jobUrl, salaryMin, salaryMax, salaryCurrency });
+    if (problem) {
+      setValidationError(problem);
       return;
     }
 
@@ -150,7 +166,7 @@ export function CreateApplicationModal({
         employment_type: employmentType,
         salary_min: parsedMin,
         salary_max: parsedMax,
-        salary_currency: salaryCurrency,
+        salary_currency: salaryCurrency.trim().toUpperCase(),
         job_url: jobUrl.trim() || null,
         external_job_id: externalJobId.trim() || null,
         tags,
@@ -185,6 +201,9 @@ export function CreateApplicationModal({
     setExternalJobId('');
     setStage('APPLIED');
     setPriority('MEDIUM');
+    setWorkArrangement('Remote');
+    setEmploymentType('Full-time');
+    setSalaryCurrency('USD');
     setLocation('');
     setSalaryMin('');
     setSalaryMax('');
@@ -200,6 +219,7 @@ export function CreateApplicationModal({
     setDuplicateError(null);
     setOverrideDuplicate(false);
     setValidationError(null);
+    setConfirmDiscard(false);
   };
 
   const stages = workflow?.stages ?? [
@@ -216,12 +236,12 @@ export function CreateApplicationModal({
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={requestClose}
       title="New Job Application"
       maxWidth={680}
       footer={
         <>
-          <Button variant="outline" type="button" onClick={onClose} disabled={submitting}>
+          <Button variant="outline" type="button" onClick={requestClose} disabled={submitting}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" form="create-application-form" disabled={submitting}>
@@ -231,6 +251,15 @@ export function CreateApplicationModal({
       }
     >
       <form id="create-application-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
+          {confirmDiscard && (
+            <UnsavedChangesBar
+              onDiscard={() => {
+                handleReset();
+                onClose();
+              }}
+              onKeepEditing={() => setConfirmDiscard(false)}
+            />
+          )}
           {validationError && (
             <div
               style={{

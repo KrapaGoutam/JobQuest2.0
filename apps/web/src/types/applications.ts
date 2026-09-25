@@ -142,7 +142,7 @@ export interface CanonicalWorkflow {
 }
 
 export interface ApplicationSort {
-  field: keyof Application | 'company_name' | 'role_title' | 'stage' | 'priority' | 'applied_at' | 'last_activity_at';
+  field: 'company_name' | 'role_title' | 'stage' | 'priority' | 'applied_at' | 'last_activity_at' | 'created_at';
   direction: 'asc' | 'desc';
 }
 
@@ -157,4 +157,43 @@ export function computeAgingBand(daysInactive: number): AgingBand {
 export function calculateDaysInactive(lastActivityAt: string): number {
   const diffMs = Date.now() - new Date(lastActivityAt).getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+// ---------------------------------------------------------------------------------
+// Aging filters (Gate 02B §4.5): bands are computed from whole days of inactivity.
+// ---------------------------------------------------------------------------------
+export type AgingFilter = 'ALL' | 'QUIET' | 'STALE' | 'LONG_WAITING';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * last_activity_at range (ISO strings) matching a band, consistent with
+ * calculateDaysInactive (floor of whole days): STALE = 15–30 days, LONG_WAITING = 31+,
+ * QUIET = both (15+). `from` is exclusive and `to` inclusive.
+ */
+export function agingRange(filter: Exclude<AgingFilter, 'ALL'>, now: Date): { from: string | null; to: string } {
+  const at = (days: number) => new Date(now.getTime() - days * DAY_MS).toISOString();
+  if (filter === 'STALE') return { from: at(31), to: at(15) };
+  if (filter === 'LONG_WAITING') return { from: null, to: at(31) };
+  return { from: null, to: at(15) };
+}
+
+// ---------------------------------------------------------------------------------
+// Search: build a PostgREST `or` filter from untrusted input without letting the
+// input change the filter structure (commas, parentheses, quotes, wildcards).
+// ---------------------------------------------------------------------------------
+export const SEARCH_COLUMNS = ['company_name', 'role_title', 'location', 'notes'] as const;
+
+export function buildSearchFilter(raw: string): string | null {
+  const term = raw.trim().replace(/\s+/g, ' ').slice(0, 100);
+  if (!term) return null;
+  // 1) LIKE escaping: the user's % and _ are literal characters.
+  const like = term.replace(/[\\%_]/g, (c) => `\\${c}`);
+  // 2) PostgREST quoted value: escape backslash and double quote; the quotes keep
+  //    commas, parentheses and dots from being parsed as filter syntax.
+  const quoted = like.replace(/[\\"]/g, (c) => `\\${c}`);
+  const clauses = SEARCH_COLUMNS.map((col) => `${col}.ilike."*${quoted}*"`);
+  // Tags are an array: exact tag match for single safe tokens.
+  if (/^[A-Za-z0-9_.+#-]{1,40}$/.test(term)) clauses.push(`tags.cs.{${term}}`);
+  return clauses.join(',');
 }

@@ -1,18 +1,14 @@
-import { useState, useEffect, useCallback, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from 'react';
 import { Card, CardHeader, CardTitle, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { useToast } from '../context/ToastContext';
-import {
-  ShieldCheck,
-  RefreshCw,
-  Plus,
-  KeyRound,
-} from 'lucide-react';
+import { ShieldCheck, RefreshCw, Plus, KeyRound, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PublicSession, PublicUser } from '../api';
 import type {
+  AgingFilter,
   Application,
   ApplicationStage,
   ApplicationSort,
@@ -21,7 +17,11 @@ import type {
   CanonicalWorkflow,
 } from '../types/applications';
 import {
+  PAGE_SIZE,
   fetchApplications,
+  fetchApplicationDetail,
+  fetchAgingCounts,
+  fetchStageCounts,
   createApplication,
   updateApplication,
   moveApplicationStage,
@@ -31,10 +31,11 @@ import {
   restoreApplication,
   fetchCanonicalWorkflow,
   fetchWorkspaceMembers,
+  type ApplicationFilters,
+  type EditableApplicationFields,
   type WorkspaceMemberInfo,
   type CreateApplicationPayload,
 } from '../api/applications';
-import { calculateDaysInactive, computeAgingBand } from '../types/applications';
 import { ApplicationsToolbar } from '../components/applications/ApplicationsToolbar';
 import { ApplicationsTable } from '../components/applications/ApplicationsTable';
 import { AgingBanner } from '../components/applications/AgingBanner';
@@ -45,6 +46,7 @@ import { StageMoveDialog } from '../components/applications/StageMoveDialog';
 import { OutcomeDialog } from '../components/applications/OutcomeDialog';
 import { ApplicationDetailDrawer } from '../components/applications/ApplicationDetailDrawer';
 import { ApplicationPreviewRail } from '../components/applications/ApplicationPreviewRail';
+import { consumeNewApplicationRequest, onNewApplicationRequest } from '../lib/newApplicationIntent';
 
 export interface ApplicationRecord {
   id: string;
@@ -85,6 +87,29 @@ export interface ApplicationsViewProps {
   onDismissCodes?: () => void;
 }
 
+const PREVIEW_PREF_KEY = 'jobquest_preview_rail_open';
+
+function readPreviewPref(): boolean {
+  try {
+    return localStorage.getItem(PREVIEW_PREF_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function writePreviewPref(open: boolean): void {
+  try {
+    localStorage.setItem(PREVIEW_PREF_KEY, String(open));
+  } catch {
+    // storage unavailable (private mode): the preference simply is not remembered
+  }
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  const msg = (err as { message?: string })?.message;
+  return msg && msg.length < 200 ? msg : fallback;
+}
+
 export function ApplicationsView({
   user,
   session,
@@ -101,7 +126,6 @@ export function ApplicationsView({
   onLogout,
   onCreateApp,
   onStageChange,
-  onArchive,
   onLoadWorkflow,
   onPasswordChange,
   onRegenerateCodes,
@@ -110,330 +134,402 @@ export function ApplicationsView({
 }: ApplicationsViewProps) {
   const { addToast } = useToast();
 
-  // Active workspace determination
   const wsId = activeWorkspaceId || user?.active_workspace_id || '';
+  // UX only: MANAGER sees owner columns/filters. Authorization is enforced by RLS.
   const isManager = userRole === 'MANAGER' || userRole === 'OWNER';
 
-  // Applications data state
+  // ---------------------------------------------------------------------------
+  // Data state
+  // ---------------------------------------------------------------------------
   const [applications, setApplications] = useState<Application[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  // Workflow & members
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [stageCounts, setStageCounts] = useState<Record<string, number>>({});
+  const [agingCounts, setAgingCounts] = useState({ stale: 0, longWaiting: 0 });
   const [workflow, setWorkflow] = useState<CanonicalWorkflow | null>(null);
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
+  /** Bumped after every mutation so the drawer/rail refetch their event history. */
+  const [historyVersion, setHistoryVersion] = useState(0);
 
-  // Filtering & Search
-  const [activeStage, setActiveStage] = useState<string>('ALL');
-  const [outcomeFilter, setOutcomeFilter] = useState<string>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  // Filters, search & sort
+  const [activeStage, setActiveStage] = useState('ALL');
+  const [outcomeFilter, setOutcomeFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [agingFilter, setAgingFilter] = useState<AgingFilter>('ALL');
   const [archiveState, setArchiveState] = useState<'active' | 'archived' | 'all'>('active');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedOwner, setSelectedOwner] = useState<string>('ALL');
-  const [sort, setSort] = useState<ApplicationSort>({
-    field: 'last_activity_at',
-    direction: 'desc',
-  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOwner, setSelectedOwner] = useState('ALL');
+  const [sort, setSort] = useState<ApplicationSort>({ field: 'last_activity_at', direction: 'desc' });
 
-  // Table selection & active row
+  // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Modals & Panels state
+  // Dialogs & panels
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<Application | null>(null);
-  const [drawerApp, setDrawerApp] = useState<Application | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isStageMoveOpen, setIsStageMoveOpen] = useState(false);
+  const [drawerAppId, setDrawerAppId] = useState<string | null>(null);
+  const [drawerFallback, setDrawerFallback] = useState<Application | null>(null);
   const [stageMoveTarget, setStageMoveTarget] = useState<Application | null>(null);
-  const [isOutcomeOpen, setIsOutcomeOpen] = useState(false);
+  const [isStageMoveOpen, setIsStageMoveOpen] = useState(false);
   const [outcomeTarget, setOutcomeTarget] = useState<Application | null>(null);
 
-  // Wide desktop (>=1680px) Preview Rail persistence & state
-  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('jobquest_preview_rail_open');
-      return stored !== 'false';
-    }
-    return true;
-  });
-
-  const [windowWidth, setWindowWidth] = useState<number>(
-    typeof window !== 'undefined' ? window.innerWidth : 1440
-  );
-
+  // Responsive layout & wide-desktop preview rail (Gate 02B D4 / ADR-029)
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(readPreviewPref);
+  const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1440);
   const isWide = windowWidth >= 1680;
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const handleTogglePreview = useCallback(() => {
-    setIsPreviewOpen((prev) => {
-      const next = !prev;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('jobquest_preview_rail_open', String(next));
-      }
-      return next;
-    });
+  const setPreview = useCallback((open: boolean) => {
+    setIsPreviewOpen(open);
+    writePreviewPref(open);
+  }, []);
+  const togglePreview = useCallback(() => setPreview(!isPreviewOpen), [isPreviewOpen, setPreview]);
+
+  // Shell "New Application" intent (global `q` / sidebar button from any route)
+  useEffect(() => {
+    if (consumeNewApplicationRequest()) setIsCreateOpen(true);
+    return onNewApplicationRequest(() => setIsCreateOpen(true));
   }, []);
 
-  // Keyboard shortcut: P toggles preview rail; Q opens new application modal
+  // ---------------------------------------------------------------------------
+  // Loading
+  // ---------------------------------------------------------------------------
+  const filters: ApplicationFilters = useMemo(
+    () => ({
+      stage: activeStage,
+      status: outcomeFilter === 'OPEN' || outcomeFilter === 'CLOSED' ? outcomeFilter : undefined,
+      outcome: outcomeFilter !== 'ALL' && outcomeFilter !== 'OPEN' && outcomeFilter !== 'CLOSED' ? outcomeFilter : undefined,
+      priority: priorityFilter,
+      aging: agingFilter,
+      archiveState,
+      search: searchQuery,
+      ownerId: selectedOwner,
+    }),
+    [activeStage, outcomeFilter, priorityFilter, agingFilter, archiveState, searchQuery, selectedOwner]
+  );
+
+  // Any filter or sort change returns to the first page and clears the selection.
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isInput =
-        activeEl?.tagName === 'INPUT' ||
-        activeEl?.tagName === 'TEXTAREA' ||
-        activeEl?.tagName === 'SELECT' ||
-        activeEl?.getAttribute('contenteditable') === 'true';
+    setPage(0);
+    setSelectedIds([]);
+  }, [filters, sort, wsId]);
 
-      if (isInput) return;
-
-      if (e.key === 'p' || e.key === 'P') {
-        e.preventDefault();
-        handleTogglePreview();
-      } else if (e.key === 'q' || e.key === 'Q') {
-        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-          e.preventDefault();
-          setIsCreateOpen(true);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleTogglePreview]);
-
-  // Load canonical workflow & workspace members
   useEffect(() => {
-    if (wsId) {
-      fetchCanonicalWorkflow(wsId)
-        .then(setWorkflow)
-        .catch(() => {});
-      if (isManager) {
-        fetchWorkspaceMembers(wsId)
-          .then(setMembers)
-          .catch(() => {});
-      }
-    }
-  }, [wsId, isManager]);
+    if (!wsId) return;
+    fetchCanonicalWorkflow(wsId)
+      .then(setWorkflow)
+      .catch(() => setWorkflow(null));
+    fetchWorkspaceMembers(wsId)
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [wsId]);
 
-  // Load applications
+  const requestSeq = useRef(0);
   const loadApps = useCallback(async () => {
     if (!wsId) return;
+    const seq = ++requestSeq.current;
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await fetchApplications(
-        wsId,
-        {
-          stage: activeStage,
-          status: outcomeFilter === 'OPEN' || outcomeFilter === 'CLOSED' ? outcomeFilter : undefined,
-          outcome: outcomeFilter !== 'ALL' && outcomeFilter !== 'OPEN' && outcomeFilter !== 'CLOSED' ? outcomeFilter : undefined,
-          priority: priorityFilter,
-          archiveState,
-          search: searchQuery,
-          ownerId: selectedOwner,
-        },
-        sort,
-        0,
-        100
-      );
-
+      const stageIds = (workflow?.stages ?? []).map((s) => s.id);
+      const [res, counts, aging] = await Promise.all([
+        fetchApplications(wsId, filters, sort, page, PAGE_SIZE),
+        stageIds.length ? fetchStageCounts(wsId, stageIds, { ...filters, stage: 'ALL' }) : Promise.resolve({}),
+        fetchAgingCounts(wsId),
+      ]);
+      if (seq !== requestSeq.current) return; // a newer request superseded this one
       setApplications(res.applications);
       setTotalCount(res.totalCount);
-
-      // Default active ID to first application if none set
-      if (res.applications.length > 0 && res.applications[0]) {
-        const firstId = res.applications[0].id;
-        setActiveId((prev) => (prev && res.applications.some((a) => a.id === prev) ? prev : firstId));
-      } else {
-        setActiveId(null);
-      }
+      setStageCounts(counts);
+      setAgingCounts(aging);
+      setLoadError(null);
+      setActiveId((prev) => (prev && res.applications.some((a) => a.id === prev) ? prev : res.applications[0]?.id ?? null));
     } catch (err: unknown) {
-      addToast({
-        title: 'Failed to load applications',
-        description: (err as Error).message || 'Error communicating with database',
-        type: 'danger',
-      });
+      if (seq !== requestSeq.current) return;
+      setLoadError(errorMessage(err, 'Error communicating with the database'));
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [wsId, activeStage, outcomeFilter, priorityFilter, archiveState, searchQuery, selectedOwner, sort, addToast]);
+  }, [wsId, filters, sort, page, workflow]);
 
   useEffect(() => {
     void loadApps();
   }, [loadApps, legacyApps]);
 
-  // Compute stage counts and aging metrics
-  const { stageCounts, staleCount, longWaitingCount } = useMemo(() => {
-    const counts: Record<string, number> = {};
-    let stale = 0;
-    let longWaiting = 0;
+  /** Refresh list, counts and history after any mutation. */
+  const afterMutation = useCallback(async () => {
+    setHistoryVersion((v) => v + 1);
+    await loadApps();
+  }, [loadApps]);
 
-    for (const app of applications) {
-      counts[app.stage] = (counts[app.stage] ?? 0) + 1;
-      if (app.status === 'OPEN' && !app.archived_at) {
-        const days = calculateDaysInactive(app.last_activity_at);
-        const band = computeAgingBand(days);
-        if (band === 'STALE') stale++;
-        if (band === 'LONG_WAITING') longWaiting++;
+  // Drawer shows the live record: from the loaded page when present, else fetched.
+  const drawerApp = useMemo(
+    () => (drawerAppId ? applications.find((a) => a.id === drawerAppId) ?? drawerFallback : null),
+    [drawerAppId, applications, drawerFallback]
+  );
+  useEffect(() => {
+    if (!drawerAppId || applications.some((a) => a.id === drawerAppId)) return;
+    fetchApplicationDetail(drawerAppId)
+      .then(setDrawerFallback)
+      .catch(() => setDrawerFallback(null));
+  }, [drawerAppId, applications, historyVersion]);
+
+  const openDetail = useCallback((app: Application) => {
+    setDrawerFallback(app);
+    setDrawerAppId(app.id);
+  }, []);
+
+  const previewApp = useMemo(
+    () => applications.find((a) => a.id === activeId) ?? applications[0] ?? null,
+    [activeId, applications]
+  );
+  const railVisible = isWide && isPreviewOpen && !isMobile;
+
+  const handleRowClick = useCallback(
+    (app: Application) => {
+      setActiveId(app.id);
+      // With the rail open on wide desktops, a row click previews in place;
+      // otherwise it opens the drawer (desktop) or full-screen sheet (mobile).
+      if (!railVisible) openDetail(app);
+    },
+    [railVisible, openDetail]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Keyboard: one context-safe handler (Gate 02B §4.2; never Space)
+  // ---------------------------------------------------------------------------
+  const keyState = useRef({ applications, activeId, selectedIds });
+  keyState.current = { applications, activeId, selectedIds };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (document.querySelector('[role="dialog"]')) return; // a dialog/drawer owns the keyboard
+      const el = document.activeElement as HTMLElement | null;
+      const typing = !!el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable);
+      if (typing) return;
+      const inGrid = !!el?.closest('[data-app-grid]');
+      const onPage = !el || el === document.body || inGrid;
+      // Enter / M / X act on the active row only when focus is not on another control.
+      const interactive = !!el && el !== document.body && !!el.closest('button, a, [role="button"], [role="tab"], summary');
+      const { applications: list, activeId: current, selectedIds: selected } = keyState.current;
+      const idx = list.findIndex((a) => a.id === current);
+      const row = list[idx];
+
+      switch (e.key) {
+        case 'j':
+        case 'ArrowDown':
+          if (!onPage || !list.length) return;
+          e.preventDefault();
+          setActiveId(list[Math.min(list.length - 1, idx + 1)]!.id);
+          break;
+        case 'k':
+        case 'ArrowUp':
+          if (!onPage || !list.length) return;
+          e.preventDefault();
+          setActiveId(list[Math.max(0, idx - 1)]!.id);
+          break;
+        case 'Enter':
+          if (interactive || !row) return;
+          e.preventDefault();
+          openDetail(row);
+          break;
+        case 'm':
+        case 'M':
+          if (interactive || !row || row.archived_at) return;
+          e.preventDefault();
+          setStageMoveTarget(row);
+          setIsStageMoveOpen(true);
+          break;
+        case 'x':
+        case 'X':
+          if (interactive || !row) return;
+          e.preventDefault();
+          setSelectedIds(selected.includes(row.id) ? selected.filter((i) => i !== row.id) : [...selected, row.id]);
+          break;
+        case 'p':
+        case 'P':
+          if (!isWide) return;
+          e.preventDefault();
+          togglePreview();
+          break;
+        case 'q':
+        case 'Q':
+          e.preventDefault();
+          setIsCreateOpen(true);
+          break;
+        default:
       }
-    }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isWide, togglePreview, openDetail]);
 
-    return { stageCounts: counts, staleCount: stale, longWaitingCount: longWaiting };
-  }, [applications]);
+  // Keep the active row in view during keyboard navigation.
+  useEffect(() => {
+    if (!activeId) return;
+    const node = document.querySelector(`[data-app-id="${activeId}"]`);
+    if (node && 'scrollIntoView' in node) (node as HTMLElement).scrollIntoView({ block: 'nearest' });
+  }, [activeId]);
 
-  // Active selected application for preview rail
-  const previewApp = useMemo(() => {
-    if (!activeId) return applications[0] ?? null;
-    return applications.find((a) => a.id === activeId) ?? applications[0] ?? null;
-  }, [activeId, applications]);
+  // ---------------------------------------------------------------------------
+  // Mutations (lifecycle via RPC; simple fields via Data API)
+  // ---------------------------------------------------------------------------
+  const stageName = (id: string) => workflow?.stages.find((s) => s.id === id)?.label ?? id;
 
-  // Domain Actions
   const handleCreated = async (payload: CreateApplicationPayload) => {
-    await createApplication(payload);
+    const { application, snapshotError } = await createApplication(payload);
     addToast({
-      title: 'Application Created',
-      description: `${payload.company_name} — ${payload.role_title} added to ${payload.stage || 'APPLIED'}.`,
+      title: 'Application created',
+      description: `${application.company_name} · ${application.role_title} added in ${stageName(application.stage)}.`,
       type: 'success',
     });
-    await loadApps();
+    if (snapshotError) {
+      addToast({ title: 'Posting snapshot not saved', description: snapshotError, type: 'warning', duration: 8000 });
+    }
+    setActiveId(application.id);
+    await afterMutation();
   };
 
-  const handleUpdate = async (applicationId: string, updates: Partial<Application>) => {
+  const handleUpdate = async (applicationId: string, updates: Partial<EditableApplicationFields>) => {
     await updateApplication(applicationId, updates);
-    addToast({
-      title: 'Application Updated',
-      description: 'Changes saved successfully.',
-      type: 'success',
-    });
-    await loadApps();
-    if (drawerApp?.id === applicationId) {
-      setDrawerApp((prev) => (prev ? { ...prev, ...updates } : null));
-    }
+    addToast({ title: 'Application updated', description: 'Changes saved.', type: 'success' });
+    await afterMutation();
   };
 
   const handleConfirmMoveStage = async (newStage: ApplicationStage, notes?: string) => {
     if (stageMoveTarget) {
-      // Single row transition
       await moveApplicationStage(stageMoveTarget.id, newStage, notes);
-      addToast({
-        title: 'Stage Updated',
-        description: `Moved to ${newStage}`,
-        type: 'success',
-      });
-    } else if (selectedIds.length > 0) {
-      // Bulk transition
-      for (const id of selectedIds) {
-        await moveApplicationStage(id, newStage, notes);
-      }
-      addToast({
-        title: 'Bulk Stage Move',
-        description: `Updated ${selectedIds.length} applications to ${newStage}`,
-        type: 'success',
-      });
+      addToast({ title: 'Stage updated', description: `Moved to ${stageName(newStage)}.`, type: 'success' });
+    } else {
+      const results = await runBulk(selectedIds, (id) => moveApplicationStage(id, newStage, notes));
+      reportBulk(`Moved to ${stageName(newStage)}`, results);
       setSelectedIds([]);
     }
-    await loadApps();
+    await afterMutation();
   };
 
-  const handleConfirmOutcome = async (
-    outcome: ApplicationOutcome,
-    closureReason?: ClosureReason | null,
-    closureNotes?: string | null
-  ) => {
-    if (outcomeTarget) {
-      await setApplicationOutcome(outcomeTarget.id, outcome, closureReason, closureNotes);
-      addToast({
-        title: 'Application Closed',
-        description: `Outcome recorded: ${outcome}`,
-        type: 'success',
-      });
-      await loadApps();
+  const handleConfirmOutcome = async (outcome: ApplicationOutcome, closureReason?: ClosureReason | null, closureNotes?: string | null) => {
+    if (!outcomeTarget) return;
+    await setApplicationOutcome(outcomeTarget.id, outcome, closureReason, closureNotes);
+    const label = workflow?.outcomes.find((o) => o.id === outcome)?.label ?? outcome;
+    addToast({ title: 'Application closed', description: `Outcome recorded: ${label}.`, type: 'success' });
+    await afterMutation();
+  };
+
+  const guarded = async (action: () => Promise<unknown>, failTitle: string) => {
+    try {
+      await action();
+      return true;
+    } catch (err: unknown) {
+      addToast({ title: failTitle, description: errorMessage(err, 'Please try again.'), type: 'danger', duration: 6000 });
+      return false;
     }
   };
 
   const handleKeepActive = async (appId: string) => {
-    await keepApplicationActive(appId);
-    addToast({
-      title: 'Activity Refreshed',
-      description: 'Application marked as currently active.',
-      type: 'success',
-    });
-    await loadApps();
-  };
-
-  const handleArchive = async (appId: string) => {
-    await archiveApplication(appId);
-    if (onArchive) {
-      try {
-        await onArchive(appId);
-      } catch {
-        // preserve diagnostic compatibility
-      }
+    if (await guarded(() => keepApplicationActive(appId), 'Could not refresh activity')) {
+      addToast({ title: 'Marked as reviewed', description: 'Inactivity timer reset. Stage and state unchanged.', type: 'success' });
     }
-    addToast({
-      title: 'Application Archived',
-      description: 'Record moved to archive.',
-      type: 'info',
-    });
-    await loadApps();
+    await afterMutation();
   };
 
   const handleRestore = async (appId: string) => {
-    await restoreApplication(appId);
-    addToast({
-      title: 'Application Restored',
-      description: 'Application returned to active pipeline.',
-      type: 'success',
-    });
-    await loadApps();
+    if (await guarded(() => restoreApplication(appId), 'Could not restore')) {
+      addToast({ title: 'Application restored', description: 'Returned to the active pipeline.', type: 'success' });
+    }
+    await afterMutation();
   };
 
-  // Bulk actions
-  const handleBulkGhosted = async () => {
-    for (const id of selectedIds) {
-      await setApplicationOutcome(id, 'GHOSTED', null, 'Bulk marked as ghosted');
+  const handleArchive = async (appId: string) => {
+    if (await guarded(() => archiveApplication(appId), 'Could not archive')) {
+      // Gate 02B §4.5 / ADR-026: soft archive with a 10-second undo.
+      addToast({
+        title: 'Application archived',
+        description: 'Moved to the archive.',
+        type: 'info',
+        duration: 10000,
+        action: { label: 'Undo', onClick: () => void handleRestore(appId) },
+      });
     }
-    addToast({
-      title: 'Bulk Action',
-      description: `Marked ${selectedIds.length} applications as Ghosted`,
-      type: 'info',
-    });
+    await afterMutation();
+  };
+
+  // Bulk actions: sequential atomic RPCs; failures are counted and reported, never hidden.
+  async function runBulk(ids: string[], op: (id: string) => Promise<unknown>) {
+    let ok = 0;
+    const failed: string[] = [];
+    for (const id of ids) {
+      try {
+        await op(id);
+        ok++;
+      } catch (err: unknown) {
+        failed.push(errorMessage(err, 'failed'));
+      }
+    }
+    return { ok, failed };
+  }
+
+  function reportBulk(what: string, r: { ok: number; failed: string[] }) {
+    if (r.failed.length === 0) {
+      addToast({ title: 'Bulk update complete', description: `${what}: ${r.ok} application${r.ok === 1 ? '' : 's'}.`, type: 'success' });
+    } else {
+      addToast({
+        title: 'Bulk update partly failed',
+        description: `${what}: ${r.ok} succeeded, ${r.failed.length} failed (${[...new Set(r.failed)].join('; ')}).`,
+        type: 'warning',
+        duration: 8000,
+      });
+    }
+  }
+
+  const selectedApps = applications.filter((a) => selectedIds.includes(a.id));
+
+  const handleBulkGhosted = async () => {
+    // Explicit user action only (never automatic); already-closed records are skipped.
+    const open = selectedApps.filter((a) => a.status === 'OPEN').map((a) => a.id);
+    const r = await runBulk(open, (id) => setApplicationOutcome(id, 'GHOSTED', null, 'Bulk marked as ghosted'));
+    const skipped = selectedIds.length - open.length;
+    reportBulk(`Marked Ghosted${skipped ? ` (${skipped} already closed, skipped)` : ''}`, r);
     setSelectedIds([]);
-    await loadApps();
+    await afterMutation();
   };
 
   const handleBulkArchive = async () => {
-    for (const id of selectedIds) {
-      await archiveApplication(id);
-    }
-    addToast({
-      title: 'Bulk Archive',
-      description: `Archived ${selectedIds.length} applications`,
-      type: 'info',
-    });
+    const ids = selectedApps.filter((a) => !a.archived_at).map((a) => a.id);
+    reportBulk('Archived', await runBulk(ids, archiveApplication));
     setSelectedIds([]);
-    await loadApps();
+    await afterMutation();
   };
 
   const handleBulkRestore = async () => {
-    for (const id of selectedIds) {
-      await restoreApplication(id);
-    }
-    addToast({
-      title: 'Bulk Restore',
-      description: `Restored ${selectedIds.length} applications`,
-      type: 'success',
-    });
+    const ids = selectedApps.filter((a) => a.archived_at).map((a) => a.id);
+    reportBulk('Restored', await runBulk(ids, restoreApplication));
     setSelectedIds([]);
-    await loadApps();
+    await afterMutation();
   };
+
+  const clearFilters = () => {
+    setActiveStage('ALL');
+    setOutcomeFilter('ALL');
+    setPriorityFilter('ALL');
+    setAgingFilter('ALL');
+    setArchiveState('active');
+    setSearchQuery('');
+    setSelectedOwner('ALL');
+  };
+
+  const pageStart = totalCount === 0 ? 0 : page * PAGE_SIZE + 1;
+  const pageEnd = Math.min(totalCount, (page + 1) * PAGE_SIZE);
+  const lastPage = Math.max(0, Math.ceil(totalCount / PAGE_SIZE) - 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -499,28 +595,19 @@ export function ApplicationsView({
         </Card>
       </section>
 
-      {/* Aging Advisory Banner */}
+      {/* Inactivity advisory (31+ days review; 15–30 stale). Advisory only: nothing changes automatically. */}
       <AgingBanner
-        staleCount={staleCount}
-        longWaitingCount={longWaitingCount}
+        staleCount={agingCounts.stale}
+        longWaitingCount={agingCounts.longWaiting}
         onFilterAging={(band) => {
-          if (band === 'long_waiting' || band === 'stale') {
-            setOutcomeFilter('OPEN');
-            setArchiveState('active');
-          }
+          setArchiveState('active');
+          setAgingFilter(band === 'long_waiting' ? 'LONG_WAITING' : 'STALE');
         }}
       />
 
       {/* Main Applications Section */}
-      <section
-        aria-label="Applications"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-        }}
-      >
-        {/* Direct PostgREST Quick Insert Form (for E2E Test Compatibility) */}
+      <section aria-label="Applications" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Direct PostgREST Quick Insert Form (M1B harness; kept for the leak test) */}
         {onCreateApp && (
           <Card style={{ padding: '8px 12px', background: 'var(--color-surface-2)' }}>
             <form onSubmit={onCreateApp} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
@@ -553,17 +640,18 @@ export function ApplicationsView({
           </Card>
         )}
 
-        {/* Search, Filter & Stage Tabs Toolbar */}
         <ApplicationsToolbar
           workflow={workflow}
           stageCounts={stageCounts}
-          totalCount={totalCount}
+          totalCount={Object.values(stageCounts).reduce((a, b) => a + b, 0) || totalCount}
           activeStage={activeStage}
           onSelectStage={setActiveStage}
           outcomeFilter={outcomeFilter}
           onSelectOutcome={setOutcomeFilter}
           priorityFilter={priorityFilter}
           onSelectPriority={setPriorityFilter}
+          agingFilter={agingFilter}
+          onSelectAging={setAgingFilter}
           archiveState={archiveState}
           onToggleArchive={setArchiveState}
           searchQuery={searchQuery}
@@ -573,12 +661,23 @@ export function ApplicationsView({
           selectedOwner={selectedOwner}
           onSelectOwner={setSelectedOwner}
           onOpenCreateModal={() => setIsCreateOpen(true)}
+          isWide={isWide}
+          isPreviewOpen={isPreviewOpen}
+          onTogglePreview={togglePreview}
         />
 
-        {/* Data Grid + Persistent Preview Rail Layout */}
+        {loadError && (
+          <div role="alert" style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', fontSize: '13px', display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+            <span>Couldn't load applications: {loadError}</span>
+            <Button size="sm" variant="outline" onClick={() => void loadApps()}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* Data grid + wide-desktop preview rail */}
         <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-          {/* Main Applications Table Grid */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <ApplicationsTable
               applications={applications}
               loading={loading}
@@ -586,77 +685,65 @@ export function ApplicationsView({
               activeId={activeId}
               sort={sort}
               isManager={isManager}
+              isMobile={isMobile}
               members={members}
-              onSelectRow={(id, selected) => {
-                setSelectedIds((prev) => (selected ? [...prev, id] : prev.filter((i) => i !== id)));
-              }}
-              onSelectAll={(selected) => {
-                setSelectedIds(selected ? applications.map((a) => a.id) : []);
-              }}
-              onActiveRowChange={(id) => setActiveId(id)}
-              onSortChange={(field) => {
-                setSort((prev: ApplicationSort) => ({
-                  field,
-                  direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
-                }));
-              }}
-              onRowClick={(app) => {
-                if (isMobile || !isWide || !isPreviewOpen) {
-                  setDrawerApp(app);
-                  setIsDrawerOpen(true);
-                } else {
-                  setActiveId(app.id);
-                }
-              }}
+              workflow={workflow}
+              onSelectRow={(id, selected) =>
+                setSelectedIds((prev) => (selected ? [...new Set([...prev, id])] : prev.filter((i) => i !== id)))
+              }
+              onSelectAll={(selected) => setSelectedIds(selected ? applications.map((a) => a.id) : [])}
+              onActiveRowChange={setActiveId}
+              onSortChange={(field) =>
+                setSort((prev) => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' }))
+              }
+              onRowClick={handleRowClick}
               onOpenStageMove={(app) => {
                 setStageMoveTarget(app);
                 setIsStageMoveOpen(true);
               }}
-              onOpenOutcome={(app) => {
-                setOutcomeTarget(app);
-                setIsOutcomeOpen(true);
-              }}
+              onOpenOutcome={setOutcomeTarget}
               onKeepActive={handleKeepActive}
               onArchive={handleArchive}
               onRestore={handleRestore}
-              onTogglePreview={handleTogglePreview}
               onOpenCreate={() => setIsCreateOpen(true)}
-              onClearFilters={() => {
-                setActiveStage('ALL');
-                setOutcomeFilter('ALL');
-                setPriorityFilter('ALL');
-                setArchiveState('active');
-                setSearchQuery('');
-                setSelectedOwner('ALL');
-              }}
+              onClearFilters={clearFilters}
             />
+
+            {totalCount > 0 && (
+              <nav aria-label="Applications pages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                <span aria-live="polite" data-testid="page-status">
+                  Showing {pageStart}–{pageEnd} of {totalCount}
+                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <Button size="sm" variant="outline" disabled={page === 0 || loading} onClick={() => setPage((p) => Math.max(0, p - 1))} aria-label="Previous page">
+                    <ChevronLeft size={14} aria-hidden="true" />
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={page >= lastPage || loading} onClick={() => setPage((p) => Math.min(lastPage, p + 1))} aria-label="Next page">
+                    <ChevronRight size={14} aria-hidden="true" />
+                  </Button>
+                </div>
+              </nav>
+            )}
           </div>
 
-          {/* Persistent Wide-Desktop (>=1680px) Preview Rail */}
-          {isWide && (
+          {railVisible && (
             <ApplicationPreviewRail
               application={previewApp}
-              isOpen={isPreviewOpen}
-              onClose={() => setIsPreviewOpen(false)}
-              onOpenFullDetail={(app) => {
-                setDrawerApp(app);
-                setIsDrawerOpen(true);
-              }}
+              workflow={workflow}
+              historyVersion={historyVersion}
+              onClose={() => setPreview(false)}
+              onOpenFullDetail={openDetail}
               onOpenStageMove={(app) => {
                 setStageMoveTarget(app);
                 setIsStageMoveOpen(true);
               }}
-              onOpenOutcome={(app) => {
-                setOutcomeTarget(app);
-                setIsOutcomeOpen(true);
-              }}
+              onOpenOutcome={setOutcomeTarget}
               onKeepActive={handleKeepActive}
             />
           )}
         </div>
       </section>
 
-      {/* Bulk Action Bar */}
       <BulkActionBar
         selectedCount={selectedIds.length}
         isArchivedView={archiveState === 'archived'}
@@ -664,13 +751,12 @@ export function ApplicationsView({
           setStageMoveTarget(null);
           setIsStageMoveOpen(true);
         }}
-        onMarkGhosted={handleBulkGhosted}
-        onArchive={handleBulkArchive}
-        onRestore={handleBulkRestore}
+        onMarkGhosted={() => void handleBulkGhosted()}
+        onArchive={() => void handleBulkArchive()}
+        onRestore={() => void handleBulkRestore()}
         onClearSelection={() => setSelectedIds([])}
       />
 
-      {/* Create Application Modal with 3-tier Duplicate Detection */}
       <CreateApplicationModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -682,25 +768,18 @@ export function ApplicationsView({
           setIsCreateOpen(false);
           setActiveId(appId);
           const found = applications.find((a) => a.id === appId);
-          if (found) {
-            setDrawerApp(found);
-            setIsDrawerOpen(true);
-          }
+          if (found) openDetail(found);
+          else setDrawerAppId(appId);
         }}
       />
 
-      {/* Edit Application Modal */}
       <EditApplicationModal
-        isOpen={isEditOpen}
-        onClose={() => {
-          setIsEditOpen(false);
-          setEditingApp(null);
-        }}
+        isOpen={editingApp !== null}
+        onClose={() => setEditingApp(null)}
         application={editingApp}
         onSave={handleUpdate}
       />
 
-      {/* Stage Move Dialog */}
       <StageMoveDialog
         isOpen={isStageMoveOpen}
         onClose={() => {
@@ -713,41 +792,33 @@ export function ApplicationsView({
         onConfirmMove={handleConfirmMoveStage}
       />
 
-      {/* Record Outcome Dialog */}
       <OutcomeDialog
-        isOpen={isOutcomeOpen}
-        onClose={() => {
-          setIsOutcomeOpen(false);
-          setOutcomeTarget(null);
-        }}
+        isOpen={outcomeTarget !== null}
+        onClose={() => setOutcomeTarget(null)}
         applicationTitle={outcomeTarget ? `${outcomeTarget.role_title} at ${outcomeTarget.company_name}` : undefined}
         onConfirmOutcome={handleConfirmOutcome}
       />
 
-      {/* Slide-in Detail Drawer */}
       <ApplicationDetailDrawer
-        isOpen={isDrawerOpen}
+        isOpen={drawerApp !== null}
         onClose={() => {
-          setIsDrawerOpen(false);
-          setDrawerApp(null);
+          setDrawerAppId(null);
+          setDrawerFallback(null);
         }}
         application={drawerApp}
         workflow={workflow}
+        historyVersion={historyVersion}
+        members={members}
+        currentUserId={user?.id ?? null}
         onOpenStageMove={(app) => {
           setStageMoveTarget(app);
           setIsStageMoveOpen(true);
         }}
-        onOpenOutcome={(app) => {
-          setOutcomeTarget(app);
-          setIsOutcomeOpen(true);
-        }}
+        onOpenOutcome={setOutcomeTarget}
         onKeepActive={handleKeepActive}
         onArchive={handleArchive}
         onRestore={handleRestore}
-        onEdit={(app) => {
-          setEditingApp(app);
-          setIsEditOpen(true);
-        }}
+        onEdit={setEditingApp}
       />
 
       {/* Canonical Workflow Section */}
@@ -783,22 +854,8 @@ export function ApplicationsView({
             <CardBody style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
               <form onSubmit={onPasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <b>Change Password</b>
-                <Input
-                  name="current"
-                  type="password"
-                  placeholder="Current password"
-                  required
-                  aria-label="Current password"
-                  autoComplete="current-password"
-                />
-                <Input
-                  name="next"
-                  type="password"
-                  placeholder="New password"
-                  required
-                  aria-label="New password"
-                  autoComplete="new-password"
-                />
+                <Input name="current" type="password" placeholder="Current password" required aria-label="Current password" autoComplete="current-password" />
+                <Input name="next" type="password" placeholder="New password" required aria-label="New password" autoComplete="new-password" />
                 <Button variant="secondary" size="sm" style={{ alignSelf: 'flex-start' }}>
                   Change
                 </Button>
@@ -806,13 +863,7 @@ export function ApplicationsView({
 
               <form onSubmit={onRegenerateCodes} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <b>Regenerate Recovery Codes</b>
-                <Input
-                  name="password"
-                  type="password"
-                  placeholder="Password to confirm"
-                  required
-                  aria-label="Password to regenerate codes"
-                />
+                <Input name="password" type="password" placeholder="Password to confirm" required aria-label="Password to regenerate codes" />
                 <Button variant="secondary" size="sm" style={{ alignSelf: 'flex-start' }}>
                   Regenerate
                 </Button>

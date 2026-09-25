@@ -55,6 +55,7 @@ export function PriorityBars({ priority, className = '' }: PriorityBarsProps) {
   return (
     <div
       className={`pri ${className}`}
+      role="img"
       aria-label={`Priority: ${priority}`}
       title={`Priority: ${priority}`}
     >

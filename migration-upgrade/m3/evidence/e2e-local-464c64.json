@@ -1,0 +1,100 @@
+{
+  "target": "local",
+  "run": "464c64",
+  "started_at": "2026-09-25T00:59:40.387Z",
+  "E2E-04-create": "PASS",
+  "E2E-04-duplicates": {
+    "probable": "shown",
+    "strong": "shown with Save anyway",
+    "check_failure": "honest warning",
+    "dirty_guard": "PASS"
+  },
+  "E2E-02-search-filter-sort": "PASS",
+  "E2E-03-bulk": "PASS",
+  "E2E-05-drawer-timeline": {
+    "live_refresh": "PASS",
+    "events": [
+      "CREATED",
+      "CAPTURED",
+      "STAGE_CHANGED",
+      "KEEP_ACTIVE",
+      "OUTCOME_CHANGED"
+    ],
+    "stage_kept_on_close": true
+  },
+  "E2E-keyboard": "PASS",
+  "E2E-archive-restore": {
+    "undo_toast": "PASS",
+    "archived_view": "PASS",
+    "restore": "PASS"
+  },
+  "E2E-06-preview-rail": {
+    "default_open": true,
+    "p_toggle": true,
+    "persisted_across_reload": true,
+    "close_button_persists": true
+  },
+  "E2E-07-responsive": {
+    "mobile_cards": "PASS",
+    "mobile_detail_sheet": "PASS",
+    "mobile_horizontal_overflow_px": 0
+  },
+  "a11y": [
+    {
+      "context": "create-dialog",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "detail-drawer",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "table-light",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "table-dark",
+      "total": 1,
+      "critical": 0,
+      "serious": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 9,
+          "sample": "button[aria-label=\"System mode\"] > span"
+        }
+      ],
+      "blocking": 1
+    },
+    {
+      "context": "wide-preview",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "mobile-cards",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ],
+  "status": "FAIL"
+}

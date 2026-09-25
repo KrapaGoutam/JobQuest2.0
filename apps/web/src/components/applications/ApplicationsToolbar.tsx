@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Plus, Archive } from 'lucide-react';
+import { Search, X, Plus, Archive, PanelRight } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
-import type { ApplicationStage, CanonicalWorkflow } from '../../types/applications';
+import type { AgingFilter, ApplicationStage, CanonicalWorkflow } from '../../types/applications';
 import type { WorkspaceMemberInfo } from '../../api/applications';
 
 export interface ApplicationsToolbarProps {
@@ -24,6 +24,12 @@ export interface ApplicationsToolbarProps {
   selectedOwner: string;
   onSelectOwner: (ownerId: string) => void;
   onOpenCreateModal: () => void;
+  agingFilter: AgingFilter;
+  onSelectAging: (aging: AgingFilter) => void;
+  /** Wide desktop (>=1680px): explicit visible Preview toggle (Gate 02B §4.2). */
+  isWide?: boolean;
+  isPreviewOpen?: boolean;
+  onTogglePreview?: () => void;
 }
 
 export function ApplicationsToolbar({
@@ -45,6 +51,11 @@ export function ApplicationsToolbar({
   selectedOwner,
   onSelectOwner,
   onOpenCreateModal,
+  agingFilter,
+  onSelectAging,
+  isWide = false,
+  isPreviewOpen = false,
+  onTogglePreview,
 }: ApplicationsToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -195,6 +206,19 @@ export function ApplicationsToolbar({
             <option value="POSITION_CLOSED">Position Closed</option>
           </Select>
 
+          {/* Aging Filter (OPEN applications; Gate 02B §4.5 bands) */}
+          <Select
+            value={agingFilter}
+            onChange={(e) => onSelectAging(e.target.value as AgingFilter)}
+            style={{ width: '150px' }}
+            aria-label="Filter by aging"
+          >
+            <option value="ALL">All Aging</option>
+            <option value="QUIET">Quiet (15+ days)</option>
+            <option value="STALE">Stale (15–30 days)</option>
+            <option value="LONG_WAITING">Long Waiting (31+ days)</option>
+          </Select>
+
           {/* Priority Filter */}
           <Select
             value={priorityFilter}
@@ -237,6 +261,20 @@ export function ApplicationsToolbar({
             {archiveState === 'archived' ? 'Archived Only' : 'Archive'}
           </Button>
 
+          {/* Wide-desktop preview rail toggle (also `P` with grid focus) */}
+          {isWide && onTogglePreview && (
+            <Button
+              variant={isPreviewOpen ? 'primary' : 'outline'}
+              size="md"
+              onClick={onTogglePreview}
+              aria-pressed={isPreviewOpen}
+              title="Show or hide the preview rail (P)"
+            >
+              <PanelRight size={15} style={{ marginRight: '6px' }} />
+              Preview
+            </Button>
+          )}
+
           {/* New Application CTA */}
           <Button
             variant="primary"
@@ -272,13 +310,12 @@ export function ApplicationsToolbar({
           paddingBottom: '4px',
           scrollbarWidth: 'thin',
         }}
-        role="tablist"
+        role="group"
         aria-label="Filter by stage"
       >
         <button
           type="button"
-          role="tab"
-          aria-selected={activeStage === 'ALL'}
+          aria-pressed={activeStage === 'ALL'}
           onClick={() => onSelectStage('ALL')}
           style={{
             padding: '6px 12px',
@@ -316,8 +353,7 @@ export function ApplicationsToolbar({
             <button
               key={st.id}
               type="button"
-              role="tab"
-              aria-selected={isSelected}
+              aria-pressed={isSelected}
               onClick={() => onSelectStage(st.id)}
               style={{
                 padding: '6px 12px',

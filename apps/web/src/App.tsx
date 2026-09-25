@@ -235,14 +235,15 @@ function AppContent() {
   }
 
   async function onStage(id: string, stage: string) {
-    const r = await supabase.from('applications').update({ stage }).eq('id', id);
-    note(r.error ? `update failed: ${r.error.message}` : `stage → ${stage} (direct PostgREST)`);
+    // Lifecycle changes go through the atomic RPC (Gate 03 boundary; migration 20260924310000).
+    const r = await supabase.rpc('rpc_move_application_stage', { p_application_id: id, p_new_stage: stage });
+    note(r.error ? `update failed: ${r.error.message}` : `stage → ${stage} (RPC via Data API)`);
     await loadData();
   }
 
   async function onArchive(id: string) {
-    const r = await supabase.from('applications').update({ archived_at: new Date().toISOString() }).eq('id', id);
-    note(r.error ? `archive failed: ${r.error.message}` : 'archived (direct PostgREST)');
+    const r = await supabase.rpc('rpc_archive_application', { p_application_id: id });
+    note(r.error ? `archive failed: ${r.error.message}` : 'archived (RPC via Data API)');
     await loadData();
   }
 

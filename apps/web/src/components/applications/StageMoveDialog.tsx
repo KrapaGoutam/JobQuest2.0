@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -25,6 +25,19 @@ export function StageMoveDialog({
   const [selectedStage, setSelectedStage] = useState<ApplicationStage>(currentStage);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // The dialog stays mounted; start every opening from the target's current stage.
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedStage(currentStage);
+      setNotes('');
+      setError(null);
+    }
+  }, [isOpen, currentStage]);
+
+  const isSingle = targetAppCount <= 1;
+  const unchanged = isSingle && selectedStage === currentStage;
 
   const stages = workflow?.stages ?? [
     { id: 'SAVED' as ApplicationStage, label: 'Saved', order: 1 },
@@ -38,11 +51,15 @@ export function StageMoveDialog({
   ];
 
   const handleConfirm = async () => {
+    if (unchanged) return;
     try {
       setSubmitting(true);
+      setError(null);
       await onConfirmMove(selectedStage, notes.trim() || undefined);
       setNotes('');
       onClose();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Stage change failed');
     } finally {
       setSubmitting(false);
     }
@@ -52,30 +69,37 @@ export function StageMoveDialog({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title={`Move Stage ${targetAppCount > 1 ? `(${targetAppCount} applications)` : ''}`}
+      title={targetAppCount > 1 ? `Move Stage (${targetAppCount} applications)` : 'Move Stage'}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleConfirm} disabled={submitting}>
+          <Button variant="primary" onClick={handleConfirm} disabled={submitting || unchanged}>
             {submitting ? 'Updating...' : `Move to ${stages.find((s) => s.id === selectedStage)?.label ?? selectedStage}`}
           </Button>
         </>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {error && (
+          <div role="alert" style={{ fontSize: '13px', color: 'var(--color-danger)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '8px 12px' }}>
+            {error}
+          </div>
+        )}
         <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: 0 }}>
           Select the new pipeline stage to transition {targetAppCount > 1 ? 'these applications' : 'this application'} to:
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+        <div role="group" aria-label="Pipeline stages" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
           {stages.map((st) => {
             const isSelected = selectedStage === st.id;
             return (
               <button
                 key={st.id}
                 type="button"
+                aria-pressed={isSelected}
+                data-stage={st.id}
                 onClick={() => setSelectedStage(st.id)}
                 style={{
                   padding: '10px 12px',
@@ -94,7 +118,10 @@ export function StageMoveDialog({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>{st.label}</span>
+                  <span>
+                    {st.label}
+                    {isSingle && st.id === currentStage ? ' (current)' : ''}
+                  </span>
                   <StagePips stage={st.id} maxSteps={8} />
                 </div>
               </button>

@@ -3,8 +3,7 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { Tabs, TabList, Tab, TabPanel } from '../ui/Tabs';
 import { StatusBadge } from '../ui/StatusBadge';
-import { StagePips } from '../ui/StagePips';
-import { PriorityBars } from '../ui/StagePips';
+import { StagePips, PriorityBars } from '../ui/StagePips';
 import {
   ExternalLink,
   Clock,
@@ -18,7 +17,9 @@ import {
   Undo2,
   Edit,
 } from 'lucide-react';
-import { fetchApplicationEvents } from '../../api/applications';
+import { fetchApplicationEvents, type WorkspaceMemberInfo } from '../../api/applications';
+import { describeEvent } from './eventText';
+import { outcomeLabel } from './ApplicationsTable';
 import { calculateDaysInactive, computeAgingBand } from '../../types/applications';
 import type { Application, ApplicationEvent, CanonicalWorkflow } from '../../types/applications';
 
@@ -33,6 +34,10 @@ export interface ApplicationDetailDrawerProps {
   onArchive: (appId: string) => Promise<void>;
   onRestore: (appId: string) => Promise<void>;
   onEdit: (app: Application) => void;
+  /** Bumped by the view after every mutation so the timeline refetches. */
+  historyVersion: number;
+  members: WorkspaceMemberInfo[];
+  currentUserId: string | null;
 }
 
 export function ApplicationDetailDrawer({
@@ -46,21 +51,46 @@ export function ApplicationDetailDrawer({
   onArchive,
   onRestore,
   onEdit,
+  historyVersion,
+  members,
+  currentUserId,
 }: ApplicationDetailDrawerProps) {
   const [events, setEvents] = useState<ApplicationEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [activeTab, setActiveTab] = useState('timeline');
   const [keepingActive, setKeepingActive] = useState(false);
 
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const appId = application?.id ?? null;
+
   useEffect(() => {
-    if (application && isOpen) {
-      setLoadingEvents(true);
-      fetchApplicationEvents(application.id)
-        .then(setEvents)
-        .catch(() => setEvents([]))
-        .finally(() => setLoadingEvents(false));
-    }
-  }, [application, isOpen]);
+    if (!appId || !isOpen) return;
+    let cancelled = false;
+    setLoadingEvents(true);
+    setEventsError(null);
+    fetchApplicationEvents(appId)
+      .then((evs) => {
+        if (!cancelled) setEvents(evs);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setEvents([]);
+          setEventsError((err as Error).message || 'Could not load history');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEvents(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appId, isOpen, historyVersion]);
+
+  const actorName = (actorId: string) => {
+    if (actorId === currentUserId) return 'You';
+    const m = members.find((x) => x.user_id === actorId);
+    return m ? m.display_name || m.username : 'Workspace member';
+  };
 
   if (!application) return null;
 
@@ -71,8 +101,6 @@ export function ApplicationDetailDrawer({
     try {
       setKeepingActive(true);
       await onKeepActive(application.id);
-      const updatedEvents = await fetchApplicationEvents(application.id);
-      setEvents(updatedEvents);
     } finally {
       setKeepingActive(false);
     }
@@ -96,10 +124,16 @@ export function ApplicationDetailDrawer({
               <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '2px 0 6px 0', color: 'var(--color-text-primary)' }}>
                 {application.role_title}
               </h2>
+              {(application.location || application.work_arrangement) && (
+                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MapPin size={12} aria-hidden="true" />
+                  {[application.location, application.work_arrangement].filter(Boolean).join(' · ')}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <StatusBadge variant={application.status === 'OPEN' ? 'accent' : 'muted'}>
-                {application.status === 'OPEN' ? 'OPEN' : application.outcome || 'CLOSED'}
+                {application.status === 'OPEN' ? 'Open' : outcomeLabel(workflow, application.outcome)}
               </StatusBadge>
               {application.archived_at && (
                 <StatusBadge variant="muted">Archived</StatusBadge>
@@ -168,7 +202,7 @@ export function ApplicationDetailDrawer({
             ) : (
               <Button size="sm" variant="primary" onClick={() => onOpenStageMove(application)}>
                 <ArrowRight size={14} style={{ marginRight: '6px' }} />
-                Reopen / Move Stage
+                Move Stage
               </Button>
             )}
 
@@ -236,6 +270,10 @@ export function ApplicationDetailDrawer({
                   <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                     Loading history...
                   </div>
+                ) : eventsError ? (
+                  <div role="alert" style={{ padding: '12px', color: 'var(--color-danger)', fontSize: '13px' }}>
+                    Could not load history: {eventsError}
+                  </div>
                 ) : events.length === 0 ? (
                   <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                     No recorded timeline events for this application.
@@ -243,30 +281,11 @@ export function ApplicationDetailDrawer({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {events.map((ev) => {
-                      const dateStr = new Date(ev.created_at).toLocaleString();
-                      let label: string = ev.event_type;
-                      let detail = '';
-
-                      if (ev.event_type === 'STAGE_CHANGED') {
-                        label = `Moved Stage: ${ev.payload?.from_stage} → ${ev.payload?.to_stage}`;
-                        if (ev.payload?.notes) detail = String(ev.payload.notes);
-                      } else if (ev.event_type === 'OUTCOME_CHANGED') {
-                        label = `Closed: ${ev.payload?.outcome}`;
-                        if (ev.payload?.closure_reason) detail = `Reason: ${ev.payload.closure_reason}`;
-                        if (ev.payload?.closure_notes) detail += ` — ${ev.payload.closure_notes}`;
-                      } else if (ev.event_type === 'KEEP_ACTIVE') {
-                        label = 'Activity Refreshed (Keep Active)';
-                      } else if (ev.event_type === 'ARCHIVED') {
-                        label = 'Archived Application';
-                      } else if (ev.event_type === 'RESTORED') {
-                        label = 'Restored Application';
-                      } else if (ev.event_type === 'CREATED') {
-                        label = 'Application Created';
-                      }
-
+                      const { label, detail } = describeEvent(ev, workflow);
                       return (
                         <div
                           key={ev.id}
+                          data-event-type={ev.event_type}
                           style={{
                             padding: '10px 14px',
                             borderRadius: 'var(--radius-md)',
@@ -277,18 +296,15 @@ export function ApplicationDetailDrawer({
                             gap: '4px',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                              {label}
-                            </span>
-                            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                              {dateStr}
-                            </span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</span>
+                            <time dateTime={ev.created_at} style={{ fontSize: '11px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                              {new Date(ev.created_at).toLocaleString()}
+                            </time>
                           </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>by {actorName(ev.actor_id)}</div>
                           {detail && (
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-                              {detail}
-                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>{detail}</div>
                           )}
                         </div>
                       );

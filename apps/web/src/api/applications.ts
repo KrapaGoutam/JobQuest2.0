@@ -11,133 +11,166 @@ import type {
   CanonicalWorkflow,
   ApplicationEvent,
 } from '../types/applications';
+import { buildSearchFilter, agingRange, type AgingFilter, type ApplicationSort } from '../types/applications';
+
+/*
+ * Applications data layer (M3). Hybrid contract (Gate 03 RPC_DOMAIN_OPERATIONS §1):
+ *  - reads and simple field edits: direct Data API under RLS;
+ *  - lifecycle changes (stage, outcome, archive, restore, keep active): atomic RPCs,
+ *    which also append the application_events history. The database rejects direct
+ *    lifecycle writes (migration 20260924310000), and CREATED / CAPTURED events are
+ *    written by triggers, never by the client.
+ */
 
 export interface ApplicationFilters {
   stage?: string;
   status?: string;
   outcome?: string;
   priority?: string;
-  agingBand?: string;
+  aging?: AgingFilter;
   archiveState?: 'active' | 'archived' | 'all';
   ownerId?: string;
   search?: string;
 }
 
-export interface ApplicationSort {
-  field: keyof Application | 'company_name' | 'role_title' | 'stage' | 'priority' | 'applied_at' | 'last_activity_at';
-  direction: 'asc' | 'desc';
-}
+export type { ApplicationSort } from '../types/applications';
 
 export interface FetchApplicationsResult {
   applications: Application[];
   totalCount: number;
 }
 
+export const PAGE_SIZE = 50;
+
 /**
- * Fetch applications from PostgREST under RLS with server-side filtering, sorting & pagination.
+ * Fetch one page of applications under RLS, with server-side filtering, sorting and pagination.
  */
 export async function fetchApplications(
   workspaceId: string,
   filters: ApplicationFilters = {},
   sort: ApplicationSort = { field: 'last_activity_at', direction: 'desc' },
   page = 0,
-  pageSize = 50
+  pageSize = PAGE_SIZE
 ): Promise<FetchApplicationsResult> {
   let query = supabase
     .from('applications')
     .select('*, job_snapshots(*)', { count: 'exact' })
     .eq('workspace_id', workspaceId);
 
-  // Archive filtering
   if (filters.archiveState === 'archived') {
     query = query.not('archived_at', 'is', null);
-  } else if (filters.archiveState === 'all') {
-    // Include both
-  } else {
-    // Default: active only
+  } else if (filters.archiveState !== 'all') {
     query = query.is('archived_at', null);
   }
+  if (filters.stage && filters.stage !== 'ALL') query = query.eq('stage', filters.stage);
+  if (filters.status && filters.status !== 'ALL') query = query.eq('status', filters.status);
+  if (filters.outcome && filters.outcome !== 'ALL') query = query.eq('outcome', filters.outcome);
+  if (filters.priority && filters.priority !== 'ALL') query = query.eq('priority', filters.priority);
+  if (filters.ownerId && filters.ownerId !== 'ALL') query = query.eq('user_id', filters.ownerId);
 
-  // Stage filter
-  if (filters.stage && filters.stage !== 'ALL') {
-    query = query.eq('stage', filters.stage);
+  if (filters.aging && filters.aging !== 'ALL') {
+    // Aging bands apply to OPEN applications only (Gate 02B §4.5).
+    const range = agingRange(filters.aging, new Date());
+    query = query.eq('status', 'OPEN').lte('last_activity_at', range.to);
+    if (range.from) query = query.gt('last_activity_at', range.from);
   }
 
-  // Status & outcome filter
-  if (filters.status && filters.status !== 'ALL') {
-    query = query.eq('status', filters.status);
-  }
-  if (filters.outcome && filters.outcome !== 'ALL') {
-    query = query.eq('outcome', filters.outcome);
-  }
+  const orFilter = buildSearchFilter(filters.search ?? '');
+  if (orFilter) query = query.or(orFilter);
 
-  // Priority filter
-  if (filters.priority && filters.priority !== 'ALL') {
-    query = query.eq('priority', filters.priority);
-  }
+  // Stable ordering: requested column, then id as a tie-breaker so pages never overlap.
+  query = query.order(sort.field, { ascending: sort.direction === 'asc' }).order('id', { ascending: true });
 
-  // Manager owner filter
-  if (filters.ownerId && filters.ownerId !== 'ALL') {
-    query = query.eq('user_id', filters.ownerId);
-  }
-
-  // Search filter across text columns
-  if (filters.search && filters.search.trim().length > 0) {
-    const s = filters.search.trim();
-    query = query.or(`company_name.ilike.%${s}%,role_title.ilike.%${s}%,location.ilike.%${s}%,notes.ilike.%${s}%`);
-  }
-
-  // Sorting
-  query = query.order(sort.field, { ascending: sort.direction === 'asc' });
-
-  // Pagination
   const from = page * pageSize;
-  const to = from + pageSize - 1;
-  query = query.range(from, to);
+  query = query.range(from, from + pageSize - 1);
 
   const { data, count, error } = await query;
   if (error) throw error;
 
-  const applications = (data ?? []).map((row: Record<string, unknown>) => ({
-    ...row,
-    job_snapshot: Array.isArray(row.job_snapshots) ? (row.job_snapshots[0] as unknown) ?? null : (row.job_snapshots as unknown) ?? null,
-  })) as Application[];
+  const applications = (data ?? []).map((row: Record<string, unknown>) => withSnapshot(row));
+  return { applications, totalCount: count ?? applications.length };
+}
 
-  return {
-    applications,
-    totalCount: count ?? applications.length,
-  };
+function withSnapshot(row: Record<string, unknown>): Application {
+  const snaps = row.job_snapshots;
+  const job_snapshot = Array.isArray(snaps) ? (snaps[0] ?? null) : (snaps ?? null);
+  const rest = { ...row };
+  delete rest.job_snapshots;
+  return { ...rest, job_snapshot } as Application;
 }
 
 /**
- * Fetch a single application detail with its job snapshot.
+ * Per-stage counts for the stage filter pills, using every active filter except the stage
+ * itself, so the counts describe the whole result set rather than the loaded page.
  */
+export async function fetchStageCounts(
+  workspaceId: string,
+  stageIds: string[],
+  filters: ApplicationFilters
+): Promise<Record<string, number>> {
+  const counts = await Promise.all(
+    stageIds.map(async (stage) => {
+      let q = supabase.from('applications').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('stage', stage);
+      if (filters.archiveState === 'archived') q = q.not('archived_at', 'is', null);
+      else if (filters.archiveState !== 'all') q = q.is('archived_at', null);
+      if (filters.status && filters.status !== 'ALL') q = q.eq('status', filters.status);
+      if (filters.outcome && filters.outcome !== 'ALL') q = q.eq('outcome', filters.outcome);
+      if (filters.priority && filters.priority !== 'ALL') q = q.eq('priority', filters.priority);
+      if (filters.ownerId && filters.ownerId !== 'ALL') q = q.eq('user_id', filters.ownerId);
+      if (filters.aging && filters.aging !== 'ALL') {
+        const range = agingRange(filters.aging, new Date());
+        q = q.eq('status', 'OPEN').lte('last_activity_at', range.to);
+        if (range.from) q = q.gt('last_activity_at', range.from);
+      }
+      const orFilter = buildSearchFilter(filters.search ?? '');
+      if (orFilter) q = q.or(orFilter);
+      const { count, error } = await q;
+      if (error) throw error;
+      return [stage, count ?? 0] as const;
+    })
+  );
+  return Object.fromEntries(counts);
+}
+
+/** Counts of quiet OPEN applications across the whole workspace (not just the loaded page). */
+export async function fetchAgingCounts(workspaceId: string): Promise<{ stale: number; longWaiting: number }> {
+  const now = new Date();
+  const count = async (band: 'STALE' | 'LONG_WAITING') => {
+    const range = agingRange(band, now);
+    let q = supabase
+      .from('applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'OPEN')
+      .is('archived_at', null)
+      .lte('last_activity_at', range.to);
+    if (range.from) q = q.gt('last_activity_at', range.from);
+    const { count: n, error } = await q;
+    if (error) throw error;
+    return n ?? 0;
+  };
+  const [stale, longWaiting] = await Promise.all([count('STALE'), count('LONG_WAITING')]);
+  return { stale, longWaiting };
+}
+
+/** Fetch a single application (with its snapshot); null when not visible under RLS. */
 export async function fetchApplicationDetail(applicationId: string): Promise<Application | null> {
   const { data, error } = await supabase
     .from('applications')
     .select('*, job_snapshots(*)')
     .eq('id', applicationId)
     .maybeSingle();
-
   if (error) throw error;
-  if (!data) return null;
-
-  return {
-    ...data,
-    job_snapshot: Array.isArray(data.job_snapshots) ? data.job_snapshots[0] ?? null : data.job_snapshots ?? null,
-  } as Application;
+  return data ? withSnapshot(data as Record<string, unknown>) : null;
 }
 
-/**
- * Fetch chronological event history for an application.
- */
+/** Chronological history (newest first) from the append-only application_events table. */
 export async function fetchApplicationEvents(applicationId: string): Promise<ApplicationEvent[]> {
   const { data, error } = await supabase
     .from('application_events')
     .select('*')
     .eq('application_id', applicationId)
     .order('created_at', { ascending: false });
-
   if (error) throw error;
   return (data ?? []) as ApplicationEvent[];
 }
@@ -169,10 +202,17 @@ export interface CreateApplicationPayload {
   };
 }
 
+export interface CreateApplicationResult {
+  application: Application;
+  /** Set when the application was saved but its posting snapshot could not be captured. */
+  snapshotError: string | null;
+}
+
 /**
- * Create a new application and optionally capture its job snapshot.
+ * Create an application (starts OPEN, unarchived). The database trigger records the
+ * CREATED event, and a CAPTURED event when a posting snapshot is stored.
  */
-export async function createApplication(payload: CreateApplicationPayload): Promise<Application> {
+export async function createApplication(payload: CreateApplicationPayload): Promise<CreateApplicationResult> {
   const { snapshot, ...appData } = payload;
 
   const { data, error } = await supabase
@@ -181,98 +221,60 @@ export async function createApplication(payload: CreateApplicationPayload): Prom
       ...appData,
       stage: appData.stage ?? 'APPLIED',
       priority: appData.priority ?? 'MEDIUM',
-      status: 'OPEN',
-      applied_at: new Date().toISOString(),
-      last_activity_at: new Date().toISOString(),
     })
     .select('*')
     .single();
-
   if (error) throw error;
-  const createdApp = data as Application;
+  const application = data as Application;
 
-  // Insert job snapshot if provided
+  let snapshotError: string | null = null;
   if (snapshot && (snapshot.job_description || snapshot.requirements || snapshot.skills)) {
-    const { data: snapData } = await supabase
+    const snap = await supabase
       .from('job_snapshots')
       .insert({
-        application_id: createdApp.id,
-        workspace_id: createdApp.workspace_id,
+        application_id: application.id,
+        workspace_id: application.workspace_id,
         job_description: snapshot.job_description ?? null,
         requirements: snapshot.requirements ?? null,
         skills: snapshot.skills ?? null,
+        raw_payload: { source: 'manual_form', version: 1 },
       })
       .select('*')
       .single();
-
-    createdApp.job_snapshot = snapData;
+    if (snap.error) snapshotError = snap.error.message;
+    else application.job_snapshot = snap.data;
   }
 
-  // Insert initial CREATED / APPLIED event
-  await supabase.from('application_events').insert({
-    application_id: createdApp.id,
-    workspace_id: createdApp.workspace_id,
-    actor_id: createdApp.user_id,
-    event_type: 'CREATED',
-    payload: {
-      company: createdApp.company_name,
-      role: createdApp.role_title,
-      stage: createdApp.stage,
-    },
-  });
-
-  return createdApp;
+  return { application, snapshotError };
 }
 
+/** Fields a client may edit directly. Lifecycle fields are excluded (RPC only). */
+export type EditableApplicationFields = Pick<
+  Application,
+  | 'company_name' | 'role_title' | 'job_url' | 'external_job_id' | 'priority' | 'location'
+  | 'work_arrangement' | 'employment_type' | 'salary_min' | 'salary_max' | 'salary_currency'
+  | 'next_action' | 'next_action_date' | 'tags' | 'notes'
+>;
+
 /**
- * Update an existing application's fields.
+ * Update simple fields. Does not touch last_activity_at: aging measures time since the
+ * last timeline activity (Gate 02B §4.5), and a metadata edit is not a timeline event.
  */
 export async function updateApplication(
   applicationId: string,
-  updates: Partial<Application>,
-  snapshotUpdates?: { job_description?: string; requirements?: string; skills?: string }
+  updates: Partial<EditableApplicationFields>
 ): Promise<Application> {
   const { data, error } = await supabase
     .from('applications')
-    .update({
-      ...updates,
-      last_activity_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq('id', applicationId)
     .select('*')
     .single();
-
   if (error) throw error;
-  const updatedApp = data as Application;
-
-  if (snapshotUpdates) {
-    const { data: existingSnap } = await supabase
-      .from('job_snapshots')
-      .select('id')
-      .eq('application_id', applicationId)
-      .maybeSingle();
-
-    if (existingSnap) {
-      await supabase
-        .from('job_snapshots')
-        .update(snapshotUpdates)
-        .eq('application_id', applicationId);
-    } else {
-      await supabase.from('job_snapshots').insert({
-        application_id: applicationId,
-        workspace_id: updatedApp.workspace_id,
-        ...snapshotUpdates,
-      });
-    }
-  }
-
-  return updatedApp;
+  return data as Application;
 }
 
-/**
- * Atomic RPC: Transition application to a new stage.
- */
+/** Atomic RPC: move to a new stage (never changes OPEN/CLOSED state). */
 export async function moveApplicationStage(
   applicationId: string,
   newStage: ApplicationStage,
@@ -283,14 +285,11 @@ export async function moveApplicationStage(
     p_new_stage: newStage,
     p_notes: notes ?? null,
   });
-
   if (error) throw error;
   return data;
 }
 
-/**
- * Atomic RPC: Close application with an outcome and optional closure reason.
- */
+/** Atomic RPC: close with a terminal outcome (closure reason required for WITHDRAWN only). */
 export async function setApplicationOutcome(
   applicationId: string,
   outcome: ApplicationOutcome,
@@ -303,50 +302,32 @@ export async function setApplicationOutcome(
     p_closure_reason: closureReason ?? null,
     p_closure_notes: closureNotes ?? null,
   });
-
   if (error) throw error;
   return data;
 }
 
-/**
- * Atomic RPC: Refresh application activity timestamp without altering stage or outcome.
- */
+/** Atomic RPC: explicit "Keep Active" review (resets aging; no stage/state change). */
 export async function keepApplicationActive(applicationId: string): Promise<{ id: string; last_activity_at: string }> {
-  const { data, error } = await supabase.rpc('rpc_keep_application_active', {
-    p_application_id: applicationId,
-  });
-
+  const { data, error } = await supabase.rpc('rpc_keep_application_active', { p_application_id: applicationId });
   if (error) throw error;
   return data;
 }
 
-/**
- * Atomic RPC: Soft archive application.
- */
+/** Atomic RPC: soft archive. */
 export async function archiveApplication(applicationId: string): Promise<{ id: string; archived_at: string }> {
-  const { data, error } = await supabase.rpc('rpc_archive_application', {
-    p_application_id: applicationId,
-  });
-
+  const { data, error } = await supabase.rpc('rpc_archive_application', { p_application_id: applicationId });
   if (error) throw error;
   return data;
 }
 
-/**
- * Atomic RPC: Restore soft-archived application.
- */
+/** Atomic RPC: restore from archive. */
 export async function restoreApplication(applicationId: string): Promise<{ id: string; archived_at: null }> {
-  const { data, error } = await supabase.rpc('rpc_restore_application', {
-    p_application_id: applicationId,
-  });
-
+  const { data, error } = await supabase.rpc('rpc_restore_application', { p_application_id: applicationId });
   if (error) throw error;
   return data;
 }
 
-/**
- * Atomic RPC: 3-tier duplicate detection check.
- */
+/** Atomic RPC: 3-tier duplicate detection (only records the caller may see are compared). */
 export async function checkApplicationDuplicate(
   workspaceId: string,
   companyName: string,
@@ -361,61 +342,47 @@ export async function checkApplicationDuplicate(
     p_job_url: jobUrl ?? null,
     p_external_job_id: externalJobId ?? null,
   });
-
   if (error) throw error;
   return (data ?? { tier: 'NONE', matches: [] }) as DuplicateCheckResult;
 }
 
-/**
- * Fetch canonical workflow definition (stages, outcomes, closure reasons).
- */
+const FALLBACK_WORKFLOW: CanonicalWorkflow = {
+  stages: [
+    { id: 'SAVED', label: 'Saved', order: 1 },
+    { id: 'PREPARING', label: 'Preparing', order: 2 },
+    { id: 'APPLIED', label: 'Applied', order: 3 },
+    { id: 'ASSESSMENT', label: 'Assessment', order: 4 },
+    { id: 'RECRUITER_SCREEN', label: 'Recruiter Screen', order: 5 },
+    { id: 'INTERVIEW', label: 'Interview', order: 6 },
+    { id: 'FINAL_INTERVIEW', label: 'Final Interview', order: 7 },
+    { id: 'OFFER', label: 'Offer', order: 8 },
+  ],
+  outcomes: [
+    { id: 'ACCEPTED', label: 'Accepted', terminal_state: 'CLOSED' },
+    { id: 'REJECTED', label: 'Rejected', terminal_state: 'CLOSED' },
+    { id: 'WITHDRAWN', label: 'Withdrawn', terminal_state: 'CLOSED' },
+    { id: 'GHOSTED', label: 'Ghosted', terminal_state: 'CLOSED' },
+    { id: 'POSITION_CLOSED', label: 'Position Closed', terminal_state: 'CLOSED' },
+  ],
+  closure_reasons: [
+    { id: 'OFFER_DECLINED', label: 'Offer declined', for_outcome: 'WITHDRAWN' },
+    { id: 'GENERAL_WITHDRAWAL', label: 'Withdrew', for_outcome: 'WITHDRAWN' },
+    { id: 'COMPENSATION_MISMATCH', label: 'Compensation mismatch', for_outcome: 'WITHDRAWN' },
+    { id: 'LOCATION_UNSUITABLE', label: 'Location unsuitable', for_outcome: 'WITHDRAWN' },
+    { id: 'OTHER', label: 'Other', for_outcome: 'WITHDRAWN' },
+  ],
+};
+
+/** Canonical workflow (workspace override if present, else the system default). */
 export async function fetchCanonicalWorkflow(workspaceId?: string | null): Promise<CanonicalWorkflow> {
-  let query = supabase.from('workflow_definitions').select('*');
-  if (workspaceId) {
-    query = query.or(`workspace_id.eq.${workspaceId},is_default.eq.true`);
-  } else {
-    query = query.eq('is_default', true);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from('workflow_definitions')
+    .select('workspace_id, is_default, stages, outcomes, closure_reasons');
   if (error) throw error;
-
-  const def = (data ?? []).find((d: Record<string, unknown>) => d.workspace_id === workspaceId) ?? data?.[0];
-  if (!def) {
-    // Fallback to default canonical spec
-    return {
-      stages: [
-        { id: 'SAVED', label: 'Saved', order: 1 },
-        { id: 'PREPARING', label: 'Preparing', order: 2 },
-        { id: 'APPLIED', label: 'Applied', order: 3 },
-        { id: 'ASSESSMENT', label: 'Assessment', order: 4 },
-        { id: 'RECRUITER_SCREEN', label: 'Recruiter Screen', order: 5 },
-        { id: 'INTERVIEW', label: 'Interview', order: 6 },
-        { id: 'FINAL_INTERVIEW', label: 'Final Interview', order: 7 },
-        { id: 'OFFER', label: 'Offer', order: 8 },
-      ],
-      outcomes: [
-        { id: 'ACCEPTED', label: 'Accepted', terminal_state: 'CLOSED' },
-        { id: 'REJECTED', label: 'Rejected', terminal_state: 'CLOSED' },
-        { id: 'WITHDRAWN', label: 'Withdrawn', terminal_state: 'CLOSED' },
-        { id: 'GHOSTED', label: 'Ghosted', terminal_state: 'CLOSED' },
-        { id: 'POSITION_CLOSED', label: 'Position Closed', terminal_state: 'CLOSED' },
-      ],
-      closure_reasons: [
-        { id: 'OFFER_DECLINED', label: 'Offer declined', for_outcome: 'WITHDRAWN' },
-        { id: 'GENERAL_WITHDRAWAL', label: 'Withdrew', for_outcome: 'WITHDRAWN' },
-        { id: 'COMPENSATION_MISMATCH', label: 'Compensation mismatch', for_outcome: 'WITHDRAWN' },
-        { id: 'LOCATION_UNSUITABLE', label: 'Location unsuitable', for_outcome: 'WITHDRAWN' },
-        { id: 'OTHER', label: 'Other', for_outcome: 'WITHDRAWN' },
-      ],
-    };
-  }
-
-  return {
-    stages: def.stages,
-    outcomes: def.outcomes,
-    closure_reasons: def.closure_reasons,
-  };
+  const rows = (data ?? []) as (CanonicalWorkflow & { workspace_id: string | null; is_default: boolean })[];
+  const def = rows.find((d) => workspaceId && d.workspace_id === workspaceId) ?? rows.find((d) => d.is_default);
+  if (!def) return FALLBACK_WORKFLOW;
+  return { stages: def.stages, outcomes: def.outcomes, closure_reasons: def.closure_reasons };
 }
 
 export interface WorkspaceMemberInfo {
@@ -425,24 +392,9 @@ export interface WorkspaceMemberInfo {
   display_name: string | null;
 }
 
-/**
- * Fetch workspace members for manager filtering.
- */
+/** Workspace roster (members only; user_accounts itself is not reachable from the Data API). */
 export async function fetchWorkspaceMembers(workspaceId: string): Promise<WorkspaceMemberInfo[]> {
-  const { data, error } = await supabase
-    .from('workspace_members')
-    .select('user_id, role, user_accounts(username, profiles(display_name))')
-    .eq('workspace_id', workspaceId);
-
-  if (error) return [];
-  return (data ?? []).map((row: Record<string, unknown>): WorkspaceMemberInfo => {
-    const acc = (Array.isArray(row.user_accounts) ? row.user_accounts[0] : row.user_accounts) as Record<string, unknown> | undefined;
-    const prof = (Array.isArray(acc?.profiles) ? acc.profiles[0] : acc?.profiles) as Record<string, unknown> | undefined;
-    return {
-      user_id: String(row.user_id),
-      role: String(row.role),
-      username: typeof acc?.username === 'string' ? acc.username : 'Member',
-      display_name: typeof prof?.display_name === 'string' ? prof.display_name : null,
-    };
-  });
+  const { data, error } = await supabase.rpc('rpc_list_workspace_members', { p_workspace_id: workspaceId });
+  if (error) throw error;
+  return (data ?? []) as WorkspaceMemberInfo[];
 }

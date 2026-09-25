@@ -107,7 +107,6 @@ export const STRONG = () => `Quiet-harbor-${randomBytes(4).toString('hex')}-lant
 // ---------------------------------------------------------------------------------
 // Sanitized evidence
 // ---------------------------------------------------------------------------------
-const evidence: Record<string, unknown> = { run: RUN, started_at: new Date().toISOString() };
 const FORBIDDEN_IN_EVIDENCE = [
   /eyJ[A-Za-z0-9_-]{20,}/, // any JWT
   /jqr_[A-Za-z0-9_-]{20,}/, // refresh token
@@ -116,13 +115,20 @@ const FORBIDDEN_IN_EVIDENCE = [
   /\$argon2id\$/, // password or recovery-code verifier
   /Quiet-harbor-[0-9a-f]{8}-lantern/, // generated test passwords
 ];
-export function record(id: string, data: unknown): void {
-  const text = JSON.stringify(data);
-  for (const re of FORBIDDEN_IN_EVIDENCE) {
-    if (re.test(text)) throw new Error(`Evidence for ${id} would contain secret material (${re}); refusing to write it.`);
-  }
-  evidence.target = target();
-  evidence[id] = data;
-  mkdirSync('migration-upgrade/m1b/evidence', { recursive: true });
-  writeFileSync(`migration-upgrade/m1b/evidence/integration-${target()}-${RUN}.json`, JSON.stringify(evidence, null, 2));
+/** Sanitized evidence writer for a milestone: refuses tokens, keys, verifiers and test passwords. */
+export function makeRecorder(dir: string, prefix: string): (id: string, data: unknown) => void {
+  const evidence: Record<string, unknown> = { run: RUN, started_at: new Date().toISOString() };
+  return (id: string, data: unknown) => {
+    const text = JSON.stringify(data);
+    for (const re of FORBIDDEN_IN_EVIDENCE) {
+      if (re.test(text)) throw new Error(`Evidence for ${id} would contain secret material (${re}); refusing to write it.`);
+    }
+    evidence.target = target();
+    evidence[id] = data;
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(`${dir}/${prefix}-${target()}-${RUN}.json`, JSON.stringify(evidence, null, 2));
+  };
 }
+
+/** M1B evidence (migration-upgrade/m1b/evidence). */
+export const record = makeRecorder('migration-upgrade/m1b/evidence', 'integration');

@@ -4,6 +4,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
+import { UnsavedChangesBar } from './UnsavedChangesBar';
+import { validateApplicationFields } from './validation';
+import type { EditableApplicationFields } from '../../api/applications';
 import type {
   Application,
   ApplicationPriority,
@@ -15,7 +18,7 @@ export interface EditApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
   application: Application | null;
-  onSave: (applicationId: string, updates: Partial<Application>) => Promise<void>;
+  onSave: (applicationId: string, updates: Partial<EditableApplicationFields>) => Promise<void>;
 }
 
 export function EditApplicationModal({
@@ -42,6 +45,7 @@ export function EditApplicationModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => {
     if (application) {
@@ -61,18 +65,45 @@ export function EditApplicationModal({
       setTagsInput((application.tags || []).join(', '));
       setNotes(application.notes || '');
       setError(null);
+      setConfirmDiscard(false);
     }
   }, [application, isOpen]);
+
+  const isDirty = application
+    ? companyName !== (application.company_name || '') ||
+      roleTitle !== (application.role_title || '') ||
+      jobUrl !== (application.job_url || '') ||
+      externalJobId !== (application.external_job_id || '') ||
+      priority !== (application.priority || 'MEDIUM') ||
+      location !== (application.location || '') ||
+      workArrangement !== (application.work_arrangement || 'Remote') ||
+      employmentType !== (application.employment_type || 'Full-time') ||
+      salaryMin !== (application.salary_min != null ? String(application.salary_min) : '') ||
+      salaryMax !== (application.salary_max != null ? String(application.salary_max) : '') ||
+      salaryCurrency !== (application.salary_currency || 'USD') ||
+      nextAction !== (application.next_action || '') ||
+      nextActionDate !== (application.next_action_date || '') ||
+      tagsInput !== (application.tags || []).join(', ') ||
+      notes !== (application.notes || '')
+    : false;
+
+  /** AC-CREATE-02: leaving with unsaved edits asks first. */
+  const requestClose = () => {
+    if (submitting) return;
+    if (isDirty && !confirmDiscard) {
+      setConfirmDiscard(true);
+      return;
+    }
+    setConfirmDiscard(false);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!application) return;
-    if (!companyName.trim()) {
-      setError('Company name is required');
-      return;
-    }
-    if (!roleTitle.trim()) {
-      setError('Role title is required');
+    const problem = validateApplicationFields({ companyName, roleTitle, jobUrl, salaryMin, salaryMax, salaryCurrency });
+    if (problem) {
+      setError(problem);
       return;
     }
 
@@ -88,7 +119,7 @@ export function EditApplicationModal({
         .map((t) => t.trim())
         .filter(Boolean);
 
-      const updates: Partial<Application> = {
+      const updates: Partial<EditableApplicationFields> = {
         company_name: companyName.trim(),
         role_title: roleTitle.trim(),
         job_url: jobUrl.trim() || null,
@@ -99,7 +130,7 @@ export function EditApplicationModal({
         employment_type: employmentType,
         salary_min: parsedMin,
         salary_max: parsedMax,
-        salary_currency: salaryCurrency,
+        salary_currency: salaryCurrency.trim().toUpperCase(),
         next_action: nextAction.trim() || null,
         next_action_date: nextActionDate || null,
         tags,
@@ -118,12 +149,12 @@ export function EditApplicationModal({
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={requestClose}
       title="Edit Application"
       maxWidth={680}
       footer={
         <>
-          <Button variant="outline" type="button" onClick={onClose} disabled={submitting}>
+          <Button variant="outline" type="button" onClick={requestClose} disabled={submitting}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" form="edit-application-form" disabled={submitting}>
@@ -133,6 +164,15 @@ export function EditApplicationModal({
       }
     >
       <form id="edit-application-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto', paddingRight: '4px' }}>
+        {confirmDiscard && (
+          <UnsavedChangesBar
+            onDiscard={() => {
+              setConfirmDiscard(false);
+              onClose();
+            }}
+            onKeepEditing={() => setConfirmDiscard(false)}
+          />
+        )}
           {error && (
             <div
               style={{

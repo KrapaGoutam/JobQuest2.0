@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
@@ -27,6 +27,16 @@ export function OutcomeDialog({
   const [closureReason, setClosureReason] = useState<ClosureReason>('OFFER_DECLINED');
   const [closureNotes, setClosureNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setOutcome('ACCEPTED');
+      setClosureReason('OFFER_DECLINED');
+      setClosureNotes('');
+      setError(null);
+    }
+  }, [isOpen]);
 
   const outcomes: { id: ApplicationOutcome; label: string; badge: BadgeVariant; desc: string }[] = [
     { id: 'ACCEPTED', label: 'Accepted', badge: 'success', desc: 'Received and accepted an offer for this position' },
@@ -47,6 +57,7 @@ export function OutcomeDialog({
   const handleConfirm = async () => {
     try {
       setSubmitting(true);
+      setError(null);
       await onConfirmOutcome(
         outcome,
         outcome === 'WITHDRAWN' ? closureReason : null,
@@ -54,6 +65,8 @@ export function OutcomeDialog({
       );
       setClosureNotes('');
       onClose();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Could not record the outcome');
     } finally {
       setSubmitting(false);
     }
@@ -76,6 +89,11 @@ export function OutcomeDialog({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {error && (
+          <div role="alert" style={{ fontSize: '13px', color: 'var(--color-danger)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '8px 12px' }}>
+            {error}
+          </div>
+        )}
         {applicationTitle && (
           <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
             Recording outcome for: <strong>{applicationTitle}</strong>
@@ -83,16 +101,18 @@ export function OutcomeDialog({
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          <span id="outcome-group-label" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
             Terminal Outcome
-          </label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          </span>
+          <div role="group" aria-labelledby="outcome-group-label" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {outcomes.map((o) => {
               const isSelected = outcome === o.id;
               return (
                 <button
                   key={o.id}
                   type="button"
+                  aria-pressed={isSelected}
+                  data-outcome={o.id}
                   onClick={() => setOutcome(o.id)}
                   style={{
                     display: 'flex',

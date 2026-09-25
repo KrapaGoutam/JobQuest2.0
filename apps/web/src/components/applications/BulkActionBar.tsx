@@ -45,6 +45,7 @@ export function BulkActionBar({
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span
+          aria-hidden="true"
           style={{
             background: 'var(--color-brand-primary)',
             color: '#fff',
@@ -60,8 +61,8 @@ export function BulkActionBar({
         >
           {selectedCount}
         </span>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-          Selected
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }} aria-live="polite">
+          {selectedCount === 1 ? '1 application selected' : `${selectedCount} applications selected`}
         </span>
       </div>
 

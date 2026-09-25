@@ -8,6 +8,8 @@ export interface ToastItem {
   description?: string;
   type: ToastType;
   duration?: number;
+  /** Optional single action (e.g. the Gate 02B 10-second "Undo" after archive). */
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastContextValue {

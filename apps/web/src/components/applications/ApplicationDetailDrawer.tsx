@@ -24,6 +24,7 @@ import { calculateDaysInactive, computeAgingBand } from '../../types/application
 import type { Application, ApplicationEvent, CanonicalWorkflow } from '../../types/applications';
 import { ApplicationInterviewsSection } from '../interviews/ApplicationInterviewsSection';
 import { ApplicationTasksSection } from '../tasks/ApplicationTasksSection';
+import { ApplicationDocumentsSection } from '../documents/ApplicationDocumentsSection';
 import { DoneSetNextDialog } from '../tasks/DoneSetNextDialog';
 import { useProfileTimeZone } from '../../hooks/useProfileTimeZone';
 
@@ -285,6 +286,13 @@ export function ApplicationDetailDrawer({
           application={application}
           workflow={workflow}
           timeZone={timeZone}
+          version={historyVersion}
+          onChanged={() => onApplicationChanged?.()}
+        />
+
+        {/* M7: documents and resumes linked to this application */}
+        <ApplicationDocumentsSection
+          application={application}
           version={historyVersion}
           onChanged={() => onApplicationChanged?.()}
         />

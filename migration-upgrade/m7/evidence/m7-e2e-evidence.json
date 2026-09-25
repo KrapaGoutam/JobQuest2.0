@@ -1,0 +1,31 @@
+{
+  "run": "2adb18",
+  "started_at": "2026-09-25T17:30:43.789Z",
+  "a11y": {
+    "resumesList": {
+      "context": "resumes-initial",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    "createModal": {
+      "context": "create-resume-modal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    "compareView": {
+      "context": "compare-versions",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  },
+  "passed": true
+}

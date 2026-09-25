@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarPlus, ClipboardPen, CalendarX } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { fetchApplicationInterviews } from '../../api/interviews';
@@ -50,6 +50,10 @@ export function ApplicationInterviewsSection({
   }, [load, version]);
 
   const canSchedule = application.status === 'OPEN' && !application.archived_at;
+  const fixedApplication = useMemo(
+    () => ({ id: application.id, company_name: application.company_name, role_title: application.role_title, stage: application.stage, user_id: application.user_id }),
+    [application.id, application.company_name, application.role_title, application.stage, application.user_id],
+  );
   const saved = () => {
     load();
     onChanged();
@@ -121,7 +125,7 @@ export function ApplicationInterviewsSection({
         workflow={workflow}
         timeZone={timeZone}
         onChangeTimeZone={onChangeTimeZone}
-        fixedApplication={{ id: application.id, company_name: application.company_name, role_title: application.role_title, stage: application.stage, user_id: application.user_id }}
+        fixedApplication={fixedApplication}
         onSaved={saved}
       />
       <RecordOutcomeDialog

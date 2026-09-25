@@ -120,8 +120,9 @@ export function ScheduleInterviewDialog({
       setQuestions('');
       setContactIds([]);
     }
-    // timeZone intentionally excluded: changing the zone must not reset typed values.
-  }, [isOpen, editing, fixedApplication]);
+    // Keyed on ids, not objects: parents may pass fresh objects on every render, and a
+    // re-render must never wipe what the user has typed. timeZone is excluded for the same reason.
+  }, [isOpen, editing?.id, fixedApplication?.id]);
 
   useEffect(() => {
     if (!isOpen || isEdit || fixedApplication) return;

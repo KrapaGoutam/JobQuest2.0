@@ -1,5 +1,7 @@
 # Milestone 3 (M3) — Applications Workflow & Data Grid
 
+**Status:** COMPLETE: awaiting user review. See `M3_COMPLETION_REPORT.md`, `M3_TEST_RESULTS.md`, `M3_VISUAL_REGRESSION.md`, `M3_IMPLEMENTATION_NOTES.md`, `NEXT_AGENT_HANDOFF.md`.
+
 ## 1. Overview
 Milestone 3 implements the complete JobQuest 2.0 Applications tracking experience using the approved Direction D UI design and Option B backend foundation.
 

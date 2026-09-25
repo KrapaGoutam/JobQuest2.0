@@ -14,7 +14,7 @@ const evidenceDir = resolve('migration-upgrade/m3/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
-const target = process.env.M1_BASE_URL ? 'vercel-preview' : 'local';
+const target = process.env.M1_BASE_URL ? 'vercel-preview' : process.env.M1B_TARGET === 'hosted-dev' ? 'local-servers-hosted-dev' : 'local';
 const shot = (page: Page, name: string) => page.screenshot({ path: `${shotsDir}/${name}.png`, fullPage: false });
 /** Let CSS transitions finish (theme switch animates colours) before measuring or capturing. */
 const settle = (page: Page) => page.waitForTimeout(600);

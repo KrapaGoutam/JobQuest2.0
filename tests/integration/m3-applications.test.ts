@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import { Actor, loadEnv, serviceDb, anonDb, makeRecorder } from './harness';
+import pg from 'pg';
 import { agingRange, buildSearchFilter } from '../../apps/web/src/types/applications';
 
 const record = makeRecorder('migration-upgrade/m3/evidence', 'integration');
@@ -284,6 +285,31 @@ describe.skipIf(!ready)('Milestone 3 — Applications Workflow & Data Grid Integ
       expect(removed.error?.code).toBe('42501');
       expect(outsider.error?.code).toBe('42501');
       record('INT-04', { status: 'PASS', member_roster_rows: rows.length, fields: Object.keys(rows[0]!).sort(), removed_member: removed.error?.code, outsider: outsider.error?.code });
+    });
+  });
+
+  describe('Least-privilege table grants', () => {
+    it('INT-05: anon has no privileges; authenticated has only the intended ones (migration 20260924320000)', async () => {
+      const url = process.env.SUPABASE_DB_URL!;
+      const client = new pg.Client({ connectionString: url, ssl: /127\.0\.0\.1|localhost/.test(url) ? false : { rejectUnauthorized: false } });
+      await client.connect();
+      try {
+        const { rows } = await client.query(
+          `select table_name, grantee, string_agg(privilege_type, ',' order by privilege_type) as privs
+             from information_schema.role_table_grants
+            where table_schema = 'public' and table_name in ('job_snapshots', 'application_events')
+              and grantee in ('anon', 'authenticated', 'PUBLIC')
+            group by table_name, grantee order by table_name, grantee`
+        );
+        const grants = Object.fromEntries(rows.map((r) => [`${r.table_name}:${r.grantee}`, r.privs]));
+        expect(grants).toEqual({
+          'application_events:authenticated': 'SELECT',
+          'job_snapshots:authenticated': 'INSERT,SELECT',
+        });
+        record('INT-05', { status: 'PASS', grants, anon: 'none' });
+      } finally {
+        await client.end();
+      }
     });
   });
 

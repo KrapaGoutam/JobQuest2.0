@@ -47,18 +47,28 @@ export function ApplicationPreviewRail({
   onKeepActive,
 }: ApplicationPreviewRailProps) {
   const [recentEvents, setRecentEvents] = useState<ApplicationEvent[]>([]);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [keepingActive, setKeepingActive] = useState(false);
   const appId = application?.id ?? null;
+  // A different record's events (or none yet) means "loading", never "no events".
+  const loadingEvents = appId !== null && loadedFor !== appId;
 
   useEffect(() => {
     if (!appId) return;
     let cancelled = false;
     fetchApplicationEvents(appId)
       .then((evs) => {
-        if (!cancelled) setRecentEvents(evs.slice(0, 4));
+        if (cancelled) return;
+        setRecentEvents(evs.slice(0, 4));
+        setLoadError(false);
+        setLoadedFor(appId);
       })
       .catch(() => {
-        if (!cancelled) setRecentEvents([]);
+        if (cancelled) return;
+        setRecentEvents([]);
+        setLoadError(true);
+        setLoadedFor(appId);
       });
     return () => {
       cancelled = true;
@@ -213,7 +223,11 @@ export function ApplicationPreviewRail({
 
       <section aria-label="Recent activity">
         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Recent Activity</div>
-        {recentEvents.length === 0 ? (
+        {loadingEvents ? (
+          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }} role="status">Loading activity…</div>
+        ) : loadError ? (
+          <div style={{ fontSize: '12px', color: 'var(--color-danger)' }} role="alert">Couldn't load recent activity.</div>
+        ) : recentEvents.length === 0 ? (
           <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>No recorded events yet.</div>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>

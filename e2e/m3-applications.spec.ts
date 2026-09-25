@@ -51,6 +51,14 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     const jobUrl = `https://careers.starlight.example/jobs/${run}`;
     const evidence: Record<string, unknown> = { target, run, started_at: new Date().toISOString() };
     const a11y: unknown[] = [];
+    const eventReads: { status: number; auth: 'bearer' | 'none'; rows: number | null }[] = [];
+    page.on('response', async (res) => {
+      if (!res.url().includes('/rest/v1/application_events')) return;
+      const auth = (await res.request().allHeaders()).authorization ? 'bearer' : 'none';
+      let rows: number | null = null;
+      try { const body = await res.json(); rows = Array.isArray(body) ? body.length : null; } catch { /* not JSON */ }
+      eventReads.push({ status: res.status(), auth, rows });
+    });
 
     // ---------------------------------------------------------------- E2E-00 register
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -255,6 +263,7 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await row(page, company).getByText(role).click();
     await expect(rail).toContainText(company); // row click previews in place (no drawer)
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(rail.getByRole('region', { name: 'Recent activity' }).locator('[data-event-type]').first()).toBeVisible();
     await shot(page, 'applications-wide-preview');
     a11y.push(await audit(page, 'wide-preview'));
     await page.locator('body').click({ position: { x: 5, y: 5 } });
@@ -283,7 +292,9 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await shot(page, 'applications-mobile');
     a11y.push(await audit(page, 'mobile-cards'));
     await page.getByRole('button', { name: `Open ${role} at ${company}` }).click();
-    await expect(page.getByRole('dialog', { name: `${role} · ${company}` })).toBeVisible();
+    const mobileDrawer = page.getByRole('dialog', { name: `${role} · ${company}` });
+    await expect(mobileDrawer).toBeVisible();
+    await expect(mobileDrawer.locator('[data-event-type="OUTCOME_CHANGED"]')).toBeVisible();
     await shot(page, 'applications-mobile-detail');
     await page.keyboard.press('Escape');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -291,6 +302,7 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
 
     // ---------------------------------------------------------------- accessibility summary
     const blocking = (a11y as { blocking: number }[]).reduce((n, a) => n + a.blocking, 0);
+    evidence.event_reads = eventReads;
     evidence.a11y = a11y;
     evidence.status = blocking === 0 && overflow <= 0 ? 'PASS' : 'FAIL';
     writeFileSync(`${evidenceDir}/e2e-${target}-${run}.json`, JSON.stringify(evidence, null, 2));

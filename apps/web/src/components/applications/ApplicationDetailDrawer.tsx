@@ -56,35 +56,37 @@ export function ApplicationDetailDrawer({
   currentUserId,
 }: ApplicationDetailDrawerProps) {
   const [events, setEvents] = useState<ApplicationEvent[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
+  /** `${appId}:${historyVersion}` whose history is currently loaded; anything else is still loading. */
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('timeline');
   const [keepingActive, setKeepingActive] = useState(false);
 
   const [eventsError, setEventsError] = useState<string | null>(null);
   const appId = application?.id ?? null;
+  const requestKey = appId ? `${appId}:${historyVersion}` : null;
+  // Never render "no events" for a record whose history has not arrived yet (slow networks).
+  const loadingEvents = requestKey !== null && loadedKey !== requestKey && !loadedKey?.startsWith(`${appId}:`);
 
   useEffect(() => {
-    if (!appId || !isOpen) return;
+    if (!appId || !isOpen || !requestKey) return;
     let cancelled = false;
-    setLoadingEvents(true);
     setEventsError(null);
     fetchApplicationEvents(appId)
       .then((evs) => {
-        if (!cancelled) setEvents(evs);
+        if (cancelled) return;
+        setEvents(evs);
+        setLoadedKey(requestKey);
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
-          setEvents([]);
-          setEventsError((err as Error).message || 'Could not load history');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingEvents(false);
+        if (cancelled) return;
+        setEvents([]);
+        setEventsError((err as Error).message || 'Could not load history');
+        setLoadedKey(requestKey);
       });
     return () => {
       cancelled = true;
     };
-  }, [appId, isOpen, historyVersion]);
+  }, [appId, isOpen, requestKey]);
 
   const actorName = (actorId: string) => {
     if (actorId === currentUserId) return 'You';
@@ -259,7 +261,7 @@ export function ApplicationDetailDrawer({
         <div>
           <Tabs id="app-drawer-tabs" activeTab={activeTab} onTabChange={setActiveTab}>
             <TabList aria-label="Application detail sections">
-              <Tab id="timeline" count={events.length}>Timeline</Tab>
+              <Tab id="timeline" count={loadingEvents ? undefined : events.length}>Timeline</Tab>
               <Tab id="snapshot">Job Posting</Tab>
               <Tab id="details">Details & Notes</Tab>
             </TabList>

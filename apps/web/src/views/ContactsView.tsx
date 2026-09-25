@@ -74,6 +74,12 @@ export function ContactsView({
   // Filters & sorting
   const [selectedTab, setSelectedTab] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  // The list query follows the search box 250 ms after the last keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
   const [companyFilter, setCompanyFilter] = useState('');
   const [ownerFilter, setOwnerFilter] = useState<string | undefined>();
   const [archiveState, setArchiveState] = useState<'active' | 'archived' | 'all'>('active');
@@ -148,7 +154,7 @@ export function ContactsView({
           followUpDueOnly: isDueOnly,
           archiveState,
           ownerId: ownerFilter,
-          search: search || undefined,
+          search: debouncedSearch || undefined,
         },
         sort,
         page,
@@ -165,7 +171,7 @@ export function ContactsView({
     } finally {
       if (seq === requestSeq.current) setIsLoading(false);
     }
-  }, [activeWorkspaceId, selectedTab, companyFilter, ownerFilter, archiveState, search, sort, page, pageSize]);
+  }, [activeWorkspaceId, selectedTab, companyFilter, ownerFilter, archiveState, debouncedSearch, sort, page, pageSize]);
 
   // Initial load on workspace change
   useEffect(() => {

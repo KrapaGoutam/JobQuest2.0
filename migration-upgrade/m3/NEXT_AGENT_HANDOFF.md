@@ -6,10 +6,10 @@ This file is for any coding agent (Claude Code, Antigravity, Codex, …); no cha
 
 | Item | State |
 |---|---|
-| Milestone | **M3 (Applications Workflow & Data Grid): COMPLETE, awaiting user review** |
-| Branch | `feature/m3-applications-workflow` (pushed). **Not merged** into `development` or `main`. No PR. |
+| Milestone | **M3 (Applications Workflow & Data Grid): APPROVED by user for merge** |
+| Branch | `feature/m3-applications-workflow` (pushed). Ready for merge into `development`. Never touch `main`. |
 | Base | `development` @ `9bfac15` (M2 approved) |
-| M3 commits | `98958b4` (Antigravity checkpoint), `79c1825`, `58155be`, `e8fedb2`, then the final docs commit |
+| M3 commits | `98958b4`, `79c1825`, `58155be`, `e8fedb2`, `214f98e`, followed by approval closeout |
 | Auth | Option B (Node-minted ES256 JWTs, Argon2id, app-owned sessions), unchanged |
 | Supabase | `jobquest-dev` (`xpnkasclquplmrcmhsif`, DEV): migrations `120000`, `200000`, `300000`, `310000`, `320000` all applied **and recorded** |
 | Vercel | Project `jobquest2`, team `one-piece-5779`. **Preview only**; env vars scoped to Preview and Development; no production |

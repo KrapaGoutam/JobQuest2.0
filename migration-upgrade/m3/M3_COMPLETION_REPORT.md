@@ -252,12 +252,14 @@ Full matrix and evidence files: `M3_TEST_RESULTS.md`.
 | Production | None anywhere |
 | Local Docker stack | JobQuest on ports 553xx; another local Supabase project left running untouched |
 
-## 22. Open questions for the user
+## 22. User Decisions & Final Approval
 
-1. Approve M3 for merge into `development` (`--no-ff`)? Not done automatically.
-2. Should the pre-existing M2 shell observations (`M3_VISUAL_REGRESSION.md` §3) be scheduled as a shell polish task before M4?
-3. Keep "no reopen flow" as designed, or specify one? A proper reopen would need an RPC and a new event type.
+The user has reviewed and formally APPROVED Milestone 3 for merge into `development`:
+1. **Merge Approval:** M3 is approved for integration into `development` via `--no-ff`.
+2. **Reopen Flow:** APPROVED as designed — **NO REOPEN FLOW**. Closed records remain closed. No `REOPENED` event, no reopen RPC.
+3. **M2 Shell Observations:** The shell observations in `M3_VISUAL_REGRESSION.md` §3 are confirmed **NON-BLOCKING** polish backlog items and will not delay M4.
+4. **Final CI Status:** Run `36091367364` (commit `214f98e`) — **100% SUCCESS / GREEN** (both jobs passing: migrations/RLS/browser and lint/typecheck/unit/build/secret scans).
 
-## 23. Recommended next step
+## 23. Recommended Next Step
 
-User review of this report. After approval: merge M3 into `development`, then plan **M4 (Contacts & Networking)** on the same pattern (RPC boundary, append-only history, evidence-producing suites). **Not started.**
+Merge M3 into `development`, verify development integration, and initiate **Milestone 4 — Contacts & Networking** on branch `feature/m4-contacts-networking`.

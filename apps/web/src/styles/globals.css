@@ -714,6 +714,14 @@ a:hover {
   white-space: nowrap;
   font-size: var(--font-size-base);
 }
+/* M3: a dialog opened from a drawer must sit above the drawer and its scrim. */
+.scrim.scrim-dialog {
+  z-index: 65;
+}
+.dialog {
+  z-index: 70;
+}
+
 .toast-container {
   position: fixed;
   bottom: 24px;

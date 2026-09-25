@@ -1,35 +1,43 @@
 export interface StagePipsProps {
   stage: string;
   isClosed?: boolean;
+  maxSteps?: 5 | 8;
   className?: string;
 }
 
-export function StagePips({ stage, isClosed = false, className = '' }: StagePipsProps) {
-  // Map stage to 1..5 active pips
-  // 1: Saved / Preparing
-  // 2: Applied
-  // 3: Screening
-  // 4: Interview
-  // 5: Offer / Accepted
+export function StagePips({ stage, isClosed = false, maxSteps = 8, className = '' }: StagePipsProps) {
   const s = stage.toUpperCase();
-  let activeCount = 1;
-  if (s === 'OFFER' || s === 'ACCEPTED') activeCount = 5;
-  else if (s === 'INTERVIEW') activeCount = 4;
-  else if (s === 'SCREENING') activeCount = 3;
-  else if (s === 'APPLIED') activeCount = 2;
-  else activeCount = 1;
+  const STAGE_ORDER_8: Record<string, number> = {
+    SAVED: 1,
+    PREPARING: 2,
+    APPLIED: 3,
+    ASSESSMENT: 4,
+    RECRUITER_SCREEN: 5,
+    SCREENING: 5,
+    INTERVIEW: 6,
+    FINAL_INTERVIEW: 7,
+    OFFER: 8,
+    ACCEPTED: 8,
+  };
+
+  const active8 = STAGE_ORDER_8[s] ?? 1;
+  const count = maxSteps === 5
+    ? (s === 'OFFER' || s === 'ACCEPTED' ? 5 : s.includes('INTERVIEW') ? 4 : s.includes('SCREEN') || s === 'ASSESSMENT' ? 3 : s === 'APPLIED' ? 2 : 1)
+    : active8;
+  const total = maxSteps === 5 ? 5 : 8;
+  const steps = Array.from({ length: total }, (_, i) => i + 1);
 
   return (
     <div
       className={`pips ${isClosed ? 'closed' : ''} ${className}`}
-      aria-label={`Stage progress: ${activeCount} of 5`}
+      aria-label={`Stage progress: ${count} of ${total}`}
       role="progressbar"
-      aria-valuenow={activeCount}
+      aria-valuenow={count}
       aria-valuemin={1}
-      aria-valuemax={5}
+      aria-valuemax={total}
     >
-      {[1, 2, 3, 4, 5].map((idx) => (
-        <i key={idx} className={idx <= activeCount ? 'on' : ''} aria-hidden="true" />
+      {steps.map((idx) => (
+        <i key={idx} className={idx <= count ? 'on' : ''} aria-hidden="true" />
       ))}
     </div>
   );
@@ -47,6 +55,7 @@ export function PriorityBars({ priority, className = '' }: PriorityBarsProps) {
   return (
     <div
       className={`pri ${className}`}
+      role="img"
       aria-label={`Priority: ${priority}`}
       title={`Priority: ${priority}`}
     >

@@ -14,6 +14,10 @@ if (existsSync(envFile)) {
   }
   process.env.M1B_TARGET ??= serverEnv.M1B_TARGET ?? 'hosted-dev';
 }
+// Test-only knob for the LOCAL servers Playwright starts (same as tests/integration/harness.ts):
+// every spec registers users from 127.0.0.1, and the DB-backed per-IP register limit (3/hour)
+// persists across runs. Runs against a deployed preview (M1_BASE_URL) keep the real limits.
+if (!process.env.M1_BASE_URL) serverEnv.REGISTER_IP_MAX_PER_HOUR ??= '500';
 
 const base = process.env.M1_BASE_URL ?? 'http://localhost:5173';
 export default defineConfig({

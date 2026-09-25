@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
+import { useOverlay } from './useOverlay';
 import { X } from 'lucide-react';
 import { IconButton } from './IconButton';
 
@@ -22,69 +23,13 @@ export function Drawer({
   width = 380,
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      triggerRef.current = document.activeElement as HTMLElement | null;
-      document.body.style.overflow = 'hidden';
-
-      const timer = setTimeout(() => {
-        if (drawerRef.current) {
-          const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-          );
-          const firstEl = focusable[0];
-          if (firstEl) {
-            firstEl.focus();
-          } else {
-            drawerRef.current.focus();
-          }
-        }
-      }, 50);
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          onClose();
-        } else if (e.key === 'Tab' && drawerRef.current) {
-          const focusable = Array.from(
-            drawerRef.current.querySelectorAll<HTMLElement>(
-              'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-            ),
-          );
-          if (focusable.length === 0) return;
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-
-          if (first && last) {
-            if (e.shiftKey && document.activeElement === first) {
-              e.preventDefault();
-              last.focus();
-            } else if (!e.shiftKey && document.activeElement === last) {
-              e.preventDefault();
-              first.focus();
-            }
-          }
-        }
-      };
-
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('keydown', handleKeyDown);
-        document.body.style.overflow = '';
-        if (triggerRef.current) {
-          triggerRef.current.focus();
-        }
-      };
-    }
-  }, [isOpen, onClose]);
+  const uid = useId();
+  useOverlay(isOpen, onClose, drawerRef);
 
   if (!isOpen) return null;
 
-  const titleId = 'drawer-title';
-  const descId = description ? 'drawer-description' : undefined;
+  const titleId = `drawer-title-${uid}`;
+  const descId = description ? `drawer-description-${uid}` : undefined;
 
   return (
     <>

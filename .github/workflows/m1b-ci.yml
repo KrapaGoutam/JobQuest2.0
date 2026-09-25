@@ -68,8 +68,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m1b-evidence
-          path: migration-upgrade/m1b/evidence/
+          name: m1b-m3-evidence
+          path: |
+            migration-upgrade/m1b/evidence/
+            migration-upgrade/m3/evidence/
           if-no-files-found: ignore
       - if: always()
         run: pnpm exec supabase stop --no-backup

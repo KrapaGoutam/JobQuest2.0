@@ -165,10 +165,16 @@ describe.skipIf(!ready)('M1B · Auth Option B architecture spike', () => {
 
     // B06: USER sees and edits own
     const aRows = await A.db().from('applications').select('id, user_id').eq('workspace_id', W);
-    const aUpd = await A.db().from('applications').update({ stage: 'INTERVIEW' }).eq('id', insA.data!.id).select('id');
+    // M3: simple fields are direct Data API writes; lifecycle changes (stage/state/outcome/archive)
+    // go through the atomic RPCs (Gate 03 RPC boundary, migration 20260924310000).
+    const aUpd = await A.db().from('applications').update({ next_action: 'Send portfolio' }).eq('id', insA.data!.id).select('id');
+    const aDirectStage = await A.db().from('applications').update({ stage: 'INTERVIEW' }).eq('id', insA.data!.id).select('id');
+    const aRpcStage = await A.db().rpc('rpc_move_application_stage', { p_application_id: insA.data!.id, p_new_stage: 'INTERVIEW' });
     expect(aRows.data!.every((x) => x.user_id === A.userId)).toBe(true);
     expect(aRows.data!.map((x) => x.id)).toContain(insA.data!.id);
     expect(aUpd.data).toHaveLength(1);
+    expect(aDirectStage.error?.code).toBe('42501');
+    expect(aRpcStage.error).toBeNull();
     // B07: peer denial
     const aSeesB = await A.db().from('applications').select('id').eq('id', insB.data!.id);
     const aUpdB = await A.db().from('applications').update({ stage: 'OFFER' }).eq('id', insB.data!.id).select('id');
@@ -207,7 +213,7 @@ describe.skipIf(!ready)('M1B · Auth Option B architecture spike', () => {
     const demote = await M.db().from('workspace_members').update({ role: 'USER' }).eq('workspace_id', W).eq('user_id', M.userId).select('id');
     expect(demote.error?.message ?? '').toContain('CANNOT_REMOVE_OR_DEMOTE_LAST_MANAGER');
 
-    record('B06', { status: 'PASS', user_rows_all_own: true, own_insert: 'allowed', own_update_rows: 1 });
+    record('B06', { status: 'PASS', user_rows_all_own: true, own_insert: 'allowed', own_update_rows: 1, own_direct_stage_write: aDirectStage.error?.code, own_stage_via_rpc: 'allowed' });
     record('B07', { status: 'PASS', peer_row_visible: 0, peer_update_rows: 0, insert_for_peer: aInsForB.error?.code, user_adds_member: bAddsMember.error?.code });
     record('B08', { status: 'PASS', outsider_rows_in_W: 0, outsider_insert_into_W: xInsW.error?.code, member_rows_in_foreign_personal: 0, outsider_membership_rows: 0 });
     record('B09', { status: 'PASS', manager_sees_owners: 'A and B', manager_update_rows: 1, manager_insert_for_member: 'allowed' });
@@ -219,15 +225,17 @@ describe.skipIf(!ready)('M1B · Auth Option B architecture spike', () => {
     const ins = await db.from('applications').insert({ workspace_id: personal.A, user_id: A.userId, company_name: 'Brightline', role_title: 'Lead UX', stage: 'SAVED' }).select('id, stage').single();
     expect(ins.error).toBeNull();
     const sel = await db.from('applications').select('id, stage').eq('id', ins.data!.id).single();
-    const upd = await db.from('applications').update({ stage: 'APPLIED' }).eq('id', ins.data!.id).select('stage').single();
+    const upd = await db.from('applications').update({ priority: 'HIGH' }).eq('id', ins.data!.id).select('priority').single();
+    const moved = await db.rpc('rpc_move_application_stage', { p_application_id: ins.data!.id, p_new_stage: 'APPLIED' });
     const del = await db.from('applications').delete().eq('id', ins.data!.id).select('id');
     const badStage = await db.from('applications').insert({ workspace_id: personal.A, user_id: A.userId, company_name: 'Q', role_title: 'Q', stage: 'NOT_A_STAGE' });
     expect(sel.data?.id).toBe(ins.data!.id);
-    expect(upd.data?.stage).toBe('APPLIED');
+    expect(upd.data?.priority).toBe('HIGH');
+    expect(moved.error).toBeNull();
     expect(del.error?.code).toBe('42501'); // no DELETE grant: archive-first (Gate 03)
     expect(badStage.error?.code).toBe('23514');
     record('B11', { status: 'PASS', client: 'supabase-js createClient({ accessToken })', select_http: sel.status, row_found: true });
-    record('B12', { status: 'PASS', insert_http: ins.status, update_http: upd.status, delete: `denied (${del.error?.code})`, check_constraint: badStage.error?.code });
+    record('B12', { status: 'PASS', insert_http: ins.status, update_http: upd.status, stage_via_rpc: 'allowed', delete: `denied (${del.error?.code})`, check_constraint: badStage.error?.code });
   });
 
   it('B13 · session creation: app-owned session row + hashed refresh verifier; no raw token or IP stored', async () => {

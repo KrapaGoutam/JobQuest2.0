@@ -4,11 +4,8 @@ import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import { Dialog } from '../ui/Dialog';
 import { Input } from '../ui/Input';
-import { FormField } from '../ui/FormField';
-import { Select } from '../ui/Select';
-import { Button } from '../ui/Button';
-import { useToast } from '../../context/ToastContext';
 import { Search } from 'lucide-react';
+import { requestNewApplication } from '../../lib/newApplicationIntent';
 import type { PublicSession, PublicUser } from '../../api';
 
 export interface AppShellProps {
@@ -36,10 +33,15 @@ export function AppShell({
   children,
   previewPane,
 }: AppShellProps) {
-  const { addToast } = useToast();
   const [isRail, setIsRail] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isNewAppOpen, setIsNewAppOpen] = useState(false);
+
+  // M3: "New Application" opens the real create form on the Applications page
+  // (replaces the M2 placeholder Quick Add modal, which did not save anything).
+  const openNewApplication = () => {
+    requestNewApplication();
+    if (currentPath !== '/' && currentPath !== '/applications') onNavigate('/applications');
+  };
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1200,
   );
@@ -64,6 +66,8 @@ export function AppShell({
   // Global Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // A page-level handler (e.g. the Applications toolbar/grid) already acted on this key.
+      if (e.defaultPrevented) return;
       // Don't intercept when user is typing in an input
       const target = e.target as HTMLElement | null;
       const isInput =
@@ -77,13 +81,13 @@ export function AppShell({
         setIsSearchOpen(true);
       } else if (e.key.toLowerCase() === 'q' && !isInput && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        setIsNewAppOpen(true);
+        openNewApplication();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  });
 
   return (
     <div
@@ -104,7 +108,7 @@ export function AppShell({
           isRail={isRail}
           onToggleRail={() => setIsRail((prev) => !prev)}
           applicationsCount={applicationsCount}
-          onNewApplication={() => setIsNewAppOpen(true)}
+          onNewApplication={openNewApplication}
         />
       )}
 
@@ -222,54 +226,6 @@ export function AppShell({
         </div>
       </Dialog>
 
-      {/* New Application Quick Modal */}
-      <Dialog
-        isOpen={isNewAppOpen}
-        onClose={() => setIsNewAppOpen(false)}
-        title="Quick Add Application"
-        description="Add a new job application to your active workspace"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsNewAppOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setIsNewAppOpen(false);
-                addToast({
-                  title: 'Application Created',
-                  description: 'New application added to preparing stage.',
-                  type: 'success',
-                });
-                onNavigate('/applications');
-              }}
-            >
-              Create Application
-            </Button>
-          </>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <FormField label="Company Name" required>
-            {({ id }) => <Input id={id} placeholder="e.g. Acme Corp" autoFocus />}
-          </FormField>
-          <FormField label="Role Title" required>
-            {({ id }) => <Input id={id} placeholder="e.g. Senior Product Designer" />}
-          </FormField>
-          <FormField label="Initial Stage">
-            {({ id }) => (
-              <Select id={id} defaultValue="APPLIED">
-                <option value="SAVED">Saved</option>
-                <option value="PREPARING">Preparing</option>
-                <option value="APPLIED">Applied</option>
-                <option value="SCREENING">Screening</option>
-                <option value="INTERVIEW">Interview</option>
-              </Select>
-            )}
-          </FormField>
-        </div>
-      </Dialog>
     </div>
   );
 }

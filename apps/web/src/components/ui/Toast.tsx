@@ -47,6 +47,28 @@ function ToastCard({ toast, onClose }: { toast: ToastItem; onClose: () => void }
           <span style={{ fontSize: '12px', opacity: 0.85 }}>{toast.description}</span>
         )}
       </div>
+      {toast.action && (
+        <button
+          type="button"
+          onClick={() => {
+            toast.action?.onClick();
+            onClose();
+          }}
+          style={{
+            background: 'transparent',
+            border: '1px solid currentColor',
+            color: 'inherit',
+            cursor: 'pointer',
+            padding: '4px 10px',
+            minHeight: '28px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         onClick={onClose}
         aria-label="Close notification"

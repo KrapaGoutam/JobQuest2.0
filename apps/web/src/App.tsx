@@ -235,14 +235,15 @@ function AppContent() {
   }
 
   async function onStage(id: string, stage: string) {
-    const r = await supabase.from('applications').update({ stage }).eq('id', id);
-    note(r.error ? `update failed: ${r.error.message}` : `stage → ${stage} (direct PostgREST)`);
+    // Lifecycle changes go through the atomic RPC (Gate 03 boundary; migration 20260924310000).
+    const r = await supabase.rpc('rpc_move_application_stage', { p_application_id: id, p_new_stage: stage });
+    note(r.error ? `update failed: ${r.error.message}` : `stage → ${stage} (RPC via Data API)`);
     await loadData();
   }
 
   async function onArchive(id: string) {
-    const r = await supabase.from('applications').update({ archived_at: new Date().toISOString() }).eq('id', id);
-    note(r.error ? `archive failed: ${r.error.message}` : 'archived (direct PostgREST)');
+    const r = await supabase.rpc('rpc_archive_application', { p_application_id: id });
+    note(r.error ? `archive failed: ${r.error.message}` : 'archived (RPC via Data API)');
     await loadData();
   }
 
@@ -361,6 +362,8 @@ function AppContent() {
           leakResults={leak}
           probeStatus={probe}
           log={log}
+          activeWorkspaceId={activeWs}
+          userRole={memberships.find((m) => m.workspace_id === activeWs)?.role ?? 'MEMBER'}
           onRefresh={refresh}
           onLogout={onLogout}
           onCreateApp={onCreateApp}
@@ -522,27 +525,6 @@ function AppContent() {
         onLogout={onLogout}
         applicationsCount={apps.length}
         pageTitle={getPageTitle(currentPath)}
-        previewPane={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Application Preview</h3>
-            <p className="muted small" style={{ margin: 0 }}>
-              Persistent Wide-Desktop Preview Rail (≥1680px viewport).
-            </p>
-            {apps[0] ? (
-              <div className="card" style={{ padding: '14px' }}>
-                <div style={{ fontWeight: 600, fontSize: '14px' }}>{apps[0].company_name}</div>
-                <div className="muted small">{apps[0].role_title}</div>
-                <div style={{ marginTop: '8px' }}>
-                  <span className="pill accent">{apps[0].stage}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="empty">
-                <span className="muted small">Select an application to preview details</span>
-              </div>
-            )}
-          </div>
-        }
       >
         {renderRouteView()}
       </AppShell>

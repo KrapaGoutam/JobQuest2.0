@@ -15,11 +15,11 @@ import { HabitsView } from './views/HabitsView';
 import { DashboardView } from './views/DashboardView';
 import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { ResumesView } from './views/ResumesView';
+import { AnalyticsView } from './views/AnalyticsView';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   Calendar,
   BookOpen,
-  BarChart3,
   UserPlus,
   Settings,
   AlertCircle,
@@ -465,11 +465,9 @@ function AppContent() {
 
     if (currentPath === '/analytics') {
       return (
-        <PlaceholderView
-          title="Search Analytics"
-          subtitle="Stage funnel conversion rates, latency to interview, and response distributions"
-          icon={<BarChart3 size={24} />}
-          milestoneOwner="Milestone 9"
+        <AnalyticsView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
         />
       );
     }

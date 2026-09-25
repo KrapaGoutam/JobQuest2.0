@@ -87,6 +87,7 @@ export interface Application {
   next_action_completed_at: string | null;
   job_url: string | null;
   external_job_id: string | null;
+  source: string | null;
   location: string | null;
   work_arrangement: WorkArrangement | null;
   employment_type: EmploymentType | null;

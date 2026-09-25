@@ -142,19 +142,17 @@ export function TabPanel({
   const isSelected = ctx.activeTab === id;
   const tabId = `${ctx.baseId}-tab-${id}`;
   const panelId = `${ctx.baseId}-panel-${id}`;
-
-  if (!isSelected) return null;
-
   return (
     <div
       role="tabpanel"
       id={panelId}
       aria-labelledby={tabId}
       tabIndex={0}
+      hidden={!isSelected}
       className={`tab-panel ${className}`}
-      style={{ outline: 'none', paddingTop: '16px' }}
+      style={{ outline: 'none', paddingTop: '16px', display: isSelected ? undefined : 'none' }}
     >
-      {children}
+      {isSelected ? children : null}
     </div>
   );
 }

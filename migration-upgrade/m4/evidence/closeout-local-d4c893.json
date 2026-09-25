@@ -1,0 +1,64 @@
+{
+  "run": "d4c893",
+  "started_at": "2026-09-25T07:02:24.203Z",
+  "target": "local",
+  "m4c-01-hard-delete-denied": {
+    "userDelete": "42501",
+    "managerDelete": "42501",
+    "rowSurvives": true
+  },
+  "m4c-02-archive-via-rpc-only": {
+    "directArchive": "42501",
+    "insertArchived": "42501",
+    "rpcArchiveRestore": "OK",
+    "plainEdit": "OK"
+  },
+  "m4c-03-interactions-append-only": {
+    "directInsert": "42501",
+    "update": "42501",
+    "delete": "42501",
+    "peerRpc": "42501"
+  },
+  "m4c-04-company-delete-denied": {
+    "userDelete": "42501",
+    "managerDelete": "42501",
+    "moveWorkspace": "42501"
+  },
+  "m4c-05-composite-company-fk": {
+    "serviceInsert": "23503",
+    "appUpdate": "23503",
+    "contactUpdate": "23503",
+    "onDeleteSetNullKeepsWorkspace": true
+  },
+  "m4c-06-unlink-authorization": {
+    "peer": "42501",
+    "foreign": "42501",
+    "manager": "OK",
+    "audited": true
+  },
+  "m4c-07-ownership-immutable": {
+    "ownerReassign": "42501",
+    "managerReassign": "42501",
+    "workspaceMove": "42501"
+  },
+  "m4c-08-manager-audit": {
+    "contactActions": [
+      "RECORD_UPDATED",
+      "RECORD_ARCHIVED",
+      "RECORD_RESTORED"
+    ],
+    "stageAudit": {
+      "from": "APPLIED",
+      "to": "INTERVIEW"
+    },
+    "interactionAudit": "RECORD_CREATED",
+    "ownerSelfEditsAudited": false,
+    "managerInteractionVisibleToOwner": true
+  },
+  "m4c-09-audit-events-locked": {
+    "clientSelect": "42501",
+    "clientInsert": "42501",
+    "anon": "denied",
+    "serviceUpdateDelete": "denied"
+  }
+}

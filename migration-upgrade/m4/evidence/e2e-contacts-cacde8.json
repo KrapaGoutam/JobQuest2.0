@@ -1,0 +1,48 @@
+{
+  "evidence": {
+    "target": "local",
+    "run": "cacde8",
+    "started_at": "2026-09-25T07:03:06.273Z",
+    "E2E-01-create-contact": "PASS",
+    "E2E-02-filter-tabs": "PASS",
+    "E2E-03-search": "PASS",
+    "E2E-04-log-interaction": "PASS",
+    "E2E-05-mobile": "PASS",
+    "completed_at": "2026-09-25T07:03:12.468Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "contacts-list-initial",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contact-create-modal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contact-detail-drawer",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contacts-mobile-layout",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+M5 performance fixture: 50 applications x 100 interviews = 5000 rows (local stack; removed afterwards)
+ fixture_rows 
+--------------
+         5000
+(1 row)
+
+--- upcoming tab
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Limit (actual time=0.009..0.010 rows=2 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.004..0.004 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.004..0.004 rows=1 loops=1)
+   ->  Index Scan using idx_interviews_open on interviews (actual time=0.009..0.009 rows=2 loops=1)
+         Index Cond: ((workspace_id = (InitPlan 1).col1) AND (scheduled_at >= now()))
+ Planning Time: 0.104 ms
+ Execution Time: 0.021 ms
+(8 rows)
+
+--- needs-outcome, USER-scoped (RLS adds the owner predicate)
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.057..0.060 rows=50 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.002..0.002 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.001..0.002 rows=1 loops=1)
+   InitPlan 2
+     ->  Limit (actual time=0.001..0.001 rows=1 loops=1)
+           ->  Seq Scan on fx fx_1 (actual time=0.001..0.001 rows=1 loops=1)
+   ->  Sort (actual time=0.057..0.058 rows=50 loops=1)
+         Sort Key: interviews.scheduled_at DESC
+         Sort Method: quicksort  Memory: 50kB
+         ->  Bitmap Heap Scan on interviews (actual time=0.021..0.045 rows=100 loops=1)
+               Recheck Cond: ((workspace_id = (InitPlan 1).col1) AND (user_id = (InitPlan 2).col1) AND (scheduled_at < now()))
+               Filter: (outcome IS NULL)
+               Rows Removed by Filter: 1
+               Heap Blocks: exact=100
+               ->  Bitmap Index Scan on idx_interviews_ws_owner_schedule (actual time=0.012..0.012 rows=101 loops=1)
+                     Index Cond: ((workspace_id = (InitPlan 1).col1) AND (user_id = (InitPlan 2).col1) AND (scheduled_at < now()))
+ Planning Time: 0.053 ms
+ Execution Time: 0.076 ms
+(19 rows)
+
+--- past-tab count
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=0.048..0.049 rows=1 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.003..0.004 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.003..0.003 rows=1 loops=1)
+   ->  Bitmap Heap Scan on interviews (actual time=0.019..0.047 rows=1 loops=1)
+         Recheck Cond: (workspace_id = (InitPlan 1).col1)
+         Filter: (outcome IS NOT NULL)
+         Rows Removed by Filter: 102
+         Heap Blocks: exact=100
+         ->  Bitmap Index Scan on idx_interviews_workspace_schedule (actual time=0.011..0.011 rows=103 loops=1)
+               Index Cond: (workspace_id = (InitPlan 1).col1)
+ Planning Time: 0.043 ms
+ Execution Time: 0.088 ms
+(13 rows)
+
+--- application drawer
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.057..0.063 rows=100 loops=1)
+   InitPlan 1
+     ->  Limit (actual time=0.002..0.003 rows=1 loops=1)
+           ->  Seq Scan on fx (actual time=0.002..0.002 rows=1 loops=1)
+   ->  Sort (actual time=0.057..0.059 rows=100 loops=1)
+         Sort Key: interviews.scheduled_at
+         Sort Method: quicksort  Memory: 52kB
+         ->  Bitmap Heap Scan on interviews (actual time=0.016..0.048 rows=103 loops=1)
+               Recheck Cond: (application_id = (InitPlan 1).col1)
+               Heap Blocks: exact=100
+               ->  Bitmap Index Scan on idx_interviews_application (actual time=0.009..0.009 rows=103 loops=1)
+                     Index Cond: (application_id = (InitPlan 1).col1)
+ Planning Time: 0.043 ms
+ Execution Time: 0.075 ms
+(14 rows)
+
+DELETE 5000

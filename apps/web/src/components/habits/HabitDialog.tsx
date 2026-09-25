@@ -138,7 +138,7 @@ export function HabitDialog({
         )}
         <label className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} style={{ marginTop: 3 }} />
-          <span><b>Active</b><br /><span className="small muted">Paused habits keep their history and don't break streaks.</span></span>
+          <span><b>Active</b><br /><span className="small muted">Paused habits keep their history. Days while paused count as missed for streaks.</span></span>
         </label>
         <div className="banner small"><Info size={14} aria-hidden="true" /><span>Changing the target doesn't rewrite past days.</span></div>
       </div>

@@ -43,6 +43,15 @@ function dayIn(timeZone: string, days: number): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
+/** Wait for a dialog to close; if it stays open, fail with the text it shows (validation/server error). */
+async function expectClosed(dialog: import('@playwright/test').Locator) {
+  try {
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  } catch {
+    throw new Error(`Dialog stayed open: ${(await dialog.innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600)}`);
+  }
+}
+
 test.use({ timezoneId: 'Europe/Berlin' });
 
 test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
@@ -115,7 +124,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     await shot(page, 'interview-schedule');
     a11y.push(await audit(page, 'schedule-form'));
     await dlg.getByRole('button', { name: 'Schedule', exact: true }).click();
-    await expect(dlg).toBeHidden();
+    await expectClosed(dlg);
 
     const row = page.getByTestId('interview-row').filter({ hasText: company }).first();
     await expect(row).toBeVisible();
@@ -132,7 +141,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     await dlg.getByLabel(/^Date\*?$/).fill('2026-11-02');
     await dlg.getByLabel(/^Time\*?$/).fill('14:30');
     await dlg.getByRole('button', { name: 'Schedule', exact: true }).click();
-    await expect(dlg).toBeHidden();
+    await expectClosed(dlg);
     const dstRow = page.getByTestId('interview-row').filter({ hasText: 'Technical · round 2' });
     await expect(dstRow).toContainText('2:30 PM');
     await dstRow.getByRole('button', { name: /^Open Technical/ }).first().click();
@@ -167,7 +176,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     await expect(edit.getByLabel(/^Time\*?$/)).toHaveValue('14:30');
     await edit.getByLabel(/^Time\*?$/).fill('15:00');
     await edit.getByRole('button', { name: 'Save changes' }).click();
-    await expect(edit).toBeHidden();
+    await expectClosed(edit);
     await expect(row).toContainText('3:00 PM');
     evidence['E2E-05-edit'] = 'PASS';
 
@@ -216,7 +225,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     await dlg2.getByLabel(/^Time\*?$/).fill('10:00');
     await dlg2.getByRole('radio', { name: 'Move to Interview' }).click();
     await dlg2.getByRole('button', { name: 'Schedule', exact: true }).click();
-    await expect(dlg2).toBeHidden();
+    await expectClosed(dlg2);
     await expect(drawer.getByText('Stage: Recruiter Screen → Interview')).toBeVisible({ timeout: 10_000 });
     await expect(drawer.getByText(/Interview scheduled: Panel · round 3/)).toBeVisible();
     evidence['E2E-07-explicit-stage-move'] = 'PASS';
@@ -235,7 +244,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     await shot(page, 'interview-debrief');
     a11y.push(await audit(page, 'debrief-form'));
     await out.getByRole('button', { name: 'Save outcome' }).click();
-    await expect(out).toBeHidden();
+    await expectClosed(out);
     await expect(section.locator('li[data-status="completed"]')).toContainText('Advanced');
     await expect(drawer.getByText('Panel completed: Advanced')).toBeVisible({ timeout: 10_000 });
     await expect(drawer.getByText('Send thank-you note')).toBeVisible();

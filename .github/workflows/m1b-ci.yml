@@ -76,5 +76,12 @@ jobs:
             migration-upgrade/m5/evidence/
             migration-upgrade/m5/screenshots/
           if-no-files-found: ignore
+      - name: Upload Playwright failure context (ARIA snapshots; no credentials)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-context
+          path: test-results/**/error-context.md
+          if-no-files-found: ignore
       - if: always()
         run: pnpm exec supabase stop --no-backup

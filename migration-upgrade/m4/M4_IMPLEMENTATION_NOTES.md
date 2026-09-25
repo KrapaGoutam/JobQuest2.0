@@ -1,10 +1,12 @@
 # Milestone 4 — Implementation Notes: Contacts & Networking
 
+> **M4 closeout (2026-09-25):** corrected during the final consistency audit. Canonical roles are `USER` / `MANAGER`; refresh tokens use a SHA-256 verifier (Argon2id is for passwords and recovery codes); contacts are archive-first (no hard delete); interactions are append-only; manager cross-user mutations are audited in `audit_events`. See `M4_COMPLETION_REPORT.md` §3 for the full list of corrections.
+
 **Milestone:** M4: Contacts & Networking  
 **Branch:** `feature/m4-contacts-networking`  
 **Base:** `development` @ `dc3d38a` (approved M3 applications workflow)  
 **Architecture Preserved:**
-- Auth Option B (ES256, Argon2id, custom JWTs, HttpOnly refresh cookies)
+- Auth Option B (ES256 access JWTs; Argon2id for passwords and recovery codes; opaque `jqr_` refresh tokens with a SHA-256 verifier in an HttpOnly SameSite=Strict cookie)
 - Direct Supabase Data API reads and simple updates under RLS
 - Atomic RPC domain operations for state changes, linkages, and activity logging
 - USER own-record isolation, MANAGER workspace oversight, zero cross-workspace data leakage
@@ -24,11 +26,11 @@
   - Backfilled existing `applications` from `company_name` via an idempotent workspace-level upsert.
 - **`contacts` Table:**
   - `workspace_id` UUID NOT NULL REFERENCES `workspaces(id)`
-  - `user_id` UUID NOT NULL REFERENCES `auth_accounts(id)` (owner)
+  - `user_id` UUID NOT NULL REFERENCES `user_accounts(user_id)` ON DELETE RESTRICT (owner)
   - `relationship_type` TEXT CHECK (`'RECRUITER'`, `'HIRING_MANAGER'`, `'REFERRAL'`, `'INTERVIEWER'`, `'PEER'`, `'CONTACT'`)
   - `company_id` UUID REFERENCES `companies(id, workspace_id)`
   - `email`, `phone`, `linkedin_url`, `location`, `relationship_notes`
-  - `last_contact_date` DATE, `next_follow_up_date` DATE
+  - `next_follow_up_date` DATE (there is no `last_contact_date` column; last contact is derived from the newest interaction)
   - `archived_at` TIMESTAMPTZ NULL
   - Unique key on `(id, workspace_id)` for relational binding.
 - **`contact_interactions` Table:**
@@ -52,8 +54,8 @@
 2. **`contacts`**:
    - `SELECT`: Contact owner (`auth_uid() = user_id`) OR workspace manager (`role = 'MANAGER'`).
    - `INSERT`: Contact owner (`auth_uid() = user_id`).
-   - `UPDATE`: Contact owner OR workspace manager.
-   - `DELETE`: Contact owner OR workspace manager.
+   - `UPDATE`: Contact owner OR workspace manager (owner/workspace immutable; archive via RPC only; manager edits audited).
+   - `DELETE`: NOT granted since closeout migration `20260925100000` (archive-first).
 3. **`contact_interactions`**:
    - Inherits contact ownership constraints via join to `contacts` or direct `user_id` ownership.
 4. **`application_contacts`**:
@@ -71,7 +73,7 @@
   - If `p_application_id` is specified, links the application to the contact in `application_contacts`.
 - **`rpc_log_contact_interaction`**:
   - Inserts an interaction row.
-  - Updates the parent contact's `last_contact_date` to the interaction date.
+  - Touches the parent contact's `updated_at` and optional `next_follow_up_date`.
   - Optionally updates the parent contact's `next_follow_up_date`.
 - **`rpc_link_application_contact` / `rpc_unlink_application_contact`**:
   - Manages the many-to-many relationship with role assignment (`RECRUITER`, `HIRING_MANAGER`, etc.).
@@ -90,6 +92,6 @@
   - Full keyboard accessibility (↑/↓ arrow navigation, Enter to open drawer, N to create new contact).
 - **Slide-out Detail Drawer (740px):**
   - Follow-up banner with quick completion ("Done") and snooze ("Snooze 3d") controls.
-  - Two-column layout: left column houses quick interaction logger and activity timeline; right column houses contact info (one-tap mailto/tel/LinkedIn), linked applications, and networking progress checklist.
+  - Two-column layout: left column houses quick interaction logger and activity timeline; right column houses contact info (one-tap mailto/tel/LinkedIn), and linked applications (networking progress checklist deferred at closeout).
 - **CSV Data Export:**
   - Client-side CSV generation allowing users to download their contacts directory.

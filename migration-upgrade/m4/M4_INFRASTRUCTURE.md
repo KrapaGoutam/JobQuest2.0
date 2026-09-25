@@ -1,5 +1,7 @@
 # M4 — Infrastructure & Environment Report
 
+> **M4 closeout (2026-09-25):** corrected during the final consistency audit. Canonical roles are `USER` / `MANAGER`; refresh tokens use a SHA-256 verifier (Argon2id is for passwords and recovery codes); contacts are archive-first (no hard delete); interactions are append-only; manager cross-user mutations are audited in `audit_events`. See `M4_COMPLETION_REPORT.md` §3 for the full list of corrections.
+
 This document records the exact infrastructure state, database reconciliation, auth configuration, and cloud preview verification for **Milestone 4 — Contacts & Networking**.
 
 ---
@@ -9,7 +11,7 @@ This document records the exact infrastructure state, database reconciliation, a
 ```
                                   +------------------------------------+
                                   |     Vercel Non-Production Preview  |
-                                  | jobquest2-d5pdff0pm-one-piece-5779 |
+                                  | jobquest2 M4 preview (see §Preview) |
                                   |       /api/health -> {"status":"ok"} |
                                   +-----------------+------------------+
                                                     |
@@ -18,7 +20,7 @@ This document records the exact infrastructure state, database reconciliation, a
 |    Local Development Stack         |    |    Hosted Supabase Dev Project     |
 |  - Postgres: 127.0.0.1:55322       |    |  - Project: jobquest-dev           |
 |  - PostgREST: 127.0.0.1:55321      |    |  - Ref: xpnkasclquplmrcmhsif       |
-|  - Option B Auth (ES256 / Argon2id)|    |  - Region: us-east-1               |
+|  - Option B Auth (ES256; Argon2id pw)|    |  - Region: us-east-1               |
 |  - Migration: 20260924400000_m4    |    |  - Migration: 20260924400000_m4    |
 +------------------------------------+    +------------------------------------+
 ```
@@ -69,17 +71,18 @@ This document records the exact infrastructure state, database reconciliation, a
 The Option B authentication model established in Milestone 1B remains strictly preserved:
 1. **Asymmetric Key Pairs:** ES256 (ECDSA using the P-256 curve and SHA-256).
 2. **Access Tokens:** Signed with custom private key; validated by PostgREST via JWT secret / public key. Short lifetime (15 minutes).
-3. **Refresh Tokens:** High-entropy cryptographically random tokens stored in database verifiers with Argon2id hashing; exchanged via HttpOnly `SameSite=Lax` cookies.
+3. **Refresh Tokens:** High-entropy cryptographically random tokens stored in database verifiers with a SHA-256 verifier (Argon2id is used for passwords and recovery codes, not refresh tokens); exchanged via an HttpOnly `SameSite=Strict` cookie.
 4. **Tenant Isolation:** Tokens carry `user_id` and active `workspace_id`. All RLS policies query current workspace membership directly.
-5. **Option A Inactivity:** Supabase native `auth.users` remains disabled and empty. Zero leakage between external auth providers and the application database.
+5. **Option A FAILED / SUPERSEDED:** JobQuest uses Option B. `auth.users` contains zero JobQuest identities (verified on hosted `jobquest-dev` at closeout: 0 rows).
 
 ---
 
 ## 5. Non-Production Vercel Preview
 
 - **Project:** `jobquest2` (team: `one-piece-5779`)
-- **Deployment URL:** `https://jobquest2-d5pdff0pm-one-piece-5779.vercel.app`
-- **Health Endpoint:** `https://jobquest2-d5pdff0pm-one-piece-5779.vercel.app/api/health`
+- **Correction:** the URL originally cited here (`jobquest2-d5pdff0pm`) is the **M3** preview; M4 was not deployed before closeout.
+- **M4 preview (closeout):** see `M4_COMPLETION_REPORT.md` §32 for the final URL, commit and E2E results.
+- **Migrations on `jobquest-dev`:** `20260924400000_m4_contacts_networking` and `20260925100000_m4_closeout_integrity` (pushed with `supabase db push --db-url`, dry run first, ref `xpnkasclquplmrcmhsif` verified).
 - **Health Response:** `{"status":"ok"}`
 - **Security Scopes:**
   - Environment variables scoped exclusively to `Preview` and `Development`.

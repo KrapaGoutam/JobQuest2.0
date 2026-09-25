@@ -1,0 +1,166 @@
+{
+  "target": "local",
+  "run": "9a4408",
+  "started_at": "2026-09-25T06:15:04.333Z",
+  "E2E-04-create": "PASS",
+  "E2E-04-duplicates": {
+    "probable": "shown",
+    "strong": "shown with Save anyway",
+    "check_failure": "honest warning",
+    "dirty_guard": "PASS"
+  },
+  "E2E-02-search-filter-sort": "PASS",
+  "E2E-01-dense-rows": {
+    "row_heights_px": [
+      44,
+      44
+    ]
+  },
+  "E2E-03-bulk": "PASS",
+  "E2E-05-drawer-timeline": {
+    "live_refresh": "PASS",
+    "events": [
+      "CREATED",
+      "CAPTURED",
+      "STAGE_CHANGED",
+      "KEEP_ACTIVE",
+      "OUTCOME_CHANGED"
+    ],
+    "stage_kept_on_close": true
+  },
+  "E2E-keyboard": "PASS",
+  "E2E-archive-restore": {
+    "undo_toast": "PASS",
+    "archived_view": "PASS",
+    "restore": "PASS"
+  },
+  "E2E-06-preview-rail": {
+    "default_open": true,
+    "p_toggle": true,
+    "persisted_across_reload": true,
+    "close_button_persists": true
+  },
+  "E2E-07-responsive": {
+    "mobile_cards": "PASS",
+    "mobile_detail_sheet": "PASS",
+    "mobile_horizontal_overflow_px": 0
+  },
+  "event_reads": [
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 2
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 3
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 4
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 1
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    },
+    {
+      "status": 200,
+      "auth": "bearer",
+      "rows": 5
+    }
+  ],
+  "a11y": [
+    {
+      "context": "create-dialog",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "detail-drawer",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "table-light",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "table-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "wide-preview",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "mobile-cards",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ],
+  "status": "PASS"
+}

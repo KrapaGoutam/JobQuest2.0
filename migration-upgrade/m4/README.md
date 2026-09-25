@@ -1,5 +1,7 @@
 # Milestone 4 — Contacts & Networking
 
+> **M4 closeout (2026-09-25):** corrected during the final consistency audit. Canonical roles are `USER` / `MANAGER`; refresh tokens use a SHA-256 verifier (Argon2id is for passwords and recovery codes); contacts are archive-first (no hard delete); interactions are append-only; manager cross-user mutations are audited in `audit_events`. See `M4_COMPLETION_REPORT.md` §3 for the full list of corrections.
+
 **Status:** Implementation & Verification Complete
 **Branch:** `feature/m4-contacts-networking`
 **Target Environment:** Local Stack & Supabase `jobquest-dev` (`xpnkasclquplmrcmhsif`)
@@ -25,7 +27,7 @@ Milestone 4 introduces the comprehensive **Contacts & Networking** domain for Jo
 2. **Frontend UI Components (`apps/web/src/components/contacts/`)**:
    - `ContactsToolbar`: Search input, filter tabs (All, Follow-up due, Recruiters, Hiring managers, Referrals, Interviewers, Networking), company filter, manager owner filter, sort selector, CSV export.
    - `ContactsTable`: Dense 44px rows matching Gate 02B `03-contacts.html` (N1/N2), avatar with initials, company tile, status pills, follow-up badges (overdue alert, today warning, upcoming), keyboard navigation (↑/↓ move, Enter open, N new contact).
-   - `ContactDetailDrawer`: 740px slide-out drawer (N3/N4) with contact identity, overdue follow-up banner with quick "Done" and "Snooze" actions, 2-column layout with quick interaction logger, activity timeline, contact info, linked applications list, and 6-stage networking progress checklist.
+   - `ContactDetailDrawer`: 740px slide-out drawer (N3/N4) with contact identity, overdue follow-up banner with quick "Done" and "Snooze" actions, 2-column layout with quick interaction logger, activity timeline, contact info, and linked applications list. (The networking progress checklist from `03-contacts.html` is deferred: its progress flags are not in the approved schema.)
    - `CreateContactModal`: New/edit contact dialog (N5) with company typeahead, job title, email/LinkedIn validation, optional application linking with role selection, and next follow-up date.
    - `LogInteractionModal`: Full modal for logging interactions with interaction type, date, notes, and next follow-up scheduling.
    - `LinkApplicationModal`: Modal to associate active applications with contacts and define hiring team roles.
@@ -33,7 +35,7 @@ Milestone 4 introduces the comprehensive **Contacts & Networking** domain for Jo
 3. **Verification & Testing**:
    - 10 integration tests in `tests/integration/m4-contacts.test.ts`.
    - 7 unit tests in `tests/unit/m4-contacts.test.ts`.
-   - E2E Playwright test suite in `e2e/m4-contacts.spec.ts` capturing visual regression baselines and running WCAG 2.1 AA accessibility audits via axe-core.
+   - E2E Playwright test suite in `e2e/m4-contacts.spec.ts` capturing visual regression baselines and running WCAG 2.0/2.1/2.2 A+AA accessibility audits (colour contrast included) via axe-core.
 
 ---
 

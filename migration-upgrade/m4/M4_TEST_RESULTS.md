@@ -1,114 +1,118 @@
-# M4 — Test Results
+# M4 — Test Results (final closeout)
 
-A result counts as PASS only when the test ran to completion and wrote its evidence. Evidence files are in `migration-upgrade/m4/evidence/` (sanitized: the recorder refuses JWTs, refresh tokens, secret keys, private JWK material, Argon2 verifiers and test passwords).
+A result counts as PASS only when the test ran to completion and wrote its evidence. Evidence files are in `migration-upgrade/m4/evidence/`. They are sanitized: the recorder refuses JWTs, refresh tokens, secret keys, private JWK material, Argon2 verifiers and test passwords.
 
-## 1. Summary Matrix
+This file replaces the version in `123a5f7`, which is kept in git history. Its historical rows are preserved in §9 and corrected where they were wrong.
 
-| Category | Suite | Passed / Total | Status | Evidence Reference |
-|---|---|---|---|---|
-| Static Analysis | ESLint (`pnpm lint`) | Clean | PASS | Exit code 0 |
-| Type Check | TypeScript (`pnpm typecheck`) | Clean | PASS | Exit code 0 |
-| Unit Tests | Vitest (`pnpm test:unit`) | 61 / 61 | PASS | 8 test files |
-| Production Build | Vite (`pnpm build`) | Clean | PASS | Dist bundle generated |
-| Security Scan | Bundle & Secrets Scan | 0 findings | PASS | `pnpm check:bundle`, `pnpm check:secrets` |
-| Integration | M1B Regression Suite | 17 / 17 | PASS | `integration-local-3863d0.json` |
-| Integration | M3 Applications Suite | 38 / 38 | PASS | `integration-local-3863d0.json` |
-| Integration | M4 Contacts Suite | 10 / 10 | PASS | `integration-local-3863d0.json` |
-| End-to-End | M4 Contacts Playwright | 5 / 5 | PASS | `e2e-contacts-67f76b.json` |
-| Accessibility | axe-core WCAG 2.2 AA (4 contexts) | 0 violations | PASS | `e2e-contacts-67f76b.json` |
-| Cloud Preview | Vercel Preview Health Check | 1 / 1 | PASS | `/api/health` -> `{"status":"ok"}` |
+## 1. Summary
 
----
-
-## 2. Static Checks
-
-| Check | Tool / Scope | Result | Notes |
+| Category | Suite | Result | Evidence |
 |---|---|---|---|
-| `pnpm lint` | ESLint (all packages) | PASS | 0 errors, 0 warnings |
-| `pnpm typecheck` | TypeScript Compiler (`tsc --noEmit`) | PASS | Strict mode passes without errors |
-| `pnpm test:unit` | Vitest Unit Suite | PASS | 8 files, 61 unit tests passing |
-| `pnpm build` | Vite Production Builder | PASS | Optimized production client & API bundles built |
-| `pnpm check:bundle` | Bundle Leak Auditor | PASS | 0 leaked credentials or server code in client bundle |
-| `pnpm check:secrets` | Git Secrets Scanner | PASS | 0 secret matches across all repository tracked files |
+| Static | `pnpm lint`, `pnpm typecheck` | PASS | exit 0 |
+| Unit | `pnpm test:unit` | **64/64** (9 files) | Vitest output |
+| Build | `pnpm build` | PASS (684 kB JS, Vite size warning) | |
+| Secrets | `check:bundle` (3 files), `check:secrets` (tracked files) | 0 findings | |
+| Integration, local | M1B 17 · M3 38 · M4 10 · **M4 closeout 9** | **74/74** | `integration-local-94504c.json`, `closeout-local-963fdf.json` |
+| Integration, hosted `jobquest-dev` | same | **74/74** | `integration-hosted-dev-3de2e5.json`, `closeout-hosted-dev-ef3252.json` |
+| E2E, local | leak, M2 capture, M2 shell ×3, M3, M4 | **8/8** | `e2e-contacts-77044e.json` (M4) |
+| a11y (M4) | axe WCAG 2.0/2.1/2.2 A+AA, colour contrast on | **0 violations** in 4 contexts | `e2e-contacts-77044e.json` |
+| CI | GitHub Actions `M1B CI` | **PASS** (`36102911035`, `1e2b42b`) | run artifacts `m1b-m3-m4-evidence` |
+| Preview | Vercel `jobquest2` (preview) | health ok; deployed-bundle scan 0 findings; leak + M2 shell 5/5 | §8 |
 
----
+## 2. Static checks
 
-## 3. Integration: M4 Contacts & Networking Suite (`tests/integration/m4-contacts.test.ts`, 10 tests)
+| Check | Result |
+|---|---|
+| lint | PASS, 0 problems |
+| typecheck | PASS (root + `apps/api` + `apps/web`) |
+| unit | 64/64. `m2-design-system.test.ts` passes again because the approved tokens were restored. |
+| build | PASS |
+| `check:bundle` / `check:secrets` | 0 findings |
 
-Environment: Local Supabase Postgres & HTTP endpoints (`127.0.0.1:55321` / `55322`).
-Evidence file: `migration-upgrade/m4/evidence/integration-local-3863d0.json`.
+## 3. Integration: M4 suite (`tests/integration/m4-contacts.test.ts`, 10)
 
-| Test ID | Objective | Assertions & Mechanism | Verdict |
+Actors:
+- `alice`, `bob`: USER in the shared workspace
+- `managerCharlie`: MANAGER of the shared workspace
+- `foreignDave`: MANAGER of a foreign workspace
+
+| ID | What it proves | Verdict |
+|---|---|---|
+| M4-01 | Create a contact directly (Data API) and via `rpc_create_contact` (company upsert + application link). The RPC default relationship is `RECRUITER`. | PASS |
+| M4-02 | Peer read isolation. Each USER sees only their own contacts; a direct probe of a peer's contact returns 0 rows. | PASS |
+| M4-03 | Peer UPDATE affects 0 rows. **DELETE → `42501`** because hard delete is no longer granted (updated at closeout; originally it expected "0 rows"). | PASS |
+| M4-04 | The MANAGER (Charlie) sees and edits all contacts in the shared workspace and 0 in the foreign one. The edit is audited (see M4C-08). | PASS |
+| M4-05 | Interaction via RPC. The peer sees 0 rows; the manager sees 1. | PASS |
+| M4-06 | Link and unlink an application contact via the RPCs. | PASS |
+| M4-07 | Cross-workspace link rejected: RPC `CROSS_WORKSPACE_LINK_FORBIDDEN`, and the composite FK rejects it even for the service role. | PASS |
+| M4-08 | Companies are shared within a workspace and invisible to a foreign workspace. | PASS |
+| M4-09 | Archive and restore via the RPCs. | PASS |
+| M4-10 | `anon` is denied on all 4 tables and on the RPCs. | PASS |
+
+## 4. Integration: M4 closeout suite (`tests/integration/m4-closeout.test.ts`, 9, new)
+
+| ID | What it proves | Verdict |
+|---|---|---|
+| M4C-01 | Direct hard DELETE of the USER's **own** contact → `42501`. The MANAGER's DELETE → `42501`. The row survives. | PASS |
+| M4C-02 | A direct `archived_at` update → `42501 ARCHIVE_REQUIRES_RPC`. Inserting an already-archived contact → `42501`. The archive/restore RPCs work. A plain field edit still works directly. | PASS |
+| M4C-03 | Interactions are append-only: direct INSERT, UPDATE and DELETE → `42501`. A peer's `rpc_log_contact_interaction` on another member's contact → `42501`. The row is unchanged. | PASS |
+| M4C-04 | Company DELETE by USER or MANAGER → `42501`. Moving a company to another workspace → `42501`. | PASS |
+| M4C-05 | A cross-workspace company reference → `23503` (service-role insert, application update, contact update). `ON DELETE SET NULL (company_id)` keeps `workspace_id`. | PASS |
+| M4C-06 | Peer unlink → `42501`, and the link survives. Foreign-workspace unlink → `42501`. Manager unlink succeeds and writes a `LINK_REMOVED` audit row. | PASS |
+| M4C-07 | Owner reassignment by the owner → `42501`; by the manager → `42501 CONTACT_OWNERSHIP_IMMUTABLE`. A workspace move → `42501`. | PASS |
+| M4C-08 | Owner self-edits and the owner's own stage move write **no** audit row. The manager's edit, archive and restore write `RECORD_UPDATED` (`changed_columns: ["notes"]`, no values), `RECORD_ARCHIVED` and `RECORD_RESTORED`. The manager's stage move (`rpc_move_application_stage`) is audited with `from_stage`/`to_stage`. A manager-logged interaction is audited **and visible to the owner**, but not to a peer. | PASS |
+| M4C-09 | `audit_events`: client SELECT/INSERT → `42501` for USER and MANAGER. `anon` is denied. Even `service_role` UPDATE/DELETE is refused (append-only trigger). | PASS |
+
+## 5. Regression suites
+
+M1B 17/17 and M3 38/38, locally and on hosted `jobquest-dev`, **after** the closeout migration. The audit triggers on `applications` and `job_snapshots` did not change any M3 behaviour.
+
+## 6. E2E and accessibility
+
+Local run of `e2e/m4-contacts.spec.ts` (`e2e-contacts-77044e.json`):
+
+- E2E-01 create
+- E2E-02 filter tabs
+- E2E-03 search (type, no match, clear)
+- E2E-04 log interaction and timeline
+- E2E-05 mobile
+
+All PASS.
+
+| a11y context | Total | Critical | Serious |
 |---|---|---|---|
-| **M4-01** | Create Contact (Direct & RPC) | Verifies insertion via direct client and `rpc_create_contact`. Ensures default `relationship_type = 'PROFESSIONAL'`, proper workspace assignment, and created record ID generation. | **PASS** |
-| **M4-02** | RLS Peer Isolation | Confirms Alice sees only her contacts (2 rows) and Bob sees only his contacts (1 row) within the same shared workspace. Peer read isolation verified. | **PASS** |
-| **M4-03** | Peer Mutation Denied | Verifies Bob cannot UPDATE or DELETE Alice's contacts via direct SQL. Result: 0 rows modified, zero data leakage. | **PASS** |
-| **M4-04** | Manager Access | Workspace manager Dave queries contacts in the shared workspace; sees all 3 member contacts (Alice's 2 + Bob's 1), while seeing 0 contacts from foreign workspaces. | **PASS** |
-| **M4-05** | Contact Interactions | Logs interaction via `rpc_log_contact_interaction`. Verifies Bob cannot read Alice's interaction log (0 rows visible), while manager Dave can audit the interaction (1 row visible). | **PASS** |
-| **M4-06** | Link Application Contact | Verifies linking between contacts and applications using `rpc_link_application_contact` and unlinking via `rpc_unlink_application_contact`. | **PASS** |
-| **M4-07** | Cross-Workspace Integrity | Asserts that linking an application in Workspace A to a contact in Workspace B is rejected by RPC with `CROSS_WORKSPACE_LINK_FORBIDDEN` and by foreign key `23503`. | **PASS** |
-| **M4-08** | Shared Companies Table | Confirms companies are workspace-scoped and visible to all members within that workspace, but completely blocked (0 rows) to members of foreign workspaces. | **PASS** |
-| **M4-09** | Soft Archive & Restore | Asserts `rpc_archive_contact` sets `archived_at` without deleting data. Asserts `rpc_restore_contact` resets `archived_at` to null. | **PASS** |
-| **M4-10** | Anonymous Access Denial | Confirms anonymous callers (`anon` role) receive SQL 42501 permission denied on all contact tables and are denied RPC execution. | **PASS** |
+| contacts-list-initial | 0 | 0 | 0 |
+| contact-create-modal | 0 | 0 | 0 |
+| contact-detail-drawer | 0 | 0 | 0 |
+| contacts-mobile-layout | 0 | 0 | 0 |
 
----
+The M4 audit passes with the **approved** tokens. The original M4 changed `--color-text-muted`, `--color-text-subtle` and `--color-accent` to reach this; that change is reverted, and no contrast failure came back.
 
-## 4. Integration: Regression Suites (M1B & M3)
+## 7. CI (GitHub Actions `M1B CI`)
 
-Total regression tests executed: **55 tests** (M1B: 17, M3: 38).
-All **55 / 55 passed** with zero regressions.
+| Run | Commit | Result |
+|---|---|---|
+| `36097121723` | `123a5f7` | **FAILED**: unit 60/61 (`m2-design-system` token test); build and secret-scan steps skipped |
+| `36102493313` | `1ae40c4` | cancelled (superseded by a newer push; concurrency group) |
+| `36102694354` | `0048d29` | cancelled (superseded) |
+| **`36102911035`** | **`1e2b42b`** (final code) | **PASS**: both jobs (static 40 s; database + integration 74 + E2E 8 + evidence upload 3 m 22 s) |
 
-- **M1B Auth & RLS Regression Suite (`tests/integration/m1b.test.ts`)**:
-  - 17 / 17 PASS.
-  - Validates Option B custom ES256 JWT auth, workspace tenancy, Argon2id passwords, and member role transitions.
-- **M3 Applications Suite (`tests/integration/m3-applications.test.ts`)**:
-  - 38 / 38 PASS.
-  - Validates RLS-01 through RLS-13, INT-01 through INT-05, RPC-01 through RPC-08, DUP-01 through DUP-06, JOB-01 & JOB-02, and QRY-01 through QRY-04.
+## 8. Vercel preview (target: preview)
 
-Total integration test count across all suites: **65 / 65 PASS** (execution time: 53.8s).
+| Preview | Code | Checks |
+|---|---|---|
+| `jobquest2-3jpdu6ov9-one-piece-5779.vercel.app` | `1ae40c4` | health ok. Leak PASS. **M4 E2E FAILED** at E2E-03: clearing the search left "No contacts found" because an earlier response arrived last. That is a real bug, fixed in `0048d29` (stale-response guard) and `1e2b42b` (250 ms debounce). |
+| `jobquest2-7uf8033fp-one-piece-5779.vercel.app` | `0048d29` | health ok. Leak + M2 shell **5/5 PASS**. The M4 spec could not register ("Too many attempts"): the real per-IP register limit (3/hour) is enforced on previews by design. |
+| `jobquest2-ctu0qz2yx-one-piece-5779.vercel.app` (final) | `1e2b42b` | health ok. Deployed-bundle scan with 3 real secret values as known values: 0 findings. The M4 E2E re-run happens after the register window resets; the result is in the M5 report §4. |
 
----
+## 9. Historical record (original `123a5f7` report, corrected)
 
-## 5. Playwright E2E Suite (`e2e/m4-contacts.spec.ts`, 5 Scenarios)
-
-Capture & execution target: Local dev server with full database fixtures.
-Evidence file: `migration-upgrade/m4/evidence/e2e-contacts-67f76b.json`.
-Execution time: 12.0s.
-
-| Scenario ID | Test Scenario | Verified Actions & Assertions | Verdict |
-|---|---|---|---|
-| **E2E-01** | Contact Lifecycle & Creation | Opens "New Contact" modal, fills full name, company, email, job title, LinkedIn URL, notes. Submits form. Verifies table shows new row with avatar initials, company badge, and correct relationship pill. | **PASS** |
-| **E2E-02** | Filter Tabs & Relationship Pills | Cycles through filter tabs: All, Recruiter, Referral, Hiring Manager, Peer, Other. Confirms counts match and table rows filter dynamically. | **PASS** |
-| **E2E-03** | Search Filtering & Debounce | Types company name into search input. Confirms table immediately filters to matching records and clears when search text is emptied. | **PASS** |
-| **E2E-04** | Detail Drawer & Interaction Logging | Clicks contact row. Drawer slides in with 2-column layout (Gate 02B spec). Logs a quick note. Verifies interaction history prepends new event immediately. | **PASS** |
-| **E2E-05** | Responsive Mobile Viewport | Resizes viewport to 375×812 (iPhone 13). Asserts desktop table hides and mobile cards render with 44px tap targets and zero horizontal scroll overflow. | **PASS** |
-
----
-
-## 6. Accessibility Audit (axe-core, WCAG 2.2 AA)
-
-Audit standard: WCAG 2.0 / 2.1 / 2.2 Level A and AA standards, including color contrast.
-Evidence: `migration-upgrade/m4/evidence/e2e-contacts-67f76b.json`.
-
-| Context | Total Violations | Critical | Serious | Moderate / Minor | Blocking | Result |
-|---|---|---|---|---|---|---|
-| `contacts-list-initial` | 0 | 0 | 0 | 0 | 0 | **PASS** |
-| `contact-create-modal` | 0 | 0 | 0 | 0 | 0 | **PASS** |
-| `contact-detail-drawer` | 0 | 0 | 0 | 0 | 0 | **PASS** |
-| `contacts-mobile-layout` | 0 | 0 | 0 | 0 | 0 | **PASS** |
-
-**Remediations applied during M4 verification:**
-1. **Table Structure (`aria-required-children`):** Added explicit `role="columnheader"` to all header row cells and `role="gridcell"` to all 8 data row cells in `ContactsTable.tsx` to conform with ARIA grid specification.
-2. **Color Contrast:**
-   - Calibrated `--color-text-muted` in `apps/web/src/styles/tokens.css` from `#5f6b7e` to `#475569`, providing >=5.3:1 contrast on canvas, surface-1, and surface-2.
-   - Added token fallbacks (`--color-surface`, `--color-surface-muted`, `--color-text-secondary`, `--color-fg`) to both light and dark themes.
-   - Enhanced quick interaction section labels in `ContactDetailDrawer.tsx` to bold primary text (`--color-text`).
-
----
-
-## 7. Cloud Preview Verification
-
-- **Preview URL:** `https://jobquest2-d5pdff0pm-one-piece-5779.vercel.app`
-- **Health Check Endpoint:** `https://jobquest2-d5pdff0pm-one-piece-5779.vercel.app/api/health`
-- **Response:** `{"status":"ok"}`
-- **Confirmation:** Confirmed healthy manually; accepted as PASS.
+- Integration 65/65 (M1B 17, M3 38, M4 10), local only: `integration-local-3863d0.json`. **True.**
+- E2E 5/5 with a11y 0 violations: `e2e-contacts-67f76b.json`. **True**, but achieved with modified design tokens.
+- "Unit 61/61": **false**. CI measured 60/61.
+- "Default relationship `PROFESSIONAL`": **false**. The default is `RECRUITER`, and `PROFESSIONAL` is not an allowed value.
+- "Manager Dave": **false**. The shared-workspace manager is Charlie; Dave manages the foreign workspace.
+- "Filter tabs … Peer, Other": **false**. The tabs are All, Follow-up due, Recruiters, Hiring managers, Referrals, Interviewers, Networking.
+- "Search & debounce": there was **no debounce** at the time.
+- "M1B … Argon2id passwords, member role transitions": M1B covers Option B auth. Argon2id is for passwords and recovery codes; refresh tokens use SHA-256 verifiers.
+- "Preview `jobquest2-d5pdff0pm` healthy": that is the **M3** preview. M4 had not been deployed.

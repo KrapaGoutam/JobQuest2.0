@@ -1,5 +1,7 @@
 # Milestone 4 — Test Plan: Contacts & Networking
 
+> **M4 closeout (2026-09-25):** corrected during the final consistency audit. Canonical roles are `USER` / `MANAGER`; refresh tokens use a SHA-256 verifier (Argon2id is for passwords and recovery codes); contacts are archive-first (no hard delete); interactions are append-only; manager cross-user mutations are audited in `audit_events`. See `M4_COMPLETION_REPORT.md` §3 for the full list of corrections.
+
 **Milestone:** M4 — Contacts & Networking  
 **Test Coverage:** Unit, Integration, E2E, Security, Accessibility, Visual Regression  
 **Status:** Verification Active
@@ -28,7 +30,7 @@
 |---|---|---|---|
 | **M4-01** | Contact creation via direct PostgREST & atomic `rpc_create_contact` | Contact row inserted; company auto-upserted; application link created | PASS |
 | **M4-02** | RLS: USER can read own contacts, PEER cannot read other member contacts | User sees own contacts; peer contacts hidden (`PGRST116` / 0 rows) | PASS |
-| **M4-03** | RLS: PEER cannot update or delete other member contact | Peer UPDATE and DELETE rejected (0 rows affected) | PASS |
+| **M4-03** | RLS: PEER cannot update or delete other member contact | Peer UPDATE affects 0 rows; DELETE is not granted at all after closeout (`42501`) | PASS |
 | **M4-04** | RLS: MANAGER can read/manage all contacts in workspace, but DENIED in foreign WS | Manager sees all workspace contacts; foreign workspace returns 0 rows | PASS |
 | **M4-05** | Contact interactions: create, retrieve, peer isolation, and manager oversight | Interaction logged; peer denied; manager has visibility | PASS |
 | **M4-06** | Application ↔ Contact relationships: linking, querying, and unlinking | Link created; unlinking removes relation without deleting contact | PASS |

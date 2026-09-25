@@ -1,5 +1,7 @@
 # Milestone 4 — Implementation Plan: Contacts & Networking
 
+> **M4 closeout (2026-09-25):** corrected during the final consistency audit. Canonical roles are `USER` / `MANAGER`; refresh tokens use a SHA-256 verifier (Argon2id is for passwords and recovery codes); contacts are archive-first (no hard delete); interactions are append-only; manager cross-user mutations are audited in `audit_events`. See `M4_COMPLETION_REPORT.md` §3 for the full list of corrections.
+
 **Milestone:** M4 — Contacts & Networking  
 **Branch:** `feature/m4-contacts-networking`  
 **Base Commit:** `dc3d38a` (approved M3 merge on `development`)  
@@ -11,7 +13,7 @@
 
 1. Implement the workspace-scoped and owner-isolated **Contacts & Networking** domain.
 2. Provide a centralized **Companies** registry linked to both applications and contacts.
-3. Establish atomic domain RPC operations to ensure data integrity, audit logging, and authorization boundaries.
+3. Establish atomic domain RPC operations to ensure data integrity and authorization boundaries. (Audit logging was added at closeout: `audit_events` + trigger, migration `20260925100000`.)
 4. Deliver desktop and mobile UI experiences conforming to Gate 02B mockups (`03-contacts.html`).
 5. Ensure 100% test coverage across Unit, Integration, and E2E suites with zero regressions on M1B and M3.
 
@@ -54,7 +56,7 @@
 ### Phase 4: UI Components (`apps/web/src/components/contacts/`)
 - [x] `ContactsToolbar.tsx`: Search input, filter tabs (All, Follow-up due, Recruiters, Hiring managers, Referrals, Interviewers, Networking), company filter, manager owner filter, sort selector, CSV export.
 - [x] `ContactsTable.tsx`: 44px dense rows matching Gate 02B `03-contacts.html`, avatar with initials, company tile, status pills, follow-up badges (overdue alert, today warning, upcoming), keyboard navigation (↑/↓ move, Enter open, N new contact).
-- [x] `ContactDetailDrawer.tsx`: 740px slide-out drawer (N3/N4) with contact identity, overdue follow-up banner with quick "Done" and "Snooze" actions, 2-column layout with quick interaction logger, activity timeline, contact info, linked applications list, and 6-stage networking progress checklist.
+- [x] `ContactDetailDrawer.tsx`: 740px slide-out drawer (N3/N4) with contact identity, overdue follow-up banner with quick "Done" and "Snooze" actions, 2-column layout with quick interaction logger, activity timeline, contact info, and linked applications list. (Networking progress checklist deferred at closeout: not in the approved schema.)
 - [x] `CreateContactModal.tsx`: New/edit contact dialog (N5) with company typeahead, job title, email/LinkedIn validation, optional application linking with role selection, and next follow-up date.
 - [x] `LogInteractionModal.tsx`: Full modal for logging interactions with interaction type, date, notes, and next follow-up scheduling.
 - [x] `LinkApplicationModal.tsx`: Modal to associate active applications with contacts and define hiring team roles.

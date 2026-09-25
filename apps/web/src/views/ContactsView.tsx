@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useToast } from '../context/ToastContext';
@@ -120,8 +120,11 @@ export function ContactsView({
     }
   }, []);
 
-  // Fetch contacts
+  // Fetch contacts. Only the latest request may update the list: with network latency,
+  // responses to earlier keystrokes/filters can arrive after newer ones.
+  const requestSeq = useRef(0);
   const loadContacts = useCallback(async () => {
+    const seq = ++requestSeq.current;
     if (!activeWorkspaceId) {
       setContacts([]);
       setTotalCount(0);
@@ -152,13 +155,15 @@ export function ContactsView({
         pageSize
       );
 
+      if (seq !== requestSeq.current) return;
       setContacts(result.contacts);
       setTotalCount(result.totalCount);
     } catch (err: unknown) {
+      if (seq !== requestSeq.current) return;
       const msg = err instanceof Error ? err.message : 'Failed to load contacts.';
       showToast(msg, 'danger');
     } finally {
-      setIsLoading(false);
+      if (seq === requestSeq.current) setIsLoading(false);
     }
   }, [activeWorkspaceId, selectedTab, companyFilter, ownerFilter, archiveState, search, sort, page, pageSize]);
 

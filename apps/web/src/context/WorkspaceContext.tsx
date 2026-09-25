@@ -45,17 +45,37 @@ function getWorkspaceColor(id: string | null): string {
   return colors[Math.abs(hash) % colors.length] ?? '#3157d5';
 }
 
+/**
+ * Controlled mode (the signed-in app): the app owns the memberships it loaded and
+ * the active workspace, and the shell (switcher, sidebar, top bar) reflects and
+ * changes them. Uncontrolled mode (design-system showcase) keeps local state.
+ */
 export function WorkspaceProvider({
   children,
   userActiveWorkspaceId,
+  memberships: controlledMemberships,
+  activeWorkspaceId: controlledActiveId,
+  onSelectWorkspace,
 }: {
   children: ReactNode;
   userActiveWorkspaceId?: string | null;
+  memberships?: WorkspaceMembership[];
+  activeWorkspaceId?: string | null;
+  /** Called to switch (and reload) the active workspace in controlled mode. */
+  onSelectWorkspace?: (id: string) => Promise<void> | void;
 }) {
-  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
-  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(null);
+  const controlled = controlledMemberships !== undefined;
+  const [localMemberships, setMemberships] = useState<WorkspaceMembership[]>([]);
+  const [localActiveId, setActiveWorkspaceIdState] = useState<string | null>(null);
+  const memberships = controlled ? controlledMemberships : localMemberships;
+  const activeWorkspaceId = controlled ? controlledActiveId ?? null : localActiveId;
 
   const loadWorkspaces = useCallback(async (preferredId?: string | null) => {
+    if (controlled) {
+      const id = preferredId ?? activeWorkspaceId;
+      if (id) await onSelectWorkspace?.(id);
+      return;
+    }
     try {
       const res = await supabase
         .from('workspace_members')
@@ -84,7 +104,7 @@ export function WorkspaceProvider({
     } catch (err) {
       console.error('Exception loading workspaces:', err);
     }
-  }, [activeWorkspaceId, userActiveWorkspaceId]);
+  }, [controlled, onSelectWorkspace, activeWorkspaceId, userActiveWorkspaceId]);
 
   const createSharedWorkspace = async (name: string): Promise<string | null> => {
     try {
@@ -116,7 +136,10 @@ export function WorkspaceProvider({
         activeRole,
         isManager,
         workspaceColor,
-        setActiveWorkspaceId: setActiveWorkspaceIdState,
+        setActiveWorkspaceId: (id: string) => {
+          if (controlled) void onSelectWorkspace?.(id);
+          else setActiveWorkspaceIdState(id);
+        },
         loadWorkspaces,
         createSharedWorkspace,
       }}

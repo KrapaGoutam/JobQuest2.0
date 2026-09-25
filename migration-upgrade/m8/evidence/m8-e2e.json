@@ -1,6 +1,6 @@
 {
-  "run": "b74bd0",
-  "started_at": "2026-09-25T18:33:30.673Z",
+  "run": "a48f40",
+  "started_at": "2026-09-25T19:23:24.592Z",
   "Y1_screenshot": "Y1-analytics-light.png",
   "a11y_overview": {
     "context": "analytics-overview-light",
@@ -38,5 +38,14 @@
     "violations": [],
     "blocking": 0
   },
-  "completed_at": "2026-09-25T18:33:41.544Z"
+  "Y5_screenshot": "Y5-analytics-mobile.png",
+  "a11y_mobile": {
+    "context": "analytics-goals-mobile",
+    "total": 0,
+    "critical": 0,
+    "serious": 0,
+    "violations": [],
+    "blocking": 0
+  },
+  "completed_at": "2026-09-25T19:23:34.632Z"
 }

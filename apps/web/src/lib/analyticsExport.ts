@@ -11,7 +11,7 @@ export function sanitizeCsvField(val: string | number | null | undefined): strin
   if (dangerousChars.some((char) => s.startsWith(char))) {
     escaped = `'${s}`;
   }
-  if (escaped.includes('"') || escaped.includes(',') || escaped.includes('\n')) {
+  if (escaped.includes('"') || escaped.includes(',') || escaped.includes('\n') || escaped.includes('\r')) {
     return `"${escaped.replace(/"/g, '""')}"`;
   }
   return escaped;

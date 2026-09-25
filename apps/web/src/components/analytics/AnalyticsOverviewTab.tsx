@@ -143,7 +143,10 @@ export function AnalyticsOverviewTab({ data, isManager }: AnalyticsOverviewTabPr
           <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
             Applications
           </div>
-          <div className="text-2xl font-bold text-foreground mt-1">
+          <div
+            className="text-2xl font-bold text-foreground mt-1"
+            data-testid="analytics-total-applications"
+          >
             {data.total_applications.toLocaleString()}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">

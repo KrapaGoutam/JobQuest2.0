@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
@@ -13,6 +13,10 @@ const shot = (page: Page, name: string) => page.screenshot({ path: `${shotsDir}/
 const settle = (page: Page) => page.waitForTimeout(500);
 const nav = (page: Page, name: string) =>
   page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name, exact: true }).click();
+const dismissToasts = async (page: Page) => {
+  const closeButtons = page.getByRole('button', { name: 'Close notification' });
+  while (await closeButtons.count()) await closeButtons.first().click();
+};
 
 async function audit(page: Page, context: string) {
   const r = await new AxeBuilder({ page })
@@ -63,6 +67,7 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     await expect(createDialog).toBeVisible();
     await page.locator('#app-company').fill('Apex Fintech');
     await page.locator('#app-role').fill('Staff Backend Engineer');
+    await page.locator('#app-source').fill('=2+2');
     await page.getByRole('button', { name: 'Create Application' }).click();
     await expect(createDialog).toBeHidden();
     await settle(page);
@@ -71,6 +76,7 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     await expect(createDialog).toBeVisible();
     await page.locator('#app-company').fill('Starlight AI');
     await page.locator('#app-role').fill('Machine Learning Architect');
+    await page.locator('#app-source').fill('LinkedIn');
     await page.getByRole('button', { name: 'Create Application' }).click();
     await expect(createDialog).toBeHidden();
     await settle(page);
@@ -88,6 +94,39 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     await expect(page.getByRole('heading', { name: 'What is open right now?' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Where do applications stop?' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Which sources work?' })).toBeVisible();
+    await expect(page.getByTestId('analytics-total-applications')).toHaveText('2');
+    await expect(page.getByText('=2+2', { exact: true })).toBeVisible();
+    await expect(page.getByText('LinkedIn', { exact: true })).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(/NaN|undefined/);
+
+    // Date presets reload the same range-scoped data without losing current-state panels.
+    await page.getByRole('button', { name: '30d' }).click();
+    await expect(page.getByTestId('analytics-total-applications')).toHaveText('2');
+
+    // Export both supported formats and inspect the downloaded payloads.
+    const csvDownloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export CSV' }).click();
+    const csvDownload = await csvDownloadPromise;
+    expect(csvDownload.suggestedFilename()).toBe('jobquest-analytics-30d.csv');
+    const csvPath = await csvDownload.path();
+    expect(csvPath).not.toBeNull();
+    const csv = readFileSync(csvPath!, 'utf8');
+    expect(csv).toContain('--- SEARCH SUMMARY ---');
+    expect(csv).toContain("'=2+2,1");
+
+    const jsonDownloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'JSON' }).click();
+    const jsonDownload = await jsonDownloadPromise;
+    expect(jsonDownload.suggestedFilename()).toBe('jobquest-analytics-30d.json');
+    const jsonPath = await jsonDownload.path();
+    expect(jsonPath).not.toBeNull();
+    const json = JSON.parse(readFileSync(jsonPath!, 'utf8')) as {
+      overview: { total_applications: number };
+      timing: unknown;
+    };
+    expect(json.overview.total_applications).toBe(2);
+    expect(json.timing).not.toBeNull();
+    await dismissToasts(page);
 
     // Screenshot Y1 · Analytics overview (light mode)
     await shot(page, 'Y1-analytics-light');
@@ -165,6 +204,11 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
       await lightRadio.click();
       await settle(page);
     }
+
+    // A manager can scope analytics and goals to an individual workspace member.
+    const memberFilter = page.getByLabel('Filter by workspace member');
+    await expect(memberFilter.locator('option')).toHaveCount(2);
+    await memberFilter.selectOption({ index: 1 });
     await page.getByRole('tab', { name: 'Goals' }).click();
     await settle(page);
 
@@ -180,6 +224,7 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     await goalModal.getByRole('spinbutton').first().fill('18');
     await goalModal.getByRole('button', { name: 'Save Goals' }).click();
     await settle(page);
+    await dismissToasts(page);
 
     // Screenshot R3 · Goals (light mode)
     await shot(page, 'R3-goals-light');
@@ -189,6 +234,18 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     expect(a11yGoals.critical).toBe(0);
     expect(a11yGoals.serious).toBe(0);
     evidence['a11y_goals'] = a11yGoals;
+
+    // Mobile layout preserves navigation, filters, and tab access.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Goals' })).toBeVisible();
+    await shot(page, 'Y5-analytics-mobile');
+    evidence['Y5_screenshot'] = 'Y5-analytics-mobile.png';
+
+    const a11yMobile = await audit(page, 'analytics-goals-mobile');
+    expect(a11yMobile.critical).toBe(0);
+    expect(a11yMobile.serious).toBe(0);
+    evidence['a11y_mobile'] = a11yMobile;
 
     evidence['completed_at'] = new Date().toISOString();
     writeFileSync(`${evidenceDir}/m8-e2e.json`, JSON.stringify(evidence, null, 2));

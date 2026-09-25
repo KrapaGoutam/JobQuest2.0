@@ -259,6 +259,8 @@ export function AnalyticsView({
                   overview={overview}
                   workspaceId={activeWorkspaceId!}
                   onRefresh={loadData}
+                  targetUserId={selectedMemberId || null}
+                  isManagerAggregate={isManager && !selectedMemberId}
                 />
               )}
             </TabPanel>

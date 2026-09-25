@@ -43,6 +43,7 @@ export function CreateApplicationModal({
   const [roleTitle, setRoleTitle] = useState('');
   const [jobUrl, setJobUrl] = useState('');
   const [externalJobId, setExternalJobId] = useState('');
+  const [source, setSource] = useState('');
 
   const [stage, setStage] = useState<ApplicationStage>('APPLIED');
   const [priority, setPriority] = useState<ApplicationPriority>('MEDIUM');
@@ -91,7 +92,7 @@ export function CreateApplicationModal({
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const isDirty =
-    [companyName, roleTitle, jobUrl, externalJobId, location, salaryMin, salaryMax, tagsInput, notes, jobDescription, requirements, skills, nextAction, nextActionDate]
+    [companyName, roleTitle, jobUrl, externalJobId, source, location, salaryMin, salaryMax, tagsInput, notes, jobDescription, requirements, skills, nextAction, nextActionDate]
       .some((v) => v.trim() !== '') ||
     stage !== 'APPLIED' || priority !== 'MEDIUM' || workArrangement !== 'Remote' || employmentType !== 'Full-time' || salaryCurrency !== 'USD';
 
@@ -186,6 +187,7 @@ export function CreateApplicationModal({
         salary_currency: salaryCurrency.trim().toUpperCase(),
         job_url: jobUrl.trim() || null,
         external_job_id: externalJobId.trim() || null,
+        source: source.trim() || null,
         tags,
         notes: notes.trim() || null,
         next_action: nextAction.trim() || null,
@@ -217,6 +219,7 @@ export function CreateApplicationModal({
     setRoleTitle('');
     setJobUrl('');
     setExternalJobId('');
+    setSource('');
     setStage('APPLIED');
     setPriority('MEDIUM');
     setWorkArrangement('Remote');
@@ -365,6 +368,18 @@ export function CreateApplicationModal({
 
           {/* Pipeline & Pacing */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+            <div>
+              <label htmlFor="app-source" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
+                Source
+              </label>
+              <Input
+                id="app-source"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder="e.g. LinkedIn, Referral, Company site"
+                maxLength={128}
+              />
+            </div>
             <div>
               <label htmlFor="app-stage-select" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
                 Initial Stage

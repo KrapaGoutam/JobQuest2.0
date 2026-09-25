@@ -3,10 +3,12 @@
  */
 
 export interface WeeklyPacingPoint {
+  week_start: string;
   week_label: string;
   applied: number;
   responses: number;
   interviews: number;
+  outreach: number;
   target: number;
 }
 
@@ -38,8 +40,8 @@ export interface OutcomePerformance {
 }
 
 export interface ActiveGoal {
-  id: string;
-  period_type: 'WEEKLY' | 'MONTHLY';
+  id: string | null;
+  period_type: 'DAILY' | 'WEEKLY' | 'MONTHLY';
   target_applications: number;
   target_outreach: number;
   effective_date: string;
@@ -60,10 +62,16 @@ export interface AnalyticsOverview {
   resumes_breakdown: ResumePerformance[];
   outcomes_breakdown: OutcomePerformance[];
   active_goal: ActiveGoal | null;
+  date_range_semantics?: {
+    range_scoped: string[];
+    current_state: string[];
+    fixed_window: string[];
+  };
 }
 
 export interface StageTransition {
   transition: string;
+  average_days: number | null;
   median_days: number | null;
   min_days: number | null;
   max_days: number | null;
@@ -109,7 +117,7 @@ export interface GoalRecord {
   id: string;
   workspace_id: string;
   user_id: string;
-  period_type: 'WEEKLY' | 'MONTHLY';
+  period_type: 'DAILY' | 'WEEKLY' | 'MONTHLY';
   target_applications: number;
   target_outreach: number;
   effective_date: string;

@@ -29,7 +29,7 @@ export function StageTimingTab({ data }: StageTimingTabProps) {
                 How long does each step take?
               </h2>
               <p className="text-xs text-muted-foreground">
-                Days between stages, from stage history · median and range
+                Days between first qualifying events · average, median and range
               </p>
             </div>
 
@@ -39,6 +39,7 @@ export function StageTimingTab({ data }: StageTimingTabProps) {
                   <tr className="border-b border-border text-muted-foreground font-medium">
                     <th className="py-2.5 pr-2">Transition</th>
                     <th className="py-2.5 px-2 text-right">Median</th>
+                    <th className="py-2.5 px-2 text-right">Average</th>
                     <th className="py-2.5 px-2 text-right">Range</th>
                     <th className="py-2.5 px-2 text-right">Sample</th>
                     <th className="py-2.5 pl-3 w-28">Distribution</th>
@@ -47,7 +48,7 @@ export function StageTimingTab({ data }: StageTimingTabProps) {
                 <tbody className="divide-y divide-border">
                   {data.transitions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                      <td colSpan={6} className="py-4 text-center text-muted-foreground">
                         No transition data available yet
                       </td>
                     </tr>
@@ -65,6 +66,9 @@ export function StageTimingTab({ data }: StageTimingTabProps) {
                           </td>
                           <td className="py-2.5 px-2 text-right font-bold text-foreground">
                             {t.median_days !== null ? `${t.median_days} d` : '—'}
+                          </td>
+                          <td className="py-2.5 px-2 text-right text-muted-foreground">
+                            {t.average_days !== null ? `${t.average_days} d` : '—'}
                           </td>
                           <td className="py-2.5 px-2 text-right text-muted-foreground whitespace-nowrap">
                             {t.min_days !== null && t.max_days !== null
@@ -167,7 +171,7 @@ export function StageTimingTab({ data }: StageTimingTabProps) {
         <div className="mb-4">
           <h2 className="text-base font-semibold text-foreground">Does following up help?</h2>
           <p className="text-xs text-muted-foreground">
-            Response within 14 days, with vs without a follow-up sent
+            Response rate for applications with vs without a follow-up sent within 14 days
           </p>
         </div>
 

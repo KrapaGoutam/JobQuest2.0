@@ -24,11 +24,65 @@ export async function fetchAnalyticsOverview(
   });
 
   if (error) throw error;
-  return data as AnalyticsOverview;
+  return normalizeAnalyticsOverview(data);
+}
+
+interface RawOverviewPayload extends Partial<AnalyticsOverview> {
+  weekly_activity?: Array<Partial<AnalyticsOverview['weekly_pacing'][number]>>;
+}
+
+export function normalizeAnalyticsOverview(payload: unknown): AnalyticsOverview {
+  const raw = (payload ?? {}) as RawOverviewPayload;
+  const weekly = raw.weekly_pacing ?? raw.weekly_activity ?? [];
+  return {
+    total_applications: raw.total_applications ?? 0,
+    response_count: raw.response_count ?? 0,
+    interview_count: raw.interview_count ?? 0,
+    offer_count: raw.offer_count ?? 0,
+    accepted_count: raw.accepted_count ?? 0,
+    median_response_days: raw.median_response_days ?? null,
+    response_samples: raw.response_samples ?? 0,
+    weekly_pacing: weekly.map((point) => ({
+      week_start: point.week_start ?? '',
+      week_label: point.week_label ?? point.week_start ?? '',
+      applied: point.applied ?? 0,
+      responses: point.responses ?? 0,
+      interviews: point.interviews ?? 0,
+      outreach: point.outreach ?? 0,
+      target: point.target ?? 0,
+    })),
+    current_pipeline: raw.current_pipeline ?? [],
+    historical_funnel: (raw.historical_funnel ?? []).map((row) => ({
+      stage: row.stage,
+      count: row.count,
+      pct: row.pct ?? (row as { rate?: number }).rate,
+    })),
+    sources_breakdown: (raw.sources_breakdown ?? []).map((row) => ({
+      source: row.source,
+      apps: row.apps ?? (row as { apps_count?: number }).apps_count ?? 0,
+      responses: row.responses ?? (row as { response_count?: number }).response_count ?? 0,
+      interviews: row.interviews ?? (row as { interview_count?: number }).interview_count ?? 0,
+    })),
+    resumes_breakdown: (raw.resumes_breakdown ?? []).map((row) => ({
+      resume_id: row.resume_id,
+      title: row.title ?? (row as { name?: string }).name ?? 'Untitled resume',
+      apps: row.apps ?? (row as { apps_count?: number }).apps_count ?? 0,
+      responses: row.responses ?? (row as { response_count?: number }).response_count ?? 0,
+      interviews: row.interviews ?? (row as { interview_count?: number }).interview_count ?? 0,
+    })),
+    outcomes_breakdown: (raw.outcomes_breakdown ?? []).map((row) => ({
+      outcome: row.outcome,
+      count: row.count,
+      stages_detail: row.stages_detail ?? (row as { terminal_stage?: string }).terminal_stage ?? '',
+    })),
+    active_goal: raw.active_goal ?? null,
+    date_range_semantics: raw.date_range_semantics,
+  };
 }
 
 interface RawTransition {
   transition?: string;
+  average_days?: number | null;
   median_days?: number | null;
   min_days?: number | null;
   max_days?: number | null;
@@ -85,6 +139,7 @@ export async function fetchStageTiming(
   return {
     transitions: (raw.transitions || []).map((t) => ({
       transition: t.transition || '',
+      average_days: t.average_days ?? null,
       median_days: t.median_days ?? null,
       min_days: t.min_days ?? null,
       max_days: t.max_days ?? null,
@@ -200,14 +255,16 @@ export async function upsertGoal(
     targetApplications: number;
     targetOutreach: number;
     effectiveDate?: string;
+    userId?: string | null;
   }
 ) {
-  const { data, error } = await supabase.rpc('rpc_upsert_goal', {
+  const { data, error } = await supabase.rpc('rpc_upsert_goal_for_user', {
     p_workspace_id: workspaceId,
     p_period_type: params.periodType,
     p_target_applications: params.targetApplications,
     p_target_outreach: params.targetOutreach,
     p_effective_date: params.effectiveDate ?? new Date().toISOString().split('T')[0],
+    p_user_id: params.userId ?? null,
   });
 
   if (error) throw error;
@@ -219,4 +276,3 @@ export {
   exportAnalyticsToCsv,
   exportAnalyticsToJson,
 } from '../lib/analyticsExport';
-

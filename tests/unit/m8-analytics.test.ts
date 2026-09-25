@@ -10,7 +10,7 @@ describe('Milestone 8 — Unit Tests: Analytics, Sanitization & Timing Floors', 
       expect(sanitizeCsvField('@SUM(A1:B10)')).toBe("'@SUM(A1:B10)");
       expect(sanitizeCsvField('@SUM(1,2)')).toBe('"\'@SUM(1,2)"');
       expect(sanitizeCsvField('\tTAB_PREFIX')).toBe("'\tTAB_PREFIX");
-      expect(sanitizeCsvField('\rCR_PREFIX')).toBe("'\rCR_PREFIX");
+      expect(sanitizeCsvField('\rCR_PREFIX')).toBe('"\'\rCR_PREFIX"');
     });
 
     it('safely handles standard strings and numeric values without unnecessary prepending', () => {

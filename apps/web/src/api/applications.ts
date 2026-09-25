@@ -190,6 +190,7 @@ export interface CreateApplicationPayload {
   salary_currency?: string;
   job_url?: string | null;
   external_job_id?: string | null;
+  source?: string | null;
   tags?: string[];
   notes?: string | null;
   next_action?: string | null;

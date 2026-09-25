@@ -11,6 +11,7 @@ interface EditGoalModalProps {
   onClose: () => void;
   workspaceId: string;
   currentGoal: ActiveGoal | null;
+  targetUserId?: string | null;
   onGoalUpdated: () => void;
 }
 
@@ -19,11 +20,12 @@ export function EditGoalModal({
   onClose,
   workspaceId,
   currentGoal,
+  targetUserId,
   onGoalUpdated,
 }: EditGoalModalProps) {
   const { addToast } = useToast();
   const [targetApps, setTargetApps] = useState<number>(currentGoal?.target_applications ?? 15);
-  const [targetOutreach, setTargetOutreach] = useState<number>(currentGoal?.target_outreach ?? 8);
+  const [targetOutreach, setTargetOutreach] = useState<number>(currentGoal?.target_outreach ?? 5);
   const [effectiveDate, setEffectiveDate] = useState<string>(
     currentGoal?.effective_date ?? (new Date().toISOString().split('T')[0] as string)
   );
@@ -43,6 +45,7 @@ export function EditGoalModal({
         targetApplications: targetApps,
         targetOutreach: targetOutreach,
         effectiveDate,
+        userId: targetUserId,
       });
       addToast({ type: 'success', title: 'Search goals updated successfully' });
       onGoalUpdated();

@@ -149,7 +149,7 @@ export function Topbar({
       <button
         type="button"
         className="bell focus-ring"
-        aria-label="Notifications: 2 unread"
+        aria-label="Notifications"
         style={{
           border: 0,
           background: 'transparent',
@@ -158,7 +158,6 @@ export function Topbar({
         }}
       >
         <Bell size={17} color="var(--color-text-muted)" aria-hidden="true" />
-        <b>2</b>
       </button>
 
       {/* User Profile Menu */}

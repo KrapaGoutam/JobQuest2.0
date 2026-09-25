@@ -10,13 +10,13 @@ import { AuthView } from './views/AuthView';
 import { ApplicationsView, type ApplicationRecord, type WorkflowDef } from './views/ApplicationsView';
 import { ContactsView } from './views/ContactsView';
 import { InterviewsView } from './views/InterviewsView';
+import { TasksView } from './views/TasksView';
+import { HabitsView } from './views/HabitsView';
+import { DashboardView } from './views/DashboardView';
 import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
-  LayoutDashboard,
-  CheckSquare,
   Calendar,
-  Flame,
   BookOpen,
   FileText,
   BarChart3,
@@ -384,22 +384,21 @@ function AppContent() {
 
     if (currentPath === '/dashboard') {
       return (
-        <PlaceholderView
-          title="Dashboard"
-          subtitle="Overview of active applications, upcoming interviews, and daily follow-up queues"
-          icon={<LayoutDashboard size={24} />}
-          milestoneOwner="Milestone 4"
+        <DashboardView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          currentUserId={user?.id ?? null}
+          onNavigate={navigate}
         />
       );
     }
 
     if (currentPath === '/tasks') {
       return (
-        <PlaceholderView
-          title="Tasks & Follow-ups"
-          subtitle="Next-action engine, reminder queue, and overdue application alerts"
-          icon={<CheckSquare size={24} />}
-          milestoneOwner="Milestone 6"
+        <TasksView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          currentUserId={user?.id ?? null}
         />
       );
     }
@@ -436,11 +435,10 @@ function AppContent() {
 
     if (currentPath === '/habits') {
       return (
-        <PlaceholderView
-          title="Daily Habits"
-          subtitle="Goal habits, daily outreach volume, and career development streaks"
-          icon={<Flame size={24} />}
-          milestoneOwner="Milestone 8"
+        <HabitsView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          currentUserId={user?.id ?? null}
         />
       );
     }

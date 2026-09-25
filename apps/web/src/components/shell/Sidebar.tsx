@@ -43,9 +43,9 @@ export function Sidebar({
   const { isManager, workspaceColor } = useWorkspace();
 
   const coreNav = [
-    { id: 'dashboard', path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'applications', path: '/applications', label: 'Applications', icon: Briefcase, count: applicationsCount },
-    { id: 'tasks', path: '/tasks', label: 'Tasks & Follow-ups', icon: CheckSquare, badge: { text: '2', danger: true } },
+    { id: 'tasks', path: '/tasks', label: 'Tasks & Follow-ups', icon: CheckSquare },
     { id: 'contacts', path: '/contacts', label: 'Contacts', icon: Users },
     { id: 'calendar', path: '/calendar', label: 'Calendar', icon: Calendar },
   ];

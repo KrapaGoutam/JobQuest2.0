@@ -48,7 +48,7 @@ export interface InterviewsViewProps {
 
 export function InterviewsView({ activeWorkspaceId: ws, isManager, currentUserId }: InterviewsViewProps) {
   const { addToast } = useToast();
-  const { timeZone, setTimeZone } = useProfileTimeZone(currentUserId);
+  const { timeZone, weekStart, setTimeZone } = useProfileTimeZone(currentUserId);
   const wide = useMedia(WIDE);
 
   const [tab, setTab] = useState<InterviewTab>('upcoming');
@@ -235,7 +235,7 @@ export function InterviewsView({ activeWorkspaceId: ws, isManager, currentUserId
     }
     if (tab === 'upcoming') {
       const bands = { THIS_WEEK: [] as Interview[], NEXT_WEEK: [] as Interview[], LATER: [] as Interview[] };
-      for (const i of rows) bands[upcomingBand(i.scheduled_at, timeZone)].push(i);
+      for (const i of rows) bands[upcomingBand(i.scheduled_at, timeZone, Date.now(), weekStart)].push(i);
       if (!rows.length && !needsBand.length && !recentBand.length) {
         return (
           <EmptyState

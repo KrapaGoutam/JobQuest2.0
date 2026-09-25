@@ -103,16 +103,17 @@ export function interviewStatus(i: Pick<Interview, 'outcome' | 'scheduled_at'>, 
   return Date.parse(i.scheduled_at) <= now ? 'needs_outcome' : 'upcoming';
 }
 
-/** Band for the upcoming list, computed on calendar days in the profile time zone (week starts Monday). */
+/** Band for the upcoming list, computed on calendar days in the profile time zone,
+ *  with weeks starting on the profile's week_start (0 = Sunday, 1 = Monday). */
 export type UpcomingBand = 'THIS_WEEK' | 'NEXT_WEEK' | 'LATER';
-export function upcomingBand(iso: string, timeZone: string, now: number = Date.now()): UpcomingBand {
+export function upcomingBand(iso: string, timeZone: string, now: number = Date.now(), weekStart: 0 | 1 = 1): UpcomingBand {
   const today = dayKey(now, timeZone);
   const [y, m, d] = today.split('-').map(Number);
   const weekday = new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay(); // 0 = Sunday, in the profile zone's calendar
-  const daysToNextMonday = ((8 - weekday) % 7) || 7;
+  const daysToNextWeek = 7 - ((weekday - weekStart + 7) % 7);
   const diff = daysBetweenKeys(today, dayKey(iso, timeZone));
-  if (diff < daysToNextMonday) return 'THIS_WEEK';
-  if (diff < daysToNextMonday + 7) return 'NEXT_WEEK';
+  if (diff < daysToNextWeek) return 'THIS_WEEK';
+  if (diff < daysToNextWeek + 7) return 'NEXT_WEEK';
   return 'LATER';
 }
 

@@ -23,6 +23,8 @@ import { outcomeLabel } from './ApplicationsTable';
 import { calculateDaysInactive, computeAgingBand } from '../../types/applications';
 import type { Application, ApplicationEvent, CanonicalWorkflow } from '../../types/applications';
 import { ApplicationInterviewsSection } from '../interviews/ApplicationInterviewsSection';
+import { ApplicationTasksSection } from '../tasks/ApplicationTasksSection';
+import { DoneSetNextDialog } from '../tasks/DoneSetNextDialog';
 import { useProfileTimeZone } from '../../hooks/useProfileTimeZone';
 
 export interface ApplicationDetailDrawerProps {
@@ -61,6 +63,7 @@ export function ApplicationDetailDrawer({
   onApplicationChanged,
 }: ApplicationDetailDrawerProps) {
   const { timeZone, setTimeZone } = useProfileTimeZone(currentUserId);
+  const [doneSetNext, setDoneSetNext] = useState(false);
   const [events, setEvents] = useState<ApplicationEvent[]>([]);
   /** `${appId}:${historyVersion}` whose history is currently loaded; anything else is still loading. */
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
@@ -260,6 +263,10 @@ export function ApplicationDetailDrawer({
                 </div>
               )}
             </div>
+            <Button size="sm" variant="primary" onClick={() => setDoneSetNext(true)}>
+              <CheckCircle2 size={14} style={{ marginRight: '6px' }} />
+              Done, set next
+            </Button>
           </div>
         )}
 
@@ -271,6 +278,15 @@ export function ApplicationDetailDrawer({
           onChangeTimeZone={setTimeZone}
           onChanged={() => onApplicationChanged?.()}
           version={historyVersion}
+        />
+
+        {/* M6: canonical tasks linked to this application */}
+        <ApplicationTasksSection
+          application={application}
+          workflow={workflow}
+          timeZone={timeZone}
+          version={historyVersion}
+          onChanged={() => onApplicationChanged?.()}
         />
 
         {/* Main Tabs */}
@@ -472,6 +488,13 @@ export function ApplicationDetailDrawer({
           </Tabs>
         </div>
       </div>
+      <DoneSetNextDialog
+        isOpen={doneSetNext}
+        onClose={() => setDoneSetNext(false)}
+        application={application.next_action ? { id: application.id, company_name: application.company_name, next_action: application.next_action } : null}
+        timeZone={timeZone}
+        onSaved={() => onApplicationChanged?.()}
+      />
     </Drawer>
   );
 }

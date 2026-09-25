@@ -97,6 +97,8 @@ export interface ScheduleInterviewParams {
   contactIds?: string[];
   /** Explicit, optional stage move (existing workflow RPC, same transaction). */
   moveToStage?: string | null;
+  /** M6: create a REMINDER task this many minutes before (canonical tasks). */
+  remindBeforeMinutes?: number | null;
 }
 
 export async function scheduleInterview(p: ScheduleInterviewParams): Promise<Interview> {
@@ -113,6 +115,7 @@ export async function scheduleInterview(p: ScheduleInterviewParams): Promise<Int
     p_questions_expected: p.questionsExpected ?? null,
     p_contact_ids: p.contactIds ?? [],
     p_move_to_stage: p.moveToStage ?? null,
+    p_remind_before_minutes: p.remindBeforeMinutes ?? null,
   });
   if (error) throw new Error(friendlyError(error.message));
   return data as Interview;

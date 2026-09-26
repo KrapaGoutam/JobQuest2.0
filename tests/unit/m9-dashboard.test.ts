@@ -48,11 +48,11 @@ describe('Milestone 9 — dashboard registry and preferences', () => {
 
   it('round-trips a workspace/type layout without overwriting unrelated preferences', () => {
     const layout = createDefaultDashboardLayout('user');
-    layout[0] = { ...layout[0], enabled: true };
+    layout[0] = { ...layout[0]!, enabled: true };
     const preferences = writeDashboardLayout({ themeDensity: 'compact' }, 'workspace-a', 'user', layout);
     expect(preferences.themeDensity).toBe('compact');
-    expect(readDashboardLayout(preferences, 'workspace-a', 'user')[0].enabled).toBe(true);
-    expect(readDashboardLayout(preferences, 'workspace-b', 'user')[0].enabled).toBe(false);
+    expect(readDashboardLayout(preferences, 'workspace-a', 'user')[0]!.enabled).toBe(true);
+    expect(readDashboardLayout(preferences, 'workspace-b', 'user')[0]!.enabled).toBe(false);
   });
 
   it('groups enabled widgets into the approved three-tier order', () => {

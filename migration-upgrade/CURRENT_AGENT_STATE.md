@@ -10,15 +10,15 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`3718f85` — M9 customizable dashboard surface checkpoint.
+`b67daf0` — focused M9 browser verification and visual evidence.
 
 ## Last Pushed Commit
 
-`3718f85` — customizable dashboard surface, drill-through, integration coverage, and local evidence.
+`b67daf0` — focused M9 browser verification and visual evidence.
 
 ## Working Tree State
 
-Focused M9 Playwright coverage, sanitized evidence JSON, and four visual-regression screenshots are ready to checkpoint.
+Strict test typing fixes, fresh M9 full-suite evidence, and recovery documentation are ready to checkpoint. Redundant untracked evidence generated for already-closed milestones was removed; their committed evidence was untouched.
 
 ## Last Completed Step
 
@@ -26,11 +26,11 @@ Completed and pushed the M9 dashboard surface: exact 30-widget registry, three-t
 
 ## Current Step
 
-Focused local browser verification passes 1/1 in 23.2 seconds. It proves the 30-widget customization registry, keyboard reordering, layout persistence/reload, reset defaults, Aging drill-through, dark/light rendering, 390px mobile with zero overflow, and axe with 0 critical/serious/blocking findings. The first server launch inside the Windows sandbox failed at `uv_os_get_passwd` (environment); the outside-sandbox run is green. The attempted `--project=chromium` invocation also exited before server startup because this repository has no named Playwright projects.
+Full local regression gate completed: lint PASS; root typecheck PASS; unit 108/108; local integration 121/121; build PASS; local database lint has no schema errors; browser-bundle scan 0 findings; tracked-file secret scan 0 findings. Root typecheck initially exposed test-only tuple/index strictness issues, now fixed with no runtime behavior change. The first sandboxed DB-lint attempt was blocked by the CLI telemetry file, then passed outside the sandbox.
 
 ## Next Exact Step
 
-Commit and push the focused browser/evidence checkpoint. Then update this file before running the full local regression gate (`npm run lint`, `npm run typecheck`, `npm run test:unit`, local `npm run test:integration`, `npm run build`, database lint, bundle/secret scans, and applicable prior browser regressions).
+Commit and push the strict typing/full-regression checkpoint, then monitor the feature-branch GitHub Actions run. Before waiting, record the run ID, command, success condition, and interruption instructions here.
 
 ## Database State
 
@@ -56,7 +56,7 @@ Development run `36183012517`: success at `e79d9b57c118480b705521a6608d80d64afba
 
 ## Local Test State
 
-M9 unit: 5/5. M9 integration: 2/2. Web typecheck/lint/build: PASS. Focused M9 browser: 1/1 PASS; axe 0 blocking; mobile overflow 0px. Build warning: existing single JS chunk is 901.41 kB (231.92 kB gzip); non-blocking but track in performance evidence.
+Full local: lint PASS; root typecheck PASS; 108/108 unit; 121/121 integration; build PASS; database lint 0 errors; bundle scan 0; tracked-file scan 0. Focused M9 browser: 1/1 PASS; axe 0 blocking; mobile overflow 0px. Build warning: existing single JS chunk is 901.41 kB (231.92 kB gzip); non-blocking but track in performance evidence.
 
 ## Hosted Test State
 
@@ -68,7 +68,7 @@ None.
 
 ## Files Currently Modified
 
-The M9 Playwright spec, sanitized evidence JSON, four screenshots, and recovery documentation. These form a coherent passing checkpoint.
+`e2e/m9-dashboard.spec.ts`, `tests/unit/m9-dashboard.test.ts`, this state/handoff, and new `migration-upgrade/m9/evidence/integration-local-503e24.json`.
 
 ## Untracked Files Classification
 

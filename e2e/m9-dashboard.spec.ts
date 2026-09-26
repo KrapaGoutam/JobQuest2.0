@@ -58,7 +58,11 @@ test.describe('Milestone 9 · Dashboard parity E2E', () => {
     await page.getByRole('button', { name: 'I saved them' }).click();
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
-    for (const [company, role] of [['Northstar Systems', 'Platform Engineer'], ['Lantern Labs', 'Product Engineer']]) {
+    const applications: Array<readonly [string, string]> = [
+      ['Northstar Systems', 'Platform Engineer'],
+      ['Lantern Labs', 'Product Engineer'],
+    ];
+    for (const [company, role] of applications) {
       await page.getByTestId('new-application-btn').click();
       const createDialog = page.getByRole('dialog', { name: 'New Job Application' });
       await expect(createDialog).toBeVisible();

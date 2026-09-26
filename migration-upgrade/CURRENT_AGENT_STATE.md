@@ -2,112 +2,151 @@
 
 ## Current Milestone
 
-M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashboard).
+M10 — Import & Export
 
 ## Current Branch
 
-`feature/m9-dashboard-parity`
+`feature/m10-import-export`
 
 ## Current HEAD
 
-`49960c3918f2703d9ce6f1ea6b857afd21deea2c` — final M9 Preview evidence checkpoint.
+`1daad55`
 
 ## Last Pushed Commit
 
-`49960c3` — final M9 Preview evidence checkpoint.
+`1daad55` (base merge commit of M9 on `development`)
 
 ## Working Tree State
 
-Final M9 closeout Markdown is modified. Product, tests, screenshots, and final Preview evidence are pushed.
+M10 implementation, database migration, API services/routes, web UI, integration and unit tests, and security overrides in progress. Dependencies recovered and verified healthy.
 
 ## Last Completed Step
 
-Completed and pushed the M9 dashboard surface: exact 30-widget registry, three-tier composition, user/manager defaults, persistent customization, manager owner filtering, and Aging drill-through.
+Dependency recovery confirmed: ExcelJS 4.4.0, tar-stream, and Vercel CLI 60.0.0 healthy; 0 high/critical audit findings; M10 unit tests (5/5) and integration tests (6/6) passing; full regression unit (113/113) and integration (127/127) suites green; lint and typecheck passing.
 
 ## Current Step
 
-Replacement M9 Preview `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh` is READY at `https://jobquest2-ojurhvmq4-one-piece-5779.vercel.app`, target Preview. Health is HTTP 200. M9 E2E is 1/1 PASS (24.7s), all required behaviors pass, first-ready is 1.694s/10s, mobile overflow is 0px, and axe has 0 blocking findings in four contexts. Option B browser privacy is 1/1 PASS and the deployed-bundle scan has 0 findings. Visual baselines were inspected and accepted.
+Creating immediate safe checkpoint commit on `feature/m10-import-export` and pushing to origin.
 
 ## Next Exact Step
 
-Commit and push the final M9 closeout reports, then confirm the docs-only CI for that exact closeout SHA. If green, merge `feature/m9-dashboard-parity` into `development` with `--no-ff`, push, and verify the resulting `development` CI before determining M10.
+Verify M10 implementation against source of truth (Gate 02B Import/Export screens, Gate 03 target architecture, and feature catalog), ensure all 13 CSV exports, Excel workbook styling, Playwright E2E browser suite, and axe audits pass.
 
 ## Database State
 
-M9 migration `20260929100000_m9_dashboard_preferences.sql` is applied locally and on hosted development. Hosted migration list is synchronized and a post-apply dry run reports up to date; hosted integration verification is the current step.
+M10 migration `supabase/migrations/20260930100000_m10_import_export.sql` applied cleanly on local Supabase stack. Tables `import_batches` and `import_rows` with RLS and `rpc_commit_import` active. Pending hosted apply on `jobquest-dev`.
 
 ## Supabase Project
 
-Development only: `jobquest-dev` (`xpnkasclquplmrcmhsif`). Production is out of scope.
+`jobquest-dev`
 
-## Applied/Pending Migrations
+## Supabase Ref
 
-- Applied locally and hosted before this branch: through `20260928110000`.
-- Applied local: through `20260929100000`.
-- Applied hosted dev: through `20260929100000`; post-apply dry run has no pending migrations.
+`xpnkasclquplmrcmhsif`
+
+## Applied Migrations
+
+- Applied locally: through `20260930100000_m10_import_export.sql`.
+- Applied hosted dev: through `20260929100000_m9_dashboard_preferences.sql`.
+
+## Pending Migrations
+
+`20260930100000_m10_import_export.sql` (to be applied to `jobquest-dev` once local quality gate is complete).
+
+## Vercel Project
+
+`jobquest2`
 
 ## Vercel Preview State
 
-M9 Preview `https://jobquest2-ojurhvmq4-one-piece-5779.vercel.app`; deployment `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh`; target Preview; READY; build 48s; health, M9 E2E/a11y, Option B privacy, deployed-bundle scan, and visual inspection all PASS.
+Pending deployment for M10.
 
 ## Last CI Run
 
-Final evidence CI `36246617220` at `49960c3918f2703d9ce6f1ea6b857afd21deea2c` is SUCCESS: static/build/security and migrations/auth/RLS/browser jobs are green. Development run `36183012517` remains green pending the M9 merge.
+Development CI run `36183012517` on `1daad55` was SUCCESS.
 
 ## Local Test State
 
-Full local: lint PASS; root typecheck PASS; 108/108 unit; 121/121 integration; build PASS; database lint 0 errors; bundle scan 0; tracked-file scan 0. Focused M9 browser: 1/1 PASS; axe 0 blocking; mobile overflow 0px. Build warning: existing single JS chunk is 901.41 kB (231.92 kB gzip); non-blocking but track in performance evidence.
+- Lint: PASS (0 errors, 0 warnings)
+- Root Typecheck: PASS
+- API Typecheck: PASS
+- Web Typecheck: PASS
+- Unit Tests: 15/15 passed (113 tests passed)
+- Integration Tests: 10/10 passed (127 tests passed)
+- Production Build: PASS
+- Bundle Secret Scan: PASS (0 findings)
+- Tracked Secret Scan: PASS (0 findings across 582 files)
 
 ## Hosted Test State
 
-M9 hosted integration: 121/121; M9-specific: 2/2. M8-specific coverage remains included and green.
+Pending hosted verification on `jobquest-dev` after remote migration push.
 
 ## Background Processes / Jobs
 
-No background process.
+None active.
 
 ## Files Currently Modified
 
-Eight M9 closeout/recovery Markdown files. No product or test source is modified.
+- `apps/api/package.json`
+- `apps/api/src/app.ts`
+- `apps/api/src/routes/imports.ts`
+- `apps/api/src/services/export.ts`
+- `apps/web/src/App.tsx`
+- `apps/web/src/components/applications/ApplicationsToolbar.tsx`
+- `apps/web/src/components/shell/MobileNav.tsx`
+- `apps/web/src/components/shell/Sidebar.tsx`
+- `apps/web/src/styles/globals.css`
+- `apps/web/src/views/ApplicationsView.tsx`
+- `package.json`
+- `pnpm-lock.yaml`
+- `.gitignore`
+- `migration-upgrade/CURRENT_AGENT_STATE.md`
 
 ## Untracked Files Classification
 
-None expected. Inspect `git status --short`; after the final recovery commit the tree should be clean.
+- `apps/api/src/routes/exports.ts`: M10 export routes (CSV, XLSX, JSON)
+- `apps/api/src/routes/scope.ts`: M10 workspace/owner scope resolution helper
+- `apps/api/src/services/import.ts`: M10 parsing and validation service
+- `apps/web/src/api/importExport.ts`: M10 client API functions
+- `apps/web/src/views/ImportExportView.tsx`: M10 4-step wizard and export UI
+- `supabase/migrations/20260930100000_m10_import_export.sql`: M10 schema & RPC
+- `tests/unit/m10-import-export.test.ts`: M10 unit tests
+- `tests/integration/m10-import-export.test.ts`: M10 integration tests
+- `migration-upgrade/m10/`: M10 plans and evidence
 
 ## Known Failures
 
-No current product or infrastructure failure is known. The scoped goal-progress accessibility defect found on Preview was fixed at `17be90a` and verified on the replacement Preview. No Production action occurred.
+None. Previous forced-install interruption resolved without regression.
 
-## Decisions Made This Session
+## Decisions Made
 
-- The authoritative later roadmap is Gate 01: M9 Goals/Analytics/Dashboard, M10 Import/Export, M11 Extension. The older 24-milestone implementation plan is historical.
-- M8 already completed Goals/Analytics and M6 completed the approved action-first dashboard core. M9 therefore implements the remaining dashboard parity slice without reopening M8 formulas.
-- Preserve all 30 legacy widget IDs verbatim, but organize them under the approved Direction D action-first hierarchy.
-- Store layout/visibility in `profiles.ui_preferences`, as approved by Gate 03; do not recreate `dashboard_preferences`.
-- M9 and M10 are NORMAL DEVELOPMENT. No production or cutover operation is authorized.
+- ExcelJS 4.4.0 pinned for XLSX generation in `@jobquest/api` and root devDependencies.
+- Security overrides in `package.json` preserved (0 high/critical audit findings).
+- M10 migration ordered at `20260930100000_m10_import_export.sql` following M9.
+- Import commit boundary encapsulated in database RPC `rpc_commit_import`.
 
 ## Unresolved Questions
 
-- None for M9. The docs-only closeout commit and its CI remain before the authorized merge.
-- Journal, reminder-category, and Calendar placeholder debt is not M9 and will not be silently folded into this milestone.
+None blocking M10.
 
 ## Do Not Repeat
 
-- Do not rerun M8 closeout suites unless shared code changes invalidate them.
-- Do not edit prior migrations.
-- Do not recreate Goals or Analytics logic already delivered by M8.
-- Do not touch `main`, Production Vercel/Supabase, DNS, legacy production data, or JobQuest1.0.
+- Do not run `pnpm install --force`.
+- Do not modify `JobQuest1.0`.
+- Do not merge to `main`.
+- Do not create production infrastructure.
 
 ## Safe Resume Commands
 
 ```powershell
 git branch --show-current
 git status --short
-git log --oneline --decorate -15
-Get-Content -Raw migration-upgrade/CURRENT_AGENT_STATE.md
-Get-Content -Raw migration-upgrade/m9/NEXT_AGENT_HANDOFF.md
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm test:integration
 ```
 
 ## Next Agent Instructions
 
-DO NOT RESTART THE MILESTONE. CONTINUE FROM THE LAST COMPLETED CHECKPOINT. All substantive M9 gates are green; commit the final reports, verify their docs-only CI, and merge only if it remains green. Treat JobQuest1.0 as read-only reference material.
+Continue from the checkpoint commit. Verify M10 against Gate 02B requirements, run browser E2E test, and apply migration to hosted dev `jobquest-dev`.

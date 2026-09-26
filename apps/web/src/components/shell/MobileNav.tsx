@@ -16,6 +16,7 @@ import {
   BookOpen,
   FileText,
   BarChart3,
+  ArrowDownUp,
   LogOut,
 } from 'lucide-react';
 import { Drawer } from '../ui/Drawer';
@@ -216,6 +217,24 @@ export function MobileNav({
                 );
               })}
             </div>
+          </div>
+
+          <div>
+            <div className="nav-head" style={{ padding: '0 4px', marginBottom: '8px' }}>
+              Workspace
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onNavigate('/workspace/imports');
+                setIsMoreOpen(false);
+              }}
+              className="btn ghost"
+              style={{ minHeight: '44px', justifyContent: 'flex-start', width: '100%', padding: '0 12px' }}
+            >
+              <ArrowDownUp size={18} className="muted" />
+              <span>Import & Export</span>
+            </button>
           </div>
 
           {isManager && (

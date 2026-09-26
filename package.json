@@ -29,6 +29,7 @@
     "@types/node": "^26.6.2",
     "@types/pg": "^8.23.1",
     "eslint": "^10.11.0",
+    "exceljs": "4.4.0",
     "globals": "^17.12.0",
     "jose": "^6.2.12",
     "pg": "^8.23.0",
@@ -38,5 +39,18 @@
     "typescript-eslint": "^8.70.1",
     "vercel": "^60.0.0",
     "vitest": "^5.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml@>=4.0.0 <5": "4.3.2",
+      "minimatch@>=10.0.0 <11": "10.2.3",
+      "path-to-regexp@>=8.0.0 <9": "8.4.0",
+      "smol-toml@<=1.7.0": "1.7.1",
+      "tar@<=7.5.20": "7.5.21",
+      "@vercel/node>undici": "6.27.0",
+      "vercel>undici": "6.27.0",
+      "undici@>=5.0.0 <6": "5.29.0",
+      "undici@>=6.0.0 <7": "6.27.0"
+    }
   }
 }

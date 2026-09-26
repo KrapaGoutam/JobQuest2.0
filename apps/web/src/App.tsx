@@ -16,6 +16,7 @@ import { DashboardView } from './views/DashboardView';
 import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { ResumesView } from './views/ResumesView';
 import { AnalyticsView } from './views/AnalyticsView';
+import { ImportExportView } from './views/ImportExportView';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   Calendar,
@@ -470,6 +471,17 @@ function AppContent() {
           activeWorkspaceId={activeWs}
           isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
           initialTab={currentPath === '/analytics/aging' ? 'aging' : 'overview'}
+        />
+      );
+    }
+
+    if (currentPath === '/workspace/imports') {
+      return (
+        <ImportExportView
+          activeWorkspaceId={activeWs}
+          currentUserId={user?.id ?? ''}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          session={session}
         />
       );
     }

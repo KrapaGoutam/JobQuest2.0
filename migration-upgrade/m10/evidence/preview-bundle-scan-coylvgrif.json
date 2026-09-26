@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "deployment_id": "dpl_BcDodgC5p7hzXT9qcyyhJtpwaTYa",
+  "preview_url": "https://jobquest2-coylvgrif-one-piece-5779.vercel.app",
+  "files_scanned": 4,
+  "known_secret_values_checked": 0,
+  "findings": 0,
+  "completed_at": "2026-09-26T15:30:49.585Z"
+}

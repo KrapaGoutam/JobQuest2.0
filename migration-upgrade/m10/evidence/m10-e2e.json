@@ -1,0 +1,68 @@
+{
+  "evidence": {
+    "run": "8c0b9a",
+    "reused_preview_account": false,
+    "started_at": "2026-09-26T15:29:24.097Z",
+    "import_committed": true,
+    "created_rows": 1,
+    "skipped_rows": 1,
+    "history_verified": true,
+    "csv_export_downloaded": true,
+    "xlsx_export_downloaded": true,
+    "json_export_downloaded": true,
+    "mobile_overflow_px": 0,
+    "a11y_blocking": 0,
+    "completed_at": "2026-09-26T15:29:41.469Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "import-wizard-light",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "import-mapping-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "import-preview-light",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "import-summary-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "export-controls-light",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "import-mobile",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    }
+  ]
+}

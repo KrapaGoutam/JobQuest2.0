@@ -10,31 +10,31 @@ M10 — Import & Export
 
 ## Current HEAD
 
-`1daad55`
+`3666ea69`
 
 ## Last Pushed Commit
 
-`1daad55` (base merge commit of M9 on `development`)
+`3666ea69` — safe M10 implementation checkpoint.
 
 ## Working Tree State
 
-M10 implementation, database migration, API services/routes, web UI, integration and unit tests, and security overrides in progress. Dependencies recovered and verified healthy.
+M10 E2E tests, visual screenshots, sanitized evidence, contrast/a11y improvements, and report documentation ready for final milestone commit.
 
 ## Last Completed Step
 
-Dependency recovery confirmed: ExcelJS 4.4.0, tar-stream, and Vercel CLI 60.0.0 healthy; 0 high/critical audit findings; M10 unit tests (5/5) and integration tests (6/6) passing; full regression unit (113/113) and integration (127/127) suites green; lint and typecheck passing.
+Completed local quality gates, applied M10 migration to hosted dev Supabase (`jobquest-dev`), verified hosted integration tests (6/6 PASS), deployed to Vercel Preview (`dpl_BcDodgC5p7hzXT9qcyyhJtpwaTYa`), verified health (200 OK), verified live preview E2E with Axe accessibility (0 blocking findings), verified Option B privacy (PASS), and verified deployed bundle secret scan (0 findings).
 
 ## Current Step
 
-Creating immediate safe checkpoint commit on `feature/m10-import-export` and pushing to origin.
+Staging and committing final M10 executable code, tests, and documentation, then pushing to `origin/feature/m10-import-export`.
 
 ## Next Exact Step
 
-Verify M10 implementation against source of truth (Gate 02B Import/Export screens, Gate 03 target architecture, and feature catalog), ensure all 13 CSV exports, Excel workbook styling, Playwright E2E browser suite, and axe audits pass.
+Verify GitHub Actions CI on the final push, merge `feature/m10-import-export` to `development` (`--no-ff`), verify development CI, determine M11, and initialize M11 feature branch.
 
 ## Database State
 
-M10 migration `supabase/migrations/20260930100000_m10_import_export.sql` applied cleanly on local Supabase stack. Tables `import_batches` and `import_rows` with RLS and `rpc_commit_import` active. Pending hosted apply on `jobquest-dev`.
+M10 migration `supabase/migrations/20260930100000_m10_import_export.sql` applied cleanly on BOTH local Supabase stack and hosted dev Supabase. Tables `import_batches` and `import_rows` with RLS and `rpc_commit_import` active.
 
 ## Supabase Project
 
@@ -47,106 +47,93 @@ M10 migration `supabase/migrations/20260930100000_m10_import_export.sql` applied
 ## Applied Migrations
 
 - Applied locally: through `20260930100000_m10_import_export.sql`.
-- Applied hosted dev: through `20260929100000_m9_dashboard_preferences.sql`.
+- Applied hosted dev: through `20260930100000_m10_import_export.sql` (remote database up to date).
 
 ## Pending Migrations
 
-`20260930100000_m10_import_export.sql` (to be applied to `jobquest-dev` once local quality gate is complete).
+None. All migrations up to date locally and remotely.
 
 ## Vercel Project
 
-`jobquest2`
+`jobquest2` (team `one-piece-5779`)
 
 ## Vercel Preview State
 
-Pending deployment for M10.
+Deployment ID: `dpl_BcDodgC5p7hzXT9qcyyhJtpwaTYa`
+Preview URL: `https://jobquest2-coylvgrif-one-piece-5779.vercel.app`
+State: `READY`
+Health: HTTP 200 `{"status":"ok"}`
 
 ## Last CI Run
 
-Development CI run `36183012517` on `1daad55` was SUCCESS.
+Checkpoint CI run `36251432240` on `3666ea69` completed with conclusion **SUCCESS** (both static checks and integration/browser jobs green).
 
 ## Local Test State
 
 - Lint: PASS (0 errors, 0 warnings)
-- Root Typecheck: PASS
-- API Typecheck: PASS
-- Web Typecheck: PASS
-- Unit Tests: 15/15 passed (113 tests passed)
-- Integration Tests: 10/10 passed (127 tests passed)
-- Production Build: PASS
-- Bundle Secret Scan: PASS (0 findings)
-- Tracked Secret Scan: PASS (0 findings across 582 files)
+- Typecheck: PASS (root, api, web)
+- Unit: PASS (15 files, 113/113 passed)
+- Local Integration: PASS (10 files, 127/127 passed)
+- Playwright E2E: PASS (1/1 in 8.5s, 0 blocking a11y findings across 6 contexts)
+- Build: PASS (compiled in 321ms)
+- Check bundle: PASS (0 secrets)
+- Check tracked: PASS (597 files, 0 secrets)
 
 ## Hosted Test State
 
-Pending hosted verification on `jobquest-dev` after remote migration push.
+- Hosted Dev Integration: PASS (6/6 M10 suites passed against `jobquest-dev` in 18.7s)
+- Preview E2E: PASS (1/1 in 17.5s against live Vercel Preview)
+- Preview Privacy: PASS (1/1 in 10.4s against live Vercel Preview)
+- Preview Bundle Scan: PASS (4 files scanned, 0 findings)
 
 ## Background Processes / Jobs
 
-None active.
+None running.
 
 ## Files Currently Modified
 
-- `apps/api/package.json`
-- `apps/api/src/app.ts`
-- `apps/api/src/routes/imports.ts`
-- `apps/api/src/services/export.ts`
-- `apps/web/src/App.tsx`
-- `apps/web/src/components/applications/ApplicationsToolbar.tsx`
-- `apps/web/src/components/shell/MobileNav.tsx`
-- `apps/web/src/components/shell/Sidebar.tsx`
-- `apps/web/src/styles/globals.css`
-- `apps/web/src/views/ApplicationsView.tsx`
-- `package.json`
-- `pnpm-lock.yaml`
-- `.gitignore`
-- `migration-upgrade/CURRENT_AGENT_STATE.md`
+- `apps/web/src/styles/globals.css` (enhanced color contrast for M10 status pills in light and dark mode)
+- `apps/web/src/views/ImportExportView.tsx` (added accessible scrollable region attributes to table wrappers)
+- `migration-upgrade/CURRENT_AGENT_STATE.md` (updated live state)
 
 ## Untracked Files Classification
 
-- `apps/api/src/routes/exports.ts`: M10 export routes (CSV, XLSX, JSON)
-- `apps/api/src/routes/scope.ts`: M10 workspace/owner scope resolution helper
-- `apps/api/src/services/import.ts`: M10 parsing and validation service
-- `apps/web/src/api/importExport.ts`: M10 client API functions
-- `apps/web/src/views/ImportExportView.tsx`: M10 4-step wizard and export UI
-- `supabase/migrations/20260930100000_m10_import_export.sql`: M10 schema & RPC
-- `tests/unit/m10-import-export.test.ts`: M10 unit tests
-- `tests/integration/m10-import-export.test.ts`: M10 integration tests
-- `migration-upgrade/m10/`: M10 plans and evidence
+- `e2e/m10-import-export.spec.ts`: M10 Playwright E2E test suite (STAGE)
+- `migration-upgrade/m10/evidence/`: Sanitized M10 E2E and secret scan evidence (STAGE)
+- `migration-upgrade/m10/screenshots/`: Visual regression screenshot captures (STAGE)
+- `migration-upgrade/m10/M10_TEST_RESULTS.md`: Milestone test results (STAGE)
+- `migration-upgrade/m10/M10_VISUAL_REGRESSION.md`: Visual regression report (STAGE)
+- `migration-upgrade/m10/M10_INFRASTRUCTURE.md`: Infrastructure record (STAGE)
+- `migration-upgrade/m10/M10_COMPLETION_REPORT.md`: Milestone completion report (STAGE)
+- `migration-upgrade/m10/NEXT_AGENT_HANDOFF.md`: Next agent handoff (STAGE)
+- `migration-upgrade/m*/evidence/`: Temporary local test run artifacts (DO NOT STAGE)
 
 ## Known Failures
 
-None. Previous forced-install interruption resolved without regression.
+None. Zero test failures, zero lint issues, zero type errors, zero accessibility violations.
 
 ## Decisions Made
 
-- ExcelJS 4.4.0 pinned for XLSX generation in `@jobquest/api` and root devDependencies.
-- Security overrides in `package.json` preserved (0 high/critical audit findings).
-- M10 migration ordered at `20260930100000_m10_import_export.sql` following M9.
-- Import commit boundary encapsulated in database RPC `rpc_commit_import`.
-
-## Unresolved Questions
-
-None blocking M10.
+- `safeCell` formula injection defense implemented across all 13 CSV exports and Applications XLSX export.
+- `rpc_commit_import` acts as the single atomic write boundary; client preview is never trusted as validation or authorization truth.
+- Raw file uploads are not persisted to database; only durable batch metadata and summarized rows are retained in `import_batches` and `import_rows`.
+- Status pill contrast calibrated to exceed WCAG AA 4.5:1 ratio threshold (`#0b573a` on `#d6e4e3` in light theme, `#54c89a` in dark theme).
 
 ## Do Not Repeat
 
-- Do not run `pnpm install --force`.
-- Do not modify `JobQuest1.0`.
-- Do not merge to `main`.
-- Do not create production infrastructure.
+- Do NOT attempt to run `supabase db reset --remote` or touch production resources.
+- Do NOT run `git add .` or commit local environment files or temporary run tokens.
+- Do NOT merge M11 into `development`.
 
 ## Safe Resume Commands
 
 ```powershell
-git branch --show-current
 git status --short
-pnpm lint
-pnpm typecheck
 pnpm test:unit
 pnpm test:integration
+pnpm exec playwright test e2e/m10-import-export.spec.ts
 ```
 
 ## Next Agent Instructions
 
-Continue from the checkpoint commit. Verify M10 against Gate 02B requirements, run browser E2E test, and apply migration to hosted dev `jobquest-dev`.
+Proceed with committing M10 deliverables, pushing to `feature/m10-import-export`, verifying CI, and merging M10 into `development` using `--no-ff`.

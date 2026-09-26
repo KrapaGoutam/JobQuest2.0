@@ -1,14 +1,16 @@
 {
   "evidence": {
-    "run": "941ab0",
-    "started_at": "2026-09-26T08:29:41.598Z",
+    "run": "c9581b",
+    "started_at": "2026-09-26T09:08:02.846Z",
+    "dashboard_first_ready_ms": 262,
+    "dashboard_first_ready_budget_ms": 10000,
     "custom_layout_persisted": true,
     "aging_drill_through": true,
     "reset_defaults": true,
     "mobile_overflow_px": 0,
     "widget_registry_count": 30,
     "a11y_blocking": 0,
-    "completed_at": "2026-09-26T08:29:54.854Z",
+    "completed_at": "2026-09-26T09:08:18.931Z",
     "status": "PASS"
   },
   "a11y": [

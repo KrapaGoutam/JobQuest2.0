@@ -72,10 +72,15 @@ test.describe('Milestone 9 · Dashboard parity E2E', () => {
       await expect(createDialog).toBeHidden();
     }
 
+    const dashboardStartedAt = Date.now();
     await nav(page, 'Dashboard');
     await expect(page.getByRole('heading', { name: 'What needs attention today', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Your dashboard', level: 2 })).toBeVisible();
     await expect(page.getByRole('status', { name: 'Loading dashboard widgets' })).toHaveCount(0);
+    const dashboardFirstReadyMs = Date.now() - dashboardStartedAt;
+    expect(dashboardFirstReadyMs).toBeLessThan(10_000);
+    evidence.dashboard_first_ready_ms = dashboardFirstReadyMs;
+    evidence.dashboard_first_ready_budget_ms = 10_000;
     await expect(page.locator('[data-widget-id="applications-month"]')).toBeVisible();
     await expect(page.locator('[data-widget-id="active-applications"]')).toContainText('2');
     await expect(page.locator('body')).not.toContainText(/NaN|undefined/);

@@ -10,15 +10,15 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`afadc0a85dea5e2fe08c5430a3a1de22d6445f59` — full local regression checkpoint.
+`0bff1e4` — hosted-development migration/integration checkpoint.
 
 ## Last Pushed Commit
 
-`afadc0a` — strict test typing fixes and green full local regression evidence.
+`0bff1e4` — hosted-development migration/integration evidence.
 
 ## Working Tree State
 
-Recovery metadata is modified to record the active CI wait; source/evidence checkpoint `afadc0a` is pushed and the rest of the tree is clean.
+Clean and synchronized with `origin/feature/m9-dashboard-parity` before preview deployment.
 
 ## Last Completed Step
 
@@ -30,7 +30,7 @@ Full local regression gate completed: lint PASS; root typecheck PASS; unit 108/1
 
 ## Next Exact Step
 
-Hosted-development integration completed in 287.59 seconds: 9 files and 121/121 tests pass, including M9 2/2. Sanitized M9 evidence is `migration-upgrade/m9/evidence/integration-hosted-dev-c4f327.json`. Commit and push this hosted database checkpoint, then update recovery state before the Vercel preview deployment.
+Run `npx playwright test e2e/m9-dashboard.spec.ts` locally to capture the newly explicit dashboard first-ready performance measurement (10-second budget), expected under four minutes. Evidence: `migration-upgrade/m9/evidence/m9-e2e.json`. If interrupted, ensure Playwright-owned servers stopped and rerun once. Preview remains blocked: CLI returned `Not authorized`; the connected deploy was safety-rejected because it cannot constrain Preview; read-only Vercel access returned 403 requiring re-authentication to `one-piece-5779`.
 
 ## Database State
 
@@ -52,7 +52,7 @@ No M9 preview yet. Last proven M8 preview: `https://jobquest2-ke8qoar7s-one-piec
 
 ## Last CI Run
 
-Feature run `36230624958`: static job GREEN; database job migrations + 121 integrations GREEN, browser portion was still active when the watcher hit GitHub API rate limiting at 2026-09-26 08:46:47 UTC. Do not spam retries; recheck after independent hosted/deployment work. Development run `36183012517` remains green.
+Run `36230624958` had static GREEN and migrations/integrations GREEN before polling rate-limited. Push `0bff1e4` triggered a newer feature CI run, but its ID cannot yet be queried due the GitHub anonymous API rate limit (last confirmed 09:02:17 UTC). Do not spam retries. Development run `36183012517` remains green.
 
 ## Local Test State
 
@@ -64,11 +64,11 @@ M9 hosted integration: 121/121; M9-specific: 2/2. M8-specific coverage remains i
 
 ## Background Processes / Jobs
 
-GitHub Actions run `36230624958` is in progress remotely; no local background process. The `gh run watch` process exited after GitHub API rate limiting.
+Latest feature GitHub Actions run is remote; no local background process. GitHub polling remains rate-limited. No Vercel deployment was created by the failed CLI attempt.
 
 ## Files Currently Modified
 
-Recovery state/handoff and new sanitized M9 hosted integration evidence `integration-hosted-dev-c4f327.json`.
+Only recovery state/handoff for the upcoming preview deployment.
 
 ## Untracked Files Classification
 
@@ -76,7 +76,7 @@ Expected M9 source, test, and migration files only. No runtime evidence or user 
 
 ## Known Failures
 
-No product failures. GitHub polling reached an anonymous API rate limit at 08:46:47 UTC; valid evidence before the limit: current static job green and current migrations/integrations green. Do not retry rapidly. Prior feature CI `36230044512` failed root typecheck on strict test-only typing now fixed; its DB/integration/full-browser job passed.
+External Preview blocker: Vercel CLI returned `Not authorized`; connected deploy was rejected because it lacks a preview-only target; read-only connector access returned 403 and requires re-authentication to team scope `one-piece-5779`. No deployment was created and no Production action occurred. GitHub polling also remains anonymously rate-limited; do not spam retries. There are no product failures.
 
 ## Decisions Made This Session
 

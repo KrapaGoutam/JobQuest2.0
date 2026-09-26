@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. M9 is pushed through full-regression checkpoint `afadc0a85dea5e2fe08c5430a3a1de22d6445f59`. The local M9 migration is applied and verified. Dashboard composition, the 30-widget tiered surface, accessible customization, preference isolation tests, and the Aging drill-through route are implemented. Full local gates and focused Playwright pass.
+M8 is merged and development CI is green. M9 is pushed through hosted checkpoint `0bff1e4`. The M9 migration is applied locally and on `jobquest-dev`; hosted integration is 121/121. Full local gates and focused Playwright pass.
 
 ## Next action
 
-Hosted-dev apply passed for exactly `20260929100000_m9_dashboard_preferences.sql`; linked history is synchronized and the follow-up dry run is empty. Hosted integration is green at 121/121 total and M9 2/2; sanitized evidence is `migration-upgrade/m9/evidence/integration-hosted-dev-c4f327.json`. Commit/push this checkpoint, then update recovery state before deploying the M9 preview. CI `36230624958` had green static/migrations/integrations before GitHub polling rate-limited.
+Preview is externally blocked: CLI returned `Not authorized`; the connected deploy action cannot constrain Preview and was safety-rejected; read-only connector access returned 403 requiring re-authentication to scope `one-piece-5779`. No deployment was created. Finish the independent local performance-evidence run, reports, and checkpoint, but do not merge M9 or start M10 until Vercel access is restored and Preview/CI gates are green.
 
 ## Guardrails
 

@@ -80,7 +80,16 @@ function GoalProgress({ data, period }: { data: AnalyticsOverview; period: 'day'
   return (
     <div className="dash-goal">
       <div className="row"><Target size={18} aria-hidden="true" /><strong>{actual} / {target}</strong><span className="muted small">{pct}%</span></div>
-      <div className="dash-progress" aria-label={`${actual} of ${target} applications`}><i style={{ width: `${pct}%` }} /></div>
+      <div
+        className="dash-progress"
+        role="progressbar"
+        aria-label={`${actual} of ${target} applications`}
+        aria-valuemin={0}
+        aria-valuemax={target}
+        aria-valuenow={Math.min(actual, target)}
+      >
+        <i style={{ width: `${pct}%` }} />
+      </div>
       <span className="small muted">Applications this {period}</span>
     </div>
   );

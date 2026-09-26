@@ -41,35 +41,44 @@ test.describe('Milestone 9 · Dashboard parity E2E', () => {
   test.setTimeout(240_000);
 
   test('30-widget customization, persistence, drill-through, responsive/theme/a11y', async ({ page }) => {
-    const run = randomBytes(3).toString('hex');
+    const reusedRun = process.env.M9_REUSE_RUN?.trim();
+    const run = reusedRun || randomBytes(3).toString('hex');
     const username = `m9_e2e_${run}`;
     const password = `Dashboard-Run-${run}-P@ss!`;
-    const evidence: Record<string, unknown> = { run, started_at: new Date().toISOString() };
+    const evidence: Record<string, unknown> = { run, reused_preview_account: Boolean(reusedRun), started_at: new Date().toISOString() };
     const a11y: Awaited<ReturnType<typeof audit>>[] = [];
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
 
-    const registration = page.getByRole('form', { name: 'Register' });
-    await registration.getByLabel('Username (required)').fill(username);
-    await registration.getByLabel('Password (required)').fill(password);
-    await registration.getByRole('button', { name: 'Create account' }).click();
-    await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
-    await page.getByRole('button', { name: 'I saved them' }).click();
-    await expect(page.getByTestId('new-application-btn')).toBeVisible();
+    if (reusedRun) {
+      const login = page.getByRole('form', { name: 'Sign in' });
+      await login.getByLabel('Username').fill(username);
+      await login.getByLabel('Password').fill(password);
+      await login.getByRole('button', { name: 'Sign in' }).click();
+      await expect(page.getByTestId('new-application-btn')).toBeVisible();
+    } else {
+      const registration = page.getByRole('form', { name: 'Register' });
+      await registration.getByLabel('Username (required)').fill(username);
+      await registration.getByLabel('Password (required)').fill(password);
+      await registration.getByRole('button', { name: 'Create account' }).click();
+      await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
+      await page.getByRole('button', { name: 'I saved them' }).click();
+      await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
-    const applications: Array<readonly [string, string]> = [
-      ['Northstar Systems', 'Platform Engineer'],
-      ['Lantern Labs', 'Product Engineer'],
-    ];
-    for (const [company, role] of applications) {
-      await page.getByTestId('new-application-btn').click();
-      const createDialog = page.getByRole('dialog', { name: 'New Job Application' });
-      await expect(createDialog).toBeVisible();
-      await page.locator('#app-company').fill(`${company} ${run}`);
-      await page.locator('#app-role').fill(role);
-      await page.getByRole('button', { name: 'Create Application' }).click();
-      await expect(createDialog).toBeHidden();
+      const applications: Array<readonly [string, string]> = [
+        ['Northstar Systems', 'Platform Engineer'],
+        ['Lantern Labs', 'Product Engineer'],
+      ];
+      for (const [company, role] of applications) {
+        await page.getByTestId('new-application-btn').click();
+        const createDialog = page.getByRole('dialog', { name: 'New Job Application' });
+        await expect(createDialog).toBeVisible();
+        await page.locator('#app-company').fill(`${company} ${run}`);
+        await page.locator('#app-role').fill(role);
+        await page.getByRole('button', { name: 'Create Application' }).click();
+        await expect(createDialog).toBeHidden();
+      }
     }
 
     const dashboardStartedAt = Date.now();
@@ -84,6 +93,11 @@ test.describe('Milestone 9 · Dashboard parity E2E', () => {
     await expect(page.locator('[data-widget-id="applications-month"]')).toBeVisible();
     await expect(page.locator('[data-widget-id="active-applications"]')).toContainText('2');
     await expect(page.locator('body')).not.toContainText(/NaN|undefined/);
+    const ownerFilter = page.getByLabel('Owner', { exact: true });
+    await expect(ownerFilter.locator('option')).toHaveCount(2);
+    await ownerFilter.selectOption({ index: 1 });
+    await expect(page.locator('[data-widget-id="active-applications"]')).toContainText('2');
+    evidence.manager_owner_scope = true;
     await dismissToasts(page);
     await shot(page, 'D1-dashboard-light');
     a11y.push(await audit(page, 'dashboard-light'));
@@ -163,6 +177,21 @@ test.describe('Milestone 9 · Dashboard parity E2E', () => {
     expect(overflow).toBeLessThanOrEqual(0);
     await shot(page, 'D4-dashboard-mobile');
     a11y.push(await audit(page, 'dashboard-mobile'));
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.route((url) => url.pathname.endsWith('/rest/v1/tasks'), async (route) => {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 750));
+      await route.abort();
+    });
+    await ownerFilter.selectOption({ index: 1 });
+    await expect(page.getByRole('status', { name: 'Loading queue' })).toBeVisible();
+    const loadError = page.getByRole('alert').filter({ hasText: 'Could not load your queue' });
+    await expect(loadError).toBeVisible({ timeout: 30_000 });
+    await page.unroute((url) => url.pathname.endsWith('/rest/v1/tasks'));
+    await loadError.getByRole('button', { name: 'Retry' }).click();
+    await expect(loadError).toBeHidden();
+    await expect(page.getByRole('status', { name: 'Loading dashboard widgets' })).toHaveCount(0);
+    evidence.error_retry = true;
 
     const blocking = a11y.reduce((total, result) => total + result.blocking, 0);
     evidence.mobile_overflow_px = overflow;

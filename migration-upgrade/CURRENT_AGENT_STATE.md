@@ -10,15 +10,15 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`de220e8c7fa6934b4bf905915d2f47ebcf065248` — final pushed M9 executable/test checkpoint.
+`2a94e6f1687d900cead790de29bb6b9bb64a277e` — blocked M9 closeout reports (resolve with `git rev-parse HEAD` if the final recovery-only commit follows).
 
 ## Last Pushed Commit
 
-`de220e8` — final local browser/performance evidence and exact Vercel blocker state.
+`2a94e6f` — blocked M9 closeout report package.
 
 ## Working Tree State
 
-M9 closeout reports and checklist updates are modified/untracked and ready for a documentation checkpoint; executable/test SHA `de220e8` is pushed.
+Two Markdown whitespace fixes plus final recovery metadata are modified; all M9 implementation, tests, evidence, and substantive reports are pushed. No product source is modified.
 
 ## Last Completed Step
 
@@ -30,7 +30,7 @@ Full local regression gate completed: lint PASS; root typecheck PASS; unit 108/1
 
 ## Next Exact Step
 
-Review, secret-scan, commit, and push the M9 closeout documentation checkpoint. Then stop the execution train: M9 cannot merge and M10 cannot start until Vercel scope `one-piece-5779` is re-authenticated and Preview/final-CI gates pass.
+Stop and request Vercel re-authentication for team scope `one-piece-5779`. After access is restored: deploy Preview-only to existing `jobquest2`; record ID/URL/READY; verify `/api/health`; run preview M9 E2E and deployed-bundle scan; confirm final executable CI; update reports; conditionally merge M9; verify development CI; only then determine/start M10.
 
 ## Database State
 
@@ -68,11 +68,11 @@ Latest feature GitHub Actions run is remote; no local background process. GitHub
 
 ## Files Currently Modified
 
-M9 README/checklist, five closeout reports, and recovery state/handoff. No product source is modified.
+Two Markdown whitespace fixes and final recovery state/handoff. No product source is modified.
 
 ## Untracked Files Classification
 
-Expected M9 source, test, and migration files only. No runtime evidence or user files are expected.
+None expected. Inspect `git status --short`; after the final recovery commit the tree should be clean.
 
 ## Known Failures
 
@@ -111,4 +111,4 @@ Get-Content -Raw migration-upgrade/m9/NEXT_AGENT_HANDOFF.md
 
 ## Next Agent Instructions
 
-DO NOT RESTART THE MILESTONE. CONTINUE FROM THE LAST COMPLETED CHECKPOINT. Read the M9 planning package, confirm the current git state, and continue with the exact next step above. Treat JobQuest1.0 as read-only reference material.
+DO NOT RESTART THE MILESTONE. CONTINUE FROM THE LAST COMPLETED CHECKPOINT. Do not merge M9 or start M10 while Preview/final-CI gates are incomplete. Restore Vercel team access, then continue with the exact next step above. Treat JobQuest1.0 as read-only reference material.

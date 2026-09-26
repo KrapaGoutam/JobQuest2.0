@@ -1,6 +1,7 @@
 # M9 Test Results — Dashboard Parity
 
-Date: 2026-09-26  
+Date: 2026-09-26
+
 Final pushed executable/test SHA: `de220e8c7fa6934b4bf905915d2f47ebcf065248`
 
 ## Verification matrix

@@ -1,6 +1,7 @@
 # M9 Visual Regression — Dashboard Parity
 
-Target: local application against local Supabase. Preview recapture is pending Vercel re-authentication.  
+Target: local application against local Supabase. Preview recapture is pending Vercel re-authentication.
+
 Executable/test SHA: `de220e8c7fa6934b4bf905915d2f47ebcf065248`
 
 ## Captures

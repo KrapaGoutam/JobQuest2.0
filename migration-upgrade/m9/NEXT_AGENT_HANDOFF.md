@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. M9 is pushed through browser checkpoint `b67daf0`. The local M9 migration is applied and verified. Dashboard composition, the 30-widget tiered surface, accessible customization, preference isolation tests, and the Aging drill-through route are implemented. M9 unit 5/5, integration 2/2, web typecheck/lint/build, and focused Playwright 1/1 pass. Browser evidence records 0 axe blocking findings and 0px mobile overflow.
+M8 is merged and development CI is green. M9 is pushed through full-regression checkpoint `afadc0a85dea5e2fe08c5430a3a1de22d6445f59`. The local M9 migration is applied and verified. Dashboard composition, the 30-widget tiered surface, accessible customization, preference isolation tests, and the Aging drill-through route are implemented. Full local gates and focused Playwright pass.
 
 ## Next action
 
-The full local regression gate is green: lint; root typecheck; 108/108 unit; 121/121 integration; production build; local database lint; bundle scan; and tracked-file secret scan. Commit/push the strict test typing fix plus fresh M9 integration evidence, then monitor the resulting feature-branch CI. Update both recovery files before the CI wait and before any hosted migration.
+Hosted-dev apply passed for exactly `20260929100000_m9_dashboard_preferences.sql`; linked history is synchronized and the follow-up dry run is empty. Hosted integration is green at 121/121 total and M9 2/2; sanitized evidence is `migration-upgrade/m9/evidence/integration-hosted-dev-c4f327.json`. Commit/push this checkpoint, then update recovery state before deploying the M9 preview. CI `36230624958` had green static/migrations/integrations before GitHub polling rate-limited.
 
 ## Guardrails
 

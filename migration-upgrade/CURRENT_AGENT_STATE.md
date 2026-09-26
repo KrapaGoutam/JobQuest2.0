@@ -10,15 +10,15 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`b67daf0` — focused M9 browser verification and visual evidence.
+`afadc0a85dea5e2fe08c5430a3a1de22d6445f59` — full local regression checkpoint.
 
 ## Last Pushed Commit
 
-`b67daf0` — focused M9 browser verification and visual evidence.
+`afadc0a` — strict test typing fixes and green full local regression evidence.
 
 ## Working Tree State
 
-Strict test typing fixes, fresh M9 full-suite evidence, and recovery documentation are ready to checkpoint. Redundant untracked evidence generated for already-closed milestones was removed; their committed evidence was untouched.
+Recovery metadata is modified to record the active CI wait; source/evidence checkpoint `afadc0a` is pushed and the rest of the tree is clean.
 
 ## Last Completed Step
 
@@ -30,11 +30,11 @@ Full local regression gate completed: lint PASS; root typecheck PASS; unit 108/1
 
 ## Next Exact Step
 
-Commit and push the strict typing/full-regression checkpoint, then monitor the feature-branch GitHub Actions run. Before waiting, record the run ID, command, success condition, and interruption instructions here.
+Hosted-development integration completed in 287.59 seconds: 9 files and 121/121 tests pass, including M9 2/2. Sanitized M9 evidence is `migration-upgrade/m9/evidence/integration-hosted-dev-c4f327.json`. Commit and push this hosted database checkpoint, then update recovery state before the Vercel preview deployment.
 
 ## Database State
 
-M9 migration `20260929100000_m9_dashboard_preferences.sql` is applied locally and verified: `jsonb NOT NULL DEFAULT '{}'`, object-shape constraint present. It is not yet applied to hosted development.
+M9 migration `20260929100000_m9_dashboard_preferences.sql` is applied locally and on hosted development. Hosted migration list is synchronized and a post-apply dry run reports up to date; hosted integration verification is the current step.
 
 ## Supabase Project
 
@@ -44,7 +44,7 @@ Development only: `jobquest-dev` (`xpnkasclquplmrcmhsif`). Production is out of 
 
 - Applied locally and hosted before this branch: through `20260928110000`.
 - Applied local: through `20260929100000`.
-- Pending hosted dev: `20260929100000_m9_dashboard_preferences.sql`.
+- Applied hosted dev: through `20260929100000`; post-apply dry run has no pending migrations.
 
 ## Vercel Preview State
 
@@ -52,7 +52,7 @@ No M9 preview yet. Last proven M8 preview: `https://jobquest2-ke8qoar7s-one-piec
 
 ## Last CI Run
 
-Development run `36183012517`: success at `e79d9b57c118480b705521a6608d80d64afba971`.
+Feature run `36230624958`: static job GREEN; database job migrations + 121 integrations GREEN, browser portion was still active when the watcher hit GitHub API rate limiting at 2026-09-26 08:46:47 UTC. Do not spam retries; recheck after independent hosted/deployment work. Development run `36183012517` remains green.
 
 ## Local Test State
 
@@ -60,15 +60,15 @@ Full local: lint PASS; root typecheck PASS; 108/108 unit; 121/121 integration; b
 
 ## Hosted Test State
 
-M8 hosted integration: 119/119; M8-specific: 8/8. No M9 hosted run yet.
+M9 hosted integration: 121/121; M9-specific: 2/2. M8-specific coverage remains included and green.
 
 ## Background Processes / Jobs
 
-None.
+GitHub Actions run `36230624958` is in progress remotely; no local background process. The `gh run watch` process exited after GitHub API rate limiting.
 
 ## Files Currently Modified
 
-`e2e/m9-dashboard.spec.ts`, `tests/unit/m9-dashboard.test.ts`, this state/handoff, and new `migration-upgrade/m9/evidence/integration-local-503e24.json`.
+Recovery state/handoff and new sanitized M9 hosted integration evidence `integration-hosted-dev-c4f327.json`.
 
 ## Untracked Files Classification
 
@@ -76,7 +76,7 @@ Expected M9 source, test, and migration files only. No runtime evidence or user 
 
 ## Known Failures
 
-No product failures. Recorded test-development issues: an invalid named Playwright project, Windows sandbox `uv_os_get_passwd` ENOMEM, a corrected analytics fixture expectation, and hidden native-checkbox pointer semantics. Direct `supabase.com/changelog.md` markdown retrieval returned an unsupported-content-type error; the official filtered changelog page was checked instead. Current breaking changes do not affect M9.
+No product failures. GitHub polling reached an anonymous API rate limit at 08:46:47 UTC; valid evidence before the limit: current static job green and current migrations/integrations green. Do not retry rapidly. Prior feature CI `36230044512` failed root typecheck on strict test-only typing now fixed; its DB/integration/full-browser job passed.
 
 ## Decisions Made This Session
 

@@ -25,6 +25,7 @@ import {
 export interface AnalyticsViewProps {
   activeWorkspaceId: string | null;
   isManager: boolean;
+  initialTab?: AnalyticsTab;
 }
 
 export type AnalyticsTab = 'overview' | 'timing' | 'aging' | 'goals';
@@ -33,9 +34,10 @@ export type DateRangePreset = '30d' | '90d' | '180d' | '1y';
 export function AnalyticsView({
   activeWorkspaceId,
   isManager,
+  initialTab = 'overview',
 }: AnalyticsViewProps) {
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
   const [dateRange, setDateRange] = useState<DateRangePreset>('90d');
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
@@ -45,6 +47,8 @@ export function AnalyticsView({
   const [aging, setAging] = useState<AgingApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => setActiveTab(initialTab), [initialTab]);
 
   // Load workspace members if manager
   useEffect(() => {

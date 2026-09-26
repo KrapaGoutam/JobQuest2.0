@@ -18,7 +18,8 @@ const FORBIDDEN = [
 ];
 
 test('B03 (browser) · no private identity or credential material reaches the browser; B11/B12 direct Data API', async ({ page, context }) => {
-  const run = randomBytes(3).toString('hex');
+  const reusedRun = process.env.M1B_REUSE_RUN?.trim();
+  const run = reusedRun || randomBytes(3).toString('hex');
   const username = `m1b_e2e_${run}`;
   const password = `Quiet-harbor-${run}-lantern`;
   const hits: string[] = [];
@@ -62,12 +63,20 @@ test('B03 (browser) · no private identity or credential material reaches the br
   });
 
   await page.goto('/');
-  const reg = page.getByRole('form', { name: 'Register' });
-  await reg.getByLabel('Username (required)').fill(username);
-  await reg.getByLabel('Password (required)').fill(password);
-  await reg.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
-  await page.getByRole('button', { name: 'I saved them' }).click();
+  if (reusedRun) {
+    const login = page.getByRole('form', { name: 'Sign in' });
+    await login.getByLabel('Username').fill(username);
+    await login.getByLabel('Password').fill(password);
+    await login.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('region', { name: 'Session' })).toContainText(username);
+  } else {
+    const reg = page.getByRole('form', { name: 'Register' });
+    await reg.getByLabel('Username (required)').fill(username);
+    await reg.getByLabel('Password (required)').fill(password);
+    await reg.getByRole('button', { name: 'Create account' }).click();
+    await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
+    await page.getByRole('button', { name: 'I saved them' }).click();
+  }
 
   await page.getByRole('button', { name: 'Load (PostgREST + Node)' }).click();
   await expect(page.getByText('PostgREST: Saved → Preparing')).toBeVisible();
@@ -118,6 +127,7 @@ test('B03 (browser) · no private identity or credential material reaches the br
     && !surfaces.documentCookie && !surfaces.reactState && !surfaces.html && !consoleLeak && rt?.httpOnly === true;
   const evidence = {
     status: ok ? 'PASS' : 'FAIL',
+    reused_preview_account: Boolean(reusedRun),
     base_url: process.env.M1_BASE_URL ? 'vercel-preview' : 'local',
     supabase_target: process.env.M1B_TARGET ?? 'local',
     requests_scanned: requestsScanned, data_responses_scanned: responsesScanned, code_modules_skipped: codeModulesSkipped, network_hits: hits,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TriangleAlert, Clock, CalendarDays, Moon, RefreshCw, Video, Phone, MapPin, CircleX } from 'lucide-react';
+import { TriangleAlert, Clock, CalendarDays, Moon, RefreshCw, Video, Phone, MapPin, CircleX, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -13,6 +13,13 @@ import { buildQueue, sectionQueue, todayBounds, type QueueItem } from '../lib/qu
 import { typeLabel, formatLabel, upcomingBand, type Interview } from '../types/interviews';
 import type { CanonicalWorkflow } from '../types/applications';
 import { dayKey, daysBetweenKeys, formatInZone, formatTime, zonedWallTimeToUtcIso } from '../lib/time';
+import { weekStartKey } from '../lib/habits';
+import { fetchAnalyticsOverview, fetchStageTiming } from '../api/analytics';
+import { fetchDashboardApplications, fetchDashboardLayout, saveDashboardLayout } from '../api/dashboard';
+import { createDefaultDashboardLayout, groupDashboardLayout, type DashboardType, type DashboardWidgetLayout } from '../lib/dashboard';
+import { DashboardWidgetCard, type DashboardWidgetData } from '../components/dashboard/DashboardWidgets';
+import { DashboardCustomizeDialog } from '../components/dashboard/DashboardCustomizeDialog';
+import { useToast } from '../context/ToastContext';
 
 const FORMAT_ICON = { VIDEO: Video, PHONE: Phone, ONSITE: MapPin } as const;
 
@@ -29,6 +36,7 @@ export interface DashboardViewProps {
  * quiet applications. A read view: every action goes through its domain's RPC.
  */
 export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId, onNavigate }: DashboardViewProps) {
+  const { addToast } = useToast();
   const { timeZone, weekStart } = useProfileTimeZone(currentUserId);
   const [ownerId, setOwnerId] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -38,6 +46,12 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
   const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<CanonicalWorkflow | null>(null);
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
+  const dashboardType: DashboardType = isManager ? 'manager' : 'user';
+  const [layout, setLayout] = useState<DashboardWidgetLayout[]>(() => createDefaultDashboardLayout(dashboardType));
+  const [preferences, setPreferences] = useState<Record<string, unknown>>({});
+  const [layoutError, setLayoutError] = useState<string | null>(null);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [widgetData, setWidgetData] = useState<DashboardWidgetData | null>(null);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -45,6 +59,28 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
     fetchCanonicalWorkflow(ws).then(setWorkflow).catch(() => setWorkflow(null));
     if (isManager) fetchWorkspaceMembers(ws).then(setMembers).catch(() => setMembers([]));
   }, [ws, isManager]);
+
+  useEffect(() => {
+    if (!ws || !currentUserId) {
+      setLayout(createDefaultDashboardLayout(dashboardType));
+      setPreferences({});
+      return;
+    }
+    let active = true;
+    setLayoutError(null);
+    void fetchDashboardLayout(currentUserId, ws, dashboardType)
+      .then((result) => {
+        if (!active) return;
+        setLayout(result.layout);
+        setPreferences(result.preferences);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setLayout(createDefaultDashboardLayout(dashboardType));
+        setLayoutError((cause as Error).message || 'Saved layout could not be loaded.');
+      });
+    return () => { active = false; };
+  }, [ws, currentUserId, dashboardType]);
 
   const viewKey = `${ws}|${ownerId}|${timeZone}`;
   const load = useCallback(async () => {
@@ -55,17 +91,40 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
     try {
       const tb = todayBounds(timeZone, Date.now(), zonedWallTimeToUtcIso);
       const owner = ownerId || undefined;
-      const [tasks, next, outcomes, upcoming, q] = await Promise.all([
+      const todayKey = dayKey(Date.now(), timeZone);
+      const weekKey = weekStartKey(todayKey, weekStart);
+      const monthKey = `${todayKey.slice(0, 7)}-01`;
+      const analyticsOptions = { endDate: todayKey, userId: owner || null };
+      const [tasks, next, outcomes, upcoming, q, todayOverview, weekOverview, monthOverview, allOverview, timing, applications] = await Promise.all([
         fetchQueueTasks(ws, { today: tb.today, tomorrow: tb.tomorrow, end: tb.end, now: new Date().toISOString() }, { ownerId: owner }),
         fetchNextActions(ws, { dueOnOrBefore: tb.today, ownerId: owner }),
         fetchOutcomesNeeded(ws, owner),
         fetchInterviews(ws, 'upcoming', { ownerId: owner }, 0, 20),
         fetchQuietApplications(ws, owner),
+        fetchAnalyticsOverview(ws, { ...analyticsOptions, startDate: todayKey }),
+        fetchAnalyticsOverview(ws, { ...analyticsOptions, startDate: weekKey }),
+        fetchAnalyticsOverview(ws, { ...analyticsOptions, startDate: monthKey }),
+        fetchAnalyticsOverview(ws, { userId: owner || null }),
+        fetchStageTiming(ws, { userId: owner || null }),
+        fetchDashboardApplications(ws, owner),
       ]);
       if (mine !== seq.current) return;
-      setQueue(buildQueue({ tasks, nextActions: next, outcomes }, timeZone));
+      const nextQueue = buildQueue({ tasks, nextActions: next, outcomes }, timeZone);
+      setQueue(nextQueue);
       setInterviews(upcoming.interviews);
       setQuiet(q);
+      setWidgetData({
+        today: todayOverview,
+        week: weekOverview,
+        month: monthOverview,
+        all: allOverview,
+        timing,
+        applications,
+        queue: nextQueue,
+        interviews: upcoming.interviews,
+        quiet: q,
+        timeZone,
+      });
       setLoadedKey(key);
     } catch (e) {
       if (mine === seq.current) {
@@ -73,7 +132,7 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
         setLoadedKey(key);
       }
     }
-  }, [ws, ownerId, timeZone]);
+  }, [ws, ownerId, timeZone, weekStart]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -86,6 +145,20 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
     if (uid === currentUserId) return 'You';
     const m = members.find((x) => x.user_id === uid);
     return m ? m.display_name || m.username : null;
+  };
+  const widgetGroups = useMemo(() => groupDashboardLayout(layout), [layout]);
+  const saveLayout = async (nextLayout: DashboardWidgetLayout[]) => {
+    if (!ws || !currentUserId) throw new Error('A signed-in profile and workspace are required.');
+    try {
+      const nextPreferences = await saveDashboardLayout(currentUserId, ws, dashboardType, nextLayout, preferences);
+      setLayout(nextLayout);
+      setPreferences(nextPreferences);
+      setLayoutError(null);
+      addToast({ type: 'success', title: 'Dashboard layout saved' });
+    } catch (cause) {
+      addToast({ type: 'danger', title: 'Dashboard layout could not be saved' });
+      throw cause;
+    }
   };
 
   if (!ws) return <EmptyState title="No workspace selected" description="Choose a workspace to see what needs attention." />;
@@ -121,6 +194,12 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
         <div role="alert" className="banner danger small">
           Could not load your queue: {error}
           <Button size="sm" variant="secondary" leftIcon={<RefreshCw size={13} />} onClick={() => void load()}>Retry</Button>
+        </div>
+      )}
+
+      {layoutError && (
+        <div role="status" className="banner info small">
+          Saved dashboard preferences could not be loaded. Safe defaults are in use.
         </div>
       )}
 
@@ -221,6 +300,63 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
           </section>
         </div>
       </div>
+
+      <section className="dash-insights" aria-labelledby="dash-insights-h">
+        <div className="dash-insights-head">
+          <div>
+            <h2 id="dash-insights-h">Your dashboard</h2>
+            <p className="small muted">Stable widgets, organized around action first and context second.</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<SlidersHorizontal size={14} aria-hidden="true" />}
+            onClick={() => setCustomizeOpen(true)}
+            disabled={!currentUserId}
+          >
+            Customize
+          </Button>
+        </div>
+
+        {loading || !widgetData ? (
+          <div className="dash-widget-grid" role="status" aria-label="Loading dashboard widgets">
+            {[0, 1, 2, 3].map((item) => <div key={item} className="card skel dash-widget-skeleton" />)}
+          </div>
+        ) : widgetGroups.length === 0 ? (
+          <div className="card empty">
+            <strong>No dashboard widgets are visible</strong>
+            <span className="small muted">Customize the dashboard to turn widgets back on.</span>
+          </div>
+        ) : (
+          widgetGroups.map((group) => (
+            <section key={group.id} className="dash-tier" aria-labelledby={`dash-tier-${group.id}`}>
+              <div className="dash-tier-head">
+                <h3 id={`dash-tier-${group.id}`}>{group.label}</h3>
+                <span className="small muted">{group.description}</span>
+              </div>
+              <div className="dash-widget-grid" data-testid={`dashboard-tier-${group.id}`}>
+                {group.widgets.map(({ definition, layout: itemLayout }) => (
+                  <DashboardWidgetCard
+                    key={definition.id}
+                    definition={definition}
+                    layout={itemLayout}
+                    data={widgetData}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
+      </section>
+
+      <DashboardCustomizeDialog
+        isOpen={customizeOpen}
+        type={dashboardType}
+        layout={layout}
+        onClose={() => setCustomizeOpen(false)}
+        onSave={saveLayout}
+      />
       {actions.dialogs}
     </div>
   );

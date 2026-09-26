@@ -10,15 +10,15 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`0bff1e4` — hosted-development migration/integration checkpoint.
+`de220e8c7fa6934b4bf905915d2f47ebcf065248` — final pushed M9 executable/test checkpoint.
 
 ## Last Pushed Commit
 
-`0bff1e4` — hosted-development migration/integration evidence.
+`de220e8` — final local browser/performance evidence and exact Vercel blocker state.
 
 ## Working Tree State
 
-Clean and synchronized with `origin/feature/m9-dashboard-parity` before preview deployment.
+M9 closeout reports and checklist updates are modified/untracked and ready for a documentation checkpoint; executable/test SHA `de220e8` is pushed.
 
 ## Last Completed Step
 
@@ -30,7 +30,7 @@ Full local regression gate completed: lint PASS; root typecheck PASS; unit 108/1
 
 ## Next Exact Step
 
-Run `npx playwright test e2e/m9-dashboard.spec.ts` locally to capture the newly explicit dashboard first-ready performance measurement (10-second budget), expected under four minutes. Evidence: `migration-upgrade/m9/evidence/m9-e2e.json`. If interrupted, ensure Playwright-owned servers stopped and rerun once. Preview remains blocked: CLI returned `Not authorized`; the connected deploy was safety-rejected because it cannot constrain Preview; read-only Vercel access returned 403 requiring re-authentication to `one-piece-5779`.
+Review, secret-scan, commit, and push the M9 closeout documentation checkpoint. Then stop the execution train: M9 cannot merge and M10 cannot start until Vercel scope `one-piece-5779` is re-authenticated and Preview/final-CI gates pass.
 
 ## Database State
 
@@ -68,7 +68,7 @@ Latest feature GitHub Actions run is remote; no local background process. GitHub
 
 ## Files Currently Modified
 
-Only recovery state/handoff for the upcoming preview deployment.
+M9 README/checklist, five closeout reports, and recovery state/handoff. No product source is modified.
 
 ## Untracked Files Classification
 
@@ -88,7 +88,8 @@ External Preview blocker: Vercel CLI returned `Not authorized`; connected deploy
 
 ## Unresolved Questions
 
-- Exact visual density for the 30-widget customization surface will be resolved from the approved Direction D mockups and existing design tokens; this does not change scope.
+- Vercel team scope `one-piece-5779` must be re-authenticated before Preview deployment/inspection.
+- Final CI for `de220e8` (or its eventual docs-only descendant) must be confirmed after GitHub API rate limiting clears.
 - Journal, reminder-category, and Calendar placeholder debt is not M9 and will not be silently folded into this milestone.
 
 ## Do Not Repeat

@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. M9 is pushed through hosted checkpoint `0bff1e4`. The M9 migration is applied locally and on `jobquest-dev`; hosted integration is 121/121. Full local gates and focused Playwright pass.
+M8 is merged and development CI is green. M9 executable/test work is pushed through `de220e8c7fa6934b4bf905915d2f47ebcf065248`. The migration is applied locally and on `jobquest-dev`; hosted integration is 121/121. Full local gates, focused Playwright, axe, responsive, and performance checks pass. Closeout documentation is the only working-tree checkpoint remaining.
 
 ## Next action
 
-Preview is externally blocked: CLI returned `Not authorized`; the connected deploy action cannot constrain Preview and was safety-rejected; read-only connector access returned 403 requiring re-authentication to scope `one-piece-5779`. No deployment was created. Finish the independent local performance-evidence run, reports, and checkpoint, but do not merge M9 or start M10 until Vercel access is restored and Preview/CI gates are green.
+Commit/push the completed closeout documentation, then stop. Preview is externally blocked: CLI returned `Not authorized`; connected deploy cannot constrain Preview and was safety-rejected; read-only access returned 403 requiring re-authentication to `one-piece-5779`. No deployment was created. After re-authentication, deploy Preview, verify health/E2E/bundle, confirm final CI, then and only then conditionally merge M9 and begin M10.
 
 ## Guardrails
 

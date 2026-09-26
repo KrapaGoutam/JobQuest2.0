@@ -2,7 +2,7 @@
 
 ## Status
 
-PLANNED — implementation has not started.
+IMPLEMENTED AND VERIFIED LOCALLY/HOSTED — closeout is blocked only on Vercel team re-authentication, Preview validation, and final CI confirmation. M9 is not eligible to merge until those gates pass.
 
 ## Repository-derived scope
 

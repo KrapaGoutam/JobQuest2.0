@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. M9 planning is pushed. The preference foundation is implemented: additive profile JSON preferences, exact registry/default layouts, normalization/persistence helpers, and focused tests. Focused tests and web typecheck pass.
+M8 is merged and development CI is green. M9 planning and preference foundation are pushed. The local M9 migration is applied and verified. Dashboard composition, the 30-widget tiered surface, accessible customization, preference isolation tests, and the Aging drill-through route are implemented. M9 unit 5/5, integration 2/2, web typecheck/lint/build pass.
 
 ## Next action
 
-Confirm the preference-foundation commit is pushed, then refactor `DashboardView.tsx` to compose existing M6/M8 data and render/customize the tiered widget layout. Update both this file and `CURRENT_AGENT_STATE.md` before any long test, hosted migration, deployment, CI wait, or branch merge.
+Confirm the dashboard UI checkpoint is pushed, then start the local web/API stack and run focused M9 browser verification. Update both this file and `CURRENT_AGENT_STATE.md` before the process start and before any full suite, hosted migration, deployment, CI wait, or branch merge.
 
 ## Guardrails
 

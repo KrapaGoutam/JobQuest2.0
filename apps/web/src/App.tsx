@@ -329,6 +329,7 @@ function AppContent() {
       case '/resumes':
         return 'Resumes';
       case '/analytics':
+      case '/analytics/aging':
         return 'Analytics';
       case '/workspace':
       case '/workspace/members':
@@ -463,11 +464,12 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/analytics') {
+    if (currentPath === '/analytics' || currentPath === '/analytics/aging') {
       return (
         <AnalyticsView
           activeWorkspaceId={activeWs}
           isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          initialTab={currentPath === '/analytics/aging' ? 'aging' : 'overview'}
         />
       );
     }

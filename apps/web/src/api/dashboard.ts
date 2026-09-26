@@ -10,6 +10,20 @@ interface ProfilePreferencesRow {
   ui_preferences: unknown;
 }
 
+export interface DashboardApplication {
+  id: string;
+  user_id: string;
+  company_name: string;
+  role_title: string;
+  stage: string;
+  status: string;
+  outcome: string | null;
+  priority: string;
+  work_arrangement: string | null;
+  applied_at: string;
+  last_activity_at: string;
+}
+
 export async function fetchDashboardLayout(
   userId: string,
   workspaceId: string,
@@ -44,4 +58,21 @@ export async function saveDashboardLayout(
     .single();
   if (error) throw error;
   return ((data as ProfilePreferencesRow | null)?.ui_preferences ?? nextPreferences) as Record<string, unknown>;
+}
+
+export async function fetchDashboardApplications(
+  workspaceId: string,
+  ownerId?: string
+): Promise<DashboardApplication[]> {
+  let query = supabase
+    .from('applications')
+    .select('id,user_id,company_name,role_title,stage,status,outcome,priority,work_arrangement,applied_at,last_activity_at')
+    .eq('workspace_id', workspaceId)
+    .is('archived_at', null)
+    .order('last_activity_at', { ascending: false })
+    .limit(1000);
+  if (ownerId) query = query.eq('user_id', ownerId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as DashboardApplication[];
 }

@@ -10,15 +10,15 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`7e479ab` (resolve with `git rev-parse HEAD` if more checkpoints exist)
+`06bcd7c` (resolve with `git rev-parse HEAD` if more checkpoints exist)
 
 ## Last Pushed Commit
 
-`7e479ab` — M9 planning and crash-recovery package.
+`06bcd7c` — verified M9 dashboard preference foundation.
 
 ## Working Tree State
 
-Clean after the pushed planning checkpoint. This file is being updated immediately before creating the M9 database migration and beginning the preference/dashboard refactor.
+Dashboard UI composition, customization, drill-through route, styles, M9 integration test, and sanitized local evidence are modified but not yet checkpointed.
 
 ## Last Completed Step
 
@@ -26,15 +26,15 @@ Completed the M9 preference foundation: additive `profiles.ui_preferences` migra
 
 ## Current Step
 
-Checkpoint and push the preference foundation, then implement the dashboard data composition and UI.
+Applied and verified `20260929100000` locally. Implemented the dashboard data composition and UI. M9 integration 2/2, M9 unit 5/5, web typecheck, targeted lint, web build, and diff checks pass.
 
 ## Next Exact Step
 
-Refactor `DashboardView.tsx` to load saved layout and existing M6/M8 data in parallel, render the enabled three-tier widget grid, and add the accessible customization dialog without changing the existing action queue behavior.
+Commit and push the coherent dashboard UI checkpoint, then start the local web/API stack and run focused M9 browser verification (render, customization persistence, keyboard controls, aging drill-through, responsive/theme/axe).
 
 ## Database State
 
-M9 migration `20260929100000_m9_dashboard_preferences.sql` is authored and locally reviewed but not yet applied. It adds one owner-private JSONB column and an object-shape constraint; existing profile RLS/grants remain authoritative.
+M9 migration `20260929100000_m9_dashboard_preferences.sql` is applied locally and verified: `jsonb NOT NULL DEFAULT '{}'`, object-shape constraint present. It is not yet applied to hosted development.
 
 ## Supabase Project
 
@@ -43,7 +43,8 @@ Development only: `jobquest-dev` (`xpnkasclquplmrcmhsif`). Production is out of 
 ## Applied/Pending Migrations
 
 - Applied locally and hosted before this branch: through `20260928110000`.
-- Pending M9: `20260929100000_m9_dashboard_preferences.sql` (not applied locally or hosted yet).
+- Applied local: through `20260929100000`.
+- Pending hosted dev: `20260929100000_m9_dashboard_preferences.sql`.
 
 ## Vercel Preview State
 
@@ -55,7 +56,7 @@ Development run `36183012517`: success at `e79d9b57c118480b705521a6608d80d64afba
 
 ## Local Test State
 
-M9 focused unit: 5/5. Web TypeScript check: PASS. No database or browser run yet.
+M9 unit: 5/5. M9 integration: 2/2. Web typecheck/lint/build: PASS. Browser run not started. Build warning: existing single JS chunk is 901.41 kB (231.92 kB gzip); non-blocking but track in performance evidence.
 
 ## Hosted Test State
 
@@ -67,7 +68,7 @@ None.
 
 ## Files Currently Modified
 
-Preference foundation files plus this recovery update; inspect `git status --short` for exact state. These form a coherent checkpoint and should be committed together.
+Dashboard React/CSS/API files, M9 integration test/evidence, and this recovery update; inspect `git status --short` for exact state. These form a coherent passing checkpoint.
 
 ## Untracked Files Classification
 

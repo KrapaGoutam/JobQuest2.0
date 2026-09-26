@@ -3,6 +3,7 @@
 
 # dependencies / build
 node_modules/
+.pnpm-store/
 dist/
 .vercel/
 .turbo/

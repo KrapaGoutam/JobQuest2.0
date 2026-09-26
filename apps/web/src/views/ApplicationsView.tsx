@@ -5,7 +5,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { useToast } from '../context/ToastContext';
-import { ShieldCheck, RefreshCw, Plus, KeyRound, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Plus, KeyRound, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import type { PublicSession, PublicUser } from '../api';
 import type {
   AgingFilter,
@@ -46,6 +46,8 @@ import { StageMoveDialog } from '../components/applications/StageMoveDialog';
 import { OutcomeDialog } from '../components/applications/OutcomeDialog';
 import { ApplicationDetailDrawer } from '../components/applications/ApplicationDetailDrawer';
 import { ApplicationPreviewRail } from '../components/applications/ApplicationPreviewRail';
+import { Dialog } from '../components/ui/Dialog';
+import { downloadExport } from '../api/importExport';
 import { consumeNewApplicationRequest, onNewApplicationRequest } from '../lib/newApplicationIntent';
 
 export interface ApplicationRecord {
@@ -145,6 +147,9 @@ export function ApplicationsView({
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'CSV' | 'XLSX'>('CSV');
+  const [exportBusy, setExportBusy] = useState(false);
   const [page, setPage] = useState(0);
   const [stageCounts, setStageCounts] = useState<Record<string, number>>({});
   const [agingCounts, setAgingCounts] = useState({ stale: 0, longWaiting: 0 });
@@ -664,6 +669,7 @@ export function ApplicationsView({
           isWide={isWide}
           isPreviewOpen={isPreviewOpen}
           onTogglePreview={togglePreview}
+          onOpenExport={() => setIsExportOpen(true)}
         />
 
         {loadError && (
@@ -756,6 +762,33 @@ export function ApplicationsView({
         onRestore={() => void handleBulkRestore()}
         onClearSelection={() => setSelectedIds([])}
       />
+
+      <Dialog
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        title="Export applications"
+        description="Download applications in the current owner scope. Spreadsheet cells are formula-injection safe."
+        footer={<><Button variant="secondary" onClick={() => setIsExportOpen(false)}>Cancel</Button><Button variant="primary" disabled={exportBusy || !session || !wsId} leftIcon={<Download size={14} />} onClick={() => void (async () => {
+          if (!session || !wsId) return;
+          setExportBusy(true);
+          try {
+            const owner = isManager ? selectedOwner : user?.id || '';
+            const params = new URLSearchParams({ workspace_id: wsId, owner_id: owner });
+            const path = exportFormat === 'XLSX' ? '/exports/applications.xlsx' : '/exports/applications';
+            await downloadExport(`${path}?${params}`, session, exportFormat === 'XLSX' ? 'jobquest-applications.xlsx' : 'applications.csv');
+            setIsExportOpen(false);
+          } catch (err) {
+            addToast({ title: 'Export failed', description: errorMessage(err, 'Could not export applications.'), type: 'danger' });
+          } finally { setExportBusy(false); }
+        })()}>{exportBusy ? 'Preparing…' : 'Download'}</Button></>}
+      >
+        <label style={{ display: 'grid', gap: '6px' }}>Format
+          <Select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as 'CSV' | 'XLSX')}>
+            <option value="CSV">CSV</option><option value="XLSX">Excel workbook (.xlsx)</option>
+          </Select>
+        </label>
+        {isManager && <p className="muted small" style={{ marginBottom: 0 }}>Owner scope: {selectedOwner === 'ALL' ? 'entire workspace' : members.find((member) => member.user_id === selectedOwner)?.display_name || 'selected member'}.</p>}
+      </Dialog>
 
       <CreateApplicationModal
         isOpen={isCreateOpen}

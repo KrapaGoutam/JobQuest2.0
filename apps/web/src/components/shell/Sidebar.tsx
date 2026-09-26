@@ -61,9 +61,12 @@ export function Sidebar({
     { id: 'analytics', path: '/analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
-  const workspaceNav = [
-    { id: 'ws-members', path: '/workspace/members', label: 'Members', icon: UserPlus },
+  const sharedWorkspaceNav = [
     { id: 'ws-imports', path: '/workspace/imports', label: 'Import & Export', icon: ArrowDownUp },
+  ];
+
+  const managerWorkspaceNav = [
+    { id: 'ws-members', path: '/workspace/members', label: 'Members', icon: UserPlus },
     { id: 'ws-workflow', path: '/workspace/workflow', label: 'Workflow', icon: GitBranch },
     { id: 'ws-audit', path: '/workspace/audit', label: 'Audit History', icon: ShieldCheck },
   ];
@@ -170,13 +173,10 @@ export function Sidebar({
         {!isRail && <div className="nav-head">Insights</div>}
         {insightsNav.map(renderNavItem)}
 
-        {/* Workspace Manager items */}
-        {isManager && (
-          <>
-            {!isRail && <div className="nav-head">Workspace</div>}
-            {workspaceNav.map(renderNavItem)}
-          </>
-        )}
+        {/* Import/export is self-scoped for users; managers also receive workspace administration. */}
+        {!isRail && <div className="nav-head">Workspace</div>}
+        {sharedWorkspaceNav.map(renderNavItem)}
+        {isManager && managerWorkspaceNav.map(renderNavItem)}
       </nav>
 
       {/* Bottom Footer Section */}

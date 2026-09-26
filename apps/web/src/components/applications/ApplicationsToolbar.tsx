@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Plus, Archive, PanelRight } from 'lucide-react';
+import { Search, X, Plus, Archive, PanelRight, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import type { AgingFilter, ApplicationStage, CanonicalWorkflow } from '../../types/applications';
@@ -30,6 +30,7 @@ export interface ApplicationsToolbarProps {
   isWide?: boolean;
   isPreviewOpen?: boolean;
   onTogglePreview?: () => void;
+  onOpenExport?: () => void;
 }
 
 export function ApplicationsToolbar({
@@ -56,6 +57,7 @@ export function ApplicationsToolbar({
   isWide = false,
   isPreviewOpen = false,
   onTogglePreview,
+  onOpenExport,
 }: ApplicationsToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -276,6 +278,12 @@ export function ApplicationsToolbar({
           )}
 
           {/* New Application CTA */}
+          {onOpenExport && (
+            <Button variant="outline" size="md" onClick={onOpenExport}>
+              <Download size={15} style={{ marginRight: '6px' }} /> Export
+            </Button>
+          )}
+
           <Button
             variant="primary"
             size="md"

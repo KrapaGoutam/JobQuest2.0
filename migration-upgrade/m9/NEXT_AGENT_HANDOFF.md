@@ -2,7 +2,7 @@
 
 Repository:
 `feature/m9-dashboard-parity`
-`de220e8c7fa6934b4bf905915d2f47ebcf065248` (final executable/test SHA; run git commands below for the later closeout/recovery docs HEAD)
+`49960c3918f2703d9ce6f1ea6b857afd21deea2c` (final Preview evidence SHA)
 
 Run first:
 
@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. M9 executable/test work is pushed through `de220e8c7fa6934b4bf905915d2f47ebcf065248`; blocked closeout reports are pushed at `2a94e6f`. The migration is applied locally and on `jobquest-dev`; hosted integration is 121/121. Full local gates, Playwright, axe, responsive, and performance checks pass.
+M8 is merged and development CI is green. M9 implementation, accessibility fix, strengthened E2E, final visual baselines, and sanitized Preview evidence are pushed through `49960c3`. The migration is applied locally and on `jobquest-dev`; hosted integration is 121/121. Full local gates pass.
 
 ## Next action
 
-Stop and obtain Vercel re-authentication for team scope `one-piece-5779`. Preview is externally blocked: CLI returned `Not authorized`; connected deploy cannot constrain Preview and was safety-rejected; read-only access returned 403. No deployment was created. After re-authentication, deploy Preview-only, verify health/E2E/bundle, confirm final executable CI, update reports, then and only then conditionally merge M9 and begin M10.
+M9 Preview `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh` is READY at `https://jobquest2-ojurhvmq4-one-piece-5779.vercel.app`; every Preview gate passes. Exact-SHA CI run `36246617220` for `49960c3` is green. Commit/push the final reports, verify their docs-only CI, then conditionally merge M9 to `development` and verify `development` CI before starting M10.
 
 ## Guardrails
 

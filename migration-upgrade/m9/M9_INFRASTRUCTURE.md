@@ -7,7 +7,7 @@
 | Local Supabase | Migration `20260929100000` applied; database lint clean; 121/121 integration PASS |
 | Supabase development | `jobquest-dev`, ref `xpnkasclquplmrcmhsif`; ledger synchronized through `20260929100000`; empty post-apply dry run; 121/121 hosted integration PASS |
 | Vercel project link | Existing `jobquest2`, project `prj_0A32SVkbOH2fBI2XLFv7kSkv086d`, team `team_lsStfTKp3LGQEWGYRM0BJ4Pb` |
-| Vercel Preview | BLOCKED — no M9 deployment created |
+| Vercel Preview | PASS — `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh`, target Preview, READY, health/E2E/privacy/bundle green |
 | Vercel Production | Untouched |
 | Production Supabase | Untouched |
 
@@ -21,18 +21,18 @@ Preflight proved that it was the only pending migration, with no seed or role ch
 
 Presentation preferences remain private profile state. Existing profile RLS allows the signed-in owner and denies peers, managers reading another profile directly, foreign workspaces, and anonymous requests. M9 introduces no privileged Node endpoint or browser secret.
 
-## Vercel blocker
+## Vercel Preview verification
 
-The preview-only CLI command failed before upload with `Not authorized`. No `VERCEL_*` environment credential was present. The connected deploy capability was not used because it cannot express an explicit Preview target and was safety-rejected. A read-only deployment listing against the exact linked project/team returned 403: re-authentication is required for scope `one-piece-5779`.
+Team access was restored for the existing linked project without creating or relinking resources. The final product checkpoint was deployed with an explicit Preview target:
 
-No deployment ID or Preview URL is recorded because no M9 deployment was created. No Production flag, promotion, DNS action, project creation, or paid-resource change occurred.
+- deployment: `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh`;
+- URL: `https://jobquest2-ojurhvmq4-one-piece-5779.vercel.app`;
+- product SHA: `17be90a25239aa6491f1f35c6a8e5813f8854a7e`;
+- target/state: Preview / READY; build 48s;
+- `/api/health`: HTTP 200 `{"status":"ok"}`;
+- M9 E2E/a11y and Option B privacy: PASS;
+- deployed-bundle scan: 0 findings.
 
-## Recovery
+## Safety
 
-After Vercel scope re-authentication:
-
-1. Deploy with an explicitly preview-only path to the existing project.
-2. Record deployment ID, URL, target, state, and SHA.
-3. Verify `/api/health` HTTP 200.
-4. Run M9 Playwright against the Preview and scan the deployed bundle.
-5. Confirm final feature CI green before considering the conditional M9 merge.
+No Production flag, promotion, DNS action, project creation, paid-resource change, or production Supabase action occurred. The initial failed authorization attempt created no deployment.

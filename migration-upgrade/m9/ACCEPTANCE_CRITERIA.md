@@ -12,6 +12,6 @@
 - [x] No client-side filter is treated as authorization.
 - [x] Additive migration, RLS/grant verification, and local/hosted integration pass.
 - [x] Unit, typecheck, lint, build, E2E, targeted regressions, axe, performance, and secret scans pass.
-- [ ] Vercel Preview is READY and its UI/API/data flow is verified.
-- [ ] Final executable SHA, CI, Supabase state, preview URL/deployment, and evidence are recorded.
+- [x] Vercel Preview is READY and its UI/API/data flow is verified.
+- [x] Final executable SHA, CI, Supabase state, preview URL/deployment, and evidence are recorded.
 - [x] Completion report, handoff, and CURRENT_AGENT_STATE are current.

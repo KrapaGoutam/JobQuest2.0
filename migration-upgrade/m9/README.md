@@ -2,7 +2,7 @@
 
 ## Status
 
-IMPLEMENTED AND VERIFIED LOCALLY/HOSTED — closeout is blocked only on Vercel team re-authentication, Preview validation, and final CI confirmation. M9 is not eligible to merge until those gates pass.
+COMPLETE AND MERGE-ELIGIBLE — local, hosted-development, Vercel Preview, accessibility, privacy, visual, secret-scan, and exact-SHA CI gates all pass. Merge only to `development`, then require `development` CI green before starting M10.
 
 ## Repository-derived scope
 

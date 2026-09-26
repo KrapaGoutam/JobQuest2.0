@@ -1,8 +1,12 @@
 # M9 Visual Regression — Dashboard Parity
 
-Target: local application against local Supabase. Preview recapture is pending Vercel re-authentication.
+Target: Vercel Preview against hosted development Supabase.
 
-Executable/test SHA: `de220e8c7fa6934b4bf905915d2f47ebcf065248`
+Product SHA: `17be90a25239aa6491f1f35c6a8e5813f8854a7e`
+
+Evidence SHA: `49960c3918f2703d9ce6f1ea6b857afd21deea2c`
+
+Deployment: `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh`
 
 ## Captures
 
@@ -17,4 +21,4 @@ All captures were inspected. Cards, hierarchy, typography, controls, theme contr
 
 Automated axe audits cover light dashboard, customization dialog, dark dashboard, and mobile dashboard. Each reports 0 critical, 0 serious, and 0 blocking violations.
 
-Preview captures and comparison are not claimed: no M9 Vercel Preview could be created or inspected because both available Vercel auth paths require re-authentication to the linked team scope.
+All four captures were regenerated from the final Preview and visually reviewed. No clipping, overlap, modal-boundary escape, contrast regression, or horizontal overflow was observed. Axe reported zero critical, serious, or blocking violations in every captured context.

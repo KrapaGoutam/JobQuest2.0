@@ -2,9 +2,9 @@
 
 ## Current status
 
-**BLOCKED AT CLOSEOUT — do not merge M9 and do not start M10.**
+**PASS — all M9 gates are green and the feature is eligible for the authorized conditional merge into `development`.**
 
-M9 Dashboard Parity is implemented and passes local plus hosted-development verification. The automatic merge gate is not satisfied because the required Vercel Preview cannot be created/inspected until team scope `one-piece-5779` is re-authenticated, and final feature CI confirmation is still pending due GitHub API rate limiting.
+M9 Dashboard Parity is implemented and verified locally, on hosted development Supabase, in Vercel Preview, and in exact-SHA CI. Production remains untouched.
 
 ## Delivered
 
@@ -19,7 +19,8 @@ M9 Dashboard Parity is implemented and passes local plus hosted-development veri
 
 ## Revisions
 
-- Final pushed executable/test SHA: `de220e8c7fa6934b4bf905915d2f47ebcf065248`.
+- Final product SHA: `17be90a25239aa6491f1f35c6a8e5813f8854a7e`.
+- Final Preview evidence/test SHA: `49960c3918f2703d9ce6f1ea6b857afd21deea2c`.
 - Primary product-surface checkpoint: `3718f85`.
 - Hosted database checkpoint: `0bff1e4`.
 - Branch: `feature/m9-dashboard-parity`.
@@ -29,23 +30,22 @@ M9 Dashboard Parity is implemented and passes local plus hosted-development veri
 - Local and `jobquest-dev` are synchronized through `20260929100000_m9_dashboard_preferences.sql`.
 - Local: lint PASS; root typecheck PASS; 108/108 unit; 121/121 integration; build PASS; database lint PASS; secret scans 0 findings.
 - Hosted development: 121/121 integration; M9 2/2; constraint and owner isolation proven.
-- M9 browser: 1/1 PASS; 4 axe audits with 0 blocking findings; mobile overflow 0px; first-ready 262 ms against a 10,000 ms budget.
-- Prior feature CI `36230044512` proved the complete database/integration/full-browser job green but failed static on strict test typing that is fixed in later commits.
-- CI `36230624958` showed static green and migrations/integrations green before GitHub polling rate-limited. Later pushes triggered newer runs whose final IDs/results remain to be confirmed.
+- Vercel Preview `dpl_7NfhxLDPHxb1Y1VsWETq16jjjPhh` is READY at `https://jobquest2-ojurhvmq4-one-piece-5779.vercel.app`; `/api/health` is HTTP 200.
+- M9 Preview browser: 1/1 PASS in 24.7s; manager owner scope, persistence/reset, Aging drill-through, loading/error/retry, and responsive behavior pass.
+- Preview performance: first-ready 1,694 ms against a 10,000 ms budget; mobile overflow 0px.
+- Accessibility: 4 axe audits, 0 critical/serious/blocking findings. Final screenshots were visually inspected.
+- Option B Preview browser privacy: 1/1 PASS; no credential/identity leakage, secure HttpOnly Strict refresh cookie, expected direct Data API calls.
+- Deployed Preview bundle: 3 files scanned against 3 known secret values, 0 findings.
+- Exact-SHA CI `36246617220` for `49960c3`: PASS; both static/build/security and migrations/auth/RLS/browser jobs are green.
 
-## Blocking closeout gates
+## Merge-gate decision
 
-1. Vercel CLI returns `Not authorized` for the linked project.
-2. Connected read access returns 403 and requires re-authentication to `one-piece-5779`.
-3. No M9 Preview deployment, health result, Preview E2E, or deployed-bundle scan exists.
-4. Final CI for the final pushed executable SHA must be confirmed green.
-
-Because Section 21 of the controlled train requires every gate, M9 is not eligible for the authorized conditional merge. M10 Import & Export has not been started.
+All required implementation, migration, local, hosted, Preview, accessibility, privacy, secret-scan, visual, and CI gates pass. No accepted blocking defect remains. M9 is eligible to merge to `development`; M10 must not start until that merge and the resulting `development` CI are green.
 
 ## Safety result
 
 `main`, Production Vercel, production Supabase, DNS, JobQuest1.0, legacy data, and production credentials were untouched. No destructive migration or force push occurred.
 
-## Exact resume action
+## Exact next action
 
-Re-authenticate Vercel access to team scope `one-piece-5779`, then follow the five recovery steps in `M9_INFRASTRUCTURE.md`. After Preview and final CI are green, finalize the reports, conditionally merge M9 into `development`, verify development CI, and only then determine/start M10.
+Commit and push this final closeout package, confirm its docs-only CI, merge `feature/m9-dashboard-parity` into `development` with a merge commit, push `development`, and require the resulting `development` CI to pass before determining M10 scope.

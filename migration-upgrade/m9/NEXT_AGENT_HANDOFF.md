@@ -24,11 +24,11 @@ CONTINUE FROM THE LAST COMPLETED CHECKPOINT.
 
 ## Current checkpoint
 
-M8 is merged and development CI is green. M9 planning and preference foundation are pushed. The local M9 migration is applied and verified. Dashboard composition, the 30-widget tiered surface, accessible customization, preference isolation tests, and the Aging drill-through route are implemented. M9 unit 5/5, integration 2/2, web typecheck/lint/build pass.
+M8 is merged and development CI is green. M9 source is pushed through `3718f85`. The local M9 migration is applied and verified. Dashboard composition, the 30-widget tiered surface, accessible customization, preference isolation tests, and the Aging drill-through route are implemented. M9 unit 5/5, integration 2/2, web typecheck/lint/build, and focused Playwright 1/1 pass. Browser evidence records 0 axe blocking findings and 0px mobile overflow.
 
 ## Next action
 
-Confirm the dashboard UI checkpoint is pushed, then start the local web/API stack and run focused M9 browser verification. Update both this file and `CURRENT_AGENT_STATE.md` before the process start and before any full suite, hosted migration, deployment, CI wait, or branch merge.
+Checkpoint and push the focused browser artifacts. Then update both this file and `CURRENT_AGENT_STATE.md` before the full local regression suite. The local Playwright command is `npx playwright test e2e/m9-dashboard.spec.ts` (no named project); run it outside the Windows sandbox if `uv_os_get_passwd` fails.
 
 ## Guardrails
 

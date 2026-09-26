@@ -1,0 +1,48 @@
+{
+  "evidence": {
+    "run": "941ab0",
+    "started_at": "2026-09-26T08:29:41.598Z",
+    "custom_layout_persisted": true,
+    "aging_drill_through": true,
+    "reset_defaults": true,
+    "mobile_overflow_px": 0,
+    "widget_registry_count": 30,
+    "a11y_blocking": 0,
+    "completed_at": "2026-09-26T08:29:54.854Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "dashboard-light",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "dashboard-customize-dialog",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "dashboard-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "dashboard-mobile",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    }
+  ]
+}

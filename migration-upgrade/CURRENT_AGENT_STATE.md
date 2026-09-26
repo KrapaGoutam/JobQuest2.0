@@ -10,27 +10,27 @@ M9 — Dashboard Parity (remaining slice of Gate 01 M9 Goals, Analytics & Dashbo
 
 ## Current HEAD
 
-`06bcd7c` (resolve with `git rev-parse HEAD` if more checkpoints exist)
+`3718f85` — M9 customizable dashboard surface checkpoint.
 
 ## Last Pushed Commit
 
-`06bcd7c` — verified M9 dashboard preference foundation.
+`3718f85` — customizable dashboard surface, drill-through, integration coverage, and local evidence.
 
 ## Working Tree State
 
-Dashboard UI composition, customization, drill-through route, styles, M9 integration test, and sanitized local evidence are modified but not yet checkpointed.
+Focused M9 Playwright coverage, sanitized evidence JSON, and four visual-regression screenshots are ready to checkpoint.
 
 ## Last Completed Step
 
-Completed the M9 preference foundation: additive `profiles.ui_preferences` migration, exact 30-widget typed registry, user/manager legacy defaults, defensive layout normalization, workspace/type persistence helpers, direct RLS-scoped profile API, and 5 focused unit tests. Web typecheck and the focused tests pass.
+Completed and pushed the M9 dashboard surface: exact 30-widget registry, three-tier composition, user/manager defaults, persistent customization, manager owner filtering, and Aging drill-through.
 
 ## Current Step
 
-Applied and verified `20260929100000` locally. Implemented the dashboard data composition and UI. M9 integration 2/2, M9 unit 5/5, web typecheck, targeted lint, web build, and diff checks pass.
+Focused local browser verification passes 1/1 in 23.2 seconds. It proves the 30-widget customization registry, keyboard reordering, layout persistence/reload, reset defaults, Aging drill-through, dark/light rendering, 390px mobile with zero overflow, and axe with 0 critical/serious/blocking findings. The first server launch inside the Windows sandbox failed at `uv_os_get_passwd` (environment); the outside-sandbox run is green. The attempted `--project=chromium` invocation also exited before server startup because this repository has no named Playwright projects.
 
 ## Next Exact Step
 
-Commit and push the coherent dashboard UI checkpoint, then start the local web/API stack and run focused M9 browser verification (render, customization persistence, keyboard controls, aging drill-through, responsive/theme/axe).
+Commit and push the focused browser/evidence checkpoint. Then update this file before running the full local regression gate (`npm run lint`, `npm run typecheck`, `npm run test:unit`, local `npm run test:integration`, `npm run build`, database lint, bundle/secret scans, and applicable prior browser regressions).
 
 ## Database State
 
@@ -56,7 +56,7 @@ Development run `36183012517`: success at `e79d9b57c118480b705521a6608d80d64afba
 
 ## Local Test State
 
-M9 unit: 5/5. M9 integration: 2/2. Web typecheck/lint/build: PASS. Browser run not started. Build warning: existing single JS chunk is 901.41 kB (231.92 kB gzip); non-blocking but track in performance evidence.
+M9 unit: 5/5. M9 integration: 2/2. Web typecheck/lint/build: PASS. Focused M9 browser: 1/1 PASS; axe 0 blocking; mobile overflow 0px. Build warning: existing single JS chunk is 901.41 kB (231.92 kB gzip); non-blocking but track in performance evidence.
 
 ## Hosted Test State
 
@@ -68,7 +68,7 @@ None.
 
 ## Files Currently Modified
 
-Dashboard React/CSS/API files, M9 integration test/evidence, and this recovery update; inspect `git status --short` for exact state. These form a coherent passing checkpoint.
+The M9 Playwright spec, sanitized evidence JSON, four screenshots, and recovery documentation. These form a coherent passing checkpoint.
 
 ## Untracked Files Classification
 
@@ -76,7 +76,7 @@ Expected M9 source, test, and migration files only. No runtime evidence or user 
 
 ## Known Failures
 
-None. Direct `supabase.com/changelog.md` markdown retrieval returned an unsupported-content-type error; the official filtered changelog page was checked instead. Current breaking changes (Management API logs endpoint and extension version pinning) do not affect M9.
+No product failures. Recorded test-development issues: an invalid named Playwright project, Windows sandbox `uv_os_get_passwd` ENOMEM, a corrected analytics fixture expectation, and hidden native-checkbox pointer semantics. Direct `supabase.com/changelog.md` markdown retrieval returned an unsupported-content-type error; the official filtered changelog page was checked instead. Current breaking changes do not affect M9.
 
 ## Decisions Made This Session
 

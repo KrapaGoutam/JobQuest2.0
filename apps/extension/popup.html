@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobQuest Capture</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <span id="popup-state" class="sr-only" role="status" aria-live="polite"></span>
+  <!-- Header -->
+  <header class="header">
+    <div class="brand">
+      <img src="icons/icon16.png" alt="JobQuest">
+      <h1>JobQuest Capture</h1>
+    </div>
+    <div class="header-actions">
+      <button type="button" id="options-btn" class="icon-btn" title="Extension Settings" aria-label="Extension Settings">&#9881;</button>
+    </div>
+  </header>
+
+  <!-- Screen: Loading -->
+  <section id="screen-loading" class="screen loading-view">
+    <div class="spinner"></div>
+    <p class="muted">Extracting job details...</p>
+  </section>
+
+  <!-- Screen: Unconfigured or Auth Error -->
+  <section id="screen-unconfigured" class="screen" hidden>
+    <div class="empty-card">
+      <h2 id="unconfigured-title">Setup Required</h2>
+      <p id="unconfigured-desc">Connect JobQuest Capture to your personal JobQuest instance using an access token.</p>
+      <button type="button" id="open-settings-btn" class="btn primary">Open Settings</button>
+    </div>
+  </section>
+
+  <!-- Screen: Capture Form -->
+  <section id="screen-capture" class="screen" hidden>
+    <div id="state-banner" class="banner info" hidden role="status">
+      <span id="state-message"></span>
+      <button type="button" id="state-retry-btn" class="dup-btn" hidden>Retry</button>
+    </div>
+    <!-- Duplicate Warning Banner -->
+    <div id="dup-banner" class="banner warning" hidden role="alert">
+      <div class="banner-title">
+        <span id="dup-icon">⚠</span>
+        <span id="dup-heading"></span>
+      </div>
+      <p id="dup-message" class="dup-desc"></p>
+      <div id="dup-actions" class="dup-actions" hidden>
+        <button type="button" id="dup-open-btn" class="dup-btn" hidden>Open Existing</button>
+        <button type="button" id="dup-save-anyway-btn" class="dup-btn" hidden>Save Anyway</button>
+        <button type="button" id="dup-cancel-btn" class="dup-btn" hidden>Cancel</button>
+      </div>
+    </div>
+
+    <form id="capture-form">
+      <div class="form-grid">
+        <!-- Company -->
+        <div class="field col-full">
+          <label for="input-company">Company <span class="req">*</span></label>
+          <input type="text" id="input-company" class="input" required maxlength="100" placeholder="e.g. Acme Corp">
+        </div>
+
+        <!-- Job Title -->
+        <div class="field col-full">
+          <label for="input-title">Job Title <span class="req">*</span></label>
+          <input type="text" id="input-title" class="input" required maxlength="100" placeholder="e.g. Software Engineer">
+        </div>
+
+        <!-- Location -->
+        <div class="field">
+          <label for="input-location">Location</label>
+          <input type="text" id="input-location" class="input" maxlength="100" placeholder="e.g. Austin, TX">
+        </div>
+
+        <!-- Work Arrangement -->
+        <div class="field">
+          <label for="input-arrangement">Work Arrangement</label>
+          <select id="input-arrangement" class="select">
+            <option value="">Select...</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Onsite">Onsite</option>
+          </select>
+        </div>
+
+        <!-- Employment Type -->
+        <div class="field">
+          <label for="input-employment">Employment Type</label>
+          <select id="input-employment" class="select">
+            <option value="">Select...</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Contract">Contract</option>
+            <option value="Internship">Internship</option>
+            <option value="Temporary">Temporary</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <!-- Salary Range -->
+        <div class="field">
+          <label for="input-salary">Salary Range</label>
+          <input type="text" id="input-salary" class="input" placeholder="e.g. $120k - $150k">
+        </div>
+
+        <!-- Tailored Resume (mode switcher: existing / manual / none) -->
+        <div class="field col-full">
+          <label>Tailored Resume</label>
+          <div class="resume-mode-selector">
+            <label class="resume-mode-option">
+              <input type="radio" name="resume-mode" id="mode-resume-existing" value="existing" checked>
+              <span>Select existing</span>
+            </label>
+            <label class="resume-mode-option">
+              <input type="radio" name="resume-mode" id="mode-resume-manual" value="manual">
+              <span>Enter manually</span>
+            </label>
+            <label class="resume-mode-option">
+              <input type="radio" name="resume-mode" id="mode-resume-none" value="none">
+              <span>None</span>
+            </label>
+          </div>
+
+          <div id="group-resume-existing">
+            <select id="input-resume" class="select" aria-label="Select existing resume">
+              <option value="">None selected</option>
+            </select>
+          </div>
+
+          <div id="group-resume-manual" hidden>
+            <input type="text" id="input-resume-manual" class="input" placeholder="e.g. QA Automation v96" maxlength="100" aria-label="Enter resume version manually">
+          </div>
+        </div>
+
+        <!-- Stage -->
+        <div class="field">
+          <label for="input-stage">Stage</label>
+          <select id="input-stage" class="select">
+            <option value="">Loading canonical stages…</option>
+          </select>
+        </div>
+
+        <!-- Date Applied -->
+        <div class="field">
+          <label for="input-date">Date Applied</label>
+          <input type="date" id="input-date" class="input" required>
+        </div>
+
+        <!-- Job URL -->
+        <div class="field col-full">
+          <label for="input-url">Job URL</label>
+          <input type="url" id="input-url" class="input" placeholder="https://...">
+        </div>
+
+        <!-- Source -->
+        <div class="field col-full">
+          <label for="input-source">Source / Board</label>
+          <input type="text" id="input-source" class="input" placeholder="e.g. LinkedIn, Indeed, Greenhouse">
+        </div>
+
+        <!-- Notes -->
+        <div class="field col-full">
+          <label for="input-notes">Notes</label>
+          <textarea id="input-notes" class="textarea" rows="2" placeholder="Optional personal notes..."></textarea>
+        </div>
+      </div>
+
+      <div id="form-error" class="banner danger" hidden role="alert"></div>
+
+      <div class="actions">
+        <button type="submit" id="save-btn" class="btn primary">Save to JobQuest</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Screen: Success -->
+  <section id="screen-success" class="screen success-view" hidden>
+    <div class="success-icon">&#10003;</div>
+    <h2>Saved to JobQuest!</h2>
+    <p id="success-summary"></p>
+    <div class="success-actions">
+      <button type="button" id="view-app-btn" class="btn primary">Open in JobQuest</button>
+      <button type="button" id="capture-another-btn" class="btn secondary">Capture Another</button>
+    </div>
+  </section>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

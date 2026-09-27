@@ -17,12 +17,12 @@ import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { ResumesView } from './views/ResumesView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { ImportExportView } from './views/ImportExportView';
+import { ExtensionSettingsView } from './views/ExtensionSettingsView';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   Calendar,
   BookOpen,
   UserPlus,
-  Settings,
   AlertCircle,
 } from 'lucide-react';
 import './styles/globals.css';
@@ -78,6 +78,7 @@ function AppContent() {
       window.location.hash = `#${path}`;
     }
   }, []);
+  const handleDeepLinkMissing = useCallback(() => navigate('/applications'), [navigate]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -309,6 +310,7 @@ function AppContent() {
 
   // Route title resolver
   const getPageTitle = (path: string): string => {
+    if (/^\/w\/[^/]+\/applications\/[^/]+$/.test(path)) return 'Application';
     switch (path) {
       case '/':
       case '/applications':
@@ -342,6 +344,7 @@ function AppContent() {
       case '/workspace/audit':
         return 'Audit History';
       case '/settings':
+      case '/settings/extension':
         return 'Settings';
       case '/design-system':
         return 'Design System';
@@ -352,7 +355,10 @@ function AppContent() {
 
   // Render active view
   const renderRouteView = () => {
-    if (currentPath === '/' || currentPath === '/applications') {
+    const applicationDeepLink = currentPath.match(/^\/w\/([^/]+)\/applications\/([^/?#]+)$/);
+    if (currentPath === '/' || currentPath === '/applications' || applicationDeepLink) {
+      const routeWorkspaceId = applicationDeepLink?.[1] ? decodeURIComponent(applicationDeepLink[1]) : activeWs;
+      const routeApplicationId = applicationDeepLink?.[2] ? decodeURIComponent(applicationDeepLink[2]) : null;
       return (
         <ApplicationsView
           user={user}
@@ -364,8 +370,10 @@ function AppContent() {
           leakResults={leak}
           probeStatus={probe}
           log={log}
-          activeWorkspaceId={activeWs}
-          userRole={memberships.find((m) => m.workspace_id === activeWs)?.role ?? 'USER'}
+          activeWorkspaceId={routeWorkspaceId}
+          initialApplicationId={routeApplicationId}
+          onDeepLinkMissing={handleDeepLinkMissing}
+          userRole={memberships.find((m) => m.workspace_id === routeWorkspaceId)?.role ?? 'USER'}
           onRefresh={refresh}
           onLogout={onLogout}
           onCreateApp={onCreateApp}
@@ -497,13 +505,12 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/settings') {
+    if (currentPath === '/settings' || currentPath === '/settings/extension') {
       return (
-        <PlaceholderView
-          title="Settings"
-          subtitle="User profile, credentials, notifications, and telemetry preferences"
-          icon={<Settings size={24} />}
-          milestoneOwner="Milestone 4"
+        <ExtensionSettingsView
+          activeWorkspaceId={activeWs}
+          activeWorkspaceName={memberships.find((membership) => membership.workspace_id === activeWs)?.workspaces?.name ?? 'Current workspace'}
+          session={session}
         />
       );
     }

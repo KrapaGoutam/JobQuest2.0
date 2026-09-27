@@ -10,11 +10,11 @@ M11 - Browser Extension Migration
 
 ## Current HEAD
 
-`6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`
+`3b9b3970fa579269852ab42b561a04b26d46b4fd`
 
 ## Last Pushed Commit
 
-`6784fc59bde7cc77fb74a917b1c75d8e301e0b0e` on `origin/feature/m11-browser-extension` (`feat(m11): migrate manifest v3 extension and token settings ui`). First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`.
+`3b9b3970fa579269852ab42b561a04b26d46b4fd` on `origin/feature/m11-browser-extension` (`test(m11): complete extension browser verification`). First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`.
 
 ## Development Base
 
@@ -22,7 +22,7 @@ M11 - Browser Extension Migration
 
 ## Working Tree State
 
-Both implementation slices are committed and pushed. The remaining dirty tree contains only recovery documentation and generated local integration evidence from M1B-M11 regression runs. No pre-existing user changes were discarded.
+All implementation and local browser verification work is committed and pushed. Only this post-checkpoint recovery-state update is dirty. No pre-existing user changes were discarded.
 
 ## Last Completed Step
 
@@ -35,29 +35,30 @@ Both implementation slices are committed and pushed. The remaining dirty tree co
 - Added dev/prod extension packaging source and a root extension-test command.
 - Focused web typecheck, focused API typecheck, changed-file lint, token/security unit tests, and static extension syntax/manifest checks have passed.
 - Committed and pushed the web Settings/deep-link and Manifest V3 extension slice as checkpoint `6784fc59` after adding persisted System/Light/Dark themes, complete X1-X14 mapping, and manifest/CSP/content integrity tests.
+- Committed and pushed exact-current unpacked Chromium verification, salary parsing repair, dark-mode contrast repair, final local integration/browser evidence, and six screenshots as checkpoint `3b9b3970`.
 
 ## Current Step
 
-Review and checkpoint the fully green local browser and quality gate.
+Rerun the expanded rotation/revocation browser flow locally, then prepare the final executable checkpoint and reports.
 
 ## Next Exact Step
 
-1. Review intended browser/salary/a11y source, exact-current PASS evidence, screenshots, and generated integration evidence.
-2. Commit and push the coherent browser verification checkpoint.
-3. Continue to hosted dev and Preview only after the checkpoint is pushed.
+1. Run the expanded target-aware M11 browser spec locally using the existing disposable local account.
+2. Re-run lint/typecheck/extension tests and security scans for the final test-only diff.
+3. Commit/push the final executable checkpoint, verify CI, then finalize M11 reports and recovery docs.
 
 ## Supabase State
 
-Local Supabase reset succeeds through all 15 migrations with the final safe-column grant hardening. Authenticated direct `token_hash` selection is denied and targeted M11 integration passes 7/7. Hosted dev has not been changed.
+Local Supabase reset succeeds through all 15 migrations with the final safe-column grant hardening. Hosted target was verified as `jobquest-dev` / `xpnkasclquplmrcmhsif`; dry-run showed only M11 pending, and `20261005100000_m11_extension_tokens.sql` was applied successfully. Hosted focused M11 integration passes 7/7 with verifier-column denial.
 
 ## Applied / Pending Migrations
 
 - M1-M10: previously verified locally and in hosted dev.
-- `20261005100000_m11_extension_tokens.sql`: applied successfully to local in its committed form; never applied remotely.
+- `20261005100000_m11_extension_tokens.sql`: applied successfully to local and hosted dev; migration ledger verification is pending after push.
 
 ## Vercel Preview State
 
-No M11 Preview deployment exists. Allowed target later is Preview only for team `one-piece-5779`, project `jobquest2`. Never use `--prod`.
+M11 Preview is READY: `https://jobquest2-3pxm8abn9-one-piece-5779.vercel.app`, deployment `dpl_9DiSCVyCkYAV1Et2yrzPCcXLogPi`, target `preview`, build duration 42s. Project/team: `one-piece-5779/jobquest2`. Required `EXTENSION_TOKEN_PEPPER` is a cryptographically random Secret scoped to Preview only; Production was not changed. Health is 200. Never use `--prod`.
 
 ## Last CI Run
 
@@ -82,7 +83,7 @@ Historical development CI `36252789930` on `60ec9dff` was successful. No M11 CI 
 
 ## Hosted Test State
 
-No M11 hosted database or Preview tests have run.
+Hosted dev M11 integration: PASS, 7/7. Evidence: `migration-upgrade/m11/evidence/integration-hosted-dev-9ba597.json`. Preview unpacked-extension flow including one-time token reveal, storage, workflow, extraction, capture, exact duplicate, deep link, rotation invalidation, reconnect, revocation, dark mode, and six axe contexts: PASS with 0 critical/serious findings (`browser-vercel-preview-4b974939.json`). Option B privacy/auth plus M2 shell regression: PASS, 5/5 (`e2e-browser-vercel-preview-a98515.json`).
 
 ## Extension Fixture State
 
@@ -158,4 +159,4 @@ pnpm.cmd check:extension
 
 ## Next Agent Instructions
 
-Continue M11 from pushed web/extension checkpoint `6784fc59`. The complete local gate and exact-current Chromium spec are green. Review, commit, and push the coherent browser/salary/a11y checkpoint, then proceed to hosted dev/Preview. Keep M11 unmerged.
+Continue M11 from pushed browser checkpoint `3b9b3970`. Local gate, hosted migration/integration, READY Preview health, expanded Preview extension flow, and Preview auth/privacy/shell regression are green. Rerun the expanded test locally, create the final executable checkpoint, verify CI, and finalize reports. Keep M11 unmerged.

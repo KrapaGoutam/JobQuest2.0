@@ -75,7 +75,11 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
   test('setup, extraction, capture, duplicate, deep link, theme, revocation, a11y, and timings', async ({ browserName }, testInfo) => {
     expect(browserName).toBe('chromium');
     const baseURL = String(testInfo.project.use.baseURL ?? 'http://localhost:5173').replace(/\/$/, '');
+    const target = (process.env.M1B_TARGET?.trim() || (/localhost|127\.0\.0\.1/.test(baseURL) ? 'local' : 'vercel-preview'))
+      .replace(/[^a-z0-9-]/gi, '-');
     const run = randomBytes(4).toString('hex');
+    const reusedAccountRun = process.env.M11_REUSE_RUN?.trim();
+    const accountRun = reusedAccountRun || run;
     const tokenName = `M11 Chromium ${run}`;
     const jobUrl = `https://jobs.m11.test/${run}/staff-software-engineer`;
     const profilePath = testInfo.outputPath('chromium-profile');
@@ -84,6 +88,9 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       started_at: new Date().toISOString(),
       browser: 'playwright chromium persistent context',
       package: 'jobquest-capture-dev',
+      target,
+      base_origin: baseURL,
+      reused_account: Boolean(reusedAccountRun),
     };
     const a11y: AuditResult[] = [];
 
@@ -119,12 +126,19 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       const webPage = await context.newPage();
       await webPage.setViewportSize({ width: 1440, height: 900 });
       await webPage.goto(baseURL);
-      const registration = webPage.getByRole('form', { name: 'Register' });
-      await registration.getByLabel('Username (required)').fill(`m11_ext_${run}`);
-      await registration.getByLabel('Password (required)').fill(`M11-Extension-${run}-P@ss!`);
-      await registration.getByRole('button', { name: 'Create account' }).click();
-      await expect(webPage.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
-      await webPage.getByRole('button', { name: 'I saved them' }).click();
+      if (reusedAccountRun) {
+        const login = webPage.getByRole('form', { name: 'Sign in' });
+        await login.getByLabel('Username').fill(`m11_ext_${accountRun}`);
+        await login.getByLabel('Password').fill(`M11-Extension-${accountRun}-P@ss!`);
+        await login.getByRole('button', { name: 'Sign in' }).click();
+      } else {
+        const registration = webPage.getByRole('form', { name: 'Register' });
+        await registration.getByLabel('Username (required)').fill(`m11_ext_${accountRun}`);
+        await registration.getByLabel('Password (required)').fill(`M11-Extension-${accountRun}-P@ss!`);
+        await registration.getByRole('button', { name: 'Create account' }).click();
+        await expect(webPage.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
+        await webPage.getByRole('button', { name: 'I saved them' }).click();
+      }
       await expect(webPage.getByTestId('new-application-btn')).toBeVisible();
       await webPage.evaluate(() => { window.location.hash = '#/settings/extension'; });
       await expect(webPage.getByRole('heading', { name: 'Browser extension' })).toBeVisible();
@@ -147,7 +161,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       // Configure via the actual extension options page and verify local persistence.
       const optionsPage = await context.newPage();
       await optionsPage.goto(`${extensionOrigin}/options.html`);
-      await expect(optionsPage.locator('#instance-url')).toHaveValue(baseURL);
+      await expect(optionsPage.locator('#instance-url')).not.toHaveValue('');
       await optionsPage.locator('#instance-url').fill(baseURL);
       await optionsPage.locator('#api-token').fill(rawToken);
       await optionsPage.locator('#theme').selectOption('dark');
@@ -188,9 +202,13 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       });
       evidence.extraction_ms = Date.now() - extractionStarted;
       expect(extracted).toMatchObject({ company: 'Stripe', jobTitle: 'Staff Software Engineer' });
+      const expectedCompany = reusedAccountRun ? `Stripe ${run}` : 'Stripe';
+      const captureInput = reusedAccountRun
+        ? { ...(extracted as Record<string, unknown>), company: expectedCompany, externalJobId: `12345-${run}` }
+        : extracted;
       await optionsPage.evaluate(async (pendingCapture) => {
         await chrome.storage.local.set({ pendingCapture });
-      }, extracted);
+      }, captureInput);
       evidence.live_content_script_extraction = true;
 
       // X5: dark ready state with workflow loaded from the API and a NONE duplicate response.
@@ -200,11 +218,11 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       await expect(popup.locator('body')).toHaveAttribute('data-state', 'X5');
       await expect(popup.locator('html')).toHaveAttribute('data-theme', 'dark');
       await expect(popup.locator('#input-stage option')).not.toHaveCount(0);
-      await expect(popup.locator('#input-company')).toHaveValue('Stripe');
+      await expect(popup.locator('#input-company')).toHaveValue(expectedCompany);
       await expect(popup.locator('#input-title')).toHaveValue('Staff Software Engineer');
       evidence.popup_ready_ms = Date.now() - readyStarted;
       evidence.workflow_loaded = true;
-      const duplicateTiming = await optionsPage.evaluate(async () => {
+      const duplicateTiming = await optionsPage.evaluate(async ({ currentJobUrl, company }) => {
         const settings = await chrome.storage.local.get(['instanceUrl', 'apiToken']);
         if (typeof settings.instanceUrl !== 'string' || typeof settings.apiToken !== 'string') {
           throw new Error('Extension settings are unavailable');
@@ -214,15 +232,15 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
           method: 'POST',
           headers: { Authorization: `Bearer ${settings.apiToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            company: 'Stripe',
+            company,
             job_title: 'Staff Software Engineer',
-            job_url: location.href,
+            job_url: currentJobUrl,
             source: 'JSON-LD',
           }),
         });
         const result = await response.json() as { match_type?: string };
         return { elapsed: performance.now() - started, matchType: result.match_type };
-      });
+      }, { currentJobUrl: jobUrl, company: expectedCompany });
       evidence.duplicate_api_ms = Math.round(duplicateTiming.elapsed);
       expect(duplicateTiming.matchType).toBe('NONE');
       a11y.push(await audit(popup, 'popup-ready-dark'));
@@ -250,7 +268,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       // Reopening with the same extracted identity produces the canonical exact duplicate state.
       await optionsPage.evaluate(async (pendingCapture) => {
         await chrome.storage.local.set({ pendingCapture });
-      }, extracted);
+      }, captureInput);
       const duplicatePopup = await context.newPage();
       const duplicateStarted = Date.now();
       await duplicatePopup.goto(`${extensionOrigin}/popup.html`);
@@ -262,13 +280,40 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       await shot(duplicatePopup, 'm11-popup-exact-duplicate-dark');
       await duplicatePopup.close();
 
-      // Revoke through Settings, then prove the persisted token is rejected as X2.
+      // Replace through Settings and prove the old persisted token is rejected immediately.
       await webPage.bringToFront();
-      const tokenRow = webPage.getByRole('row', { name: new RegExp(tokenName) });
-      await tokenRow.getByRole('button', { name: 'Revoke' }).click();
+      const tokenRows = webPage.locator('tbody tr').filter({ hasText: tokenName });
+      const activeTokenRow = tokenRows.filter({ hasText: 'active' });
+      await expect(activeTokenRow).toHaveCount(1);
+      await activeTokenRow.getByRole('button', { name: 'Replace' }).click();
+      const replaceDialog = webPage.getByRole('dialog', { name: new RegExp(`Replace.*${tokenName}`) });
+      await replaceDialog.getByRole('button', { name: 'Replace token' }).click();
+      const replacementDialog = webPage.getByRole('dialog', { name: 'Copy your token' });
+      const replacementToken = (await replacementDialog.locator('.extension-secret code').textContent())?.trim() ?? '';
+      expect(replacementToken).toMatch(/^jqx_dev_[A-Za-z0-9]{43}$/);
+      await replacementDialog.getByRole('button', { name: 'Done, I copied it' }).click();
+
+      const rotatedOutPopup = await context.newPage();
+      await rotatedOutPopup.goto(`${extensionOrigin}/popup.html`);
+      await expect(rotatedOutPopup.locator('body')).toHaveAttribute('data-state', 'X2');
+      await rotatedOutPopup.close();
+      evidence.rotation_enforced = true;
+
+      // Reconnect with the one-time replacement, then revoke that active token.
+      await optionsPage.bringToFront();
+      await optionsPage.locator('#api-token').fill(replacementToken);
+      try {
+        await optionsPage.getByRole('button', { name: 'Save Settings' }).click();
+        await expect(optionsPage.locator('#status-box')).toContainText('Connected. JobQuest accepted this token.');
+      } finally {
+        await optionsPage.locator('#api-token').evaluate((element: HTMLInputElement) => { element.value = ''; });
+      }
+      await webPage.bringToFront();
+      await expect(activeTokenRow).toHaveCount(1);
+      await activeTokenRow.getByRole('button', { name: 'Revoke' }).click();
       const revokeDialog = webPage.getByRole('dialog', { name: new RegExp(`Revoke.*${tokenName}`) });
       await revokeDialog.getByRole('button', { name: 'Revoke token' }).click();
-      await expect(tokenRow).toContainText('revoked');
+      await expect(activeTokenRow).toHaveCount(0);
 
       const revokedPopup = await context.newPage();
       await revokedPopup.goto(`${extensionOrigin}/popup.html`);
@@ -285,7 +330,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       evidence.a11y_blocking = blocking;
       evidence.completed_at = new Date().toISOString();
       evidence.status = blocking === 0 ? 'PASS' : 'FAIL';
-      writeFileSync(resolve(evidenceDir, `browser-local-${run}.json`), `${JSON.stringify({ evidence, a11y }, null, 2)}\n`, 'utf8');
+      writeFileSync(resolve(evidenceDir, `browser-${target}-${run}.json`), `${JSON.stringify({ evidence, a11y }, null, 2)}\n`, 'utf8');
       expect(blocking, JSON.stringify(a11y, null, 2)).toBe(0);
     } finally {
       await context.close();

@@ -6,7 +6,7 @@ Milestone 11 - Browser Extension Migration
 
 ## Active Branch / HEAD
 
-`feature/m11-browser-extension` at pushed web/extension checkpoint `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`. First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`.
+`feature/m11-browser-extension` at pushed browser verification checkpoint `3b9b3970fa579269852ab42b561a04b26d46b4fd`. First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`.
 
 ## Completed Locally
 
@@ -24,15 +24,15 @@ Milestone 11 - Browser Extension Migration
 
 ## Current Caveat
 
-The local database reset, targeted M11 integration (7/7), and full integration regression (134/134) passed after the final safe-column grant hardening. Authenticated direct verifier-column SELECT is denied. Token display prefixes are 12 characters with four non-secret random discriminator characters.
+The local database reset, targeted M11 integration (7/7), and full integration regression (134/134) passed after the final safe-column grant hardening. Hosted `jobquest-dev` now has the M11 migration and hosted focused integration passes 7/7 (`integration-hosted-dev-9ba597.json`). Authenticated direct verifier-column SELECT is denied. Token display prefixes are 12 characters with four non-secret random discriminator characters.
 
 API PID `2596` on 8787 and web PID `52920` on 5173 are healthy and were reused. Local Supabase is running on 55321 after a clean reset through M11. The browser test deletes its temporary persistent profile after every run.
 
 ## Next Exact Action
 
-1. Review, commit, and push the coherent browser verification checkpoint; the exact-current Chromium spec and all local gate items are green (lint, typecheck, unit 116/116, integration 134/134, extension 27/27, build/package, DB lint, and 0-finding scans).
-2. Continue with hosted-dev/Preview verification only after the checkpoint is pushed.
-3. Continue with hosted-dev/Preview verification only after local is green; do not merge M11.
+1. Rerun the expanded target-aware M11 browser spec locally using `M11_REUSE_RUN=0df44867`; Preview rotation/revocation is already green.
+2. Run final static/security checks, commit/push the executable checkpoint, and verify CI.
+3. Finalize M11 reports and recovery docs; do not merge M11.
 
 ## Hard Guardrails
 

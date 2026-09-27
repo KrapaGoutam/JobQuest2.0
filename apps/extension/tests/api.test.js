@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildSecureJobQuestUrl, checkDuplicate, createCapture, getActiveResumes,
   getSettings, getWorkflow, isConnectionError, JobQuestApiError,
-  normalizeInstanceUrl, saveSettings, saveTheme, testConnection,
+  normalizeInstanceUrl, parseSalaryRange, saveSettings, saveTheme, testConnection,
 } from '../api/jobquest.js';
 
 const rawToken = `jqx_dev_${'A'.repeat(43)}`;
@@ -33,6 +33,12 @@ describe('JobQuest extension API client', () => {
     expect(buildSecureJobQuestUrl('https://jobquest.example.test', '/w/ws/applications/app')).toBe('https://jobquest.example.test/w/ws/applications/app');
     expect(() => buildSecureJobQuestUrl('https://jobquest.example.test', '//evil.test/phish')).toThrow(/origin boundary/);
     expect(() => buildSecureJobQuestUrl('data:text/html,test', '/')).toThrow(/http: or https:/);
+  });
+
+  it('parses formatted and abbreviated salary ranges without splitting thousands separators', () => {
+    expect(parseSalaryRange('USD 195,000 - USD 255,000')).toEqual({ min: 195000, max: 255000 });
+    expect(parseSalaryRange('$120k - $1.5m')).toEqual({ min: 120000, max: 1500000 });
+    expect(parseSalaryRange('', 90000, 110000)).toEqual({ min: 90000, max: 110000 });
   });
 
   it('stores credentials only through chrome.storage.local', async () => {

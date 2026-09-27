@@ -27,6 +27,28 @@ export function buildSecureJobQuestUrl(instanceUrl, pathAndQuery = '/') {
   return target.toString();
 }
 
+/**
+ * Parse the editable salary display without splitting thousands separators.
+ * @param {unknown} value
+ * @param {number | null | undefined} fallbackMin
+ * @param {number | null | undefined} fallbackMax
+ * @returns {{ min: number | null, max: number | null }}
+ */
+export function parseSalaryRange(value, fallbackMin = null, fallbackMax = null) {
+  const amounts = String(value || '').matchAll(/([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*([kKmM])?/g);
+  const parsed = [];
+  for (const match of amounts) {
+    const unit = match[2]?.toLowerCase();
+    const multiplier = unit === 'm' ? 1_000_000 : unit === 'k' ? 1_000 : 1;
+    const amount = Number(match[1].replaceAll(',', '')) * multiplier;
+    if (Number.isFinite(amount)) parsed.push(amount);
+    if (parsed.length === 2) break;
+  }
+  const safeMin = typeof fallbackMin === 'number' && Number.isFinite(fallbackMin) ? fallbackMin : null;
+  const safeMax = typeof fallbackMax === 'number' && Number.isFinite(fallbackMax) ? fallbackMax : null;
+  return { min: parsed[0] ?? safeMin, max: parsed[1] ?? safeMax };
+}
+
 export async function getSettings() {
   const stored = await chrome.storage.local.get(['instanceUrl', 'apiToken', 'theme']);
   const instanceUrl = typeof stored.instanceUrl === 'string' ? stored.instanceUrl : '';

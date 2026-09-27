@@ -7,6 +7,7 @@ import {
   getSettings,
   getWorkflow,
   isConnectionError,
+  parseSalaryRange,
   testConnection,
 } from './api/jobquest.js';
 
@@ -257,15 +258,6 @@ async function initialize() {
   if (workflowReady) await runDuplicateCheck();
 }
 
-function parseSalary(value) {
-  const amounts = String(value || '').match(/\$?([0-9]+(?:\.[0-9]+)?)\s*([kK])?/g) || [];
-  const numbers = amounts.slice(0, 2).map((item) => {
-    const match = item.match(/([0-9]+(?:\.[0-9]+)?)\s*([kK])?/);
-    return match ? Number(match[1]) * (match[2] ? 1000 : 1) : null;
-  });
-  return { min: numbers[0] ?? captured.salaryMin ?? null, max: numbers[1] ?? captured.salaryMax ?? null };
-}
-
 async function save(event) {
   event.preventDefault();
   const company = input('input-company').value.trim();
@@ -277,7 +269,7 @@ async function save(event) {
   }
   const resumeMode = resumeManual.checked ? 'manual' : resumeNone.checked ? 'none' : 'existing';
   const selectedResume = resumeSelect.selectedOptions[0];
-  const salary = parseSalary(input('input-salary').value);
+  const salary = parseSalaryRange(input('input-salary').value, captured.salaryMin, captured.salaryMax);
   const draft = {
     company,
     job_title: title,

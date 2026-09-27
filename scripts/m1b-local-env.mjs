@@ -7,6 +7,7 @@
 // Only variable NAMES are printed. Nothing here ever targets a hosted project.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 
 const out = process.argv[2] ?? '.env.m1b-local';
 const raw = execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['supabase', 'status', '-o', 'json'], {
@@ -31,6 +32,9 @@ const vars = {
   VITE_SUPABASE_PUBLISHABLE_KEY: s.PUBLISHABLE_KEY ?? s.ANON_KEY,
   JQ_JWT_PRIVATE_JWK: JSON.stringify(jwk),
   APP_ORIGINS: 'http://localhost:5173',
+  EXTENSION_TOKEN_PEPPER: randomBytes(32).toString('base64url'),
+  EXTENSION_TOKEN_ENV: 'dev',
+  EXTENSION_ORIGINS: '',
   M1B_TARGET: 'local',
 };
 writeFileSync(out, Object.entries(vars).map(([k, v]) => `${k}=${v}`).join('\n') + '\n');

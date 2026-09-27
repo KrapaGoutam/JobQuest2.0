@@ -25,6 +25,15 @@ export function clientIp(c: Context): string {
 export const requireSameOriginJson: MiddlewareHandler = async (c, next) => {
   const method = c.req.method;
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
+  // Extension bearer tokens are explicit Authorization credentials, never ambient
+  // cookies. Their route performs its own optional extension-origin allow-list check.
+  if (c.req.path.startsWith('/api/ext/v1/')) {
+    const ct = c.req.header('content-type') ?? '';
+    if (!ct.toLowerCase().startsWith('application/json')) {
+      return c.json({ error: { code: 'UNSUPPORTED_MEDIA_TYPE', message: 'Use application/json.' } }, 415);
+    }
+    return next();
+  }
   const origins = allowedOrigins();
   const origin = c.req.header('origin');
   const referer = c.req.header('referer');

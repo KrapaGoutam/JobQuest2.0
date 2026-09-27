@@ -10,6 +10,7 @@ beforeAll(async () => {
   process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_placeholder';
   process.env.SUPABASE_SECRET_KEY = 'sb_secret_placeholder';
   process.env.JQ_JWT_PRIVATE_JWK = JSON.stringify(jwk);
+  process.env.EXTENSION_TOKEN_PEPPER = 'unit-test-extension-pepper-32-bytes-minimum';
   const { resetEnvCache } = await import('../../apps/api/src/env');
   const { resetSigningMaterial } = await import('../../apps/api/src/lib/tokens');
   resetEnvCache(); resetSigningMaterial();
@@ -62,9 +63,16 @@ describe('service-role boundary (static)', () => {
     const p = join(dir, f);
     return statSync(p).isDirectory() ? files(p) : [p];
   });
-  it('admin() (service role) is used only by the auth routes and the rate limiter, never for user CRUD', () => {
+  it('admin() (service role) stays inside the explicit auth, rate-limit, and extension Node-facade boundaries', () => {
     const users = files('apps/api/src').filter((p) => /\badmin\(\)/.test(readFileSync(p, 'utf8'))).map((p) => p.replace(/\\/g, '/')).sort();
-    expect(users).toEqual(['apps/api/src/lib/db.ts', 'apps/api/src/lib/rateLimit.ts', 'apps/api/src/routes/auth.ts']);
+    expect(users).toEqual([
+      'apps/api/src/lib/db.ts',
+      'apps/api/src/lib/extensionTokens.ts',
+      'apps/api/src/lib/rateLimit.ts',
+      'apps/api/src/routes/auth.ts',
+      'apps/api/src/routes/extension.ts',
+      'apps/api/src/routes/scope.ts',
+    ]);
     const authSrc = readFileSync('apps/api/src/routes/auth.ts', 'utf8');
     for (const table of ['applications', 'workspaces', 'workspace_members', 'workflow_definitions']) {
       expect(authSrc).not.toContain(`from('${table}')`);

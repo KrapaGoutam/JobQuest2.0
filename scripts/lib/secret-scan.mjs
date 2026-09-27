@@ -19,12 +19,12 @@ export const RULES = [
   { id: 'supabase-personal-access-token', re: /\bsbp_[a-f0-9]{40}\b/g },
   { id: 'github-token', re: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g },
   { id: 'jobquest-refresh-token', re: new RegExp(`\\bjqr_${B64URL}{40,}`, 'g') },
-  { id: 'jobquest-extension-token', re: /\bjqe_live_[0-9a-f]{40}\b/g },
+  { id: 'jobquest-extension-token', re: /\bjqx_(?:dev|live)_[A-Za-z0-9]{43}\b/g },
   { id: 'jobquest-claim-token', re: new RegExp(`\\bjqc_live_${B64URL}{40,}`, 'g') },
   { id: 'pem-private-key', re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/g },
   { id: 'jwk-private-key', re: new RegExp(`"d"\\s*:\\s*"${B64URL}{32,}"`, 'g'), context: /"kty"\s*:/ },
   { id: 'database-url-with-password', re: /\bpostgres(?:ql)?:\/\/[^\s:@/'"`]+:([^\s@'"`]+)@[^\s'"`]+/g, check: (m) => !isPlaceholder(m[1]) },
-  { id: 'server-secret-env-name', re: /\b(?:SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|JQ_JWT_PRIVATE_JWK|SUPABASE_DB_PASSWORD|SUPABASE_DB_URL)\b/g, bundleOnly: true },
+  { id: 'server-secret-env-name', re: /\b(?:SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|JQ_JWT_PRIVATE_JWK|EXTENSION_TOKEN_PEPPER|SUPABASE_DB_PASSWORD|SUPABASE_DB_URL)\b/g, bundleOnly: true },
 ];
 
 const JWT = new RegExp(`\\beyJ${B64URL}{10,}\\.eyJ${B64URL}{10,}\\.${B64URL}{10,}`, 'g');
@@ -81,7 +81,7 @@ export function scanText(text, opts = {}) {
 
 /** Secret values that must never appear in shipped or committed files, taken from the environment. */
 export function knownSecretsFromEnv(env = process.env) {
-  const out = [env.SUPABASE_SECRET_KEY, env.SUPABASE_SERVICE_ROLE_KEY, env.SUPABASE_DB_PASSWORD];
+  const out = [env.SUPABASE_SECRET_KEY, env.SUPABASE_SERVICE_ROLE_KEY, env.SUPABASE_DB_PASSWORD, env.EXTENSION_TOKEN_PEPPER];
   if (env.JQ_JWT_PRIVATE_JWK) {
     try {
       const j = JSON.parse(env.JQ_JWT_PRIVATE_JWK);

@@ -42,7 +42,7 @@ describe('secret scanner: TRUE secret fixtures FAIL', () => {
     expect(rules(`${P.sbp}${hex(20)}`)).toContain('supabase-personal-access-token');
     expect(rules(`ghp_${rand(30).replace(/[-_]/g, 'a').slice(0, 36)}`)).toContain('github-token');
     expect(rules(`jqr_${rand(32)}`)).toContain('jobquest-refresh-token');
-    expect(rules(`jqe_live_${hex(20)}`)).toContain('jobquest-extension-token');
+    expect(rules(`jqx_dev_${rand(33).replace(/[-_]/g, 'A').slice(0, 43)}`)).toContain('jobquest-extension-token');
   });
   it('server-only secret variable names inside a browser bundle', () => {
     expect(rules('const a = process.env.JQ_JWT_PRIVATE_JWK')).toContain('server-secret-env-name');

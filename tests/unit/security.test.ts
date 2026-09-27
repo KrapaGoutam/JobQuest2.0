@@ -6,6 +6,7 @@ beforeAll(() => {
   process.env.SUPABASE_SECRET_KEY = 'sb_secret_placeholder';
   process.env.APP_ORIGINS = 'http://localhost:5173';
   process.env.JQ_JWT_PRIVATE_JWK = '{"placeholder":"unit-test-not-a-key"}'; // presence only; never parsed here
+  process.env.EXTENSION_TOKEN_PEPPER = 'unit-test-extension-pepper-32-bytes-minimum';
 });
 
 async function call(path: string, init: RequestInit) {

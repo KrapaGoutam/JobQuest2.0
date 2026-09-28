@@ -1,0 +1,25 @@
+{
+  "run": "82223f",
+  "started_at": "2026-09-28T06:05:14.799Z",
+  "target": "local",
+  "m12-integration-report": {
+    "status": "PASS",
+    "sharedWorkspaceId": "0635dc6c-8bd4-41f9-abdb-2888bcf390ea",
+    "actionsAudited": [
+      "member.left",
+      "member.removed",
+      "member.role_changed",
+      "member.status_changed",
+      "member.status_changed",
+      "member.role_changed",
+      "member.joined",
+      "member.joined",
+      "invitation.revoked",
+      "invitation.created",
+      "invitation.created",
+      "workspace.updated",
+      "workspace.created"
+    ],
+    "testsPassed": 10
+  }
+}

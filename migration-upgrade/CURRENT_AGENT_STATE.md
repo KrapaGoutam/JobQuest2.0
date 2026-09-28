@@ -1,52 +1,96 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
-## Current milestone
+## Current Milestone
+Milestone 12 — Workspace Management & Manager Functions (COMPLETED — STOPPED WITH M12 UNMERGED)
 
-M11 - Browser Extension Migration: complete and unmerged for user review.
+## Current Branch
+`feature/m12-workspace-manager`
 
-## Branch and revisions
+## Current HEAD
+Commit `fea2fcb7` (`feat(m12): implement workspace management and manager governance ui`)
 
-- Branch: `feature/m11-browser-extension`
-- Current executable HEAD: `a49399ea59dd055c4af1887c857342913d166a07`
-- Last pushed executable commit: same SHA (`fix(m11): harden extension browser ci`)
-- API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`
-- Web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`
-- Docs-only closeout content commit: `870cb4f1434397b70ca6ef21aa695b61e8309e8e`
-- Final recovery-state tail: this file is included in the final branch HEAD; use `git rev-parse HEAD` after checkout rather than embedding a self-referential SHA here.
-- Development base remains `60ec9dff05588243ae95fb643b31a81fb295e1fb`; M11 is not merged.
+## Last Pushed Commit
+Commit `fea2fcb7` on `origin/feature/m12-workspace-manager`
 
-## Completed state
+## Working Tree State
+Clean; M12 documentation and test evidence staged/committed.
 
-- Secure HMAC extension-token schema, RLS/grants, lifecycle, scopes, membership checks, rate limit, and atomic capture are complete.
-- Settings token management and Manifest V3 extension are complete.
-- Six legacy HTML fixtures and 11 named extractor cases pass; extension suite is 27/27.
-- Full local gate: lint/typecheck/build/package PASS; unit 116/116; integration 134/134; M11 7/7; all secret scans zero findings.
-- Real unpacked Chromium M11 lifecycle passes locally and on final Vercel Preview with six axe contexts and 0 critical/serious/blocking findings.
-- Hosted-development M11 integration passes 7/7.
-- Exact executable SHA CI run `36370670193` is green: static job `108766160772`, database/integration/extension/browser job `108766160686`.
+## Last Completed Step
+Milestone 12 implementation, verification, and documentation complete:
+- Additive database migration `20261010100000_m12_workspace_management.sql` created and applied locally + hosted dev (`jobquest-dev` / `xpnkasclquplmrcmhsif`);
+- 13 security-definer RPCs + ADR-036 trigger safeguard + ADR-037 durable member removal verified;
+- Web UI (`WorkspaceSwitcher`, `MembersView`, `WorkspaceSettingsView`, `JoinWorkspaceModal`, `AuditHistoryView`) built and verified;
+- Vercel Preview deployment `dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1` is READY at `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (health 200, E2E passed, Option B privacy verified);
+- 12 visual regression screenshots captured in `migration-upgrade/m12/screenshots/`;
+- 0 blocking WCAG accessibility violations;
+- Secret scan passed (0 findings across web bundle, extension bundle, and tracked repo);
+- Full documentation suite authored in `migration-upgrade/m12/`.
 
-## Infrastructure
+## Current Step
+Stopped at final prompt boundary as directed: **DO NOT START M13. DO NOT MERGE M12. DO NOT MERGE MAIN. DO NOT TOUCH PRODUCTION.**
 
-- Hosted database: `jobquest-dev`, ref `xpnkasclquplmrcmhsif`.
-- Applied migration: `20261005100000_m11_extension_tokens.sql`.
-- Final Preview: `https://jobquest2-4s4ifimlx-one-piece-5779.vercel.app`.
-- Deployment: `dpl_Bynq1FZg7G2kD5vR9M1S6KTDPMx8`, READY, target Preview, health 200.
-- Preview-only `EXTENSION_TOKEN_PEPPER` is configured. Production was not changed.
-- Local disposable Supabase was clean-reset through all 15 migrations and stopped after validation. The task-owned API/web listeners on 8787/5173 were also stopped.
+## Next Exact Step (For User / Next Agent)
+1. User reviews Milestone 12 on `feature/m12-workspace-manager` and Vercel Preview.
+2. Upon user approval, merge `feature/m12-workspace-manager` into `development`:
+   ```bash
+   git checkout development
+   git pull origin development
+   git merge --no-ff feature/m12-workspace-manager -m "merge: approve M12 workspace management and manager governance"
+   git push origin development
+   ```
+3. Verify `development` CI is green.
+4. Begin Milestone 13 (`M13 — Global Search, Hardening & Parity Sweep`).
 
-## Final evidence
+## Database State
+- 16 migrations applied through `20261010100000_m12_workspace_management.sql` (both locally and on `jobquest-dev`).
 
-- Hosted integration: `migration-upgrade/m11/evidence/integration-hosted-dev-9ba597.json`
-- Local browser: `migration-upgrade/m11/evidence/browser-local-f719491e.json`
-- Final Preview browser: `migration-upgrade/m11/evidence/browser-vercel-preview-73808ee5.json`
-- M11 reports: `migration-upgrade/m11/M11_*`
+## Supabase State
+- Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`), all 16 migrations applied.
+- Local Supabase: Docker stack active and clean.
 
-## Current/next exact step
+## Pending Migrations
+- None.
 
-No implementation or closeout work remains. Keep the feature branch unmerged and stop. Any merge requires a separate explicit user authorization.
+## Vercel State
+- Active M12 Preview: `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (Deployment `dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1`, READY).
+- Team: `one-piece-5779`, Project: `jobquest2`.
+- Production: Untouched.
 
-## Safety and authority
+## CI State
+- CI run `36386722142` for commit `fea2fcb7` on `feature/m12-workspace-manager` (passing all checks).
 
-- Do not merge M11, touch `main` or `development`, deploy Production, mutate production Supabase, or start M12.
-- JobQuest1.0 remains read-only.
-- The Gate 01 authority names M12 **Workspace Management & Manager Functions**. An older implementation plan says Journal / Notes; the Gate 01 milestone train is authoritative here.
+## Local Tests
+- Unit: 120/120 PASS (17 test files)
+- Extension: 27/27 PASS (3 test files)
+- Local Integration: 144/144 PASS (12 test files)
+- Secret scans: 0 findings (web bundle, extension, tracked files)
+- Playwright E2E: PASS (0 blocking a11y violations)
+
+## Hosted Tests
+- Hosted development `jobquest-dev`: 10/10 M12 integration tests PASS.
+- Vercel Preview: /api/health HTTP 200, E2E full lifecycle PASS, Option B leak test PASS.
+
+## Background Processes
+- None currently running.
+
+## Decisions
+- ADR-036: Last active manager safeguard strictly enforced via database trigger on demotion, suspension, leave, and removal.
+- ADR-037: Durable member removal deletes membership row but preserves historical records attributed to original `user_id`.
+- ADR-047: Role is never placed in access tokens; dynamically queried from `workspace_members`.
+- Active Workspace Persistence: Saved in `localStorage` under `jq_active_ws` to survive reloads, cleared on logout.
+- Accessible OKLCH Palette: All workspace accent colors calibrated to <= 0.52 lightness to guarantee >= 4.5:1 text contrast.
+
+## Do Not Repeat
+- Do NOT merge M12 to development without user consent.
+- Do NOT merge development to main.
+- Do NOT touch production Supabase or Vercel.
+- Do NOT edit `../JobQuest1.0/`.
+- Do NOT start M13 until M12 is merged and development CI is green.
+
+## Safe Resume Commands
+```powershell
+git status
+git log -3 --oneline
+pnpm test:unit
+pnpm test:integration
+```

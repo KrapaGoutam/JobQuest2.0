@@ -97,9 +97,9 @@ export async function extensionActor(c: Context): Promise<ExtensionActor | null>
 
   const [accountResult, membershipResult] = await Promise.all([
     admin().from('user_accounts').select('status').eq('user_id', data.user_id).maybeSingle(),
-    admin().from('workspace_members').select('id').eq('workspace_id', data.workspace_id).eq('user_id', data.user_id).maybeSingle(),
+    admin().from('workspace_members').select('id, status').eq('workspace_id', data.workspace_id).eq('user_id', data.user_id).maybeSingle(),
   ]);
-  if (accountResult.error || accountResult.data?.status !== 'ACTIVE' || membershipResult.error || !membershipResult.data) return null;
+  if (accountResult.error || accountResult.data?.status !== 'ACTIVE' || membershipResult.error || !membershipResult.data || membershipResult.data.status !== 'ACTIVE') return null;
 
   const lastUsed = data.last_used_at ? new Date(data.last_used_at).getTime() : 0;
   if (lastUsed < Date.now() - 60_000) {

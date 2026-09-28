@@ -18,6 +18,10 @@ import { ResumesView } from './views/ResumesView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { ImportExportView } from './views/ImportExportView';
 import { ExtensionSettingsView } from './views/ExtensionSettingsView';
+import { MembersView } from './views/MembersView';
+import { WorkspaceSettingsView } from './views/WorkspaceSettingsView';
+import { AuditHistoryView } from './views/AuditHistoryView';
+import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import {
   Calendar,
@@ -29,8 +33,20 @@ import './styles/globals.css';
 
 const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('jobquest-auth') : null;
 
-interface Workspace { id: string; name: string; workspace_type: string }
-interface Membership { workspace_id: string; role: 'USER' | 'MANAGER'; workspaces: Workspace | null }
+interface Workspace {
+  id: string;
+  name: string;
+  workspace_type: string;
+  color?: string;
+  description?: string | null;
+  archived_at?: string | null;
+}
+interface Membership {
+  workspace_id: string;
+  role: 'USER' | 'MANAGER';
+  status?: 'ACTIVE' | 'SUSPENDED';
+  workspaces: Workspace | null;
+}
 
 declare global {
   interface Window { __jqState?: unknown }
@@ -63,7 +79,8 @@ function AppContent() {
   const [currentPath, setCurrentPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace(/^#/, '');
-      return hash || window.location.pathname || '/';
+      if (hash) return hash.startsWith('/') ? hash : `/${hash}`;
+      return window.location.pathname || '/';
     }
     return '/';
   });
@@ -73,9 +90,10 @@ function AppContent() {
   const note = (m: string) => setLog((l) => [`${new Date().toLocaleTimeString()} ${m}`, ...l].slice(0, 40));
 
   const navigate = useCallback((path: string) => {
-    setCurrentPath(path);
+    const target = path.startsWith('/') ? path : `/${path}`;
+    setCurrentPath(target);
     if (typeof window !== 'undefined') {
-      window.location.hash = `#${path}`;
+      window.location.hash = `#${target}`;
     }
   }, []);
   const handleDeepLinkMissing = useCallback(() => navigate('/applications'), [navigate]);
@@ -83,7 +101,11 @@ function AppContent() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace(/^#/, '');
-      if (hash) setCurrentPath(hash);
+      if (hash) {
+        setCurrentPath(hash.startsWith('/') ? hash : `/${hash}`);
+      } else {
+        setCurrentPath('/');
+      }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -135,12 +157,19 @@ function AppContent() {
   }, [user, session, memberships, apps, wfDirect, wfNode, activeWs]);
 
   const loadData = useCallback(async (ws?: string | null) => {
-    const m = await supabase.from('workspace_members').select('workspace_id, role, workspaces(id, name, workspace_type)');
+    const m = await supabase
+      .from('workspace_members')
+      .select('workspace_id, role, status, workspaces(id, name, workspace_type, color, description, archived_at)')
+      .eq('status', 'ACTIVE');
     if (m.error) return note(`workspaces: ${m.error.message}`);
     const mine = (m.data as unknown as Membership[]).filter((x, i, arr) => arr.findIndex((y) => y.workspace_id === x.workspace_id) === i);
     setMemberships(mine);
-    const target = ws ?? activeWs ?? user?.active_workspace_id ?? mine[0]?.workspace_id ?? null;
+    const savedWs = typeof window !== 'undefined' ? localStorage.getItem('jq_active_ws') : null;
+    const target = ws ?? (savedWs && mine.some((x) => x.workspace_id === savedWs) ? savedWs : null) ?? activeWs ?? user?.active_workspace_id ?? mine[0]?.workspace_id ?? null;
     setActiveWs(target);
+    if (target && typeof window !== 'undefined') {
+      localStorage.setItem('jq_active_ws', target);
+    }
     if (target) {
       const a = await supabase.from('applications').select('id, company_name, role_title, stage, status, user_id, archived_at').eq('workspace_id', target).order('created_at');
       if (a.error) note(`applications: ${a.error.message}`);
@@ -187,6 +216,7 @@ function AppContent() {
     await api('/auth/logout', { scope }, session?.access_token);
     adopt(null, null);
     setApps([]); setMemberships([]);
+    if (typeof window !== 'undefined') localStorage.removeItem('jq_active_ws');
     bc?.postMessage('logout');
     note(`signed out (${scope})`);
   }
@@ -337,12 +367,17 @@ function AppContent() {
       case '/workspace':
       case '/workspace/members':
         return 'Workspace Members';
+      case '/workspace/settings':
+        return 'Workspace Settings';
       case '/workspace/imports':
         return 'Import & Export';
       case '/workspace/workflow':
         return 'Workflow';
       case '/workspace/audit':
         return 'Audit History';
+      case '/workspaces/join':
+      case '/workspace/join':
+        return 'Join Workspace';
       case '/settings':
       case '/settings/extension':
         return 'Settings';
@@ -357,7 +392,11 @@ function AppContent() {
   const renderRouteView = () => {
     const applicationDeepLink = currentPath.match(/^\/w\/([^/]+)\/applications\/([^/?#]+)$/);
     if (currentPath === '/' || currentPath === '/applications' || applicationDeepLink) {
-      const routeWorkspaceId = applicationDeepLink?.[1] ? decodeURIComponent(applicationDeepLink[1]) : activeWs;
+      let routeWorkspaceId = applicationDeepLink?.[1] ? decodeURIComponent(applicationDeepLink[1]) : activeWs;
+      // Foreign workspace check: if routeWorkspaceId is not in user's active memberships, deny foreign access safely
+      if (routeWorkspaceId && !memberships.some((m) => m.workspace_id === routeWorkspaceId)) {
+        routeWorkspaceId = activeWs;
+      }
       const routeApplicationId = applicationDeepLink?.[2] ? decodeURIComponent(applicationDeepLink[2]) : null;
       return (
         <ApplicationsView
@@ -490,6 +529,43 @@ function AppContent() {
           currentUserId={user?.id ?? ''}
           isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
           session={session}
+        />
+      );
+    }
+
+    if (currentPath === '/workspace' || currentPath === '/workspace/members') {
+      return (
+        <MembersView
+          currentUserId={user?.id ?? null}
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (currentPath === '/workspace/settings') {
+      return (
+        <WorkspaceSettingsView
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (currentPath === '/workspace/audit') {
+      return (
+        <AuditHistoryView />
+      );
+    }
+
+    const joinCodeMatch = currentPath.match(/^\/workspaces\/join(?:\?code=([^&]+))?$/) ||
+                          currentPath.match(/^\/workspace\/join(?:\?code=([^&]+))?$/);
+    if (joinCodeMatch || currentPath === '/workspaces/join' || currentPath === '/workspace/join') {
+      const initialCode = joinCodeMatch?.[1] ? decodeURIComponent(joinCodeMatch[1]) : '';
+      return (
+        <JoinWorkspaceModal
+          isOpen={true}
+          initialCode={initialCode}
+          onClose={() => navigate('/dashboard')}
+          onJoined={() => navigate('/dashboard')}
         />
       );
     }

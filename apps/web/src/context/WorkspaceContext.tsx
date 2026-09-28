@@ -1,15 +1,25 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '../supabase';
+import {
+  updateWorkspaceMetadata,
+  archiveWorkspace as apiArchiveWorkspace,
+  leaveWorkspace as apiLeaveWorkspace,
+  joinWorkspace as apiJoinWorkspace,
+} from '../api/workspace';
 
 export interface WorkspaceRecord {
   id: string;
   name: string;
   workspace_type: string;
+  color?: string;
+  description?: string | null;
+  archived_at?: string | null;
 }
 
 export interface WorkspaceMembership {
   workspace_id: string;
   role: 'USER' | 'MANAGER';
+  status?: 'ACTIVE' | 'SUSPENDED';
   workspaces: WorkspaceRecord | null;
 }
 
@@ -22,27 +32,31 @@ interface WorkspaceContextValue {
   workspaceColor: string;
   setActiveWorkspaceId: (id: string) => void;
   loadWorkspaces: (preferredId?: string | null) => Promise<void>;
-  createSharedWorkspace: (name: string) => Promise<string | null>;
+  createSharedWorkspace: (name: string, color?: string, description?: string) => Promise<string | null>;
+  updateWorkspace: (id: string, updates: { name?: string; color?: string; description?: string | null }) => Promise<void>;
+  archiveWorkspace: (id: string) => Promise<void>;
+  leaveWorkspace: (id: string) => Promise<void>;
+  joinWorkspaceWithCode: (code: string) => Promise<string>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
 
 // Generate deterministic workspace accent color based on workspace ID
 function getWorkspaceColor(id: string | null): string {
-  if (!id) return '#3157d5';
+  if (!id) return 'oklch(0.55 0.12 160)';
   const colors = [
-    '#3157d5', // Classic blue
-    '#147a55', // Forest green
-    '#8a3fb0', // Purple
-    '#9a5b08', // Amber
-    '#246b9f', // Ocean
-    '#c0392b', // Crimson
+    'oklch(0.50 0.13 265)', // Purple / Indigo
+    'oklch(0.50 0.12 160)', // Emerald / Teal
+    'oklch(0.52 0.13 55)',  // Amber / Gold
+    'oklch(0.50 0.15 25)',  // Coral / Red
+    'oklch(0.50 0.12 320)', // Rose / Magenta
+    'oklch(0.48 0.02 250)',  // Slate
   ];
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash << 5) - hash + id.charCodeAt(i);
   }
-  return colors[Math.abs(hash) % colors.length] ?? '#3157d5';
+  return colors[Math.abs(hash) % colors.length] ?? 'oklch(0.55 0.12 160)';
 }
 
 /**
@@ -79,7 +93,8 @@ export function WorkspaceProvider({
     try {
       const res = await supabase
         .from('workspace_members')
-        .select('workspace_id, role, workspaces(id, name, workspace_type)');
+        .select('workspace_id, role, status, workspaces(id, name, workspace_type, color, description, archived_at)')
+        .eq('status', 'ACTIVE');
 
       if (res.error) {
         console.error('Error loading workspaces:', res.error.message);
@@ -106,9 +121,17 @@ export function WorkspaceProvider({
     }
   }, [controlled, onSelectWorkspace, activeWorkspaceId, userActiveWorkspaceId]);
 
-  const createSharedWorkspace = async (name: string): Promise<string | null> => {
+  const createSharedWorkspace = async (
+    name: string,
+    color?: string,
+    description?: string,
+  ): Promise<string | null> => {
     try {
-      const res = await supabase.rpc('rpc_create_workspace', { p_name: name });
+      const res = await supabase.rpc('rpc_create_workspace', {
+        p_name: name,
+        p_color: color ?? 'oklch(0.55 0.12 160)',
+        p_description: description ?? null,
+      });
       if (res.error) {
         throw new Error(res.error.message);
       }
@@ -117,15 +140,39 @@ export function WorkspaceProvider({
       return newId;
     } catch (err) {
       console.error('Failed to create shared workspace:', err);
-      return null;
+      throw err;
     }
+  };
+
+  const updateWorkspace = async (
+    id: string,
+    updates: { name?: string; color?: string; description?: string | null },
+  ): Promise<void> => {
+    await updateWorkspaceMetadata(id, updates);
+    await loadWorkspaces(id);
+  };
+
+  const archiveWorkspace = async (id: string): Promise<void> => {
+    await apiArchiveWorkspace(id);
+    await loadWorkspaces();
+  };
+
+  const leaveWorkspace = async (id: string): Promise<void> => {
+    await apiLeaveWorkspace(id);
+    await loadWorkspaces();
+  };
+
+  const joinWorkspaceWithCode = async (code: string): Promise<string> => {
+    const res = await apiJoinWorkspace(code);
+    await loadWorkspaces(res.workspace_id);
+    return res.workspace_id;
   };
 
   const activeMembership = memberships.find((m) => m.workspace_id === activeWorkspaceId);
   const activeWorkspace = activeMembership?.workspaces ?? null;
   const activeRole = activeMembership?.role?.toUpperCase() ?? 'USER';
   const isManager = activeRole === 'MANAGER';
-  const workspaceColor = getWorkspaceColor(activeWorkspaceId);
+  const workspaceColor = activeWorkspace?.color || getWorkspaceColor(activeWorkspaceId);
 
   return (
     <WorkspaceContext.Provider
@@ -142,6 +189,10 @@ export function WorkspaceProvider({
         },
         loadWorkspaces,
         createSharedWorkspace,
+        updateWorkspace,
+        archiveWorkspace,
+        leaveWorkspace,
+        joinWorkspaceWithCode,
       }}
     >
       {children}
@@ -156,3 +207,4 @@ export function useWorkspace(): WorkspaceContextValue {
   }
   return ctx;
 }
+

@@ -60,7 +60,7 @@ async function expectClosed(dialog: Locator) {
     throw new Error(`Dialog stayed open: ${(await dialog.innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600)}`);
   }
 }
-const nav = (page: Page, name: string) => page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name, exact: true }).click();
+const nav = (page: Page, name: string) => page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name }).click();
 
 test.use({ timezoneId: 'Europe/Berlin' });
 

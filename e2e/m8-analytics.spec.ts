@@ -12,7 +12,7 @@ mkdirSync(evidenceDir, { recursive: true });
 const shot = (page: Page, name: string) => page.screenshot({ path: `${shotsDir}/${name}.png`, fullPage: false });
 const settle = (page: Page) => page.waitForTimeout(500);
 const nav = (page: Page, name: string) =>
-  page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name, exact: true }).click();
+  page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name }).click();
 const dismissToasts = async (page: Page) => {
   const closeButtons = page.getByRole('button', { name: 'Close notification' });
   while (await closeButtons.count()) await closeButtons.first().click();

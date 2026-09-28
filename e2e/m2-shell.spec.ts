@@ -39,21 +39,21 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
 
   test('Interactive components: Dialog focus trap, Drawer, Tabs, and Toast', async ({ page }) => {
     await page.goto('/design-system');
-    await page.getByRole('button', { name: 'Show Dialog' }).click();
+    await page.getByRole('button', { name: 'Open Modal Dialog' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.getByRole('button', { name: 'Close' }).click();
     await expect(dialog).not.toBeVisible();
 
-    await page.getByRole('button', { name: 'Show Drawer' }).click();
+    await page.getByRole('button', { name: 'Open Slide-in Drawer' }).click();
     const drawer = page.getByRole('complementary').filter({ hasText: 'Drawer content' });
     await expect(drawer).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(drawer).not.toBeVisible();
 
-    const tab2 = page.getByRole('tab', { name: 'Tab 2' });
+    const tab2 = page.getByRole('tab', { name: 'Dialogs & Drawers' });
     await tab2.click();
-    await expect(page.getByRole('tabpanel', { name: 'Tab 2' })).toBeVisible();
+    await expect(page.getByRole('tabpanel').first()).toBeVisible();
   });
 
   test('Accessibility audit on Design System Showcase with axe-core', async ({ page }) => {

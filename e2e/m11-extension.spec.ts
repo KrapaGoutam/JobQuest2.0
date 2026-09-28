@@ -138,6 +138,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
         await registration.getByRole('button', { name: 'Create account' }).click();
         await expect(webPage.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
         await webPage.getByRole('button', { name: 'I saved them' }).click();
+        await webPage.goto('/applications');
       }
       await expect(webPage.getByTestId('new-application-btn')).toBeVisible();
       await webPage.evaluate(() => { window.location.hash = '#/settings/extension'; });

@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "deployment_id": "dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1",
+  "preview_url": "https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app",
+  "checks": {
+    "leak_spec": "PASS",
+    "credentials_in_dom": 0,
+    "tokens_in_storage": 0,
+    "recovery_codes_cleared": true
+  },
+  "completed_at": "2026-09-28T06:32:00.097Z"
+}

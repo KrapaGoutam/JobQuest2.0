@@ -1,99 +1,96 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
 ## Current Milestone
-Milestone 12 — Workspace Management & Manager Functions (In Progress)
+Milestone 12 — Workspace Management & Manager Functions (COMPLETED — STOPPED WITH M12 UNMERGED)
 
 ## Current Branch
 `feature/m12-workspace-manager`
 
 ## Current HEAD
-`37cc400fe787918bede5c05b74f4889e12895051`
+Commit `fea2fcb7` (`feat(m12): implement workspace management and manager governance ui`)
 
 ## Last Pushed Commit
-`37cc400fe787918bede5c05b74f4889e12895051` (merge commit of M11 into development, tracked on `origin/feature/m12-workspace-manager`)
+Commit `fea2fcb7` on `origin/feature/m12-workspace-manager`
 
 ## Working Tree State
-Clean with untracked planning documents in `migration-upgrade/m12/`:
-- `migration-upgrade/m12/README.md`
-- `migration-upgrade/m12/IMPLEMENTATION_PLAN.md`
-- `migration-upgrade/m12/TEST_PLAN.md`
-- `migration-upgrade/m12/ACCEPTANCE_CRITERIA.md`
+Clean; M12 documentation and test evidence staged/committed.
 
 ## Last Completed Step
-Step 5: Milestone 12 Planning Package authored (`README.md`, `IMPLEMENTATION_PLAN.md`, `TEST_PLAN.md`, `ACCEPTANCE_CRITERIA.md`). Milestone authority resolved definitively as "Workspace Management & Manager Functions" per `GATE_01_ARCHITECTURE_PROPOSAL.md` §23 M12.
+Milestone 12 implementation, verification, and documentation complete:
+- Additive database migration `20261010100000_m12_workspace_management.sql` created and applied locally + hosted dev (`jobquest-dev` / `xpnkasclquplmrcmhsif`);
+- 13 security-definer RPCs + ADR-036 trigger safeguard + ADR-037 durable member removal verified;
+- Web UI (`WorkspaceSwitcher`, `MembersView`, `WorkspaceSettingsView`, `JoinWorkspaceModal`, `AuditHistoryView`) built and verified;
+- Vercel Preview deployment `dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1` is READY at `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (health 200, E2E passed, Option B privacy verified);
+- 12 visual regression screenshots captured in `migration-upgrade/m12/screenshots/`;
+- 0 blocking WCAG accessibility violations;
+- Secret scan passed (0 findings across web bundle, extension bundle, and tracked repo);
+- Full documentation suite authored in `migration-upgrade/m12/`.
 
 ## Current Step
-Step 8: Author and apply additive database migration `supabase/migrations/20261010100000_m12_workspace_management.sql`.
+Stopped at final prompt boundary as directed: **DO NOT START M13. DO NOT MERGE M12. DO NOT MERGE MAIN. DO NOT TOUCH PRODUCTION.**
 
-## Next Exact Step
-1. Commit planning package to `feature/m12-workspace-manager` and push to origin.
-2. Author database migration `20261010100000_m12_workspace_management.sql` containing schema additions (`workspaces.color`, `workspaces.description`, `workspaces.archived_at`, `workspace_members.status`, `workspace_members.invited_by`, `workspace_invitations` table), last-manager safeguard trigger enhancements, and transactional RPCs.
-3. Test migration locally with `pnpm exec supabase db reset --local --no-seed`.
+## Next Exact Step (For User / Next Agent)
+1. User reviews Milestone 12 on `feature/m12-workspace-manager` and Vercel Preview.
+2. Upon user approval, merge `feature/m12-workspace-manager` into `development`:
+   ```bash
+   git checkout development
+   git pull origin development
+   git merge --no-ff feature/m12-workspace-manager -m "merge: approve M12 workspace management and manager governance"
+   git push origin development
+   ```
+3. Verify `development` CI is green.
+4. Begin Milestone 13 (`M13 — Global Search, Hardening & Parity Sweep`).
 
 ## Database State
-- 15 migrations applied through `20261005100000_m11_extension_tokens.sql`.
-- Migration 16 pending: `20261010100000_m12_workspace_management.sql`.
+- 16 migrations applied through `20261010100000_m12_workspace_management.sql` (both locally and on `jobquest-dev`).
 
 ## Supabase State
-- Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`).
-- Local Supabase: installed and tested through M11.
+- Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`), all 16 migrations applied.
+- Local Supabase: Docker stack active and clean.
 
 ## Pending Migrations
-- `supabase/migrations/20261010100000_m12_workspace_management.sql` (to be created).
+- None.
 
 ## Vercel State
-- Previous preview: `https://jobquest2-4s4ifimlx-one-piece-5779.vercel.app` (Deployment `dpl_Bynq1FZg7G2kD5vR9M1S6KTDPMx8`, READY).
+- Active M12 Preview: `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (Deployment `dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1`, READY).
 - Team: `one-piece-5779`, Project: `jobquest2`.
-- Production untouched.
+- Production: Untouched.
 
 ## CI State
-- Development CI for M11 merge commit `37cc400f`: Run `36381805053` PASSED (Job 1 `108798928826` and Job 2 `108798928958` green).
-- M12 branch pushed and waiting for initial M12 commits.
+- CI run `36386722142` for commit `fea2fcb7` on `feature/m12-workspace-manager` (passing all checks).
 
 ## Local Tests
-- Pre-M12 baseline: Unit 116/116 PASS, Integration 134/134 PASS, M11 7/7 PASS, extension 27/27 PASS, secret scans 0 findings.
+- Unit: 120/120 PASS (17 test files)
+- Extension: 27/27 PASS (3 test files)
+- Local Integration: 144/144 PASS (12 test files)
+- Secret scans: 0 findings (web bundle, extension, tracked files)
+- Playwright E2E: PASS (0 blocking a11y violations)
 
 ## Hosted Tests
-- Hosted development `jobquest-dev` M11 verified 7/7 PASS.
+- Hosted development `jobquest-dev`: 10/10 M12 integration tests PASS.
+- Vercel Preview: /api/health HTTP 200, E2E full lifecycle PASS, Option B leak test PASS.
 
 ## Background Processes
 - None currently running.
 
-## Modified Files
-- `migration-upgrade/CURRENT_AGENT_STATE.md`
-
-## Untracked Classification
-- `migration-upgrade/m12/README.md` (authoritative scope reconciliation)
-- `migration-upgrade/m12/IMPLEMENTATION_PLAN.md` (architecture and execution plan)
-- `migration-upgrade/m12/TEST_PLAN.md` (unit, integration, regression, E2E plan)
-- `migration-upgrade/m12/ACCEPTANCE_CRITERIA.md` (acceptance criteria matrix)
-
-## Known Failures
-- None.
-
 ## Decisions
-- ADR-036: Last Manager Protection strictly enforced at database trigger layer on demotion, deletion, suspension, or departure.
-- ADR-037: Member removal deletes membership row but preserves all owned historical records with `ON DELETE RESTRICT`.
-- ADR-047: Workspace roles are never placed in access tokens; dynamically queried from `workspace_members`.
-- Audit Viewer: Read-only viewer implemented for managers; manager read-audit remains explicitly deferred.
-
-## Unresolved Questions
-- None.
+- ADR-036: Last active manager safeguard strictly enforced via database trigger on demotion, suspension, leave, and removal.
+- ADR-037: Durable member removal deletes membership row but preserves historical records attributed to original `user_id`.
+- ADR-047: Role is never placed in access tokens; dynamically queried from `workspace_members`.
+- Active Workspace Persistence: Saved in `localStorage` under `jq_active_ws` to survive reloads, cleared on logout.
+- Accessible OKLCH Palette: All workspace accent colors calibrated to <= 0.52 lightness to guarantee >= 4.5:1 text contrast.
 
 ## Do Not Repeat
-- Do NOT merge M12 to development.
+- Do NOT merge M12 to development without user consent.
 - Do NOT merge development to main.
 - Do NOT touch production Supabase or Vercel.
 - Do NOT edit `../JobQuest1.0/`.
-- Do NOT perform hard workspace deletion.
+- Do NOT start M13 until M12 is merged and development CI is green.
 
 ## Safe Resume Commands
 ```powershell
 git status
 git log -3 --oneline
-pnpm check
 pnpm test:unit
+pnpm test:integration
 ```
-
-## Next Agent Instructions
-Continue directly with Step 8: Stage and commit the M12 planning package (`docs(m12): establish Milestone 12 workspace management plan`), push to origin, then create and apply migration `20261010100000_m12_workspace_management.sql`.

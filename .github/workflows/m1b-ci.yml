@@ -60,6 +60,12 @@ jobs:
         env:
           M1B_ENV_FILE: .env.m1b-local
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Extension unit, typecheck, package, and bundle scan
+        run: |
+          pnpm test:extension
+          pnpm --filter @jobquest/extension typecheck
+          pnpm --filter @jobquest/extension package:dev
+          pnpm check:extension
       - name: Browser E2E + axe (B03/B11/B12 exposure · M2 shell · M3 · M4 · M5 · M6)
         run: pnpm test:e2e
         env:
@@ -77,6 +83,16 @@ jobs:
             migration-upgrade/m5/screenshots/
             migration-upgrade/m6/evidence/
             migration-upgrade/m6/screenshots/
+            migration-upgrade/m7/evidence/
+            migration-upgrade/m7/screenshots/
+            migration-upgrade/m8/evidence/
+            migration-upgrade/m8/screenshots/
+            migration-upgrade/m9/evidence/
+            migration-upgrade/m9/screenshots/
+            migration-upgrade/m10/evidence/
+            migration-upgrade/m10/screenshots/
+            migration-upgrade/m11/evidence/
+            migration-upgrade/m11/screenshots/
           if-no-files-found: ignore
       - name: Upload Playwright failure context (ARIA snapshots; no credentials)
         if: failure()

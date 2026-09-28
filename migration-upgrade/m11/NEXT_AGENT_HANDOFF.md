@@ -6,7 +6,7 @@ Milestone 11 - Browser Extension Migration
 
 ## Active Branch / HEAD
 
-`feature/m11-browser-extension` at pushed browser verification checkpoint `3b9b3970fa579269852ab42b561a04b26d46b4fd`. First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`.
+`feature/m11-browser-extension` at pushed final executable checkpoint `e4799e01067a88c8c1eecd46595ab64c13dc3330`. First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`; initial browser checkpoint: `3b9b3970fa579269852ab42b561a04b26d46b4fd`.
 
 ## Completed Locally
 
@@ -30,9 +30,9 @@ API PID `2596` on 8787 and web PID `52920` on 5173 are healthy and were reused. 
 
 ## Next Exact Action
 
-1. Rerun the expanded target-aware M11 browser spec locally using `M11_REUSE_RUN=0df44867`; Preview rotation/revocation is already green.
-2. Run final static/security checks, commit/push the executable checkpoint, and verify CI.
-3. Finalize M11 reports and recovery docs; do not merge M11.
+1. Commit/push the locally verified CI workflow/package and M10 date-fixture fixes as a new executable checkpoint.
+2. Require green GitHub Actions on that exact SHA.
+3. Deploy/validate that exact SHA Preview-only, then finalize M11 reports and recovery docs; do not merge M11.
 
 ## Hard Guardrails
 

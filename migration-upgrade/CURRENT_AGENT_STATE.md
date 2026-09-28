@@ -10,11 +10,11 @@ M11 - Browser Extension Migration
 
 ## Current HEAD
 
-`3b9b3970fa579269852ab42b561a04b26d46b4fd`
+`e4799e01067a88c8c1eecd46595ab64c13dc3330`
 
 ## Last Pushed Commit
 
-`3b9b3970fa579269852ab42b561a04b26d46b4fd` on `origin/feature/m11-browser-extension` (`test(m11): complete extension browser verification`). First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`.
+`e4799e01067a88c8c1eecd46595ab64c13dc3330` on `origin/feature/m11-browser-extension` (`test(m11): verify hosted extension lifecycle`). First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`; initial browser checkpoint: `3b9b3970fa579269852ab42b561a04b26d46b4fd`.
 
 ## Development Base
 
@@ -22,7 +22,7 @@ M11 - Browser Extension Migration
 
 ## Working Tree State
 
-All implementation and local browser verification work is committed and pushed. Only this post-checkpoint recovery-state update is dirty. No pre-existing user changes were discarded.
+The CI workflow/package fix, M10 date-fixture repair, refreshed M10/M11 local evidence, final `e4799e01` Preview evidence, and recovery notes are locally verified and ready for a scoped checkpoint commit. No pre-existing user changes were discarded.
 
 ## Last Completed Step
 
@@ -36,16 +36,16 @@ All implementation and local browser verification work is committed and pushed. 
 - Focused web typecheck, focused API typecheck, changed-file lint, token/security unit tests, and static extension syntax/manifest checks have passed.
 - Committed and pushed the web Settings/deep-link and Manifest V3 extension slice as checkpoint `6784fc59` after adding persisted System/Light/Dark themes, complete X1-X14 mapping, and manifest/CSP/content integrity tests.
 - Committed and pushed exact-current unpacked Chromium verification, salary parsing repair, dark-mode contrast repair, final local integration/browser evidence, and six screenshots as checkpoint `3b9b3970`.
+- Committed and pushed target-aware local/Preview lifecycle verification, rotation invalidation, reconnect/revocation evidence, hosted integration evidence, and Preview auth/privacy regression evidence as final executable checkpoint `e4799e01`.
 
 ## Current Step
 
-Rerun the expanded rotation/revocation browser flow locally, then prepare the final executable checkpoint and reports.
+Commit and push the locally verified CI hardening changes on top of `e4799e01`.
 
 ## Next Exact Step
 
-1. Run the expanded target-aware M11 browser spec locally using the existing disposable local account.
-2. Re-run lint/typecheck/extension tests and security scans for the final test-only diff.
-3. Commit/push the final executable checkpoint, verify CI, then finalize M11 reports and recovery docs.
+1. Commit and push the CI hardening checkpoint, then verify GitHub Actions on that new executable SHA.
+2. Deploy that exact SHA Preview-only, validate health/M11, then finalize reports and recovery docs.
 
 ## Supabase State
 
@@ -62,7 +62,7 @@ M11 Preview is READY: `https://jobquest2-3pxm8abn9-one-piece-5779.vercel.app`, d
 
 ## Last CI Run
 
-Historical development CI `36252789930` on `60ec9dff` was successful. No M11 CI run has started.
+M11 run `36317760917` on `e4799e01` completed: static job `108615594200` passed; database/browser job `108615594118` failed. Root causes are verified: the workflow did not package the unpacked extension before M11 Playwright, and M10 hard-coded `2026-09-26` while its seed application used the database's current date (`2026-09-27`). Both fixes pass the focused local M10 + M11 browser reproduction.
 
 ## Local Test State
 
@@ -80,6 +80,7 @@ Historical development CI `36252789930` on `60ec9dff` was successful. No M11 CI 
 - Extension bundle secret scan: PASS, 40 files and 0 findings.
 - Full local gate so far: root lint PASS; root/workspace typecheck PASS; unit 116/116; integration 134/134 across 11 files; extension 27/27; web production build PASS; dev/prod extension packages PASS; database lint exit 0 with only the pre-existing M10 `app.try_import_date` volatility warning; web bundle scan 3 files/0 findings; extension bundle scan 40 files/0 findings; tracked scan 649 files/0 findings.
 - Exact-current clean-reset Chromium rerun: PASS, 1/1.
+- Post-CI-fix focused browser reproduction: PASS, M10 + M11 2/2 in 24.8 seconds. Latest local M11 evidence: `browser-local-f719491e.json`.
 
 ## Hosted Test State
 
@@ -95,13 +96,13 @@ PASS. Playwright loaded the unpacked MV3 dev package in persistent headless Chro
 
 ## Background Processes
 
-- API listener PID `2596` is healthy on 8787 and web listener PID `52920` is healthy on 5173; both were reused by the browser run.
-- Local Supabase is running on 55321 after a clean reset through `20261005100000_m11_extension_tokens.sql`.
+- Local API/web listeners are healthy on 8787/5173 and the disposable Supabase stack was clean-reset through M11 on 55321/55322.
+- The extension CI gate has been reproduced locally: 27/27 tests, typecheck, dev package, and bundle scan with 40 files/0 findings.
 - The browser test closes Chromium and removes its temporary persistent profile after every run; no raw extension token remains in test artifacts.
 
 ## Modified Files
 
-Only `migration-upgrade/CURRENT_AGENT_STATE.md` and `migration-upgrade/m11/NEXT_AGENT_HANDOFF.md` are modified after the two pushed implementation checkpoints.
+The scoped CI workflow/test fixes, refreshed M10/M11 test evidence/screenshots, final `e4799e01` Preview evidence, and these recovery notes are modified/untracked for the next coherent checkpoint.
 
 ## Untracked Classification
 
@@ -116,7 +117,7 @@ Only `migration-upgrade/CURRENT_AGENT_STATE.md` and `migration-upgrade/m11/NEXT_
 - A staged test placeholder initially matched the complete Supabase secret pattern; it was shortened to the repository-safe placeholder and the staged tracked scan passed with 0 findings.
 - The live browser run exposed comma-separated salary parsing (`195,000` was previously split into `195` and `0`); the parser now preserves thousands separators and has focused regression coverage.
 - The first full axe pass exposed 4.16:1 white-on-blue popup buttons in dark mode; the corrected primary palette now passes all six contexts with zero serious/critical findings.
-- No active code failure is known. Full local gate and hosted verification remain pending.
+- M11 CI on `e4799e01` exposed two test-infrastructure defects: no extension package step before browser E2E, and a date-sensitive M10 duplicate fixture. Both root-cause fixes are now in the working tree.
 
 ## Decisions
 
@@ -159,4 +160,4 @@ pnpm.cmd check:extension
 
 ## Next Agent Instructions
 
-Continue M11 from pushed browser checkpoint `3b9b3970`. Local gate, hosted migration/integration, READY Preview health, expanded Preview extension flow, and Preview auth/privacy/shell regression are green. Rerun the expanded test locally, create the final executable checkpoint, verify CI, and finalize reports. Keep M11 unmerged.
+Continue M11 from pushed checkpoint `e4799e01`. Commit/push the locally green CI hardening diff, require green CI on that new executable SHA, deploy/validate that exact SHA Preview-only, and finalize reports. Keep M11 unmerged.

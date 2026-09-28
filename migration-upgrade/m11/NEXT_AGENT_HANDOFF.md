@@ -4,6 +4,8 @@
 
 M11 Browser Extension Migration is complete, fully verified, and intentionally unmerged on `feature/m11-browser-extension`.
 
+Docs-only closeout content commit: `870cb4f1434397b70ca6ef21aa695b61e8309e8e`. The final recovery-state tail is the branch HEAD; query it rather than embedding its self-referential SHA in this file.
+
 ## Exact executable checkpoint
 
 `a49399ea59dd055c4af1887c857342913d166a07`
@@ -23,7 +25,7 @@ M11 Browser Extension Migration is complete, fully verified, and intentionally u
 
 ## Next exact action
 
-Commit and push the docs-only closeout package, confirm the feature worktree is clean, and stop. Do not merge M11 or start M12.
+No work remains. Keep the feature branch unmerged and stop. Do not start M12.
 
 ## M12 authority
 

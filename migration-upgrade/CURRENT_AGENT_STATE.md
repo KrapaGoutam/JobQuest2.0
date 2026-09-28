@@ -11,7 +11,8 @@ M11 - Browser Extension Migration: complete and unmerged for user review.
 - Last pushed executable commit: same SHA (`fix(m11): harden extension browser ci`)
 - API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`
 - Web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`
-- Docs-only closeout commit: pending creation/push
+- Docs-only closeout content commit: `870cb4f1434397b70ca6ef21aa695b61e8309e8e`
+- Final recovery-state tail: this file is included in the final branch HEAD; use `git rev-parse HEAD` after checkout rather than embedding a self-referential SHA here.
 - Development base remains `60ec9dff05588243ae95fb643b31a81fb295e1fb`; M11 is not merged.
 
 ## Completed state
@@ -31,7 +32,7 @@ M11 - Browser Extension Migration: complete and unmerged for user review.
 - Final Preview: `https://jobquest2-4s4ifimlx-one-piece-5779.vercel.app`.
 - Deployment: `dpl_Bynq1FZg7G2kD5vR9M1S6KTDPMx8`, READY, target Preview, health 200.
 - Preview-only `EXTENSION_TOKEN_PEPPER` is configured. Production was not changed.
-- Local disposable Supabase was clean-reset through all 15 migrations. Local API/web listeners may still be active on 8787/5173.
+- Local disposable Supabase was clean-reset through all 15 migrations and stopped after validation. The task-owned API/web listeners on 8787/5173 were also stopped.
 
 ## Final evidence
 
@@ -42,7 +43,7 @@ M11 - Browser Extension Migration: complete and unmerged for user review.
 
 ## Current/next exact step
 
-Stage only final M11 reports, acceptance/recovery updates, final Preview evidence, and refreshed M11 screenshots. Commit as `docs(m11): finalize browser extension migration`, push the feature branch, verify a clean worktree, and stop.
+No implementation or closeout work remains. Keep the feature branch unmerged and stop. Any merge requires a separate explicit user authorization.
 
 ## Safety and authority
 

@@ -1,8 +1,8 @@
 {
   "evidence": {
-    "run": "b05a42",
+    "run": "c1eed2",
     "reused_preview_account": false,
-    "started_at": "2026-09-28T22:57:20.315Z",
+    "started_at": "2026-09-28T02:35:36.862Z",
     "import_committed": true,
     "created_rows": 1,
     "skipped_rows": 1,
@@ -12,7 +12,7 @@
     "json_export_downloaded": true,
     "mobile_overflow_px": 0,
     "a11y_blocking": 0,
-    "completed_at": "2026-09-28T22:57:35.027Z",
+    "completed_at": "2026-09-28T02:35:48.221Z",
     "status": "PASS"
   },
   "a11y": [

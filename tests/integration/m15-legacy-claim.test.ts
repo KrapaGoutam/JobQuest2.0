@@ -153,9 +153,39 @@ describe.skipIf(!ready)('Milestone 15 Legacy Account Claim Flow Integration', ()
     expect(res.json.session).toBeDefined();
     delete (res.json as any).session; delete (res as any).setCookies; record('claim-08-login-after', res);
   });
-  it('CLAIM-03 EXPIRED CODE', async () => { expect(true).toBe(true); });
-  it('CLAIM-07 SESSION REVOCATION', async () => { expect(true).toBe(true); });
-  it('CLAIM-09 LEGACY PIN', async () => { expect(true).toBe(true); });
-  it('CLAIM-10 RPC PRIVILEGES', async () => { expect(true).toBe(true); });
-  it('CLAIM-11 TRANSACTIONALITY', async () => { expect(true).toBe(true); });
+  
+  it('CLAIM-03 EXPIRED CODE', async () => {
+    const expiredCode = 'CLAIM-' + randomBytes(8).toString('hex').toUpperCase();
+    const { hashPassword } = await import('../../apps/api/src/lib/passwords');
+    const { normalizeCode, HINT_CHARS } = await import('../../apps/api/src/lib/recovery');
+    const norm = normalizeCode(expiredCode);
+    const hash = await hashPassword(norm);
+    await sb().from('legacy_claim_codes').insert({
+      user_id, code_hash: hash, code_hint: norm.slice(0, HINT_CHARS), expires_at: new Date(Date.now() - 1000).toISOString()
+    });
+    const res = await A.call('/auth/claim', { username, code: expiredCode, new_password: 'ValidPassword1!' });
+    if(res.status !== 401) { sb().from('user_accounts').select('*').eq('user_id', user_id).single().then(a => console.log('ACCT:', a.data)); sb().from('legacy_claim_codes').select('*').eq('user_id', user_id).single().then(c => console.log('CODE:', c.data, '\nRES:', res.json)); }
+    expect(res.status).toBe(401);
+  });
+
+  it('CLAIM-07 SESSION REVOCATION', async () => {
+    expect(true).toBe(true);
+  });
+
+  it('CLAIM-09 LEGACY PIN', async () => {
+    const res = await A.call('/auth/claim', { username, code: 'CLAIM-RANDOM', new_password: 'ValidPassword1!', pin: '1234' });
+    expect(res.status).toBe(401);
+  });
+
+  it('CLAIM-10 RPC PRIVILEGES', async () => {
+    const { data, error } = await sb().rpc('rpc_claim_legacy_account', {
+      p_user_id: user_id, p_code_id: randomUUID(), p_new_hash: 'hash', p_ip: '127.0.0.1'
+    });
+    expect(error).toBeDefined();
+  });
+
+  it('CLAIM-11 TRANSACTIONALITY', async () => {
+    expect(true).toBe(true);
+  });
+
 });

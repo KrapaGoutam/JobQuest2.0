@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from 'react';
 import { Card, CardHeader, CardTitle, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';

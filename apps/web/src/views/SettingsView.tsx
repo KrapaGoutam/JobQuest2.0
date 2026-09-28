@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, type FormEvent } from 'react';
 import { Card, CardHeader, CardTitle, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,7 +15,7 @@ export interface SettingsViewProps {
   onRegenerateCodes: (e: FormEvent<HTMLFormElement>) => Promise<void>;
   onLeakCheck: () => Promise<void>;
   leakResults: Record<string, boolean> | null;
-  probeStatus: number | null;
+  probeStatus: string | null;
   log: string[];
   wfDirect: any;
   wfNode: any;

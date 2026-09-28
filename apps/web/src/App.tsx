@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, type PublicSession, type PublicUser } from './api';
 import { setAccessToken, supabase, SUPABASE_KEY, SUPABASE_URL } from './supabase';

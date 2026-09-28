@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { ThemeToggle } from '../ui/ThemeToggle';

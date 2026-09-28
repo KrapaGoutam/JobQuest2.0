@@ -25,19 +25,22 @@ declare module '*migrate-legacy-data.mjs' {
     dryRun?: boolean;
     validateOnly?: boolean;
     confirmNonProduction?: boolean;
+    confirmProduction?: boolean;
     reportPath?: string | null;
+    claimCodesPath?: string | null;
   }
 
   export interface RollbackOptions {
     targetUrl: string;
     workspaceId: string;
     confirmNonProduction?: boolean;
+    confirmProduction?: boolean;
   }
 
   export const DEFAULT_MIGRATED_WORKSPACE_ID: string;
   export const DEFAULT_MIGRATED_WORKSPACE_NAME: string;
 
-  export function assertSafeTarget(url: string, confirmNonProduction: boolean): void;
+  export function assertSafeTarget(url: string, confirmNonProduction?: boolean, confirmProduction?: boolean): void;
   export function mapLegacyStage(stageStr: string): {
     stage: string;
     status: string;

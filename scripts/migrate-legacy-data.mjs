@@ -18,18 +18,18 @@ export const DEFAULT_MIGRATED_WORKSPACE_ID = '018f0000-0000-4000-8000-0000000000
 export const DEFAULT_MIGRATED_WORKSPACE_NAME = 'JobQuest (Migrated)';
 
 /**
- * Validates that the target database URL is safe for non-production rehearsal.
+ * Validates that the target database URL is safe for non-production rehearsal or authorized production cutover.
  */
-export function assertSafeTarget(url, confirmNonProduction) {
+export function assertSafeTarget(url, confirmNonProduction = false, confirmProduction = false) {
   if (!url) {
     throw new Error('Target database URL is required');
   }
-  if (!confirmNonProduction) {
-    throw new Error('Safety guard: --confirm-non-production flag is strictly required to execute migration.');
+  if (!confirmNonProduction && !confirmProduction) {
+    throw new Error('Safety guard: --confirm-non-production flag is strictly required to execute migration (or --confirm-production for authorized production migrations).');
   }
 
   const normalized = url.toLowerCase();
-  // Forbid production identifiers
+  // Forbid production identifiers unless explicitly confirmed for production
   const forbiddenPatterns = [
     'jobquest-prod',
     'prod.supabase.co',
@@ -39,9 +39,11 @@ export function assertSafeTarget(url, confirmNonProduction) {
     'api.jobquest.com'
   ];
 
-  for (const pattern of forbiddenPatterns) {
-    if (normalized.includes(pattern)) {
-      throw new Error(`FATAL SECURITY LOCK: Target URL matches production pattern "${pattern}". Rehearsal aborted.`);
+  if (!confirmProduction) {
+    for (const pattern of forbiddenPatterns) {
+      if (normalized.includes(pattern)) {
+        throw new Error(`FATAL SECURITY LOCK: Target URL matches production pattern "${pattern}". Rehearsal aborted.`);
+      }
     }
   }
 
@@ -314,7 +316,7 @@ export function generateClaimCode() {
 }
 
 /**
- * Executes migration rehearsal against target database.
+ * Executes migration rehearsal or production cutover against target database.
  */
 export async function runMigration({
   source,
@@ -324,11 +326,14 @@ export async function runMigration({
   dryRun = false,
   validateOnly = false,
   confirmNonProduction = false,
-  reportPath = null
+  confirmProduction = false,
+  reportPath = null,
+  claimCodesPath = null
 }) {
-  assertSafeTarget(targetUrl, confirmNonProduction);
+  assertSafeTarget(targetUrl, confirmNonProduction, confirmProduction);
 
   const startTime = Date.now();
+  const secureClaimCodes = [];
   const report = {
     metadata: {
       started_at: new Date().toISOString(),
@@ -357,7 +362,8 @@ export async function runMigration({
   }
 
   // Connect to target DB
-  const client = new Client({ connectionString: targetUrl });
+  const isLocal = targetUrl.includes('127.0.0.1') || targetUrl.includes('localhost');
+  const client = new Client({ connectionString: targetUrl, ssl: isLocal ? false : { rejectUnauthorized: false } });
   await client.connect();
 
   try {
@@ -435,6 +441,15 @@ export async function runMigration({
             [targetUserId, claim.hash, claim.hint]
           );
           report.claim_codes.push({ legacy_user_id: u.id, hint: claim.hint });
+          secureClaimCodes.push({
+            legacy_user_id: u.id,
+            username: userMapped.username,
+            user_id: targetUserId,
+            token: claim.token,
+            hint: claim.hint,
+            hash: claim.hash,
+            expires_at: new Date(Date.now() + 90 * 86400000).toISOString()
+          });
         }
       }
       if (!primaryUserId) primaryUserId = targetUserId;
@@ -992,6 +1007,9 @@ export async function runMigration({
   } finally {
     await client.end();
     report.metadata.duration_ms = Date.now() - startTime;
+    if (claimCodesPath && secureClaimCodes.length > 0 && !dryRun) {
+      writeFileSync(claimCodesPath, JSON.stringify(secureClaimCodes, null, 2), 'utf8');
+    }
     if (reportPath) {
       writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
     }
@@ -1003,10 +1021,11 @@ export async function runMigration({
 /**
  * Executes a clean, safe rollback of a migrated workspace.
  */
-export async function rollbackMigration({ targetUrl, workspaceId, confirmNonProduction = false }) {
-  assertSafeTarget(targetUrl, confirmNonProduction);
+export async function rollbackMigration({ targetUrl, workspaceId, confirmNonProduction = false, confirmProduction = false }) {
+  assertSafeTarget(targetUrl, confirmNonProduction, confirmProduction);
 
-  const client = new Client({ connectionString: targetUrl });
+  const isLocal = targetUrl.includes('127.0.0.1') || targetUrl.includes('localhost');
+  const client = new Client({ connectionString: targetUrl, ssl: isLocal ? false : { rejectUnauthorized: false } });
   await client.connect();
 
   try {
@@ -1183,7 +1202,9 @@ if (process.argv[1]?.endsWith('migrate-legacy-data.mjs')) {
   const preflight = hasFlag('--preflight');
   const rollback = hasFlag('--rollback');
   const confirmNonProduction = hasFlag('--confirm-non-production');
+  const confirmProduction = hasFlag('--confirm-production') || process.env.CONFIRM_PRODUCTION_MIGRATION === 'true';
   const reportPath = getArg('--report') || null;
+  const claimCodesPath = getArg('--claim-codes-out') || null;
 
   if (preflight) {
     console.log(`Starting read-only preflight against target database...`);
@@ -1192,12 +1213,12 @@ if (process.argv[1]?.endsWith('migrate-legacy-data.mjs')) {
       .catch(err => { console.error('Preflight check failed:', err); process.exit(1); });
   } else if (rollback) {
     console.log(`Starting rollback for workspace ${workspaceId}...`);
-    rollbackMigration({ targetUrl, workspaceId, confirmNonProduction })
+    rollbackMigration({ targetUrl, workspaceId, confirmNonProduction, confirmProduction })
       .then(res => { console.log(JSON.stringify(res, null, 2)); process.exit(0); })
       .catch(err => { console.error('Rollback failed:', err); process.exit(1); });
   } else {
     console.log(`Starting migration from ${source} to workspace ${workspaceId}...`);
-    runMigration({ source, targetUrl, workspaceId, workspaceName, dryRun, validateOnly, confirmNonProduction, reportPath })
+    runMigration({ source, targetUrl, workspaceId, workspaceName, dryRun, validateOnly, confirmNonProduction, confirmProduction, reportPath, claimCodesPath })
       .then(report => { console.log('Migration finished:', JSON.stringify(report, null, 2)); process.exit(0); })
       .catch(err => { console.error('Migration failed:', err); process.exit(1); });
   }

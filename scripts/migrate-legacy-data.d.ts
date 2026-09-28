@@ -30,19 +30,22 @@ export interface RunMigrationOptions {
   dryRun?: boolean;
   validateOnly?: boolean;
   confirmNonProduction?: boolean;
+  confirmProduction?: boolean;
   reportPath?: string | null;
+  claimCodesPath?: string | null;
 }
 
 export interface RollbackOptions {
   targetUrl: string;
   workspaceId: string;
   confirmNonProduction?: boolean;
+  confirmProduction?: boolean;
 }
 
 export declare const DEFAULT_MIGRATED_WORKSPACE_ID: string;
 export declare const DEFAULT_MIGRATED_WORKSPACE_NAME: string;
 
-export declare function assertSafeTarget(url: string, confirmNonProduction: boolean): void;
+export declare function assertSafeTarget(url: string, confirmNonProduction?: boolean, confirmProduction?: boolean): void;
 export declare function mapLegacyStage(stageStr: string): {
   stage: string;
   status: string;

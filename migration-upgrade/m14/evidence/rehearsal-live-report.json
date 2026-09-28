@@ -1,0 +1,118 @@
+{
+  "metadata": {
+    "started_at": "2026-09-28T12:53:13.262Z",
+    "target_workspace_id": "018f0000-0000-4000-8000-000000000001",
+    "target_workspace_name": "JobQuest (Migrated)",
+    "dry_run": false,
+    "validate_only": false,
+    "duration_ms": 168
+  },
+  "counts": {
+    "users": {
+      "source": 2,
+      "eligible": 2,
+      "migrated": 2,
+      "skipped": 0,
+      "errors": 0
+    },
+    "resumes": {
+      "source": 1,
+      "eligible": 1,
+      "migrated": 1,
+      "skipped": 0,
+      "errors": 0
+    },
+    "tags": {
+      "source": 2,
+      "eligible": 2,
+      "migrated": 2,
+      "skipped": 0,
+      "errors": 0
+    },
+    "applications": {
+      "source": 13,
+      "eligible": 13,
+      "migrated": 13,
+      "skipped": 0,
+      "errors": 0
+    },
+    "job_snapshots": {
+      "source": 13,
+      "eligible": 13,
+      "migrated": 13,
+      "skipped": 0,
+      "errors": 0
+    },
+    "contacts": {
+      "source": 2,
+      "eligible": 2,
+      "migrated": 2,
+      "skipped": 0,
+      "errors": 0
+    },
+    "interviews": {
+      "source": 1,
+      "eligible": 1,
+      "migrated": 1,
+      "skipped": 0,
+      "errors": 0
+    },
+    "tasks": {
+      "source": 3,
+      "eligible": 3,
+      "migrated": 3,
+      "skipped": 0,
+      "errors": 0
+    },
+    "habits": {
+      "source": 2,
+      "eligible": 2,
+      "migrated": 2,
+      "skipped": 0,
+      "errors": 0
+    },
+    "habit_logs": {
+      "source": 2,
+      "eligible": 2,
+      "migrated": 2,
+      "skipped": 0,
+      "errors": 0
+    },
+    "journal_entries": {
+      "source": 3,
+      "eligible": 3,
+      "migrated": 3,
+      "skipped": 0,
+      "errors": 0
+    },
+    "goals": {
+      "source": 1,
+      "eligible": 1,
+      "migrated": 1,
+      "skipped": 0,
+      "errors": 0
+    }
+  },
+  "fk_integrity": {
+    "orphan_applications": 0,
+    "orphan_snapshots": 0,
+    "orphan_interviews": 0,
+    "orphan_tasks": 0,
+    "orphan_habit_logs": 0,
+    "orphan_journal": 0
+  },
+  "sample_hashes": {},
+  "claim_codes": [
+    {
+      "legacy_user_id": 1,
+      "hint": "eb5e...4f"
+    },
+    {
+      "legacy_user_id": 2,
+      "hint": "8913...1a"
+    }
+  ],
+  "pin_hashes_migrated": 0,
+  "errors": [],
+  "status": "COMPLETED"
+}

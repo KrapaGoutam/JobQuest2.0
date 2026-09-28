@@ -1,23 +1,10 @@
 {
-  "evidence": {
-    "run": "b05a42",
-    "reused_preview_account": false,
-    "started_at": "2026-09-28T22:57:20.315Z",
-    "import_committed": true,
-    "created_rows": 1,
-    "skipped_rows": 1,
-    "history_verified": true,
-    "csv_export_downloaded": true,
-    "xlsx_export_downloaded": true,
-    "json_export_downloaded": true,
-    "mobile_overflow_px": 0,
-    "a11y_blocking": 0,
-    "completed_at": "2026-09-28T22:57:35.027Z",
-    "status": "PASS"
-  },
+  "run": "a45470",
+  "started_at": "2026-09-28T22:47:16.072Z",
+  "screenshots": [],
   "a11y": [
     {
-      "context": "import-wizard-light",
+      "context": "personal_workspace_settings",
       "total": 0,
       "critical": 0,
       "serious": 0,
@@ -25,7 +12,7 @@
       "violations": []
     },
     {
-      "context": "import-mapping-dark",
+      "context": "create_workspace_modal",
       "total": 0,
       "critical": 0,
       "serious": 0,
@@ -33,7 +20,7 @@
       "violations": []
     },
     {
-      "context": "import-preview-light",
+      "context": "shared_workspace_settings",
       "total": 0,
       "critical": 0,
       "serious": 0,
@@ -41,7 +28,7 @@
       "violations": []
     },
     {
-      "context": "import-summary-dark",
+      "context": "members_roster",
       "total": 0,
       "critical": 0,
       "serious": 0,
@@ -49,7 +36,7 @@
       "violations": []
     },
     {
-      "context": "export-controls-light",
+      "context": "invite_member_modal_code_created",
       "total": 0,
       "critical": 0,
       "serious": 0,
@@ -57,12 +44,21 @@
       "violations": []
     },
     {
-      "context": "import-mobile",
+      "context": "join_workspace_modal_preview",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "mobile_members_roster",
       "total": 0,
       "critical": 0,
       "serious": 0,
       "blocking": 0,
       "violations": []
     }
-  ]
+  ],
+  "completed_at": "2026-09-28T22:47:40.863Z"
 }

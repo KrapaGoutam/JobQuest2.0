@@ -308,3 +308,23 @@ Classification of UI/UX related questions based on the completed Gate 02B specif
 | OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | Production Scaling | **RESOLVED (M14)**: Edge rate limits (10 req/min/IP on `/api/v1/auth/*`) + pg_cron / scheduled cleanup job purging expired records every hour. |
 | OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | Audit / Informational | **CAUSE UNKNOWN (Non-blocking)**: Cause cannot be determined from available platform logs; no destructive actions taken; `jobquest-dev` is verified as the active development environment; non-blocking. |
 
+---
+
+# M15 Production Governance Reclassification (added 2026-09-28)
+
+### Operational State vs Architectural Feasibility
+In Milestone 14, items **OQ-016** (Hosting / Paid Plan Tiers), **OQ-021** (Production Smoke Account), **OQ-029** (Signing-Key Custody), and **OQ-030** (Edge Rate Limiting & Bucket Cleanup) were labeled as "RESOLVED" from an architectural and technical feasibility standpoint.
+
+For production execution in Milestone 15, **technical recommendations do NOT constitute user production authorization**. All production-affecting items have been formally reclassified to:
+`PROPOSED — USER APPROVAL REQUIRED`
+
+Historical M14 recommendations remain preserved as technical baselines, while production decisions are formally tracked in `migration-upgrade/m15/M15_USER_DECISION_GATE.md` across items **M15-D01 through M15-D20**.
+
+| Item | Operational Production Status | Decision Gate Reference |
+|---|---|---|
+| OQ-016 (Supabase Pro & Vercel Pro) | PROPOSED — USER APPROVAL REQUIRED | M15-D01 & M15-D02 |
+| OQ-021 (Production Smoke Account) | PROPOSED — USER APPROVAL REQUIRED | M15-D07 |
+| OQ-029 (ES256 Signing Key Custody) | PROPOSED — USER APPROVAL REQUIRED | M15-D06 |
+| OQ-030 (Rate Limiting & Rate Limits Cleanup) | PROPOSED — USER APPROVAL REQUIRED | M15-D08 & M15-D09 |
+
+

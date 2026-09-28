@@ -30,3 +30,5 @@ signing_keys.json
 *.key
 .vercel
 .env*
+scratch/
+

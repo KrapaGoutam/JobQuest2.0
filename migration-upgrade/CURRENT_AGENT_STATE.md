@@ -1,62 +1,67 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
 ## Current Milestone
-Milestone 14 — Release Candidate & Migration Rehearsal (100% COMPLETE & VERIFIED — STOPPED UNMERGED)
+M15-A Production Pre-Flight (100% COMPLETE — AWAITING USER PRODUCTION AUTHORIZATION)
 
 ## Feature Freeze Notice
-FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: release blockers, security defects, migration defects, P0/P1 parity failures, production-readiness defects, performance defects materially threatening launch, and accessibility defects materially blocking launch. All other items belong in POST_LAUNCH_DEFERRED.md.
+FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: launch blockers, security defects, migration defects, production configuration defects, critical P0/P1 regressions, critical accessibility defects, and critical performance defects materially threatening launch. All other items belong in POST_LAUNCH_DEFERRED.md.
 
 ## Current Branch
-`feature/m14-release-candidate-migration-rehearsal`
+`feature/m15-production-launch-cutover`
 
-## Current HEAD
-Commit on `feature/m14-release-candidate-migration-rehearsal`
+## Base Development Commit (M14 Merge)
+`5b67c4c630dbd94cbcca8d13058aaa59afa87fe8` (merge: approve M14 release candidate and migration rehearsal)
+
+## Development CI Verification
+- **Run ID**: `36432957662`
+- **Trigger**: Merge commit `5b67c4c630dbd94cbcca8d13058aaa59afa87fe8` on `development`
+- **Status**: SUCCESS (100% Green)
+  - Job 1 (`Lint · typecheck · unit · build · secret scans`): PASS (54s)
+  - Job 2 (`Migrations · Option B auth · RLS · browser (local Supabase)`): PASS (6m56s)
+
+## Production Authorization & Guardrails
+- **Production Authorization**: NOT GRANTED
+- **Production Mutation**: NONE
+- **Main Merge**: NOT AUTHORIZED
+- **Legacy Export**: NOT AUTHORIZED
+- **Real Migration**: NOT AUTHORIZED
+- **Production Deploy (`vercel --prod`)**: NOT AUTHORIZED
+- **DNS / Domain Mutation**: NOT AUTHORIZED
+- **Production Extension Publication**: NOT AUTHORIZED
+- **JobQuest1 Modification**: NOT AUTHORIZED (JobQuest1.0 remains strictly READ ONLY)
+- **JobQuest1 Retirement**: NOT AUTHORIZED (Subject to separate post-launch authorization)
 
 ## Working Tree State
-Work complete; all files staged and committed cleanly; pushed to origin; unmerged for user review.
-
-## Last Completed Step
-- M14 Database Migration `20261020100000_m14_legacy_migration_rehearsal.sql` authored, applied, and verified locally and on hosted development (`jobquest-dev` `xpnkasclquplmrcmhsif`).
-- Legacy migration engine `scripts/migrate-legacy-data.mjs` implemented with safety locks, 13-stage workflow decomposition, Option B claim codes, and clean rollback mechanics.
-- Representative 33-table legacy fixture created in `tests/fixtures/legacy-representative-export.json`.
-- Complete test suite passing at 100%: 341/341 tests (Lint 0/0, Typecheck clean, Unit 149/149, Extension 27/27, Integration 165/165).
-- Release Candidate 1 (`v2.0.0-rc.1`) deployed to Vercel preview: `https://jobquest2-33y9un1oa-one-piece-5779.vercel.app` (`dpl_Bt72bHx6a13C1dtxmUCkWin9qshT`).
-- Secret scan clean across 4 tiers (local bundle, extension, live preview assets, git tracked files).
-- Playwright E2E passed on live preview; Axe accessibility audit yielded 0 violations across 4 contexts.
-- Dual reconciliation verified: 100% row balance (41 entities), 0 foreign key orphans, exact timestamp preservation, 0 PIN migrations.
-- Complete documentation package produced across `migration-upgrade/m14/` (11 planning docs, 10 reports, evidence JSONs, and 5 screenshots).
-
-## Current Step
-- Milestone 14 execution finished; stopped with M14 unmerged on `feature/m14-release-candidate-migration-rehearsal`.
+- M15 branch established (`feature/m15-production-launch-cutover`).
+- M15-A Planning & Pre-Flight package fully authored (18 documents in `migration-upgrade/m15/`).
+- Zero production mutation performed.
+- Stopped awaiting explicit user decisions on Master Decision Gate (M15-D01 through M15-D20).
 
 ## Next Exact Step
-- User review and manual merge of `feature/m14-release-candidate-migration-rehearsal` into `development` and `main`.
-- Confirmation of GitHub Actions CI on `development`.
-- Milestone 15 Production Launch & Cutover (per `migration-upgrade/m14/NEXT_AGENT_HANDOFF.md`).
+WAIT FOR USER DECISIONS / AUTHORIZATION. Present compact decision table to user. Upon explicit approval, proceed to authorized Phase M15-B (Infrastructure Provisioning) steps.
 
-## Database State
-- 18 migrations applied through `20261020100000_m14_legacy_migration_rehearsal.sql`.
+## Database & Infrastructure State
+- **Database Migrations**: 18 migrations through `20261020100000_m14_legacy_migration_rehearsal.sql` verified clean.
+- **Hosted Development**: `jobquest-dev` (`xpnkasclquplmrcmhsif`) active and healthy.
+- **Local Supabase**: Docker stack active and clean.
+- **Vercel State**: Active Preview RC `https://jobquest2-33y9un1oa-one-piece-5779.vercel.app` (Deployment `dpl_Bt72bHx6a13C1dtxmUCkWin9qshT`, READY). Production remains untouched.
 
-## Supabase State
-- Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`), all 18 migrations applied.
-- Local Supabase: Docker stack active and clean.
-
-## Vercel State
-- Active Release Candidate Preview: `https://jobquest2-33y9un1oa-one-piece-5779.vercel.app` (Deployment `dpl_Bt72bHx6a13C1dtxmUCkWin9qshT`, READY).
-- Team: `one-piece-5779`, Project: `jobquest2`.
-- Production: Untouched.
-
-## Decisions
-- ADR-048: Multi-domain global search RPC (`rpc_global_search`) with workspace and role enforcement.
-- ADR-049: Career Journal workbench and note resolution (`journal_entries` table, 5 entry types).
-- Gate 03 Architecture: 33 legacy tables mapped to JobQuest 2.0; legacy tenant hosted in `"JobQuest (Migrated)"`; PINs permanently retired; Option B claim architecture.
-
-## Do Not Repeat / Strict Guardrails
-- DO NOT start M15.
-- DO NOT deploy Production or run Vercel `--prod`.
-- DO NOT create or touch Production Supabase.
-- DO NOT migrate real production data.
-- DO NOT connect to live Neon production DB without explicit user approval.
-- DO NOT merge M14 into development or main (STOP WITH M14 UNMERGED).
-- DO NOT edit `../JobQuest1.0/` (strictly READ ONLY).
-- DO NOT retire JobQuest 1.0.
+## Artifacts Authored in M15-A
+1. `migration-upgrade/m15/README.md`
+2. `migration-upgrade/m15/M15_USER_DECISION_GATE.md`
+3. `migration-upgrade/m15/PRODUCTION_ORIGIN_DECISION.md`
+4. `migration-upgrade/m15/IMPLEMENTATION_PLAN.md`
+5. `migration-upgrade/m15/PRODUCTION_ARCHITECTURE.md`
+6. `migration-upgrade/m15/PRODUCTION_ENVIRONMENT_MATRIX.md`
+7. `migration-upgrade/m15/PRODUCTION_SECRETS_PLAN.md`
+8. `migration-upgrade/m15/BACKUP_EXPORT_PLAN.md`
+9. `migration-upgrade/m15/PRODUCTION_MIGRATION_RUNBOOK.md`
+10. `migration-upgrade/m15/PRODUCTION_RECONCILIATION_PLAN.md`
+11. `migration-upgrade/m15/CUTOVER_RUNBOOK.md`
+12. `migration-upgrade/m15/ROLLBACK_RUNBOOK.md`
+13. `migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md`
+14. `migration-upgrade/m15/EXTENSION_PRODUCTION_PLAN.md`
+15. `migration-upgrade/m15/POST_LAUNCH_STABILIZATION_PLAN.md`
+16. `migration-upgrade/m15/GO_NO_GO_CHECKLIST.md`
+17. `migration-upgrade/m15/NEXT_AGENT_HANDOFF.md`
+18. `migration-upgrade/m15/M15A_PRE_FLIGHT_REPORT.md`

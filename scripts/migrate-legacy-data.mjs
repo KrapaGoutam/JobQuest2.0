@@ -110,7 +110,21 @@ export function parseLegacyDate(dateStr) {
 }
 
 /**
- * Normalizes legacy task recurrence strings to JobQuest 2.0 enum values.
+ * Normalizes legacy timestamps to ISO UTC strings.
+ */
+export function normalizeLegacyTimestamp(dateStr) {
+  return parseLegacyDate(dateStr);
+}
+
+/**
+ * Maps legacy status string to workflow stage dimensions.
+ */
+export function mapLegacyStatus(rawStatus) {
+  return mapLegacyStage(rawStatus);
+}
+
+/**
+ * Maps legacy task recurrence strings to JobQuest 2.0 enum values.
  */
 export function mapLegacyRecurrence(raw) {
   if (!raw) return null;
@@ -119,6 +133,174 @@ export function mapLegacyRecurrence(raw) {
     return upper;
   }
   return null;
+}
+
+/**
+ * Explicit transformation helper for legacy user records.
+ * Handles both real legacy schema (username, optional/null email) and M14 rehearsal fixtures.
+ */
+export function mapLegacyUser(u) {
+  const username = String(u.username || (u.email ? u.email.split('@')[0] : `user_${u.id}`)).trim();
+  const cleanUsername = username.toLowerCase().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 32);
+  const fullName = u.full_name || username;
+  const email = (u.email && String(u.email).trim().length > 0) ? String(u.email).trim().toLowerCase() : null;
+  const themePref = (u.theme_preference && ['light', 'dark', 'system'].includes(u.theme_preference)) ? u.theme_preference : 'system';
+  const weekStart = (u.week_start === 0 || u.week_start === 1) ? u.week_start : 1;
+  const role = String(u.role || '').toUpperCase() === 'MANAGER' ? 'MANAGER' : 'USER';
+
+  return {
+    username,
+    cleanUsername,
+    fullName,
+    email,
+    themePref,
+    weekStart,
+    role
+  };
+}
+
+/**
+ * Explicit transformation helper for legacy application records.
+ * Reconciles schema differences (work_arrangement, employment_type, salary_range, etc.).
+ */
+export function mapLegacyApplication(a, existingTags = []) {
+  const { stage, status, outcome, closureReason, eventType } = mapLegacyStage(a.stage);
+  const appTags = [...existingTags];
+
+  let workArrangement = null;
+  const rawWork = a.work_arrangement || a.work_mode || a.location_type;
+  if (rawWork === 'Remote') workArrangement = 'Remote';
+  else if (rawWork === 'Hybrid') workArrangement = 'Hybrid';
+  else if (rawWork === 'Onsite') workArrangement = 'Onsite';
+
+  let empType = null;
+  if (a.employment_type === 'Full-time') empType = 'Full-time';
+  else if (a.employment_type === 'Contract') empType = 'Contract';
+  else if (a.employment_type === 'Part-time') empType = 'Part-time';
+  else if (a.employment_type === 'Internship') {
+    // Target DB check constraint restricts employment_type to Full-time, Contract, Part-time.
+    // Preserve 'Internship' without data loss by ensuring it is recorded in the tags array.
+    if (!appTags.includes('Internship')) {
+      appTags.push('Internship');
+    }
+    empType = null;
+  }
+
+  let priority = 'MEDIUM';
+  if (String(a.priority || '').toUpperCase() === 'HIGH') priority = 'HIGH';
+  else if (String(a.priority || '').toUpperCase() === 'LOW') priority = 'LOW';
+
+  const salaryMin = (a.salary_min !== null && a.salary_min !== undefined && !isNaN(Number(a.salary_min))) ? Number(a.salary_min) : null;
+  const salaryMax = (a.salary_max !== null && a.salary_max !== undefined && !isNaN(Number(a.salary_max))) ? Number(a.salary_max) : null;
+  let salaryCurrency = 'USD';
+  if (a.salary_currency && String(a.salary_currency).trim().length === 3) {
+    salaryCurrency = String(a.salary_currency).trim().toUpperCase();
+  }
+
+  let notes = a.notes || null;
+  if (a.salary_range && salaryMin === null && salaryMax === null) {
+    notes = notes ? `${notes}\n[Salary Range: ${a.salary_range}]` : `[Salary Range: ${a.salary_range}]`;
+  }
+
+  const appliedAt = parseLegacyDate(a.date_applied) || parseLegacyDate(a.created_at);
+  const createdAt = parseLegacyDate(a.created_at);
+  const updatedAt = parseLegacyDate(a.updated_at);
+  const hasSnapshot = Boolean(a.job_description && a.job_description.trim().length > 0);
+
+  return {
+    companyName: a.company || 'Unknown Company',
+    roleTitle: a.job_title || 'Untitled Role',
+    stage,
+    status,
+    outcome,
+    closureReason,
+    eventType,
+    workArrangement,
+    employmentType: empType,
+    location: a.location || null,
+    jobUrl: a.job_url || null,
+    externalJobId: a.external_job_id || null,
+    salaryMin,
+    salaryMax,
+    salaryCurrency,
+    priority,
+    notes,
+    tags: appTags,
+    appliedAt,
+    createdAt,
+    updatedAt,
+    hasSnapshot,
+    jobDescription: a.job_description || null
+  };
+}
+
+/**
+ * Explicit transformation helper for legacy tasks.
+ */
+export function mapLegacyTask(t) {
+  const status = t.status === 'completed' ? 'COMPLETED' : 'PENDING';
+  const priority = String(t.priority || '').toUpperCase() === 'HIGH' ? 'HIGH' : 'MEDIUM';
+  return {
+    taskType: 'TASK',
+    title: t.title || 'Untitled Task',
+    details: t.notes || null,
+    dueDate: t.due_date || null,
+    priority,
+    status,
+    completedAt: parseLegacyDate(t.completed_at),
+    recurrenceRule: mapLegacyRecurrence(t.recurrence),
+    createdAt: parseLegacyDate(t.created_at),
+    updatedAt: parseLegacyDate(t.updated_at)
+  };
+}
+
+/**
+ * Explicit transformation helper for legacy reminders and follow-ups.
+ */
+export function mapLegacyReminder(f) {
+  const status = f.status === 'Completed' ? 'COMPLETED' : 'PENDING';
+  return {
+    taskType: 'FOLLOW_UP',
+    title: f.title || `Follow up: ${f.contact_name || 'Contact'}`,
+    details: f.notes || null,
+    dueDate: f.due_date || null,
+    priority: 'MEDIUM',
+    status,
+    completedAt: parseLegacyDate(f.completed_at),
+    createdAt: parseLegacyDate(f.created_at),
+    updatedAt: parseLegacyDate(f.updated_at)
+  };
+}
+
+/**
+ * Explicit transformation helper for legacy notes.
+ */
+export function mapLegacyNote(n) {
+  const entryType = mapLegacyNoteType(n.note_type);
+  return {
+    entryType,
+    title: n.title || 'Untitled Note',
+    content: n.body || n.content || '',
+    isPinned: n.pinned === 1 || n.is_pinned === true,
+    createdAt: parseLegacyDate(n.created_at),
+    updatedAt: parseLegacyDate(n.updated_at)
+  };
+}
+
+/**
+ * Explicit transformation helper for legacy resumes.
+ */
+export function mapLegacyResume(r) {
+  return {
+    name: r.version_name || r.name || 'Resume',
+    documentType: 'RESUME',
+    versionLabel: r.revision_label || 'v1',
+    targetRole: r.target_role || null,
+    isDefault: r.is_default === 1 || r.is_default === true,
+    isActive: r.is_active === 1 || r.is_active === true,
+    createdAt: parseLegacyDate(r.created_at),
+    updatedAt: parseLegacyDate(r.updated_at)
+  };
 }
 
 /**
@@ -207,16 +389,21 @@ export async function runMigration({
     let primaryUserId = null;
 
     for (const u of users) {
-      const email = String(u.email || '').trim().toLowerCase();
-      const fullName = u.full_name || email.split('@')[0];
-      const cleanUsername = email.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 32);
-
+      const userMapped = mapLegacyUser(u);
       let targetUserId;
-      // Check existing profile by legacy_user_id or email
-      const existing = await client.query(
-        `SELECT user_id FROM public.profiles WHERE legacy_user_id = $1 OR lower(email) = $2`,
-        [u.id, email]
-      );
+      // Check existing profile by legacy_user_id or email (if provided)
+      let existing;
+      if (userMapped.email) {
+        existing = await client.query(
+          `SELECT user_id FROM public.profiles WHERE legacy_user_id = $1 OR lower(email) = $2`,
+          [u.id, userMapped.email]
+        );
+      } else {
+        existing = await client.query(
+          `SELECT user_id FROM public.profiles WHERE legacy_user_id = $1`,
+          [u.id]
+        );
+      }
 
       if (existing.rowCount > 0) {
         targetUserId = existing.rows[0].user_id;
@@ -228,15 +415,15 @@ export async function runMigration({
             `INSERT INTO public.user_accounts (user_id, username, username_clean, status, created_at, updated_at)
              VALUES ($1, $2, $3, 'STAGED', COALESCE($4::timestamptz, NOW()), COALESCE($5::timestamptz, NOW()))
              ON CONFLICT (username_clean) DO UPDATE SET updated_at = NOW()`,
-            [targetUserId, cleanUsername, cleanUsername.toLowerCase(), parseLegacyDate(u.created_at), parseLegacyDate(u.updated_at)]
+            [targetUserId, userMapped.username, userMapped.cleanUsername, parseLegacyDate(u.created_at), parseLegacyDate(u.updated_at)]
           );
 
           // Insert into profiles
           await client.query(
-            `INSERT INTO public.profiles (user_id, display_name, email, legacy_user_id, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW()), COALESCE($6::timestamptz, NOW()))
+            `INSERT INTO public.profiles (user_id, display_name, email, legacy_user_id, theme_preference, week_start, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()), COALESCE($8::timestamptz, NOW()))
              ON CONFLICT (user_id) DO NOTHING`,
-            [targetUserId, fullName, email, u.id, parseLegacyDate(u.created_at), parseLegacyDate(u.updated_at)]
+            [targetUserId, userMapped.fullName, userMapped.email, u.id, userMapped.themePref, userMapped.weekStart, parseLegacyDate(u.created_at), parseLegacyDate(u.updated_at)]
           );
 
           // Generate Option B claim code (NEVER MIGRATE pin_hash)
@@ -280,7 +467,7 @@ export async function runMigration({
       // Add all migrated users as workspace members
       for (const u of users) {
         const targetUserId = idMap.get(`users:${u.id}`);
-        const role = u.role === 'manager' ? 'MANAGER' : 'USER';
+        const role = String(u.role || '').toUpperCase() === 'MANAGER' ? 'MANAGER' : 'USER';
         await client.query(
           `INSERT INTO public.workspace_members (workspace_id, user_id, role, joined_at)
            VALUES ($1, $2, $3, NOW())
@@ -366,22 +553,7 @@ export async function runMigration({
         [workspaceId, a.id]
       );
 
-      const { stage, status, outcome, closureReason, eventType } = mapLegacyStage(a.stage);
-      const appTags = appTagsMap.get(a.id) || [];
-
-      let workMode = null;
-      if (a.work_mode === 'Remote' || a.location_type === 'Remote') workMode = 'Remote';
-      else if (a.work_mode === 'Hybrid' || a.location_type === 'Hybrid') workMode = 'Hybrid';
-      else if (a.work_mode === 'Onsite' || a.location_type === 'Onsite') workMode = 'Onsite';
-
-      let empType = null;
-      if (a.employment_type === 'Full-time') empType = 'Full-time';
-      else if (a.employment_type === 'Contract') empType = 'Contract';
-      else if (a.employment_type === 'Part-time') empType = 'Part-time';
-
-      let priority = 'MEDIUM';
-      if (String(a.priority).toUpperCase() === 'HIGH') priority = 'HIGH';
-      else if (String(a.priority).toUpperCase() === 'LOW') priority = 'LOW';
+      const appMapped = mapLegacyApplication(a, appTagsMap.get(a.id) || []);
 
       if (existing.rowCount > 0) {
         targetId = existing.rows[0].id;
@@ -393,7 +565,9 @@ export async function runMigration({
       } else {
         targetId = (await client.query('SELECT gen_random_uuid() AS id')).rows[0].id;
 
-        if (!dryRun) {
+        if (dryRun) {
+          if (appMapped.hasSnapshot) snapshotsCreated++;
+        } else {
           await client.query(
             `INSERT INTO public.applications (
               id, workspace_id, user_id, company_name, role_title, stage, status,
@@ -407,22 +581,22 @@ export async function runMigration({
               $18, $19, $20, COALESCE($21::timestamptz, NOW()), $22, COALESCE($23::timestamptz, NOW()), COALESCE($24::timestamptz, NOW())
              )`,
             [
-              targetId, workspaceId, ownerId, a.company || 'Unknown Company', a.job_title || 'Untitled Role',
-              stage, status, outcome, closureReason, workMode, empType, a.location || null,
-              a.job_url || null, a.external_job_id || null, a.salary_min || null, a.salary_max || null,
-              a.salary_currency || 'USD', priority, a.notes || null, appTags,
-              parseLegacyDate(a.date_applied) || parseLegacyDate(a.created_at),
-              a.id, parseLegacyDate(a.created_at), parseLegacyDate(a.updated_at)
+              targetId, workspaceId, ownerId, appMapped.companyName, appMapped.roleTitle,
+              appMapped.stage, appMapped.status, appMapped.outcome, appMapped.closureReason,
+              appMapped.workArrangement, appMapped.employmentType, appMapped.location,
+              appMapped.jobUrl, appMapped.externalJobId, appMapped.salaryMin, appMapped.salaryMax,
+              appMapped.salaryCurrency, appMapped.priority, appMapped.notes, appMapped.tags,
+              appMapped.appliedAt, a.id, appMapped.createdAt, appMapped.updatedAt
             ]
           );
 
           // Immutable snapshot if job description exists
-          if (a.job_description && a.job_description.trim().length > 0) {
+          if (appMapped.hasSnapshot) {
             await client.query(
               `INSERT INTO public.job_snapshots (
                 application_id, workspace_id, job_description, raw_payload, captured_at
                ) VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW()))`,
-              [targetId, workspaceId, a.job_description, JSON.stringify({ source_url: a.job_url }), parseLegacyDate(a.created_at)]
+              [targetId, workspaceId, appMapped.jobDescription, JSON.stringify({ source_url: appMapped.jobUrl }), appMapped.createdAt]
             );
             snapshotsCreated++;
           }
@@ -433,9 +607,9 @@ export async function runMigration({
               application_id, workspace_id, actor_id, event_type, payload, created_at
              ) VALUES ($1, $2, $3, $4, $5, COALESCE($6::timestamptz, NOW()))`,
             [
-              targetId, workspaceId, ownerId, eventType,
-              JSON.stringify({ stage, status, outcome, legacy_import: true }),
-              parseLegacyDate(a.created_at)
+              targetId, workspaceId, ownerId, appMapped.eventType,
+              JSON.stringify({ stage: appMapped.stage, status: appMapped.status, outcome: appMapped.outcome, legacy_import: true }),
+              appMapped.createdAt
             ]
           );
         }
@@ -444,7 +618,7 @@ export async function runMigration({
       appsMigrated++;
     }
     report.counts.applications = { source: applications.length, eligible: applications.length, migrated: appsMigrated, skipped: 0, errors: 0 };
-    report.counts.job_snapshots = { source: applications.filter(a => a.job_description).length, eligible: applications.filter(a => a.job_description).length, migrated: snapshotsCreated, skipped: 0, errors: 0 };
+    report.counts.job_snapshots = { source: applications.filter(a => a.job_description && a.job_description.trim().length > 0).length, eligible: applications.filter(a => a.job_description && a.job_description.trim().length > 0).length, migrated: snapshotsCreated, skipped: 0, errors: 0 };
 
     // -------------------------------------------------------------------------
     // DOMAIN 5: Contacts
@@ -882,6 +1056,115 @@ export async function rollbackMigration({ targetUrl, workspaceId, confirmNonProd
   }
 }
 
+/**
+ * Executes a strictly READ-ONLY preflight against a target database.
+ * NEVER calls BEGIN, never executes INSERT, UPDATE, DELETE or any schema mutation.
+ */
+export async function runProductionPreflight({ targetUrl }) {
+  if (!targetUrl) {
+    throw new Error('Target database URL is required for preflight');
+  }
+
+  const isLocal = targetUrl.includes('127.0.0.1') || targetUrl.includes('localhost');
+  const client = new Client({ connectionString: targetUrl, ssl: isLocal ? false : { rejectUnauthorized: false } });
+  await client.connect();
+
+  try {
+    const checks = [];
+
+    // 1. Connection check
+    checks.push({ name: 'connection', status: 'PASS', detail: 'Connected successfully' });
+
+    // 2. Migration count & level in supabase_migrations
+    const migCheck = await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;');
+    const appliedVersions = migCheck.rows.map(r => r.version);
+    const hasM14 = appliedVersions.includes('20261020100000');
+    checks.push({
+      name: 'migrations',
+      status: appliedVersions.length === 18 && hasM14 ? 'PASS' : 'WARN',
+      detail: `${appliedVersions.length}/18 migrations applied (latest: ${appliedVersions[appliedVersions.length - 1]})`
+    });
+
+    // 3. Required legacy migration columns
+    const colCheck = await client.query(`
+      SELECT table_name, column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+        AND (
+          (table_name = 'profiles' AND column_name = 'legacy_user_id') OR
+          (table_name = 'applications' AND column_name = 'legacy_id') OR
+          (table_name = 'profiles' AND column_name = 'ui_preferences')
+        );
+    `);
+    const foundCols = colCheck.rows.map(r => `${r.table_name}.${r.column_name}`);
+    const hasCols = foundCols.includes('profiles.legacy_user_id') && foundCols.includes('applications.legacy_id') && foundCols.includes('profiles.ui_preferences');
+    checks.push({
+      name: 'legacy_columns',
+      status: hasCols ? 'PASS' : 'FAIL',
+      detail: `Found: ${foundCols.join(', ')}`
+    });
+
+    // 4. Required migration audit tables
+    const tblCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+        AND table_name IN ('migration_batches', 'migration_id_mappings', 'legacy_claim_codes');
+    `);
+    const foundTbls = tblCheck.rows.map(r => r.table_name);
+    const hasTbls = foundTbls.length === 3;
+    checks.push({
+      name: 'migration_tables',
+      status: hasTbls ? 'PASS' : 'FAIL',
+      detail: `Found: ${foundTbls.join(', ')}`
+    });
+
+    // 5. Required application domain tables
+    const domainTables = [
+      'user_accounts', 'profiles', 'workspaces', 'workspace_members',
+      'applications', 'job_snapshots', 'application_events',
+      'contacts', 'interviews', 'tasks', 'habits', 'habit_logs',
+      'journal_entries', 'goals', 'resumes'
+    ];
+    const dCheck = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+        AND table_name = ANY($1);
+    `, [domainTables]);
+    const foundDomains = dCheck.rows.map(r => r.table_name);
+    checks.push({
+      name: 'domain_tables',
+      status: foundDomains.length === domainTables.length ? 'PASS' : 'FAIL',
+      detail: `${foundDomains.length}/${domainTables.length} domain tables present`
+    });
+
+    // 6. RLS enabled on migration tables
+    const rlsCheck = await client.query(`
+      SELECT tablename, rowsecurity 
+      FROM pg_tables 
+      WHERE schemaname = 'public' 
+        AND tablename IN ('migration_batches', 'legacy_claim_codes', 'applications');
+    `);
+    const allRls = rlsCheck.rows.every(r => r.rowsecurity);
+    checks.push({
+      name: 'rls_status',
+      status: allRls ? 'PASS' : 'FAIL',
+      detail: `RLS active on tested tables: ${allRls}`
+    });
+
+    const isReady = checks.every(c => c.status === 'PASS');
+    return {
+      success: isReady,
+      readOnly: true,
+      checks,
+      timestamp: new Date().toISOString()
+    };
+  } finally {
+    await client.end();
+  }
+}
+
 // CLI Execution Entrypoint
 if (process.argv[1]?.endsWith('migrate-legacy-data.mjs')) {
   const args = process.argv.slice(2);
@@ -897,11 +1180,17 @@ if (process.argv[1]?.endsWith('migrate-legacy-data.mjs')) {
   const workspaceName = getArg('--workspace-name') || DEFAULT_MIGRATED_WORKSPACE_NAME;
   const dryRun = hasFlag('--dry-run');
   const validateOnly = hasFlag('--validate-only');
+  const preflight = hasFlag('--preflight');
   const rollback = hasFlag('--rollback');
   const confirmNonProduction = hasFlag('--confirm-non-production');
   const reportPath = getArg('--report') || null;
 
-  if (rollback) {
+  if (preflight) {
+    console.log(`Starting read-only preflight against target database...`);
+    runProductionPreflight({ targetUrl })
+      .then(res => { console.log(JSON.stringify(res, null, 2)); process.exit(res.success ? 0 : 1); })
+      .catch(err => { console.error('Preflight check failed:', err); process.exit(1); });
+  } else if (rollback) {
     console.log(`Starting rollback for workspace ${workspaceId}...`);
     rollbackMigration({ targetUrl, workspaceId, confirmNonProduction })
       .then(res => { console.log(JSON.stringify(res, null, 2)); process.exit(0); })
@@ -913,3 +1202,4 @@ if (process.argv[1]?.endsWith('migrate-legacy-data.mjs')) {
       .catch(err => { console.error('Migration failed:', err); process.exit(1); });
   }
 }
+

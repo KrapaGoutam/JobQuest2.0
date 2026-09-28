@@ -1,0 +1,28 @@
+{
+  "run": "a14a60",
+  "started_at": "2026-09-28T10:29:54.658Z",
+  "target": "local",
+  "m13-01-journal-lifecycle": {
+    "testJournalId": "3d69ad25-fb30-4b87-bdbf-1a9ce344bc4d",
+    "testAppId": "bcc38d73-2034-490b-8d4b-0ca664d77bcd"
+  },
+  "m13-02-journal-rls": {
+    "auditCount": 1
+  },
+  "m13-03-search-domains": {
+    "appFound": 3,
+    "contactFound": 1,
+    "noteFound": 1,
+    "interviewFound": 1,
+    "docFound": 1
+  },
+  "m13-04-search-security": {
+    "peerResultsCount": 0
+  },
+  "m13-05-member-denial": {
+    "charlieUserId": "6fa55a13-3b2c-47ca-801e-b93f0876dec8"
+  },
+  "m13-06-hardening-sweep": {
+    "tableCount": 5
+  }
+}

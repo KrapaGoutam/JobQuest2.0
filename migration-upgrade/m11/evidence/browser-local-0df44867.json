@@ -1,0 +1,80 @@
+{
+  "evidence": {
+    "run": "0df44867",
+    "started_at": "2026-09-27T11:33:59.121Z",
+    "browser": "playwright chromium persistent context",
+    "package": "jobquest-capture-dev",
+    "extension_loaded": true,
+    "manifest_version": 3,
+    "keyboard_focus_verified": true,
+    "token_created_through_settings": true,
+    "token_raw_revealed_once": true,
+    "local_storage_persisted": true,
+    "extraction_ms": 20,
+    "live_content_script_extraction": true,
+    "popup_ready_ms": 255,
+    "workflow_loaded": true,
+    "duplicate_api_ms": 61,
+    "capture_api_ms": 249,
+    "capture_succeeded": true,
+    "deep_link_verified": true,
+    "duplicate_popup_ms": 857,
+    "revocation_enforced": true,
+    "a11y_contexts": 6,
+    "a11y_critical": 0,
+    "a11y_serious": 0,
+    "a11y_blocking": 0,
+    "completed_at": "2026-09-27T11:34:07.351Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "popup-unconfigured",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "extension-options-connected-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-ready-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-capture-success",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-exact-duplicate-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-revoked-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    }
+  ]
+}

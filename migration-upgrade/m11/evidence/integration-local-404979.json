@@ -1,0 +1,55 @@
+{
+  "run": "404979",
+  "started_at": "2026-09-28T10:51:24.037Z",
+  "target": "local",
+  "m11-01-token-storage": {
+    "rawRevealedOnce": true,
+    "hmacOnlyAtRest": true,
+    "verifierColumnDenied": true,
+    "ownerRows": 1,
+    "peerRows": 0
+  },
+  "m11-02-reference-api": {
+    "me": 200,
+    "workflow": 200,
+    "ownerResumeCount": 1
+  },
+  "m11-03-duplicates": {
+    "exact": "EXACT_POSTING",
+    "probable": "SAME_ROLE",
+    "possible": "COMPANY_ONLY",
+    "none": "NONE",
+    "bounded": true
+  },
+  "m11-04-atomic-capture": {
+    "status": 201,
+    "application": true,
+    "snapshot": true,
+    "capturedEvent": true,
+    "resumeLink": true,
+    "immutable": true
+  },
+  "m11-05-capture-denials": {
+    "ownershipInjection": 422,
+    "invalidStage": 400,
+    "applicationDelta": 0
+  },
+  "m11-06-token-enforcement": {
+    "missingScope": 403,
+    "expired": 401,
+    "revoked": 401,
+    "rotatedOld": 401,
+    "rotatedNew": 200,
+    "removedMember": 401
+  },
+  "m11-07-rate-limit": {
+    "perTokenLimit": 3,
+    "limitedStatuses": [
+      200,
+      200,
+      200,
+      429
+    ],
+    "separateTokenStatus": 200
+  }
+}

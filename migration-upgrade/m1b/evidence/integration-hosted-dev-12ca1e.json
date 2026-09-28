@@ -1,0 +1,68 @@
+{
+  "run": "12ca1e",
+  "started_at": "2026-09-25T14:44:22.840Z",
+  "target": "hosted-dev",
+  "B21": {
+    "status": "PASS",
+    "per_account": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      429
+    ],
+    "correct_password_while_locked": 429,
+    "lock_store": "user_accounts (Postgres)",
+    "recovery_attempts": [
+      401,
+      401,
+      401,
+      429
+    ]
+  },
+  "B22": {
+    "status": "PASS",
+    "store": "Postgres auth_rate_limits via rpc_rate_limit_hit (shared across instances)",
+    "limit": 20,
+    "twenty_first_from_same_ip": 429,
+    "different_ip_unaffected": 401,
+    "stored_key": "sha256(ip), raw IP not stored",
+    "cross_client_shared_counter": [
+      "allowed",
+      "allowed",
+      "allowed",
+      "blocked"
+    ]
+  },
+  "SEC": {
+    "status": "PASS",
+    "system_tables_with_user_token": {
+      "user_accounts": "42501",
+      "user_credentials": "42501",
+      "auth_sessions": "42501",
+      "auth_refresh_tokens": "42501",
+      "auth_rate_limits": "42501",
+      "auth_recovery_codes": "42501"
+    },
+    "privileged_rpcs_with_user_token": {
+      "rpc_create_session": "42501",
+      "rpc_change_password": "42501",
+      "rpc_rate_limit_hit": "42501",
+      "rpc_register_account": "42501"
+    }
+  },
+  "B03-api": {
+    "status": "PASS",
+    "target": "hosted-dev",
+    "api_responses_scanned": 56,
+    "findings": {
+      "argon2_verifier_in_body": false,
+      "password_hash_field_in_body": false,
+      "refresh_token_in_body": false,
+      "refresh_token_outside_set_cookie": false,
+      "synthetic_email_pattern": false,
+      "private_key_material": false
+    }
+  }
+}

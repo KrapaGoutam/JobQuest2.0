@@ -1,0 +1,58 @@
+{
+  "name": "jobquest2",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @jobquest/web dev",
+    "dev:api": "pnpm --filter @jobquest/api dev",
+    "build": "pnpm --filter @jobquest/web build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r typecheck",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:extension": "pnpm --filter @jobquest/extension test",
+    "test:e2e": "playwright test",
+    "db:push": "supabase db push",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "check:extension": "node scripts/check-bundle.mjs --extension",
+    "check:secrets": "node scripts/check-bundle.mjs --tracked",
+    "local:key": "node scripts/gen-local-signing-key.mjs",
+    "local:env": "node scripts/m1b-local-env.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@supabase/supabase-js": "^2.117.1",
+    "@types/node": "^26.6.2",
+    "@types/pg": "^8.23.1",
+    "eslint": "^10.11.0",
+    "exceljs": "4.4.0",
+    "globals": "^17.12.0",
+    "jose": "^6.2.12",
+    "pg": "^8.23.0",
+    "supabase": "^2.117.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vercel": "^60.0.0",
+    "vitest": "^5.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml@>=4.0.0 <5": "4.3.2",
+      "minimatch@>=10.0.0 <11": "10.2.3",
+      "path-to-regexp@>=8.0.0 <9": "8.4.0",
+      "smol-toml@<=1.7.0": "1.7.1",
+      "tar@<=7.5.20": "7.5.21",
+      "@vercel/node>undici": "6.27.0",
+      "vercel>undici": "6.27.0",
+      "undici@>=5.0.0 <6": "5.29.0",
+      "undici@>=6.0.0 <7": "6.27.0"
+    }
+  }
+}

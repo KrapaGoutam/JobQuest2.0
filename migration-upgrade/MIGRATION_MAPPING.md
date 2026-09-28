@@ -71,3 +71,34 @@
   re-verifying (the Round 3 "callerless `GET /api/applications`" claim was false
   when checked — see `brain/AGENT_HANDOFF_LOG.md` Round 10 entry — the same
   discipline applies here).
+
+## Gate 01 revisions (PROPOSED, 2026-09-23)
+
+See [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md) for the
+full, per-table mapping (§10: all **33** legacy tables; the "23" count elsewhere
+in this package is wrong) and the per-API-group classification (§11). Rows above
+that change:
+
+| Row above | Gate 01 proposal |
+|---|---|
+| Custom PIN+session auth → Supabase Auth | Username + password via a Node façade over Supabase Auth. PIN retired; no PIN/password hashes migrated; legacy users reclaim via claim codes. |
+| Extension bearer tokens | Redesigned: workspace-bound, scoped, expiring, peppered hash, rotatable. Legacy tokens migrated as revoked history only. |
+| Manager oversight → RLS + SECURITY DEFINER RPC | Managers are now **workspace-scoped**, so plain membership-based RLS expresses access. RPCs remain for multi-row operations. Cross-owner manager writes are audited by trigger. |
+| Browser extension "repoint" | **Incremental migration**: keep extractors/fixtures; replace the API client, auth, workflow and duplicate integration. |
+| Render → Vercel + Supabase | Single Vercel project, same origin: SPA + Node API (Hono) as Vercel Functions at `/api`. |
+| Keep: 13-stage enum | Kept as vocabulary, **split** into 8 stages + statuses (Rejected/Withdrawn/Ghosted/Position Closed/Accepted become statuses). The mapping is total and reported. |
+
+## Gate 03 revisions (APPROVED WITH REQUIRED CORRECTIONS, 2026-09-24)
+
+Comprehensive Gate 03 database, authentication, and migration designs are codified across `migration-upgrade/gate-03/`.
+
+1. **Full 33-Table Legacy Mapping:** See [`gate-03/LEGACY_TABLE_MAPPING.md`](gate-03/LEGACY_TABLE_MAPPING.md) for the exhaustive classification of all 33 tables:
+   - **16 Keep / Modify:** Core entities adapted to target schema with `workspace_id` tenancy and UUIDv4 (`gen_random_uuid()`) primary keys.
+   - **2 Split:** `users` (split into `user_accounts` + `profiles` + `workspaces`) and `applications` (split into `applications` + `job_snapshots`).
+   - **11 Merge:** Redundant goal, task, tag, preference, and resume history tables consolidated into unified target entities.
+   - **4 Replace / Retire:** Legacy sessions, rejections table, reminder categories, and UI preference tables replaced by native Supabase/schema constructs; legacy PIN hashes permanently eliminated.
+2. **Definitive 13-Stage Decomposition:** Full deterministic state transformation specified in [`gate-03/DATA_MIGRATION_DESIGN.md`](gate-03/DATA_MIGRATION_DESIGN.md) §3, verified against legacy source code (`Saved` through `Accepted`). `Position Closed` maps to `POSITION_CLOSED`; modern candidate offer declined maps to `WITHDRAWN` + `OFFER_DECLINED`.
+3. **Dedicated Migration Workspace:** OQ-012 resolved with target workspace `"JobQuest (Migrated)"` (`gate-03/DATA_MIGRATION_DESIGN.md` §2, ADR-041).
+4. **Target Schema Catalog:** Complete 25 permanent target tables + 2 migration tracking tables (**27 total tables**) detailed in [`gate-03/TARGET_SCHEMA.md`](gate-03/TARGET_SCHEMA.md).
+5. **M1 Foundational Baseline:** Focused 7-table baseline (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`) detailed in [`gate-03/M1_SPIKE_PLAN.md`](gate-03/M1_SPIKE_PLAN.md).
+

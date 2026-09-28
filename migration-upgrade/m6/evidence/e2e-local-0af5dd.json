@@ -1,0 +1,98 @@
+{
+  "evidence": {
+    "target": "local",
+    "run": "0af5dd",
+    "started_at": "2026-09-25T15:00:36.049Z",
+    "browser_time_zone": "Europe/Berlin",
+    "profile_time_zone": "America/Chicago",
+    "E2E-01-next-action-in-queue": "PASS",
+    "E2E-02-create": "PASS",
+    "E2E-03-recurrence-undo-reminders": "PASS",
+    "E2E-04-done-set-next": "PASS",
+    "E2E-05-edit-snooze-cancel": "PASS",
+    "E2E-06-filters-keyboard": "PASS",
+    "E2E-07-error-retry-empty": "PASS",
+    "E2E-08-dashboard-review": "PASS",
+    "E2E-09-application-integration": "PASS",
+    "E2E-10-habits": "PASS",
+    "E2E-11-mobile": {
+      "overflow_px": 0
+    },
+    "completed_at": "2026-09-25T15:01:11.630Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "task-form",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "tasks-list",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "tasks-list-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "task-detail",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "tasks-list-after-actions",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "dashboard",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "habit-form",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "habits",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "tasks-mobile",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ]
+}

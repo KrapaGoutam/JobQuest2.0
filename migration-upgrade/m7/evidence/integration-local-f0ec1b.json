@@ -1,0 +1,45 @@
+{
+  "run": "f0ec1b",
+  "started_at": "2026-09-28T10:29:57.221Z",
+  "target": "local",
+  "m7-01-create-resume": {
+    "v1Id": "f48de075-e369-40f5-9768-f8ad67c6bb6e",
+    "v2Id": "3623aacf-59db-4cf0-a20d-ce1af6cf94a1"
+  },
+  "m7-02-peer-isolation": {
+    "bobVisibleCount": 0
+  },
+  "m7-03-peer-mutation-denied": {
+    "targetId": "f48de075-e369-40f5-9768-f8ad67c6bb6e",
+    "protected": true
+  },
+  "m7-04-manager-access-audit": {
+    "auditCount": 1,
+    "foreignManagerBlocked": true
+  },
+  "m7-05-cross-workspace-integrity": {
+    "fkCode": "23503"
+  },
+  "m7-06-guarded-deletion": {
+    "guarded": true,
+    "archiveAllowed": true,
+    "deleteAfterUnlink": true
+  },
+  "m7-07-clone-and-default": {
+    "baseId": "37512311-e771-483d-87ab-e19efb0a7fb3",
+    "cloneId": "a09d39a0-3562-444f-a127-cccfafd1acae",
+    "defaultSwitched": true
+  },
+  "m7-08-cover-letter-and-links": {
+    "clId": "75ad8505-75f7-4d1c-89ca-506303932aa5",
+    "docsCount": 2
+  },
+  "m7-09-archive-restore": {
+    "id": "ac1018fe-c9a1-49c1-90a5-49c12f669bac",
+    "archivedAndRestored": true
+  },
+  "m7-10-anon-denial": {
+    "tablesBlocked": true,
+    "rpcBlocked": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "bundle_files": 2,
+  "bundle_bytes": 447821,
+  "known_secret_values_checked": 4,
+  "known_secret_kinds": [
+    "local SUPABASE_SECRET_KEY",
+    "local signing key d",
+    "hosted-dev SUPABASE_SECRET_KEY",
+    "hosted-dev SUPABASE_DB_PASSWORD"
+  ],
+  "structural_rules": "supabase-secret-key, privileged-jwt, pem/jwk private key, db url with password, access tokens, server env names",
+  "findings": 0,
+  "publishable_key_present_as_expected": true
+}

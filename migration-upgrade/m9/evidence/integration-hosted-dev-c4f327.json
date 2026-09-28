@@ -1,0 +1,14 @@
+{
+  "run": "c4f327",
+  "started_at": "2026-09-26T08:56:30.200Z",
+  "target": "hosted-dev",
+  "m9-01-owner-round-trip": {
+    "objectSaved": true,
+    "malformedRejected": "23514"
+  },
+  "m9-02-profile-isolation": {
+    "peerRows": 0,
+    "managerRows": 0,
+    "anonymousDenied": true
+  }
+}

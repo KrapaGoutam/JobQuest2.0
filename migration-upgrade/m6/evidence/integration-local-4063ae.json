@@ -1,0 +1,100 @@
+{
+  "run": "4063ae",
+  "started_at": "2026-09-25T14:41:20.249Z",
+  "target": "local",
+  "m6-01-own-tasks": {
+    "insert": "OK",
+    "trimmedTitle": true,
+    "invariants": "42501",
+    "insertCompleted": "42501",
+    "delete": "42501",
+    "cancelKeepsRow": true
+  },
+  "m6-02-shape": {
+    "reminderNeedsDue": true,
+    "followUpNeedsLink": true,
+    "oneDue": true,
+    "recurrenceNeedsDue": true,
+    "badEnums": "23514"
+  },
+  "m6-03-peer": {
+    "select": 0,
+    "update": 0,
+    "complete": "42501",
+    "cancel": "42501",
+    "insertForPeer": "42501"
+  },
+  "m6-04-manager": {
+    "read": true,
+    "createForMember": true,
+    "completeAudited": true,
+    "foreign": "denied",
+    "nonMemberOwner": "42501",
+    "ownerNotAudited": true
+  },
+  "m6-05-removed-member": {
+    "tasks": 0,
+    "habits": 0,
+    "rpc": "42501"
+  },
+  "m6-06-integrity": {
+    "crossWorkspace": "23503",
+    "peerApp": "42501",
+    "peerContact": "42501",
+    "relinkToPeer": "42501",
+    "interviewImpliesApp": true,
+    "mismatch": "TASK_LINK_MISMATCH"
+  },
+  "m6-07-recurrence": {
+    "DAILY": "2026-10-06",
+    "WEEKLY": "2026-10-12",
+    "BIWEEKLY": "2026-10-19",
+    "WEEKDAYS": "2027-10-04",
+    "MONTHLY": "2027-02-28",
+    "monthlyThird": "2027-03-31",
+    "overdueSkipsToToday": true,
+    "dstWallTime": "2026-11-01T15:00:00Z",
+    "duplicateNext": "23505"
+  },
+  "m6-08-undo": {
+    "reopen": "OK",
+    "childWithdrawn": true,
+    "conflictRollsBack": true
+  },
+  "m6-09-contact-follow-ups": {
+    "createViaRpc": "task",
+    "directEditMovesTask": true,
+    "interactionMovesTask": true,
+    "projectionEarliest": true,
+    "doneCompletes": true,
+    "clearCancels": true,
+    "peer": "42501"
+  },
+  "m6-10-interview-reminders": {
+    "reminderTask": true,
+    "offsetMinutes": 60,
+    "noReminderByDefault": true,
+    "rescheduleShifts": true,
+    "cancelCancels": true
+  },
+  "m6-11-next-action": {
+    "doneSetNext": "NEXT_ACTION_CHANGED",
+    "noNextActionError": true,
+    "peer": "42501",
+    "followUpTimelineEvent": true
+  },
+  "m6-12-habits": {
+    "idempotent": true,
+    "targetSnapshot": true,
+    "uncomplete": true,
+    "futureRefused": true,
+    "paused": true,
+    "archiveKeepsLogs": true,
+    "directWrites": "42501",
+    "peer": "denied",
+    "managerAudited": true
+  },
+  "m6-13-anon": {
+    "denied": true
+  }
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobQuest Capture — Extension Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo-wrap">
+        <img src="icons/icon48.png" alt="JobQuest Logo">
+        <h1>JobQuest Capture</h1>
+      </div>
+      <p class="subtitle">Connect your browser extension to your JobQuest workspace.</p>
+    </header>
+
+    <main class="card">
+      <form id="options-form">
+        <div class="form-group">
+          <label for="instance-url">JobQuest Instance URL</label>
+          <input
+            type="url"
+            id="instance-url"
+            class="form-control"
+            placeholder="http://localhost:3000"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <p class="help-text">The web address of your JobQuest app (for local development, use <code>http://localhost:5173</code>).</p>
+        </div>
+
+        <div class="form-group">
+          <label for="api-token">Extension Access Token</label>
+          <input
+            type="password"
+            id="api-token"
+            class="form-control mono"
+            placeholder="Paste your jqx_dev_ or jqx_live_ token"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <p class="help-text">Generate a token in JobQuest under <strong>Settings &rarr; Browser Extension</strong>.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="theme">Theme</label>
+          <select id="theme" class="form-control">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+          <p class="help-text">System follows your browser and operating-system color preference.</p>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="save-btn" class="btn btn-primary">Save Settings</button>
+          <button type="button" id="test-btn" class="btn btn-secondary">Test Connection</button>
+        </div>
+
+        <div id="status-box" class="status-box" role="status" aria-live="polite"></div>
+      </form>
+    </main>
+
+    <footer class="footer">
+      <p>JobQuest &bull; Private, resilient job search tracker</p>
+    </footer>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

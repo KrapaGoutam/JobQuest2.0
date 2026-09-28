@@ -1,5 +1,9 @@
 # Implementation Plan
 
+> **Gate 01 note (2026-09-23):** a revised, PROPOSED milestone roadmap (M1–M16) is in
+> [`../GATE_01_ARCHITECTURE_PROPOSAL.md`](../GATE_01_ARCHITECTURE_PROPOSAL.md) §23–§24.
+> This file stays as the pre-Gate-01 baseline. Nothing in either plan is approved.
+
 All milestones below have status **PROPOSED**. None are approved. The user
 approves each milestone individually, from the JobQuest2.0 repository, per
 `../APPROVAL_GATES.md` Gate 5 — approval of one milestone never implies approval
@@ -297,3 +301,22 @@ slots that weren't in the original template. This is a deliberate adaptation to
 the real feature set, not a deviation to flag as a problem — see
 `../CURRENT_STATE_AUDIT.md` §10 on why there is no smaller "MVP slice" to target
 first.
+
+---
+
+## Gate 03 & M1/M1B Architecture Alignment (UPDATED POST-M1B OPTION B ADOPTION, 2026-09-24)
+
+Based on approved Gate 03 specifications and the completed M1B Auth Option B adoption:
+
+1. **Milestone 1 (M1) Spike Execution & Option B Adoption:**
+   - Option A was evaluated under [`../gate-03/M1_SPIKE_PLAN.md`](../gate-03/M1_SPIKE_PLAN.md) and FAILED due to synthetic identity exposure via `/auth/v1/user` (T03 hard-fail invariant).
+   - Option B was evaluated and passed all 26 test conditions with sanitized evidence across Local Supabase, CI, and Hosted `jobquest-dev`. Formally APPROVED in [`../gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md`](../gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md) and [`../m1b/M1B_FINAL_APPROVAL_REPORT.md`](../m1b/M1B_FINAL_APPROVAL_REPORT.md).
+   - Reconciled target database catalog: **29 permanent production tables + 2 migration tracking tables = 31 total target tables** (Option B added `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+   - M1/M1B Implemented Baseline: 11 tables (`user_accounts`, `profiles`, `auth_recovery_codes`, `workspaces`, `workspace_members`, `applications`, `workflow_definitions`, `user_credentials`, `auth_sessions`, `auth_refresh_tokens`, `auth_rate_limits`).
+2. **Next Milestone Alignment:**
+   - **Milestone 2:** Design System & App Shell (Gate 02B Direction D tokens, base themed components, navigation shell, visual regression baseline, and Vercel preview project initialization).
+   - **Milestone 3:** Full Supabase Schema Migration (authoring all remaining target tables).
+3. **Milestone 19 (Data Migration) Alignment:**
+   - Detailed in [`../gate-03/DATA_MIGRATION_DESIGN.md`](../gate-03/DATA_MIGRATION_DESIGN.md).
+   - Follows 10-phase execution plan targeting dedicated `"JobQuest (Migrated)"` system team workspace (OQ-012 resolution) using canonical UUIDv4 (`gen_random_uuid()`) primary keys.
+   - Enforces deterministic 13-stage legacy state decomposition into 4 decoupled dimensions (`stage`, `state`, `outcome`, `closure_reason`) verified directly against legacy source code (`Saved` through `Accepted`) and backfilled append-only event sourcing.

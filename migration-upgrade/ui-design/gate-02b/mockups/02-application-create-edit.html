@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>
+.formpage { flex:1; min-height:0; display:grid; grid-template-columns:200px 1fr 300px; gap:24px; padding:20px 24px 0; overflow:hidden; }
+.secnav { display:flex; flex-direction:column; gap:2px; padding-top:44px; }
+.secnav div { height:32px; display:flex; align-items:center; gap:8px; padding:0 10px; border-radius:6px; color:var(--muted); white-space:nowrap; }
+.secnav div.on { background:var(--surface); color:var(--fg); font-weight:600; border:1px solid var(--border); }
+.secnav .st { margin-left:auto; font-size:11px; }
+.fcard { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+.fcard h3 { margin:0; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; }
+.collapsed { background:var(--surface); border:1px solid var(--border); border-radius:8px; height:48px; padding:0 20px; display:flex; align-items:center; gap:8px; }
+.stickyfoot { height:60px; flex:none; border-top:1px solid var(--border); background:var(--surface); display:flex; align-items:center; gap:8px; padding:0 24px; }
+.dup { border-radius:8px; border:1px solid; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+.dupmatch { display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:8px 10px; }
+.why { display:flex; gap:6px; flex-wrap:wrap; }
+</style></head><body><script>
+const { shell, mobile, gallery, pips, pri, aging, outcome } = JQ;
+
+const sel = (v, ph) => `<div class="input ${ph ? 'ph' : ''}"><span class="grow ell">${v}</span><i class="icon-chevron-down muted"></i></div>`;
+const seg = (opts, on) => `<div class="seg">${opts.map(o => `<span class="${o === on ? 'on' : ''}">${o}</span>`).join('')}</div>`;
+const f = (label, ctrl, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${label}${o.req ? ' <span class="req" aria-hidden="true">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${ctrl}${o.help ? `<div class="help">${o.help}</div>` : ''}${o.err ? `<div class="ferr"><i class="icon-circle-alert"></i>${o.err}</div>` : ''}</div>`;
+const inp = (v, cls) => `<div class="input ${cls || ''}">${v}</div>`;
+
+/* ---------- duplicate panels ---------- */
+const match = (tile, co, role, meta, stage, extra) => `<div class="dupmatch"><span class="tile">${tile}</span><div class="grow"><div class="row"><span class="b ell">${co} · ${role}</span></div><div class="small muted ell">${meta}</div></div><div class="row" style="gap:6px">${extra || ''}<span class="btn sm">View existing</span></div></div>`;
+const dupStrong = `<div class="dup" style="background:var(--danger-soft);border-color:color-mix(in oklch,var(--danger) 35%,var(--surface))" role="alert">
+  <div class="row"><i class="icon-copy danger-t" style="font-size:16px"></i><span class="b">Strong duplicate: you already track this posting</span><span class="pill danger" style="margin-left:auto">Strong</span></div>
+  <div class="why small"><span class="muted">Why:</span><span class="pill muted"><i class="icon-link"></i>Same job URL</span><span class="pill muted"><i class="icon-hash"></i>Same requisition ID CRV-2291</span></div>
+  ${match('C', 'Corvid Labs', 'Staff Product Designer', 'Final Interview · Open · Applied Sep 01 · Referral · last activity yesterday', '')}
+  <div class="row small"><span class="muted">Saving creates a second, separate application.</span><span class="grow"></span><span class="btn sm">Cancel</span><span class="btn sm danger-o">Save anyway</span></div></div>`;
+const dupProbable = `<div class="dup" style="background:var(--warning-soft);border-color:color-mix(in oklch,var(--warning) 35%,var(--surface))" role="status">
+  <div class="row"><i class="icon-triangle-alert warning-t" style="font-size:16px"></i><span class="b">Probable duplicate: same company and role</span><span class="pill warning" style="margin-left:auto">Probable</span></div>
+  <div class="why small"><span class="muted">Why:</span><span class="pill muted">Company: Halcyon Health</span><span class="pill muted">Title: Senior Product Designer</span><span class="pill muted"><i class="icon-map-pin"></i>Location differs · Boston vs Remote</span></div>
+  ${match('H', 'Halcyon Health', 'Senior Product Designer', 'Recruiter Screen · Open · Applied Sep 14 · LinkedIn · linkedin.com/jobs/view/40211…', '')}
+  <div class="small muted">Seniority and role variants are never merged: "Senior Product Designer" and "Product Designer" are different roles.</div></div>`;
+const dupPossible = `<div class="dup" style="background:var(--info-soft);border-color:color-mix(in oklch,var(--info) 35%,var(--surface))" role="status">
+  <div class="row"><i class="icon-info info-t" style="font-size:16px"></i><span class="b">Possible: you've applied to Tessellate before</span><span class="pill info" style="margin-left:auto">Possible</span></div>
+  <div class="small">2 other roles at this company · <b>Design Systems Designer</b> (Offer, Open) · <b>UX Researcher</b> (Rejected at Interview, Mar 2026). <a>View</a></div>
+  <div class="small muted">Different role, so this doesn't block saving.</div></div>`;
+
+/* ---------- Create application ---------- */
+function createPage(o) {
+  const mgr = o.ws === 'lab';
+  return `
+  <div class="formpage">
+    <div class="secnav" aria-label="Form sections">
+      <div class="on"><i class="icon-briefcase"></i>Job<span class="st danger-t">2 required</span></div>
+      <div><i class="icon-send"></i>Application</div>
+      <div><i class="icon-alarm-clock"></i>Tracking</div>
+      <div><i class="icon-users"></i>Contacts</div>
+      <div><i class="icon-sticky-note"></i>Notes</div>
+      <p class="small muted" style="margin:10px 0 0;padding:0 10px;line-height:1.5">Only <b style="color:var(--fg)">Company</b> and <b style="color:var(--fg)">Role</b> are required. Everything else can be added later.</p>
+    </div>
+    <div class="col" style="gap:12px;min-height:0;overflow:hidden">
+      <div class="page-title"><a class="small row" style="gap:4px"><i class="icon-arrow-left"></i>Applications</a></div>
+      <div class="page-title" style="margin-top:-4px"><h1>New application</h1><span class="muted">Manual entry</span><span class="spacer"></span>${mgr ? '' : '<span class="small muted row" style="gap:6px"><i class="icon-puzzle"></i>Capturing from a job page? <a>Use the browser extension</a></span>'}</div>
+      ${mgr ? `<div class="fcard" style="flex-direction:row;align-items:center;gap:14px;padding:12px 20px"><span class="label">Owner <span class="req">*</span></span><div class="input" style="width:260px"><span class="av" style="width:20px;height:20px;font-size:9px">DP</span>Dev Patel<i class="icon-chevron-down muted" style="margin-left:auto"></i></div><span class="small muted row" style="gap:6px"><i class="icon-shield-check success-t"></i>You're creating this for a member. It's recorded in Audit history.</span></div>` : ''}
+      ${o.dup || ''}
+      <div class="fcard">
+        <h3>Job <span class="small muted" style="font-weight:400">The posting you're applying to</span></h3>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr">
+          ${f('Company', `<div class="input ${o.focus ? 'focus' : ''}"><span class="tile" style="width:20px;height:20px;font-size:10px">${o.co[0]}</span>${o.co}<span class="sfx small">Existing company</span></div>`, { req: true })}
+          ${f('Role', inp(o.role), { req: true })}
+          ${f('Job URL', `<div class="input"><i class="icon-link muted"></i><span class="ell">${o.url}</span></div>`, { opt: true, help: 'http or https links only.' })}
+          ${f('Job / requisition ID', inp(o.req || '', o.req ? '' : 'ph'), { opt: true })}
+          ${f('Location', inp(o.loc), { opt: true })}
+          ${f('Work arrangement', seg(['Remote', 'Hybrid', 'Onsite'], o.arr), { opt: true })}
+          ${f('Source', sel(o.source), { opt: true })}
+          ${f('Employment type', sel('Full-time'), { opt: true })}
+          ${f('Salary', `<div class="row" style="gap:8px">${inp('$ 150,000', 'grow')}<span class="muted">to</span>${inp('$ 175,000', 'grow')}<div style="width:140px">${sel('USD / year')}</div></div>`, { opt: true, span: 2 })}
+        </div>
+        <div class="row small" style="gap:14px"><a class="row nowrap" style="gap:4px"><i class="icon-plus"></i>Add job description</a><a class="row nowrap" style="gap:4px"><i class="icon-plus"></i>Add requirements & skills</a><span class="muted">Saved as the job posting snapshot, so it stays even if the listing disappears.</span></div>
+      </div>
+      <div class="fcard">
+        <h3>Application</h3>
+        <div class="fgrid" style="grid-template-columns:1.2fr 1fr 1fr 1fr">
+          ${f('Stage', sel(o.stage), { req: true })}
+          ${f('Date applied', inp(o.stage === 'Saved' ? '—' : 'Sep 23, 2026', o.stage === 'Saved' ? 'dis' : ''), { req: o.stage !== 'Saved', help: o.stage === 'Saved' ? 'Not needed until you apply.' : 'Required from Applied onward.' })}
+          ${f('Resume', sel('Product v3 · resume'), { opt: true })}
+          ${f('Cover letter', sel('None', true), { opt: true })}
+        </div>
+      </div>
+      <div class="collapsed"><i class="icon-alarm-clock muted"></i><span class="b">Tracking</span><span class="small muted">Priority Medium · Next action: none · Follow-up reminder in 5 business days</span><i class="icon-chevron-down muted" style="margin-left:auto"></i></div>
+    </div>
+    <div class="col" style="gap:12px;padding-top:44px">
+      <div class="card"><div class="card-h" style="height:40px"><span class="sec-t">Will be recorded</span></div>
+        <div class="card-b col small" style="gap:8px">
+          <span class="row"><i class="icon-circle-plus muted"></i>Application created</span>
+          ${o.stage === 'Saved' ? '<span class="row"><i class="icon-bookmark muted"></i>Stage: Saved</span>' : '<span class="row"><i class="icon-send muted"></i>Applied · Sep 23</span>'}
+          <span class="row"><i class="icon-file-text muted"></i>Job posting snapshot</span>
+          <span class="row"><i class="icon-bell-ring muted"></i>Follow-up reminder · Sep 30</span>
+          <span class="muted" style="margin-top:4px">These appear on the application's timeline.</span></div></div>
+      <div class="card"><div class="card-b col small" style="gap:6px"><span class="b">Tip</span><span class="muted">Press <span class="kbd">Q</span> anywhere for Quick add: company, role and stage only.</span></div></div>
+    </div>
+  </div>
+  <div class="stickyfoot"><span class="small muted row" style="gap:6px"><i class="icon-circle-dot"></i>Draft saved locally</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn">Create & add another</span><span class="btn primary">Create application</span></div>`;
+}
+
+/* ---------- Applications background (dimmed) ---------- */
+const listBg = `<div class="page" style="gap:10px"><div class="page-title"><h1>Applications</h1><span class="muted">457 active · 600 total</span></div>
+  <div class="tabs"><span class="tab sel">All active <span class="cnt">457</span></span><span class="tab">Needs follow-up <span class="cnt danger">7</span></span><span class="tab">Interviewing <span class="cnt">11</span></span><span class="tab">Saved <span class="cnt">38</span></span><span class="tab">Archived <span class="cnt">143</span></span></div>
+  <div class="tbl">${['Northwind Analytics', 'Meridian Bank', 'Aster Mobility', 'Lumen Civic', 'Corvid Labs', 'Oakridge Energy', 'Halcyon Health', 'Quarry Health', 'Brightline Freight', 'Tessellate', 'Kestrel Insurance', 'Parallax Games', 'Sable & Co.', 'Harbor Logistics'].map(c => `<div class="tr" style="grid-template-columns:16px 1fr 160px 190px 260px"><span class="cb"></span><span class="row"><span class="tile">${c[0]}</span><span class="b">${c}</span></span><span class="row">${pips(2)}Applied</span><span class="muted">—</span><span class="muted">—</span></div>`).join('')}</div></div>`;
+
+/* ---------- Quick add ---------- */
+const quickAdd = `<div class="scrim"></div><div class="dialog" style="width:480px;left:480px;top:150px" role="dialog" aria-label="Quick add application">
+  <div class="dlg-h"><h2>Quick add</h2><span class="kbd" style="margin-left:6px;margin-top:4px">Q</span><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    ${f('Company', `<div class="input focus">Harbor Logi<span class="muted">|</span></div>`, { req: true })}
+    <div class="menu" style="position:relative;box-shadow:none;margin-top:-10px"><div class="mi hl"><span class="tile" style="width:20px;height:20px;font-size:10px">H</span><b>Harbor Logi</b>stics<span class="small muted" style="margin-left:auto">1 application</span></div><div class="mi"><i class="icon-plus muted"></i>Create "Harbor Logi"</div></div>
+    ${f('Role', inp('Senior Product Designer'), { req: true })}
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">${f('Stage', sel('Applied'))}${f('Next action', inp('Follow up', ''), { opt: true })}</div>
+    <div class="small muted">Adds with today's date and Medium priority. <a>Open full form</a></div>
+  </div>
+  <div class="dlg-f"><span class="small muted">Enter to save · Esc to cancel</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Add application</span></div></div>`;
+
+/* ---------- Edit application ---------- */
+const editPage = `
+  <div class="formpage" style="grid-template-columns:200px 1fr 320px">
+    <div class="secnav"><div class="on"><i class="icon-briefcase"></i>Job details</div><div><i class="icon-send"></i>Application</div><div><i class="icon-alarm-clock"></i>Tracking</div><div><i class="icon-tag"></i>Tags</div></div>
+    <div class="col" style="gap:12px;min-height:0;overflow:hidden">
+      <div class="page-title"><a class="small row" style="gap:4px"><i class="icon-arrow-left"></i>Corvid Labs · Staff Product Designer</a></div>
+      <div class="page-title" style="margin-top:-4px"><h1>Edit details</h1><span class="mono small muted">JQ-1042</span><span class="spacer"></span><span class="pill warning"><i class="icon-pencil"></i>2 unsaved changes</span></div>
+      <div class="banner neutral small" style="align-items:flex-start"><i class="icon-info muted" style="margin-top:2px"></i><span><b>Stage, outcome and next action aren't edited here.</b> Change them from the application header (<b>Move stage</b>, <b>Done, set next</b>) so each change is recorded on the timeline.</span></div>
+      <div class="fcard">
+        <h3>Job details</h3>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr">
+          ${f('Company', inp('<span class="tile" style="width:20px;height:20px;font-size:10px">C</span>Corvid Labs'), { req: true })}
+          ${f('Role', inp('Staff Product Designer', 'focus'), { req: true })}
+          ${f('Job URL', `<div class="input"><i class="icon-link muted"></i>careers.corvidlabs.example/2291</div>`, { opt: true })}
+          ${f('Job / requisition ID', inp('CRV-2291'), { opt: true })}
+          ${f('Location', inp('Seattle, WA'), { opt: true })}
+          ${f('Salary', `<div class="row" style="gap:8px">${inp('$ 185,000', 'grow')}<span class="muted">to</span>${inp('$ 215,000 ', 'grow err')}</div>`, { opt: true, err: 'Maximum must be greater than minimum.' })}
+        </div>
+      </div>
+      <div class="fcard">
+        <h3>Application</h3>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="field"><label class="label">Stage</label><div class="input dis">Final Interview<span class="sfx"><i class="icon-lock"></i></span></div><a class="small">Move stage…</a></div>
+          <div class="field"><label class="label">Outcome</label><div class="input dis">Open<span class="sfx"><i class="icon-lock"></i></span></div><a class="small">Set outcome…</a></div>
+          ${f('Date applied', inp('Sep 01, 2026'), { req: true, help: 'Correcting this adds a note to the timeline.' })}
+        </div>
+      </div>
+    </div>
+    <div class="col" style="gap:12px;padding-top:44px">
+      <div class="card"><div class="card-h" style="height:40px"><i class="icon-file-text muted"></i><span class="sec-t">Job posting snapshot</span></div>
+        <div class="card-b col small" style="gap:8px"><span class="row" style="gap:6px"><i class="icon-puzzle muted"></i>Captured Aug 30 · browser extension</span>
+        <span class="muted">The snapshot keeps the posting exactly as captured. Editing details here doesn't change it.</span>
+        <div class="row" style="gap:6px"><span class="btn sm">View snapshot</span><span class="btn sm">Add newer snapshot</span></div></div></div>
+      <div class="card"><div class="card-h" style="height:40px"><i class="icon-history muted"></i><span class="sec-t">Edit history</span></div>
+        <div class="card-b col small" style="gap:6px"><span>Salary updated · Sep 12 · Maya</span><span>Location updated · Sep 02 · Maya</span><span class="muted">Detail edits show as system events on the timeline (hidden by default).</span></div></div>
+    </div>
+  </div>
+  <div class="stickyfoot"><span class="small danger-t row" style="gap:6px"><i class="icon-circle-alert"></i>Fix 1 field before saving</span><span class="grow"></span><span class="btn">Discard changes</span><span class="btn primary disabled">Save changes</span></div>`;
+
+
+/* ---------- Application detail backdrop (approved D7 header, simplified body) ---------- */
+const seg8 = ['Saved','Prep','Applied','Assess.','Screen','Interview','Final','Offer'];
+const detailBg = `<div style="background:var(--surface);padding:14px 24px 0;border-bottom:1px solid var(--border)">
+  <div class="row small"><a class="row" style="gap:4px"><i class="icon-arrow-left"></i>Applications</a><span class="muted">/</span><span class="mono muted">JQ-1042</span><span class="grow"></span><span class="muted">5 of 457 in view</span></div>
+  <div class="row" style="gap:14px;margin:10px 0 12px"><span class="tile lg" style="width:48px;height:48px;font-size:18px">C</span><div class="grow"><div style="font-size:24px;font-weight:600;letter-spacing:-.01em">Staff Product Designer</div><div class="muted"><b style="color:var(--fg)">Corvid Labs</b> · Seattle, WA · Hybrid · Full-time · Applied Sep 01</div></div>
+    <span class="ibtn" style="color:var(--primary)"><i class="icon-pin"></i></span><span class="btn"><i class="icon-message-square"></i>Log activity</span><span class="btn"><i class="icon-pencil"></i>Edit</span><span class="ibtn"><i class="icon-ellipsis"></i></span></div>
+  <div style="display:grid;grid-template-columns:1.9fr .8fr .9fr 1.9fr;border-top:1px solid var(--border)">
+    <div style="padding:10px 16px 12px 0"><div class="row xs b muted" style="letter-spacing:.04em">STAGE<span class="grow"></span><span style="letter-spacing:0;font-weight:500">Outcome: Open</span></div>
+      <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin:8px 0 4px">${seg8.map((x,i)=>`<div><div style="height:5px;border-radius:2px;background:${i<6?'color-mix(in oklch,var(--primary) 55%,var(--surface))':i==6?'var(--primary)':'var(--border-strong)'}"></div><div class="xs ${i==6?'b':'muted'}" style="margin-top:3px">${x}</div></div>`).join('')}</div>
+      <div class="row"><b>Final Interview</b><span class="small muted">since Sep 18 · 5 days</span><span class="grow"></span><span class="btn sm" id="movebtn">Move stage<i class="icon-chevron-down"></i></span></div></div>
+    <div style="padding:10px 16px;border-left:1px solid var(--border)"><div class="xs b muted" style="letter-spacing:.04em">PRIORITY</div><div style="margin-top:8px" class="b">${pri('High')}</div></div>
+    <div style="padding:10px 16px;border-left:1px solid var(--border)"><div class="xs b muted" style="letter-spacing:.04em">AGING</div><div style="margin-top:8px">${aging('New','1d')}</div><div class="small muted">Last activity yesterday</div></div>
+    <div style="padding:10px 16px;background:var(--warning-soft)"><div class="row xs b warning-t" style="letter-spacing:.04em"><i class="icon-clock"></i>NEXT ACTION · DUE TODAY</div><div style="font-size:15px;font-weight:600;margin:4px 0 8px">Send thank-you note</div><div class="row"><span class="btn sm primary"><i class="icon-check"></i>Done, set next</span><span class="btn sm">Reschedule</span></div></div>
+  </div></div>
+  <div class="page" style="flex-direction:row;gap:0;padding:0"><div class="grow" style="padding:14px 24px"><div class="tabs"><span class="tab sel">Timeline <span class="cnt">19</span></span><span class="tab">Job posting</span><span class="tab">Notes <span class="cnt">4</span></span></div>
+    ${[1,2,3,4,5,6].map(i=>`<div class="row" style="padding:12px 0;border-bottom:1px solid var(--border);gap:14px"><span class="skel" style="width:30px;height:24px"></span><span class="skel" style="width:${180+i*37}px"></span><span class="grow"></span><span class="skel" style="width:80px"></span></div>`).join('')}</div>
+    <div style="width:380px;border-left:1px solid var(--border);background:var(--surface);padding:12px 20px" class="col">${['Tasks & follow-ups','Interviews','Contacts','Documents'].map(t=>`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div class="sec-t">${t}</div><div class="skel" style="width:220px;margin-top:10px"></div><div class="skel" style="width:170px;margin-top:8px"></div></div>`).join('')}</div></div>`;
+
+/* ---------- Move stage / outcome dialogs ---------- */
+const stages = ['Saved', 'Preparing', 'Applied', 'Assessment', 'Recruiter Screen', 'Interview', 'Final Interview', 'Offer'];
+const moveStage = `<div class="scrim"></div><div class="menu" style="width:300px;left:346px;top:256px" role="menu" aria-label="Move stage">
+  <div class="xs b muted" style="padding:6px 10px;letter-spacing:.05em">STAGE</div>
+  ${stages.map((s, i) => `<div class="mi ${s === 'Offer' ? 'hl' : ''}" role="menuitemradio" aria-checked="${s === 'Final Interview'}"><i class="icon-${s === 'Final Interview' ? 'check' : 'dot'}" style="width:14px;${s === 'Final Interview' ? '' : 'opacity:0'}"></i>${s}${i < 6 ? '<span class="small muted" style="margin-left:auto">done</span>' : ''}</div>`).join('')}
+  <div class="hr" style="margin:4px 0"></div>
+  <div class="xs b muted" style="padding:6px 10px;letter-spacing:.05em">CLOSE WITH OUTCOME</div>
+  ${[['circle-check', 'Accepted', 'success-t'], ['circle-x', 'Rejected', 'danger-t'], ['undo-2', 'Withdrawn', 'muted'], ['ghost', 'Ghosted', 'muted'], ['ban', 'Position Closed', 'muted']].map(o => `<div class="mi"><i class="icon-${o[0]} ${o[2]}"></i>${o[1]}…</div>`).join('')}
+</div>`;
+const outcomeConfirm = `<div class="scrim"></div><div class="dialog" style="width:500px;left:470px;top:170px" role="alertdialog" aria-label="Close application as Rejected">
+  <div class="dlg-h"><span class="tile lg" style="background:var(--danger-soft);color:var(--danger)"><i class="icon-circle-x"></i></span><div><h2>Close as Rejected?</h2><div class="small muted" style="margin-top:2px">Corvid Labs · Staff Product Designer</div></div></div>
+  <div class="dlg-b">
+    <div class="kv"><span>Stage stays</span><span class="b">Final Interview</span><span>Outcome</span><span class="row" style="gap:8px">${outcome('Open')}<i class="icon-arrow-right muted"></i>${outcome('Rejected')}</span><span>Next action</span><span>"Send thank-you note" will be cleared</span></div>
+    ${f('Rejection date', inp('Sep 23, 2026'), { req: true })}
+    ${f('Reason', sel('Went with another candidate'), { opt: true })}
+    ${f('Feedback or lessons', '<div class="input ta ph">What did they say? What would you change?</div>', { opt: true })}
+    <label class="check small"><span class="cb"></span>Eligible to reapply · remind me on <span class="input" style="height:26px;display:inline-flex">Mar 23, 2027</span></label>
+  </div>
+  <div class="dlg-f"><span class="small muted">Recorded on the timeline. You can reopen later.</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn danger">Close as Rejected</span></div></div>`;
+
+/* ---------- Done, set next ---------- */
+const doneNext = `<div class="scrim"></div><div class="dialog" style="width:460px;left:490px;top:200px" role="dialog" aria-label="Complete next action">
+  <div class="dlg-h"><span class="circ on" style="width:22px;height:22px;margin-top:2px"><i class="icon-check"></i></span><div><h2>Done: Send thank-you note</h2><div class="small muted">Logged on the timeline as completed today.</div></div></div>
+  <div class="dlg-b">
+    <div class="sec-t">What's next?</div>
+    ${f('Next action', inp('Follow up on decision', 'focus'))}
+    <div class="row" style="gap:6px;flex-wrap:wrap"><span class="chip sm">Tomorrow</span><span class="chip sm on">In 1 week · Sep 30</span><span class="chip sm">In 2 weeks</span><span class="chip sm"><i class="icon-calendar"></i>Pick date</span></div>
+    <label class="check small"><span class="cb"></span>Also log a note</label>
+  </div>
+  <div class="dlg-f"><span class="btn ghost">No next action</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Save</span></div></div>`;
+
+/* ---------- archive & delete ---------- */
+const hardDelete = `<div class="scrim"></div><div class="dialog" style="width:500px;left:470px;top:180px" role="alertdialog" aria-label="Delete application permanently">
+  <div class="dlg-h"><span class="tile lg" style="background:var(--danger-soft);color:var(--danger)"><i class="icon-trash-2"></i></span><div><h2>Delete permanently?</h2><div class="small muted">Vantage Retail · Product Designer · archived Sep 02</div></div></div>
+  <div class="dlg-b">
+    <div class="banner danger small" style="align-items:flex-start"><i class="icon-triangle-alert danger-t" style="margin-top:2px"></i><span>This <b>can't be undone</b>. It removes the application, its <b>14 timeline events</b>, 2 interviews, 1 rejection record, checklist and tags. It will also <b>drop out of analytics</b> history. Linked contacts, tasks and notes are kept but unlinked.</span></div>
+    <div class="small">Prefer <b>Archive</b> to keep history. This application is already archived.</div>
+    ${f('Type <span class="mono">DELETE</span> to confirm', inp('DELE', 'focus mono'))}
+  </div>
+  <div class="dlg-f"><span class="small muted row" style="gap:5px"><i class="icon-history"></i>Recorded in Audit history</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn danger disabled">Delete permanently</span></div></div>`;
+const undoToast = `<div class="toast" style="left:560px;bottom:28px" role="status"><i class="icon-archive"></i>Archived Vantage Retail<span class="btn sm">Undo · 8s</span><span class="ibtn ghost" style="color:var(--inverse-fg)"><i class="icon-x"></i></span></div>`;
+
+/* ---------- Mobile ---------- */
+const mCreate = mobile({ back: true, title: 'New application', actions: '<span class="m-ib"><i class="icon-x"></i></span>', noTabs: true,
+  bottom: `<div style="padding:12px 16px 30px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:10px"><div class="m-btn" style="flex:1">More details</div><div class="m-btn primary" style="flex:1.4">Save</div></div>` }, `
+  <div class="field"><label class="label" style="font-size:14px">Company <span class="req">*</span></label><div class="m-input" style="border-color:var(--focus);box-shadow:0 0 0 3px var(--primary-soft)">Halcyon Health</div></div>
+  <div class="field"><label class="label" style="font-size:14px">Role <span class="req">*</span></label><div class="m-input">Senior Product Designer</div></div>
+  <div class="field"><label class="label" style="font-size:14px">Stage</label><div class="m-input">Applied<i class="icon-chevron-down muted" style="margin-left:auto"></i></div></div>
+  <div class="field"><label class="label" style="font-size:14px">Job URL <span class="opt">optional</span></label><div class="m-input muted"><i class="icon-link"></i>Paste link</div></div>
+  <div class="field"><label class="label" style="font-size:14px">Next action <span class="opt">optional</span></label><div class="m-input">Follow up<span class="pill" style="margin-left:auto">Sep 30</span></div></div>
+  ${dupProbable.replace('Seniority and role variants are never merged: "Senior Product Designer" and "Product Designer" are different roles.', 'Different location, same role.').replace(/<span class="pill muted"><i class="icon-map-pin"><\/i>[^<]*<\/span>/, '')}`);
+
+const mMove = mobile({ back: true, title: 'Application', noTabs: true, theme: 'dark', overlay: `<div class="scrim" style="border-radius:28px"></div><div class="m-sheet" style="border-radius:16px 16px 28px 28px"><div class="m-grab"></div>
+  <div style="padding:6px 16px 4px" class="row"><b style="font-size:17px">Move stage</b><span class="grow"></span><span class="m-ib" style="width:36px;height:36px"><i class="icon-x"></i></span></div>
+  ${stages.slice(3).map(s => `<div class="m-row" style="min-height:52px;font-size:15px"><span class="radio ${s === 'Final Interview' ? 'on' : ''}"></span>${s}${s === 'Final Interview' ? '<span class="small muted" style="margin-left:auto">current</span>' : ''}</div>`).join('')}
+  <div style="padding:10px 16px 4px" class="xs b muted">CLOSE WITH OUTCOME</div>
+  <div class="row" style="padding:4px 16px 30px;gap:8px;flex-wrap:wrap">${['Accepted', 'Rejected', 'Withdrawn', 'Ghosted', 'Position Closed'].map(o => `<span class="chip" style="height:40px">${outcome(o)}</span>`).join('')}</div></div>` }, `
+  <div class="small muted">Corvid Labs · Seattle</div><div style="font-size:21px;font-weight:600">Staff Product Designer</div>`);
+
+gallery('Create · Edit · Duplicates · Workflow actions',
+  'Create uses progressive sections (Job → Application → Tracking → Contacts → Notes); only Company and Role are required. Edit changes details only: stage, outcome and next action change through header actions that write timeline events. Duplicate levels follow BL-003 (strong / probable / possible) and never hard-block.',
+  [
+    { title: 'Create application', items: [
+      { cap: 'C1 · New application', sub: '1440 · light · personal', html: shell({ theme: 'light', active: 'applications', crumb: 'New application' }, createPage({ co: 'Harbor Logistics', role: 'Senior Product Designer', url: 'harborlogistics.example/careers/sr-pd', source: 'Company site', loc: 'Chicago, IL', arr: 'Hybrid', stage: 'Applied', focus: true })) },
+      { cap: 'C2 · New application (manager)', sub: '1440 · dark · creating for a member, Saved stage', html: shell({ theme: 'dark', ws: 'lab', active: 'applications', crumb: 'New application' }, createPage({ ws: 'lab', co: 'Quarry Health', role: 'UX Researcher', url: '—', source: 'LinkedIn', loc: 'Remote · US', arr: 'Remote', stage: 'Saved', req: 'QH-8812' })) },
+      { cap: 'C3 · Quick add', sub: '1440 · light · Q shortcut / header', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications', overlay: quickAdd }, listBg) }
+    ]},
+    { title: 'Duplicate detection', desc: 'Shown inline as soon as URL / requisition ID / company + role match. Actions: View existing · Cancel · Save anyway. A failed check shows "Couldn\'t check for duplicates" and never pretends "no duplicate".', items: [
+      { cap: 'C4 · Strong duplicate', sub: '1440 · light · same URL + requisition ID', html: shell({ theme: 'light', active: 'applications', crumb: 'New application' }, createPage({ co: 'Corvid Labs', role: 'Staff Product Designer', url: 'careers.corvidlabs.example/2291', source: 'Referral', loc: 'Seattle, WA', arr: 'Hybrid', stage: 'Applied', req: 'CRV-2291', dup: dupStrong })) },
+      { cap: 'C5 · Probable duplicate', sub: '1440 · dark · same company + role', html: shell({ theme: 'dark', active: 'applications', crumb: 'New application' }, createPage({ co: 'Halcyon Health', role: 'Senior Product Designer', url: 'halcyonhealth.example/jobs/77', source: 'Company site', loc: 'Boston, MA', arr: 'Onsite', stage: 'Applied', dup: dupProbable })) },
+      { cap: 'C6 · Possible duplicate', sub: '1440 · light · same company, different role (info only)', html: shell({ theme: 'light', active: 'applications', crumb: 'New application' }, createPage({ co: 'Tessellate', role: 'Senior Product Designer', url: 'tessellate.example/careers/412', source: 'LinkedIn', loc: 'New York, NY', arr: 'Hybrid', stage: 'Applied', dup: dupPossible })) }
+    ]},
+    { title: 'Edit & workflow actions', items: [
+      { cap: 'C7 · Edit details', sub: '1440 · light · validation error, dirty state, locked workflow fields', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications / Corvid Labs' }, editPage) },
+      { cap: 'C8 · Move stage menu', sub: '1440 · light · from the detail header', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications / Corvid Labs', overlay: moveStage }, detailBg) },
+      { cap: 'C9 · Close with outcome (confirm)', sub: '1440 · dark · closed outcomes always confirm', html: shell({ theme: 'dark', active: 'applications', crumb: 'Applications / Corvid Labs', overlay: outcomeConfirm }, detailBg) },
+      { cap: 'C10 · Done, set next', sub: '1440 · light', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications / Corvid Labs', overlay: doneNext }, detailBg) },
+      { cap: 'C11 · Hard delete (archived record)', sub: '1440 · light · typed confirmation, only offered for archived records', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications', overlay: hardDelete }, listBg) }
+    ]},
+    { title: 'Mobile', items: [
+      { cap: 'C12 · Quick create', sub: 'mobile · light · FAB → minimal form, "More details" opens sections', html: mCreate },
+      { cap: 'C13 · Move stage sheet', sub: 'mobile · dark', html: mMove }
+    ]}
+  ]);
+</script></body></html>

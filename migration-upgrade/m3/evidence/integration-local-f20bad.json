@@ -1,0 +1,237 @@
+{
+  "run": "f20bad",
+  "started_at": "2026-09-25T06:03:39.239Z",
+  "target": "local",
+  "RLS-01": {
+    "status": "PASS",
+    "own_rows": 1
+  },
+  "RLS-02": {
+    "status": "PASS",
+    "peer_rows": 0
+  },
+  "RLS-03": {
+    "status": "PASS",
+    "insert": "allowed"
+  },
+  "RLS-04": {
+    "status": "PASS",
+    "insert_for_peer": "42501"
+  },
+  "RLS-05": {
+    "status": "PASS",
+    "own_simple_update": "allowed",
+    "last_activity_at_unchanged_by_edit": true
+  },
+  "RLS-06": {
+    "status": "PASS",
+    "peer_update_rows": 0,
+    "peer_row_untouched": true
+  },
+  "RLS-07": {
+    "status": "PASS",
+    "manager_sees_member_rows": true
+  },
+  "RLS-08": {
+    "status": "PASS",
+    "manager_member_update_rows": 1
+  },
+  "RLS-09": {
+    "status": "PASS",
+    "foreign_rows": 0
+  },
+  "RLS-10": {
+    "status": "PASS",
+    "user_foreign_update_rows": 0,
+    "manager_foreign_update_rows": 0,
+    "manager_foreign_insert": "42501",
+    "manager_foreign_rows": 0
+  },
+  "RLS-11": {
+    "status": "PASS",
+    "removed_member_rows": 0,
+    "removed_member_events": 0,
+    "removed_member_rpc": "NOT_AUTHORIZED",
+    "record_retained_and_attributed": true
+  },
+  "RLS-12": {
+    "status": "PASS",
+    "peer_event_rows": 0,
+    "manager_event_rows": 1
+  },
+  "RLS-13": {
+    "status": "PASS",
+    "anon_rows": 0,
+    "anon_events": 0,
+    "anon_rpc": "42501"
+  },
+  "INT-01": {
+    "status": "PASS",
+    "rejected": {
+      "stage": "42501",
+      "status": "42501",
+      "archive": "42501",
+      "insert_closed": "42501",
+      "insert_archived": "42501",
+      "manager_stage": "42501"
+    },
+    "row_unchanged": true
+  },
+  "INT-02": {
+    "status": "PASS",
+    "client_insert": "42501",
+    "client_update": "42501",
+    "client_delete": "42501"
+  },
+  "INT-03": {
+    "status": "PASS",
+    "created_event": true,
+    "actor_is_creator": true,
+    "manager_created_for_member_actor": "manager"
+  },
+  "INT-04": {
+    "status": "PASS",
+    "member_roster_rows": 3,
+    "fields": [
+      "display_name",
+      "role",
+      "user_id",
+      "username"
+    ],
+    "removed_member": "42501",
+    "outsider": "42501"
+  },
+  "INT-05": {
+    "status": "PASS",
+    "grants": {
+      "application_events:authenticated": "SELECT",
+      "job_snapshots:authenticated": "INSERT,SELECT"
+    },
+    "anon": "none"
+  },
+  "RPC-01": {
+    "status": "PASS",
+    "stage": "APPLIED→INTERVIEW",
+    "state_unchanged": "OPEN",
+    "event": "STAGE_CHANGED",
+    "actor": "caller"
+  },
+  "RPC-02": {
+    "status": "PASS",
+    "invalid_stage": "INVALID_STAGE",
+    "same_stage": "STAGE_UNCHANGED",
+    "events_added": 0
+  },
+  "RPC-03": {
+    "status": "PASS",
+    "peer_rpc": "NOT_AUTHORIZED"
+  },
+  "RPC-04": {
+    "status": "PASS",
+    "errors": {
+      "withdrawn_without_reason": "CLOSURE_REASON_REQUIRED",
+      "withdrawn_invalid_reason": "INVALID_CLOSURE_REASON",
+      "reason_on_rejected": "CLOSURE_REASON_ONLY_FOR_WITHDRAWN",
+      "invalid_outcome": "INVALID_OUTCOME"
+    },
+    "row_unchanged": true,
+    "events_added": 0
+  },
+  "RPC-05": {
+    "status": "PASS",
+    "closed": "WITHDRAWN/OFFER_DECLINED",
+    "stage_kept": "INTERVIEW",
+    "event": "OUTCOME_CHANGED",
+    "stage_move_on_closed_keeps_state": true
+  },
+  "RPC-06": {
+    "status": "PASS",
+    "stage_state_unchanged": true,
+    "aging_reset": true,
+    "event": "KEEP_ACTIVE",
+    "note": "Reviewed application"
+  },
+  "RPC-07": {
+    "status": "PASS",
+    "archived_then_restored": true,
+    "archive_keeps_state": "OPEN",
+    "double_archive": "ALREADY_ARCHIVED",
+    "double_restore": "NOT_ARCHIVED"
+  },
+  "RPC-08": {
+    "status": "PASS",
+    "manager_move_member": "allowed",
+    "actor": "manager"
+  },
+  "DUP-01": {
+    "status": "PASS",
+    "tier": "STRONG"
+  },
+  "DUP-02": {
+    "status": "PASS",
+    "tier": "STRONG"
+  },
+  "DUP-03": {
+    "status": "PASS",
+    "tier": "PROBABLE"
+  },
+  "DUP-04": {
+    "status": "PASS",
+    "tier": "POSSIBLE"
+  },
+  "DUP-05": {
+    "status": "PASS",
+    "tier": "NONE"
+  },
+  "DUP-06": {
+    "status": "PASS",
+    "peer_record_tier": "NONE",
+    "foreign_workspace": "NOT_AUTHORIZED"
+  },
+  "JOB-01": {
+    "status": "PASS",
+    "captured": true,
+    "event": "CAPTURED",
+    "client_update": "42501",
+    "client_delete": "42501",
+    "second_snapshot": "23505"
+  },
+  "JOB-02": {
+    "status": "PASS",
+    "peer_snapshot_rows": 0
+  },
+  "QRY-01": {
+    "status": "PASS",
+    "comma_parens": 1,
+    "literal_percent_underscore": 1,
+    "quotes": 1,
+    "tag_match": 1,
+    "filter_injection_rows": 0
+  },
+  "QRY-02": {
+    "status": "PASS",
+    "stale": 1,
+    "long_waiting": 1,
+    "quiet": 2,
+    "fresh_excluded": true
+  },
+  "QRY-03": {
+    "status": "PASS",
+    "long_inactive_state": "OPEN",
+    "outcome": null,
+    "archived": false,
+    "events": [
+      "CREATED"
+    ]
+  },
+  "QRY-04": {
+    "status": "PASS",
+    "total_count": 7,
+    "pages": [
+      3,
+      3,
+      1
+    ],
+    "disjoint": true
+  }
+}

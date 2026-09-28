@@ -1,0 +1,71 @@
+{
+  "evidence": {
+    "target": "local",
+    "run": "cbcc55",
+    "started_at": "2026-09-25T04:56:55.212Z",
+    "E2E-01-create-contact": "PASS",
+    "E2E-02-filter-tabs": "PASS",
+    "E2E-03-search": "PASS",
+    "E2E-04-log-interaction": "PASS",
+    "E2E-05-mobile": "PASS",
+    "completed_at": "2026-09-25T04:57:04.797Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "contacts-list-initial",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "contact-create-modal",
+      "total": 1,
+      "critical": 0,
+      "serious": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 1,
+          "targets": [
+            ".ferr"
+          ]
+        }
+      ],
+      "blocking": 1
+    },
+    {
+      "context": "contact-detail-drawer",
+      "total": 1,
+      "critical": 0,
+      "serious": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 6,
+          "targets": [
+            "div:nth-child(2) > div:nth-child(1) > .small.muted",
+            "a[target=\"_blank\"] > .ell",
+            "div:nth-child(2) > div:nth-child(2) > .small.muted",
+            ".row:nth-child(4) > .muted",
+            ".row:nth-child(5) > .muted",
+            ".col > .row:nth-child(6) > .muted"
+          ]
+        }
+      ],
+      "blocking": 1
+    },
+    {
+      "context": "contacts-mobile-layout",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ]
+}

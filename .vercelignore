@@ -1,0 +1,19 @@
+# Vercel Deployment Ignore File
+# Security: Never upload local keys, environment files, or database state to Vercel builds.
+
+.env*
+*.key
+*.pem
+*.jwk
+*signing_keys.json
+signing_keys.json
+supabase/
+m1-evidence-raw/
+migration-upgrade/
+tests/
+e2e/
+test-results/
+playwright-report/
+coverage/
+.playwright-mcp/
+scripts/

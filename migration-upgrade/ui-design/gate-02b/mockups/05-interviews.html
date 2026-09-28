@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.dtile{width:44px;height:48px;border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;background:var(--surface)}
+.dtile b{font-size:16px;font-weight:600;line-height:1.1}.dtile span{font-size:10px;font-weight:700;color:var(--muted)}
+.irow{display:grid;grid-template-columns:44px 1fr 190px 150px 120px;gap:14px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border)}
+.irow.sel{background:var(--interactive-selected);box-shadow:inset 3px 0 0 var(--primary)}</style>
+</head><body><script>
+const { shell, mobile, gallery, pips } = JQ;
+const f = (l, c, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${c}${o.help ? `<div class="help">${o.help}</div>` : ''}</div>`;
+const I = [
+  ['THU', '24', 'Halcyon Health', 'Senior Product Designer', 'Recruiter screen', 'Dana Cole', '2:30 PM', 'video', 'Video · Zoom', 'Prep notes added', ''],
+  ['FRI', '25', 'Brightline Freight', 'Lead UX Designer', 'Portfolio review · round 2', 'Omar Haddad +2', '11:00 AM', 'map-pin', 'On-site', '', ''],
+  ['MON', '28', 'Tessellate', 'Design Systems Designer', 'Offer call', 'Rhea Sato', '10:00 AM', 'phone', 'Phone', '', ''],
+  ['WED', '30', 'Parallax Games', 'Product Designer', 'Design exercise review', 'Kai Moreno', '3:00 PM', 'video', 'Video · Meet', '', '']];
+const PAST = [
+  ['TUE', '22', 'Corvid Labs', 'Staff Product Designer', 'Final interview · panel', 'Elena Ruiz +3', '10:00 AM', 'map-pin', 'On-site', 'Outcome needed', 'warning'],
+  ['FRI', '18', 'Quarry Health', 'Senior Product Designer', 'Recruiter screen', 'Theo Park', '1:00 PM', 'video', 'Video', 'Advanced', 'success'],
+  ['TUE', '15', 'Corvid Labs', 'Staff Product Designer', 'Interview', 'Elena Ruiz', '1:00 PM', 'video', 'Video', 'Advanced', 'success']];
+
+const irow = (r, sel) => `<div class="irow ${sel ? 'sel' : ''}"><div class="dtile"><span>${r[0]}</span><b>${r[1]}</b></div>
+  <div style="min-width:0"><div class="b ell">${r[2]} <span class="muted" style="font-weight:400">· ${r[3]}</span></div><div class="small muted ell">${r[4]} · with ${r[5]}</div></div>
+  <div class="small row nowrap" style="gap:6px"><i class="icon-${r[7]} muted"></i>${r[6]} · ${r[8]}</div>
+  <div>${r[9] ? `<span class="pill ${r[10]}">${r[10] === 'warning' ? '<i class="icon-clipboard-pen"></i>' : r[10] === 'success' ? '<i class="icon-check"></i>' : ''}${r[9]}</span>` : ''}</div>
+  <div class="row" style="justify-content:flex-end;gap:6px">${r[10] === 'warning' ? '<span class="btn sm primary">Record outcome</span>' : '<span class="btn sm">Open</span>'}</div></div>`;
+
+const panel = `<div style="width:420px;flex:none;border:1px solid var(--border);border-left:0;background:var(--surface);display:flex;flex-direction:column;overflow:hidden">
+  <div class="row" style="height:44px;padding:0 12px 0 16px;border-bottom:1px solid var(--border)"><span class="xs b" style="letter-spacing:.05em">INTERVIEW</span><span class="grow"></span><span class="ibtn ghost"><i class="icon-pencil"></i></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="col" style="padding:14px 16px;gap:12px">
+    <div><div style="font-size:17px;font-weight:600">Recruiter screen</div><div class="muted">Halcyon Health · Senior Product Designer</div></div>
+    <div class="kv" style="grid-template-columns:86px 1fr"><span>When</span><span><b>Thu, Sep 24 · 2:30–3:00 PM</b> CT</span><span>Format</span><span class="row"><i class="icon-video muted"></i>Video · <a>Join link</a></span><span>Round</span><span>1 of ~4</span></div>
+    <div><div class="sec-t" style="margin-bottom:6px">Participants</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><span class="chip sm"><span class="av" style="width:18px;height:18px;font-size:8px">DC</span>Dana Cole · Recruiter</span><span class="chip sm add"><i class="icon-plus"></i>Add interviewer</span></div></div>
+    <div><div class="sec-t" style="margin-bottom:6px">Preparation notes</div><div class="input ta small" style="min-height:52px">Salary range answer: 150–175k. Ask about the patient-app rewrite timeline and team size.</div></div>
+    <div><div class="sec-t" style="margin-bottom:6px">Questions expected</div><div class="input ta small" style="min-height:58px">Why Halcyon? Walk through a project with measurable impact. Experience with regulated healthcare products.</div></div>
+    <div class="banner neutral small" style="align-items:flex-start"><i class="icon-bell-ring muted" style="margin-top:2px"></i><span>Reminder 1 hour before. After the interview, JobQuest asks you to record the outcome.</span></div>
+  </div></div>`;
+
+const page = (o = {}) => `<div class="page" style="gap:10px;padding:16px ${o.panel ? '0' : '20px'} 0 24px">
+  <div class="page-title" style="${o.panel ? 'padding-right:20px' : ''}"><h1>Interviews</h1><span class="muted">4 upcoming · 1 needs outcome</span><span class="spacer"></span><span class="btn"><i class="icon-calendar-days"></i>Calendar</span><span class="btn primary"><i class="icon-calendar-plus"></i>Schedule interview</span></div>
+  <div class="tabs" style="${o.panel ? 'margin-right:20px' : ''}"><span class="tab sel">Upcoming <span class="cnt">4</span></span><span class="tab">Needs outcome <span class="cnt danger">1</span></span><span class="tab">Past <span class="cnt">29</span></span></div>
+  <div style="flex:1;min-height:0;display:flex">
+  <div class="card grow" style="overflow:hidden;border-radius:${o.panel ? '8px 0 0 0' : '8px 8px 0 0'}">
+    <div class="band warning"><i class="icon-clipboard-pen"></i>NEEDS OUTCOME · 1</div>${irow(PAST[0])}
+    <div class="band neutral">THIS WEEK</div>${I.slice(0, 2).map((r, i) => irow(r, o.panel && i === 0)).join('')}
+    <div class="band neutral">NEXT WEEK</div>${I.slice(2).map(r => irow(r)).join('')}
+    <div class="band neutral">RECENT</div>${PAST.slice(1).map(r => irow(r)).join('')}
+  </div>${o.panel ? panel : ''}</div></div>`;
+
+/* schedule */
+const schedule = `<div class="scrim"></div><div class="dialog" style="width:600px;left:420px;top:70px" role="dialog" aria-label="Schedule interview">
+  <div class="dlg-h"><h2>Schedule interview</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    ${f('Application', '<div class="input"><span class="tile" style="width:20px;height:20px;font-size:10px">H</span>Halcyon Health · Senior Product Designer<span class="sfx row" style="gap:6px">' + pips(3) + 'Recruiter Screen</span></div>', { req: true })}
+    <div class="fgrid" style="grid-template-columns:1.3fr 1fr">
+      ${f('Interview type', '<div class="input">Recruiter screen<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>', { req: true })}
+      ${f('Round', '<div class="input">1</div>', { opt: true })}
+      ${f('Date & time', '<div class="row" style="gap:8px"><div class="input focus grow"><i class="icon-calendar muted"></i>Thu, Sep 24</div><div class="input" style="width:96px">2:30 PM</div><div class="input" style="width:70px">30 min</div></div>', { req: true, span: 2, help: 'Central Time (your profile time zone). <a>Change</a>' })}
+      ${f('Format', '<div class="seg"><span class="on"><i class="icon-video"></i>Video</span><span><i class="icon-phone"></i>Phone</span><span><i class="icon-map-pin"></i>On-site</span></div>')}
+      ${f('Meeting link', '<div class="input"><i class="icon-link muted"></i>zoom.us/j/8812…</div>', { opt: true })}
+    </div>
+    ${f('Participants', '<div class="input" style="height:auto;min-height:34px;flex-wrap:wrap;padding:4px 6px;gap:4px"><span class="chip sm"><span class="av" style="width:18px;height:18px;font-size:8px">DC</span>Dana Cole<i class="icon-x muted"></i></span><span class="muted" style="padding-left:4px">Add a contact or type a name…</span></div>', { opt: true, help: 'Names you type that aren\'t contacts yet can be saved as contacts later.' })}
+    <div class="field"><label class="label">Application stage</label><div class="seg"><span class="on">Keep at Recruiter Screen</span><span>Move to Interview</span></div><div class="help">Moving the stage adds "Stage changed" to the timeline. Nothing changes automatically.</div></div>
+    <label class="check small"><span class="cb on"><i class="icon-check"></i></span>Remind me 1 hour before · and ask for the outcome afterwards</label>
+  </div>
+  <div class="dlg-f"><span class="small muted">Adds "Interview scheduled" to the timeline.</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Schedule</span></div></div>`;
+
+/* record outcome */
+const record = `<div class="scrim"></div><div class="dialog" style="width:640px;left:400px;top:50px" role="dialog" aria-label="Record interview outcome">
+  <div class="dlg-h"><span class="tile lg"><i class="icon-calendar-check"></i></span><div><h2>How did it go?</h2><div class="small muted">Final interview · panel · Corvid Labs · Tue Sep 22, 10:00 AM</div></div><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    ${f('Result', '<div class="seg"><span class="on"><i class="icon-circle-check"></i>Completed · waiting</span><span><i class="icon-arrow-up-right"></i>Advanced</span><span><i class="icon-circle-x"></i>Rejected</span><span><i class="icon-calendar-x"></i>Cancelled / moved</span></div>', { req: true })}
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">
+      ${f('Participants', '<div class="row" style="gap:4px;flex-wrap:wrap"><span class="chip sm">Elena Ruiz</span><span class="chip sm">Priya Nair</span><span class="chip sm">Marco V.<span class="pill muted" style="height:18px">not a contact</span></span><span class="chip sm">+1</span></div>')}
+      ${f('Next step they mentioned', '<div class="input">Decision by early October</div>', { opt: true })}
+    </div>
+    ${f('Questions they asked', '<div class="input ta">Walk through the design-system migration. How do you handle disagreement with engineering leads? Metrics for success in year one.</div>', { opt: true })}
+    ${f('Notes', '<div class="input ta ph">Performance notes, impressions, red flags…</div>', { opt: true, help: 'Saved to the interview and shown on the application timeline.' })}
+    <div class="fsec"><div class="sec-t">Follow-up</div>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr">
+        ${f('Thank-you note', '<div class="seg"><span>Not needed</span><span class="on">To send</span><span>Sent</span></div>')}
+        ${f('Next action', '<div class="input">Send thank-you note<span class="pill" style="margin-left:auto">Today</span></div>', { help: 'Replaces the application\'s next action.' })}
+      </div></div>
+  </div>
+  <div class="dlg-f"><span class="small muted">Adds "Final interview completed" to the timeline.</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Save outcome</span></div></div>`;
+
+const mInterview = mobile({ back: true, title: 'Interview', noTabs: true,
+  bottom: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 16px 30px;border-top:1px solid var(--border);background:var(--surface)"><div class="m-btn primary"><i class="icon-video"></i>Join video</div><div class="m-btn"><i class="icon-pencil"></i>Edit</div></div>` }, `
+  <div class="row" style="gap:12px"><div class="dtile" style="width:52px;height:56px"><span>THU</span><b style="font-size:20px">24</b></div><div><div style="font-size:20px;font-weight:600">Recruiter screen</div><div class="muted" style="font-size:14px">Halcyon Health · in 1 day</div></div></div>
+  <div class="m-card">${[['clock', '2:30–3:00 PM CT'], ['video', 'Video · zoom.us/j/8812…'], ['user-round', 'Dana Cole · Recruiter'], ['briefcase', 'Senior Product Designer · Recruiter Screen']].map(r => `<div class="m-row" style="min-height:50px"><i class="icon-${r[0]} muted" style="font-size:18px"></i><span style="font-size:15px" class="ell">${r[1]}</span></div>`).join('')}</div>
+  <div class="sec-t" style="font-size:15px">Preparation notes</div>
+  <div class="m-card" style="padding:12px 14px;font-size:15px;line-height:1.5">Salary range answer: 150–175k. Ask about the patient-app rewrite timeline and team size.</div>
+  <div class="sec-t" style="font-size:15px">Questions expected</div>
+  <div class="m-card" style="padding:12px 14px;font-size:15px;line-height:1.5" >Why Halcyon? A project with measurable impact.</div>`);
+
+gallery('Interviews',
+  'Interviews stay first-class records linked to an application (Gate 01 model), with participants linked to contacts where possible. Scheduling and recording an outcome both write timeline events and can set the application\'s next action. Stage changes are suggested, never automatic.',
+  [
+    { title: 'Desktop', items: [
+      { cap: 'I1 · Interviews', sub: '1440 · light', html: shell({ theme: 'light', active: 'interviews', crumb: 'Interviews' }, page()) },
+      { cap: 'I2 · Interview detail panel', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'interviews', crumb: 'Interviews' }, page({ panel: true })) },
+      { cap: 'I3 · Schedule interview', sub: '1440 · light', html: shell({ theme: 'light', active: 'interviews', crumb: 'Interviews', overlay: schedule }, page()) },
+      { cap: 'I4 · Record completed interview', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'interviews', crumb: 'Interviews', overlay: record }, page()) }
+    ]},
+    { title: 'Mobile', items: [{ cap: 'I5 · Interview', sub: 'mobile · light · day-of view', html: mInterview }] }
+  ]);
+</script></body></html>

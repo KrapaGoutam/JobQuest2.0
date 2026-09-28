@@ -275,3 +275,83 @@ flowchart TD
     G -->|Yes| H[renderDetail(id)]
     G -->|No, deleted| I[Redirect to Applications\n+ toast: could not be found]
 ```
+
+### Journey 14 — Workspace Switching & Member Administration (Gate 02B)
+
+```mermaid
+flowchart TD
+    A[Sidebar Top: Workspace Switcher] --> B[Dropdown: Active Memberships + Role Badges]
+    B -->|Select Workspace| C[Context Switch: Theme Accent + Data Scope Updated]
+    B -->|Manager Role| D[Workspace Management Nav Group Visible]
+    D --> E[Members Roster W1]
+    E --> F[Invite Members W2: Multi-use Code Generated]
+    E --> G[Role Change: User <-> Manager]
+    G --> H{Last Manager?}
+    H -->|Yes| I[Last-Manager Safeguard W4: Blocked]
+    H -->|No| J[Role Updated + audit_events logged]
+    E --> K[Remove Member W3: Disclose Records Stay in Workspace]
+```
+
+### Journey 15 — Account Recovery via Single-Use Codes (Gate 02B)
+
+```mermaid
+flowchart TD
+    A[Sign In Screen A1] --> B[Click "Forgot password?"]
+    B --> C[Account Recovery Screen A8]
+    C --> D[Enter Username + 12-char Single-Use Recovery Code]
+    D --> E{Valid Code?}
+    E -->|No| F[Generic Error: Invalid or Used Code]
+    E -->|Yes| G[Code Burned / Consumed]
+    G --> H[Set New Password Form A9]
+    H --> I[Password Updated + Fresh Recovery Code Set Issued]
+    I --> J[Redirect to Dashboard D1]
+```
+
+### Journey 16 — Bulk Import Wizard with Column Matching (Gate 02B)
+
+```mermaid
+flowchart TD
+    A[Sidebar: Bulk Import E1] --> B[Upload CSV or XLSX]
+    B --> C[Step 2: Match Columns E3]
+    C --> D[Header Alias Auto-Matching]
+    D --> E{Required Fields Mapped?}
+    E -->|No| F[Prompt User to Map Company and Role]
+    E -->|Yes| G[Step 3: Review & Duplicates E4]
+    G --> H[Select Duplicate Strategy: Skip / Update / As New]
+    H --> I[Step 4: Commit Batch Transaction]
+    I --> J[Summary Screen E6 + Download import_errors.csv]
+```
+
+### Journey 17 — Inactivity Review & Keep Active Lifecycle (Gate 03)
+
+```mermaid
+flowchart TD
+    A[Dashboard / Applications List] --> B{Aging Check: last_activity_at}
+    B -->|15-30 days| C[Surface Aging / Stale Visual Indicator]
+    B -->|31+ days| D[Surface in Long Waiting Review Queue]
+    D --> E{User Decision}
+    E -->|Keep Active| F[Execute rpc_keep_application_active]
+    F --> G[last_activity_at = NOW + Emit KEEP_ACTIVE event]
+    G --> H[Removed from Review Queue]
+    E -->|Mark Ghosted| I[Execute rpc_set_application_outcome GHOSTED]
+    I --> J[state = CLOSED + Emit OUTCOME_CHANGED event]
+    E -->|Archive| K[Execute rpc_archive_application]
+    K --> L[archived_at = NOW + Emit ARCHIVED event]
+```
+
+### Journey 18 — Legacy Account Claim & PIN Retirement (Gate 03)
+
+```mermaid
+flowchart TD
+    A[User Opens Claim Link /claim-account?token=...] --> B[Validate 30-day Token Hash against legacy_claim_codes]
+    B -->|Expired >30d or Claimed| C[Show Claim Error Screen + Operator Reissue Notice]
+    B -->|Valid Token| D[Render Modern Registration Form]
+    D --> E[User Enters Username + Strong Password]
+    E --> F[Note: Legacy PIN is NEVER used or migrated]
+    F --> G[Provision Supabase Auth Identity]
+    G --> H[Issue 10 Single-Use Recovery Codes >=128-bit entropy]
+    H --> I[Mark Claim Code as Claimed]
+    I --> J[Redirect to Dashboard with Migrated Applications in JobQuest Migrated Workspace]
+```
+
+

@@ -1,0 +1,64 @@
+{
+  "run": "d0cbab",
+  "started_at": "2026-09-28T06:31:05.363Z",
+  "screenshots": [],
+  "a11y": [
+    {
+      "context": "personal_workspace_settings",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "create_workspace_modal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "shared_workspace_settings",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "members_roster",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "invite_member_modal_code_created",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "join_workspace_modal_preview",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "mobile_members_roster",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    }
+  ],
+  "completed_at": "2026-09-28T06:31:30.389Z"
+}

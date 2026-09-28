@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.469.0/font/lucide.css">
+<style>
+body{margin:0}
+[data-jqd]{--bg:#f6f7f9;--sidebar:#ffffff;--surface:#ffffff;--surface-muted:#f1f3f6;--surface-3:#e8ebf0;--fg:#172033;--muted:#5f6b7e;--border:#dfe3ea;--border-strong:#c7ced9;--primary:#3157d5;--primary-hover:#2849b8;--primary-fg:#ffffff;--primary-soft:#e9edff;--focus:#5076f2;--success:#147a55;--warning:#9a5b08;--danger:#ba3341;--info:#246b9f;--scrim:rgba(23,32,51,.32);--warning-soft:color-mix(in oklch,var(--warning) 9%,var(--surface));--danger-soft:color-mix(in oklch,var(--danger) 7%,var(--surface));--shadow:0 12px 32px rgba(23,32,51,.16)}
+[data-jqd][data-theme="dark"]{--bg:#090d16;--sidebar:#0d1220;--surface:#121827;--surface-muted:#171f30;--surface-3:#202a3d;--fg:#edf1f7;--muted:#b1bbca;--border:#273247;--border-strong:#35425a;--primary:#8098ff;--primary-hover:#9aacff;--primary-fg:#0b1030;--primary-soft:#202b58;--focus:#9ab0ff;--success:#54c89a;--warning:#edb457;--danger:#ff7f8c;--info:#75b8e7;--scrim:rgba(3,6,12,.6);--shadow:0 16px 40px rgba(0,0,0,.5)}
+[data-jqd] a{color:var(--primary);text-decoration:none}
+[data-jqd] a:hover{color:var(--primary-hover);text-decoration:underline}
+</style>
+</helmet>
+<sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}">
+<div data-jqd="d" data-theme="{{ theme }}" data-screen-label="Direction D desktop" style="position:relative;width:{{ fw }};height:960px;display:flex;background:var(--bg);color:var(--fg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;line-height:1.45;font-variant-numeric:tabular-nums;overflow:hidden">
+  <aside style="width:240px;flex:none;display:flex;flex-direction:column;background:var(--sidebar);border-right:1px solid var(--border);border-top:3px solid {{ ws.color }}">
+    <div style="padding:10px 10px 6px">
+      <div role="button" aria-haspopup="menu" aria-label="Switch workspace. Current: {{ ws.name }}, role {{ ws.role }}" style="display:flex;align-items:center;gap:10px;height:48px;padding:0 10px;border:1px solid {{ wsBtnBd }};border-radius:8px;background:{{ wsBtnBg }}">
+        <span style="width:28px;height:28px;flex:none;border-radius:6px;background:{{ ws.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">{{ ws.initials }}</span>
+        <div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ws.name }}</div><div style="font-size:11px;color:var(--muted)">{{ ws.role }}</div></div>
+        <i class="icon-chevrons-up-down" style="color:var(--muted);font-size:14px"></i>
+      </div>
+    </div>
+    <div style="padding:4px 10px 8px"><div style="display:flex;align-items:center;justify-content:center;gap:8px;height:34px;background:var(--primary);color:var(--primary-fg);border-radius:7px;font-weight:600"><i class="icon-plus" style="font-size:15px"></i>New application</div></div>
+    <nav aria-label="Primary" style="flex:1;overflow:hidden;padding:0 8px;display:flex;flex-direction:column;gap:1px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="12">
+        <sc-if value="{{ n.head }}"><div style="height:26px;margin-top:10px;padding:0 10px;display:flex;align-items:center;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)">{{ n.label }}</div></sc-if>
+        <sc-if value="{{ n.item }}"><div aria-current="{{ n.cur }}" style="display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border-radius:6px;background:{{ n.bg }};color:{{ n.color }};font-weight:{{ n.fw }}"><i class="icon-{{ n.icon }}" style="font-size:15px;color:{{ n.iconColor }}"></i>{{ n.label }}<span style="margin-left:auto;font-size:11px;font-weight:600;padding:0 6px;min-width:8px;text-align:center;border-radius:9px;background:{{ n.bBg }};color:{{ n.bFg }}">{{ n.badge }}</span></div></sc-if>
+      </sc-for>
+    </nav>
+    <div style="padding:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:1px">
+      <div style="display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border-radius:6px;color:var(--fg)"><i class="icon-settings" style="font-size:15px;color:var(--muted)"></i>Settings</div>
+      <div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 10px">
+        <span style="width:28px;height:28px;border-radius:50%;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">MO</span>
+        <div style="flex:1;min-width:0"><div style="font-weight:600">Maya Ortiz</div><div style="font-size:11px;color:var(--muted)">maya@example.com</div></div>
+        <span title="Theme: System" aria-label="Theme: System (following {{ theme }})" style="height:26px;padding:0 7px;display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px"><i class="icon-monitor"></i>System</span>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="height:52px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface)">
+      <div style="display:flex;align-items:center;gap:6px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:2px;background:{{ ws.color }}"></span>{{ ws.short }}<i class="icon-chevron-right" style="font-size:12px"></i><span style="color:var(--fg);font-weight:600">{{ crumb }}</span></div>
+      <sc-if value="{{ mgr }}" hint-placeholder-val="{{ false }}"><span style="height:22px;padding:0 8px;display:flex;align-items:center;gap:5px;border-radius:11px;background:var(--surface-muted);border:1px solid var(--border-strong);font-size:11px;font-weight:600;white-space:nowrap"><i class="icon-shield-check" style="color:var(--success)"></i>Manager · workspace-wide access</span></sc-if>
+      <div role="search" style="margin-left:auto;width:340px;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface);color:var(--muted);white-space:nowrap"><i class="icon-search"></i>Search applications, contacts, notes<span style="margin-left:auto;display:flex;gap:4px;font-family:ui-monospace,Menlo,monospace;font-size:11px"><span style="padding:0 5px;border:1px solid var(--border);border-radius:3px">/</span><span style="padding:0 5px;border:1px solid var(--border);border-radius:3px;opacity:.7" title="Command palette (P2)">⌘K</span></span></div>
+      <div style="position:relative;color:var(--muted)" aria-label="Notifications, 4 unread"><i class="icon-bell" style="font-size:18px"></i><span style="position:absolute;top:-4px;right:-6px;min-width:15px;height:15px;padding:0 3px;box-sizing:border-box;border-radius:8px;background:var(--danger);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">4</span></div>
+    </header>
+
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;overflow:hidden;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-end;gap:16px">
+          <div><div style="font-size:12px;color:var(--muted)">Wednesday, September 23</div><h1 style="margin:2px 0 0;font-size:22px;font-weight:600;letter-spacing:-.01em">What needs attention today</h1></div>
+          <div style="display:flex;gap:16px;margin-left:16px;padding-bottom:3px;color:var(--muted)">
+            <span style="display:flex;align-items:center;gap:6px"><i class="icon-triangle-alert" style="color:var(--danger)"></i><b style="color:var(--fg);font-weight:600">4</b> overdue</span>
+            <span style="display:flex;align-items:center;gap:6px"><i class="icon-clock" style="color:var(--warning)"></i><b style="color:var(--fg);font-weight:600">4</b> due today</span>
+            <span style="display:flex;align-items:center;gap:6px"><i class="icon-calendar"></i><b style="color:var(--fg);font-weight:600">3</b> interviews this week</span>
+            <span style="display:flex;align-items:center;gap:6px"><i class="icon-moon"></i><b style="color:var(--fg);font-weight:600">37</b> to review</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px">
+          <section aria-labelledby="q-h" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-bottom:1px solid var(--border)"><h2 id="q-h" style="margin:0;font-size:14px;font-weight:600">Today's queue</h2><span style="color:var(--muted)">Next actions and tasks, most urgent first</span><a style="margin-left:auto">All tasks</a></div>
+            <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 16px;background:var(--danger-soft);color:var(--danger);font-size:11px;font-weight:700;letter-spacing:.04em"><i class="icon-triangle-alert"></i>OVERDUE · 4</div>
+            <sc-for list="{{ queueOver }}" as="a" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-top:1px solid var(--border)">
+                <span role="checkbox" aria-checked="false" aria-label="Complete: {{ a.next }}" style="width:18px;height:18px;flex:none;border-radius:50%;border:1.5px solid var(--border-strong)"></span>
+                <div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.next }}</div><div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.company }} · {{ a.stage }} · last activity {{ a.idleText }} ago</div></div>
+                <span style="width:86px;text-align:right;font-size:12px;font-weight:600;color:var(--danger)">{{ a.dueText }}</span>
+                <span style="height:28px;padding:0 9px;display:flex;align-items:center;gap:5px;border:1px solid var(--border-strong);border-radius:6px;font-size:12px"><i class="icon-alarm-clock"></i>Snooze</span>
+              </div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 16px;border-top:1px solid var(--border);background:var(--warning-soft);color:var(--warning);font-size:11px;font-weight:700;letter-spacing:.04em"><i class="icon-clock"></i>DUE TODAY · 4</div>
+            <sc-for list="{{ queueToday }}" as="t" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-top:1px solid var(--border)">
+                <span role="checkbox" aria-checked="false" style="width:18px;height:18px;flex:none;border-radius:50%;border:1.5px solid var(--border-strong)"></span>
+                <div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.text }}</div><div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="icon-{{ t.icon }}" style="font-size:12px"></i>{{ t.co }}</div></div>
+                <span style="width:130px;text-align:right;font-size:12px;color:var(--muted);white-space:nowrap">{{ t.meta }}</span>
+                <span style="height:28px;padding:0 9px;display:flex;align-items:center;gap:5px;border:1px solid var(--border-strong);border-radius:6px;font-size:12px"><i class="icon-alarm-clock"></i>Snooze</span>
+              </div>
+            </sc-for>
+          </section>
+          <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+            <section style="background:var(--surface);border:1px solid var(--border);border-radius:8px">
+              <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-bottom:1px solid var(--border)"><h2 style="margin:0;font-size:14px;font-weight:600">Upcoming interviews</h2><a style="margin-left:auto">Calendar</a></div>
+              <sc-for list="{{ interviews }}" as="iv" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-top:1px solid var(--border)">
+                  <div style="width:40px;flex:none;text-align:center;border:1px solid var(--border);border-radius:6px;padding:2px 0"><div style="font-size:10px;font-weight:700;color:var(--muted)">{{ iv.day }}</div><div style="font-size:16px;font-weight:600;line-height:1.2">{{ iv.date }}</div></div>
+                  <div style="flex:1;min-width:0"><div style="font-weight:600">{{ iv.co }}</div><div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ iv.type }} · {{ iv.with }}</div></div>
+                  <div style="text-align:right;font-size:12px;color:var(--muted);white-space:nowrap">{{ iv.time }}<br>{{ iv.mode }}</div>
+                </div>
+              </sc-for>
+            </section>
+            <section style="background:var(--surface);border:1px solid var(--border);border-radius:8px">
+              <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-bottom:1px solid var(--border)"><h2 style="margin:0;font-size:14px;font-weight:600">Review quiet applications</h2><span style="color:var(--muted)">37 · 28+ days</span><a style="margin-left:auto">Review all</a></div>
+              <sc-for list="{{ review }}" as="a" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-top:1px solid var(--border)">
+                  <div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.company }}</div><div style="font-size:12px;color:{{ a.bandColor }};display:flex;align-items:center;gap:4px"><i class="icon-{{ a.bandIcon }}"></i>{{ a.band }} · {{ a.idleText }}</div></div>
+                  <span style="height:28px;padding:0 8px;display:flex;align-items:center;border:1px solid var(--border-strong);border-radius:6px;font-size:12px">Keep</span>
+                  <span style="height:28px;padding:0 8px;display:flex;align-items:center;border:1px solid var(--border-strong);border-radius:6px;font-size:12px">Mark Ghosted</span>
+                  <span style="height:28px;padding:0 8px;display:flex;align-items:center;border:1px solid var(--border-strong);border-radius:6px;font-size:12px">Archive</span>
+                </div>
+              </sc-for>
+              <div style="padding:8px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)">Suggestions only. Nothing is archived automatically.</div>
+            </section>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:16px">
+          <section style="background:var(--surface);border:1px solid var(--border);border-radius:8px">
+            <div style="display:flex;align-items:center;height:40px;padding:0 16px;border-bottom:1px solid var(--border)"><h2 style="margin:0;font-size:14px;font-weight:600">Recent activity</h2></div>
+            <sc-for list="{{ activity }}" as="e" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 16px"><i class="icon-{{ e.icon }}" style="color:var(--muted)"></i><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.text }} <span style="color:var(--muted)">· {{ e.co }}</span></div><span style="font-size:12px;color:var(--muted);white-space:nowrap">{{ e.when }}</span></div>
+            </sc-for>
+          </section>
+          <section style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 16px 12px">
+            <div style="display:flex;align-items:baseline;gap:8px;height:40px;align-items:center;border-bottom:1px solid var(--border);margin:0 -16px 8px;padding:0 16px"><h2 style="margin:0;font-size:14px;font-weight:600">Current pipeline</h2><span style="color:var(--muted);font-size:12px">181 open, by current stage</span></div>
+            <sc-for list="{{ pipeline }}" as="p" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;gap:10px;height:21px;font-size:12px"><span style="width:108px;color:var(--muted)">{{ p.label }}</span><span style="flex:1;height:7px;border-radius:2px;background:var(--surface-muted)"><span style="display:block;height:100%;width:{{ p.w }};border-radius:2px;background:var(--primary)"></span></span><b style="width:24px;text-align:right;font-weight:600">{{ p.n }}</b></div>
+            </sc-for>
+          </section>
+          <section style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 16px 12px">
+            <div style="display:flex;gap:8px;height:40px;align-items:center;border-bottom:1px solid var(--border);margin:0 -16px 8px;padding:0 16px"><h2 style="margin:0;font-size:14px;font-weight:600">Historical funnel</h2><span style="color:var(--muted);font-size:12px">Ever reached, incl. closed</span></div>
+            <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:10px;height:26px;font-size:12px"><span style="width:108px;color:var(--muted)">{{ f.label }}</span><span style="flex:1;height:7px;border-radius:2px;background:var(--surface-muted)"><span style="display:block;height:100%;width:{{ f.w }};border-radius:2px;background:var(--fg)"></span></span><b style="width:30px;text-align:right;font-weight:600">{{ f.n }}</b><span style="width:40px;text-align:right;color:var(--muted)">{{ f.pct }}</span></div>
+            </sc-for>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isApps }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;min-height:0;display:flex">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 20px 0 24px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Applications</h1>
+            <span style="color:var(--muted)">{{ countLine }}</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <sc-if value="{{ mgr }}" hint-placeholder-val="{{ false }}"><span style="height:32px;padding:0 12px;display:flex;align-items:center;gap:6px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface)"><i class="icon-upload"></i>Import</span></sc-if>
+              <span style="height:32px;padding:0 12px;display:flex;align-items:center;gap:6px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface)"><i class="icon-download"></i>Export</span>
+            </div>
+          </div>
+          <div role="tablist" aria-label="Saved views" style="display:flex;align-items:flex-end;gap:2px;margin-top:10px;border-bottom:1px solid var(--border)">
+            <sc-for list="{{ views }}" as="v" hint-placeholder-count="6">
+              <div role="tab" aria-selected="{{ v.sel }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 11px;margin-bottom:-1px;border-bottom:2px solid {{ v.line }};color:{{ v.color }};font-weight:{{ v.fw }};white-space:nowrap">{{ v.label }}<span style="font-size:11px;font-weight:600;padding:0 6px;border-radius:9px;background:var(--surface-muted);color:{{ v.nColor }}">{{ v.n }}</span></div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:4px;height:36px;padding:0 10px;color:var(--primary);font-weight:500;white-space:nowrap"><i class="icon-plus"></i>Save view</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:10px 0;flex-wrap:nowrap">
+            <div style="width:200px;flex:none;height:32px;display:flex;align-items:center;gap:6px;padding:0 9px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface);color:var(--muted)"><i class="icon-list-filter"></i>Filter this view</div>
+            <span style="height:32px;padding:0 10px;display:flex;align-items:center;gap:6px;border:1px solid var(--primary);background:var(--primary-soft);color:var(--primary);border-radius:7px;font-weight:500;white-space:nowrap">Outcome: Open<i class="icon-x"></i></span>
+            <span style="height:32px;padding:0 10px;display:flex;align-items:center;gap:5px;border:1px dashed var(--border-strong);border-radius:7px;color:var(--muted);white-space:nowrap"><i class="icon-plus"></i>Stage</span>
+            <span style="height:32px;padding:0 10px;display:flex;align-items:center;gap:5px;border:1px dashed var(--border-strong);border-radius:7px;color:var(--muted);white-space:nowrap"><i class="icon-plus"></i>Priority</span>
+            <sc-if value="{{ notPreview }}" hint-placeholder-val="{{ true }}"><span style="height:32px;padding:0 10px;display:flex;align-items:center;gap:5px;border:1px dashed var(--border-strong);border-radius:7px;color:var(--muted);white-space:nowrap"><i class="icon-plus"></i>Aging</span></sc-if>
+            <span style="height:32px;padding:0 10px;display:flex;align-items:center;gap:5px;border:1px dashed var(--border-strong);border-radius:7px;color:var(--muted);white-space:nowrap"><i class="icon-sliders-horizontal"></i>More</span>
+            <sc-if value="{{ mgr }}" hint-placeholder-val="{{ false }}"><span style="position:relative;height:32px;padding:0 10px;display:flex;align-items:center;gap:6px;border:1px solid {{ ownerBd }};background:{{ ownerBg }};border-radius:7px;white-space:nowrap" aria-haspopup="listbox" aria-expanded="{{ ownerOpenStr }}"><i class="icon-user-round"></i>Owner: <b style="font-weight:600">All members</b><i class="icon-chevron-down" style="color:var(--muted)"></i></span></sc-if>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+              <div role="radiogroup" aria-label="View" style="display:flex;border:1px solid var(--border-strong);border-radius:7px;overflow:hidden">
+                <sc-for list="{{ viewModes }}" as="m" hint-placeholder-count="4"><span role="radio" aria-checked="{{ m.sel }}" title="{{ m.label }}" style="height:30px;padding:0 9px;display:flex;align-items:center;gap:5px;background:{{ m.bg }};color:{{ m.color }};font-weight:{{ m.fw }};border-left:1px solid {{ m.bl }}"><i class="icon-{{ m.icon }}"></i>{{ m.text }}</span></sc-for>
+              </div>
+              <span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-strong);border-radius:7px;color:var(--muted)" aria-label="Columns and density"><i class="icon-settings-2"></i></span>
+            </div>
+          </div>
+          <div role="status" style="display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;margin-bottom:10px;border-radius:7px;background:var(--surface-muted);font-size:12px">
+            <i class="icon-moon" style="color:var(--muted)"></i><span><b style="font-weight:600">37 applications</b> have had no activity for 28+ days.</span><a style="font-weight:600">Review</a><span style="margin-left:auto;color:var(--muted)">Nothing is archived automatically</span><i class="icon-x" style="color:var(--muted)" aria-label="Dismiss for 7 days"></i>
+          </div>
+          <div role="grid" aria-rowcount="{{ rowCount }}" style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;overflow:hidden">
+            <sc-if value="{{ bulkOn }}" hint-placeholder-val="{{ false }}">
+              <div role="toolbar" aria-label="Bulk actions" style="height:40px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;background:var(--fg);color:var(--bg)">
+                <i class="icon-square-minus" style="font-size:16px"></i><b style="font-weight:600;margin-right:6px">2 selected</b>
+                <sc-for list="{{ bulk }}" as="b" hint-placeholder-count="6"><span style="height:28px;padding:0 9px;display:flex;align-items:center;gap:5px;border-radius:6px;background:rgba(127,127,127,.22);white-space:nowrap"><i class="icon-{{ b.icon }}"></i>{{ b.label }}</span></sc-for>
+                <span style="margin-left:auto;white-space:nowrap">Select all 457</span><i class="icon-x" style="margin-left:8px" aria-label="Clear selection"></i>
+              </div>
+            </sc-if>
+            <div role="row" style="height:34px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid var(--border);background:var(--surface-muted);font-size:12px;font-weight:600;color:var(--muted)">
+              <i class="icon-square" style="width:16px;font-size:15px;color:var(--border-strong)"></i>
+              <span role="columnheader" style="flex:1;min-width:0">Company · Role</span>
+              <span role="columnheader" style="width:156px">Stage</span>
+              <span role="columnheader" style="width:{{ agingW }}">Aging · last activity</span>
+              <sc-if value="{{ notPreview }}" hint-placeholder-val="{{ true }}"><span role="columnheader" style="width:64px">Priority</span></sc-if>
+              <span role="columnheader" aria-sort="ascending" style="width:{{ nextW }};color:var(--fg);display:flex;align-items:center;gap:4px">Next action<i class="icon-arrow-up"></i></span>
+              <sc-if value="{{ showSource }}" hint-placeholder-val="{{ true }}"><span role="columnheader" style="width:92px">Source</span></sc-if>
+              <sc-if value="{{ showOwner }}" hint-placeholder-val="{{ false }}"><span role="columnheader" style="width:84px">Owner</span></sc-if>
+            </div>
+            <div style="flex:1;min-height:0;overflow:hidden;position:relative">
+              <sc-for list="{{ rows }}" as="a" hint-placeholder-count="14">
+                <div role="row" aria-selected="{{ a.ariaSel }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px 0 9px;border-bottom:1px solid var(--border);border-left:3px solid {{ a.rowLine }};background:{{ a.rowBg }}">
+                  <i class="icon-{{ a.check }}" style="width:16px;font-size:15px;color:{{ a.checkColor }}"></i>
+                  <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px">
+                    <span style="width:26px;height:26px;flex:none;border-radius:6px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">{{ a.initial }}</span>
+                    <div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.company }}</div><div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.role }}</div></div>
+                  </div>
+                  <div style="width:156px;display:flex;align-items:center;gap:8px;white-space:nowrap"><span style="display:flex;gap:2px" aria-hidden="true"><sc-for list="{{ a.pips }}" as="p"><span style="width:7px;height:4px;border-radius:1px;background:{{ p.bg }}"></span></sc-for></span>{{ a.stage }}</div>
+                  <div style="width:{{ agingW }};display:flex;align-items:center;gap:5px;font-size:12px;color:{{ a.bandColor }};white-space:nowrap;overflow:hidden"><i class="icon-{{ a.bandIcon }}"></i><span style="font-weight:500;overflow:hidden;text-overflow:ellipsis">{{ a.bandLabel }}</span><span style="color:var(--muted)">· {{ a.idleText }}</span></div>
+                  <sc-if value="{{ notPreview }}" hint-placeholder-val="{{ true }}"><div style="width:64px;display:flex;align-items:center;gap:6px" aria-label="Priority {{ a.pri }}"><span style="display:flex;align-items:flex-end;gap:2px;height:12px"><sc-for list="{{ a.priBars }}" as="b"><span style="width:3px;height:{{ b.h }}px;border-radius:1px;background:{{ b.bg }}"></span></sc-for></span><span style="font-size:12px">{{ a.pri }}</span></div></sc-if>
+                  <div style="width:{{ nextW }};min-width:0;display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ a.nextColor }};font-style:{{ a.nextStyle }}">{{ a.next }}</span><span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:{{ a.dueWeight }};color:{{ a.dueColor }};white-space:nowrap"><i class="icon-{{ a.dueIcon }}"></i>{{ a.dueText }}</span></div>
+                  <sc-if value="{{ showSource }}" hint-placeholder-val="{{ true }}"><div style="width:92px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.source }}</div></sc-if>
+                  <sc-if value="{{ showOwner }}" hint-placeholder-val="{{ false }}"><div style="width:84px;display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="width:22px;height:22px;flex:none;border-radius:50%;background:var(--surface-3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ a.ownerInitials }}</span>{{ a.ownerFirst }}</div></sc-if>
+                </div>
+              </sc-for>
+              <span aria-hidden="true" style="position:absolute;right:2px;top:4px;width:5px;height:34px;border-radius:3px;background:var(--border-strong)"></span>
+            </div>
+            <div style="height:34px;flex:none;display:flex;align-items:center;gap:14px;padding:0 12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)">
+              <span role="status" aria-live="polite" style="white-space:nowrap">Rows 1–{{ rowsShown }} of {{ rowTotal }} · scrolls continuously</span>
+              <span style="margin-left:auto;display:flex;gap:12px;white-space:nowrap"><span><b style="font-family:ui-monospace,Menlo,monospace;color:var(--fg)">↑↓</b> move</span><span><b style="font-family:ui-monospace,Menlo,monospace;color:var(--fg)">X</b> select</span><span><b style="font-family:ui-monospace,Menlo,monospace;color:var(--fg)">Space</b> preview</span><span><b style="font-family:ui-monospace,Menlo,monospace;color:var(--fg)">↵</b> open</span></span>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ isPreview }}" hint-placeholder-val="{{ false }}">
+          <aside aria-label="Application preview" style="width:440px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--surface)">
+            <div style="height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--border);color:var(--muted);font-size:12px"><b style="font-weight:700;letter-spacing:.05em;color:var(--fg)">PREVIEW</b><span>5 of 457</span><span style="margin-left:auto;display:flex;gap:12px;color:var(--fg)"><i class="icon-chevron-up" aria-label="Previous"></i><i class="icon-chevron-down" aria-label="Next"></i><i class="icon-x" aria-label="Close preview"></i></span></div>
+            <div style="flex:1;overflow:hidden;padding:18px 20px">
+              <div style="display:flex;gap:12px"><span style="width:44px;height:44px;flex:none;border-radius:8px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px">C</span><div style="min-width:0"><div style="font-size:17px;font-weight:600;line-height:1.3">{{ app.role }}</div><div style="color:var(--muted)">{{ app.company }} · {{ app.loc }}</div></div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:14px;border:1px solid var(--border);border-radius:8px">
+                <div style="padding:8px 10px"><div style="font-size:11px;color:var(--muted)">Stage</div><div style="font-weight:600">{{ app.stage }}</div></div>
+                <div style="padding:8px 10px;border-left:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">Priority</div><div style="font-weight:600">{{ app.pri }}</div></div>
+                <div style="padding:8px 10px;border-left:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">Last activity</div><div style="font-weight:600">Yesterday</div></div>
+              </div>
+              <div style="margin-top:12px;padding:12px;border-radius:8px;background:var(--warning-soft);border:1px solid color-mix(in oklch,var(--warning) 30%,transparent)">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--warning)">NEXT ACTION · DUE TODAY</div>
+                <div style="font-weight:600;font-size:14px;margin-top:2px">{{ app.next }}</div>
+                <div style="display:flex;gap:8px;margin-top:10px"><span style="flex:1;height:32px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:7px;background:var(--primary);color:var(--primary-fg);font-weight:600"><i class="icon-check"></i>Done, set next</span><span style="height:32px;padding:0 12px;display:flex;align-items:center;border-radius:7px;border:1px solid var(--border-strong);background:var(--surface)">Reschedule</span></div>
+              </div>
+              <h3 style="margin:16px 0 4px;font-size:13px;font-weight:600">Recent timeline</h3>
+              <sc-for list="{{ events5 }}" as="e" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;height:32px;border-bottom:1px solid var(--border)"><i class="icon-{{ e.icon }}" style="color:var(--muted)"></i><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="font-weight:600">{{ e.title }}</b> <span style="color:var(--muted)">{{ e.summary }}</span></div><span style="font-size:12px;color:var(--muted)">{{ e.date }}</span></div>
+              </sc-for>
+              <h3 style="margin:16px 0 6px;font-size:13px;font-weight:600">Contacts</h3>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ contacts }}" as="c" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 3px;border-radius:14px;border:1px solid var(--border);font-size:12px"><span style="width:22px;height:22px;border-radius:50%;background:var(--surface-3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.initials }}</span>{{ c.name }}<span style="color:var(--muted)">{{ c.type }}</span></span></sc-for></div>
+            </div>
+            <div style="flex:none;display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--border)"><span style="flex:1;height:36px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:7px;border:1px solid var(--border-strong);font-weight:600">Open full application<i class="icon-arrow-right"></i></span><span style="height:36px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:7px;border:1px solid var(--border-strong)"><i class="icon-message-square-plus"></i>Log</span></div>
+          </aside>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:14px 24px 0;background:var(--surface);border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><i class="icon-arrow-left"></i><a>Applications</a><span>/</span><span style="font-family:ui-monospace,Menlo,monospace">{{ app.id }}</span><span style="margin-left:auto;display:flex;gap:10px;align-items:center"><i class="icon-chevron-up"></i><i class="icon-chevron-down"></i>5 of 457 in view</span></div>
+          <div style="display:flex;align-items:flex-start;gap:14px;margin-top:8px">
+            <span style="width:48px;height:48px;flex:none;border-radius:9px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px">C</span>
+            <div style="flex:1;min-width:0">
+              <h1 style="margin:0;font-size:24px;font-weight:600;line-height:1.2;letter-spacing:-.01em">{{ app.role }}</h1>
+              <div style="color:var(--muted);margin-top:2px"><b style="color:var(--fg);font-weight:600">{{ app.company }}</b> · {{ app.loc }} · Hybrid · Full-time · Applied {{ app.applied }}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-strong);border-radius:7px;color:var(--primary)" aria-label="Pinned" aria-pressed="true"><i class="icon-pin"></i></span>
+              <span style="height:34px;padding:0 12px;display:flex;align-items:center;gap:6px;border:1px solid var(--border-strong);border-radius:7px;white-space:nowrap"><i class="icon-message-square-plus"></i>Log activity</span>
+              <span style="height:34px;padding:0 12px;display:flex;align-items:center;gap:6px;border:1px solid var(--border-strong);border-radius:7px"><i class="icon-pencil"></i>Edit</span>
+              <span style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-strong);border-radius:7px" aria-label="More: archive, delete, export timeline"><i class="icon-ellipsis"></i></span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,.8fr) minmax(0,.9fr) minmax(0,1.9fr);margin-top:14px;border-top:1px solid var(--border)">
+            <div style="padding:12px 16px 14px 0;border-right:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:600;color:var(--muted);display:flex">STAGE<span style="margin-left:auto;font-weight:500">Outcome: Open</span></div>
+              <div style="display:flex;margin-top:8px" aria-label="Stage progress: Final Interview, step 7 of 8">
+                <sc-for list="{{ steps }}" as="s" hint-placeholder-count="8">
+                  <div style="flex:1;min-width:0"><div style="height:5px;border-radius:2px;margin-right:3px;background:{{ s.bar }}"></div><div style="font-size:10px;margin-top:4px;color:{{ s.color }};font-weight:{{ s.fw }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.short }}</div></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:6px"><b style="font-weight:600;font-size:14px;white-space:nowrap">Final Interview</b><span style="color:var(--muted);font-size:12px;white-space:nowrap">since Sep 18 · 5 days</span><span style="margin-left:auto;height:26px;padding:0 9px;display:flex;align-items:center;gap:5px;border:1px solid var(--border-strong);border-radius:6px;font-size:12px;white-space:nowrap">Move stage<i class="icon-chevron-down"></i></span></div>
+            </div>
+            <div style="padding:12px 14px;border-right:1px solid var(--border)"><div style="font-size:11px;font-weight:600;color:var(--muted)">PRIORITY</div><div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:600"><span style="display:flex;align-items:flex-end;gap:2px;height:12px"><sc-for list="{{ app.priBars }}" as="b"><span style="width:3px;height:{{ b.h }}px;border-radius:1px;background:{{ b.bg }}"></span></sc-for></span>{{ app.pri }}</div></div>
+            <div style="padding:12px 14px;border-right:1px solid var(--border)"><div style="font-size:11px;font-weight:600;color:var(--muted)">AGING</div><div style="display:flex;align-items:center;gap:5px;margin-top:8px;font-weight:600;color:{{ app.bandColor }}"><i class="icon-{{ app.bandIcon }}"></i>{{ app.band }}</div><div style="font-size:12px;color:var(--muted)">Last activity yesterday</div></div>
+            <div style="padding:10px 0 12px 16px;background:var(--warning-soft);margin-right:-24px;padding-right:24px">
+              <div style="font-size:11px;font-weight:700;color:var(--warning);display:flex;align-items:center;gap:5px"><i class="icon-clock"></i>NEXT ACTION · DUE TODAY</div>
+              <div style="font-weight:600;font-size:15px;margin-top:4px">{{ app.next }}</div>
+              <div style="display:flex;gap:8px;margin-top:8px"><span style="height:32px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:7px;background:var(--primary);color:var(--primary-fg);font-weight:600"><i class="icon-check"></i>Done, set next</span><span style="height:32px;padding:0 12px;display:flex;align-items:center;border-radius:7px;border:1px solid var(--border-strong);background:var(--surface)">Reschedule</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px">
+          <section style="min-width:0;padding:0 24px;overflow:hidden;border-right:1px solid var(--border)">
+            <div role="tablist" aria-label="Application content" style="display:flex;gap:4px;border-bottom:1px solid var(--border)">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><span role="tab" aria-selected="{{ t.sel }}" style="height:42px;display:flex;align-items:center;gap:6px;padding:0 12px;margin-bottom:-1px;border-bottom:2px solid {{ t.line }};color:{{ t.color }};font-weight:{{ t.fw }};font-size:14px">{{ t.label }}<span style="font-size:11px;color:var(--muted);font-weight:500">{{ t.n }}</span></span></sc-for>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:12px" role="group" aria-label="Filter timeline">
+                <sc-for list="{{ tlFilters }}" as="f" hint-placeholder-count="6"><span aria-pressed="{{ f.on }}" style="height:26px;padding:0 9px;display:flex;align-items:center;border-radius:6px;border:1px solid {{ f.bd }};background:{{ f.bg }};color:{{ f.color }};font-weight:500">{{ f.label }}</span></sc-for>
+              </div>
+            </div>
+            <div role="tabpanel" style="padding-top:10px">
+              <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border-strong);border-radius:7px;color:var(--muted);margin-bottom:6px"><i class="icon-message-square"></i>Add a note or log a call, email, interview…<span style="margin-left:auto;display:flex;gap:12px"><i class="icon-mail"></i><i class="icon-phone"></i><i class="icon-calendar-plus"></i></span></div>
+              <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:52px minmax(0,1fr);border-top:1px solid var(--border)">
+                  <div style="padding-top:8px"><div style="font-size:18px;font-weight:600;line-height:1">{{ g.day }}</div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted)">{{ g.mon }}</div></div>
+                  <div style="padding:4px 0">
+                    <sc-for list="{{ g.events }}" as="e">
+                      <div style="display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:5px 0">
+                        <span style="width:22px;height:22px;border-radius:50%;background:var(--surface-muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)"><i class="icon-{{ e.icon }}"></i></span>
+                        <div style="min-width:0;padding-top:2px">
+                          <b style="font-weight:600">{{ e.title }}</b>
+                          <sc-if value="{{ e.isStage }}"><span style="display:inline-flex;align-items:center;gap:6px;margin-left:6px;font-size:12px"><span style="padding:0 7px;border-radius:9px;background:var(--surface-muted);color:var(--muted)">{{ e.from }}</span><i class="icon-arrow-right" style="color:var(--muted)"></i><span style="padding:0 7px;border-radius:9px;background:var(--primary-soft);color:var(--primary);font-weight:600">{{ e.to }}</span></span></sc-if>
+                          <sc-if value="{{ e.plain }}"><span style="color:var(--muted)"> — {{ e.detail }}</span></sc-if>
+                          <sc-if value="{{ e.isNote }}"><div style="margin-top:4px;padding:8px 12px;border-radius:7px;background:var(--surface);border:1px solid var(--border);text-wrap:pretty">{{ e.detail }}</div></sc-if>
+                        </div>
+                        <span style="font-size:11px;color:var(--muted);white-space:nowrap;padding-top:3px">{{ e.actor }} · {{ e.time }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="display:flex;align-items:center;gap:8px;height:38px;border-top:1px solid var(--border);color:var(--primary);font-weight:500"><i class="icon-chevrons-down"></i>Show 9 earlier events · Aug 30 – Sep 04<span style="margin-left:auto;color:var(--muted);font-weight:400;font-size:12px">2 system events hidden</span></div>
+            </div>
+          </section>
+          <aside style="min-width:0;overflow:hidden;background:var(--surface)">
+            <section style="padding:12px 20px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;margin-bottom:4px"><h2 style="margin:0;font-size:13px;font-weight:600">Tasks &amp; follow-ups</h2><span style="margin-left:6px;font-size:12px;color:var(--muted)">2 open</span><i class="icon-plus" style="margin-left:auto;color:var(--muted)" aria-label="Add task"></i></div>
+              <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;height:28px;color:{{ t.color }};text-decoration:{{ t.deco }}"><i class="icon-{{ t.icon }}"></i><span style="flex:1">{{ t.t }}</span><span style="font-size:12px;color:{{ t.dueColor }};text-decoration:none">{{ t.due }}</span></div></sc-for>
+            </section>
+            <section style="padding:12px 20px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;margin-bottom:4px"><h2 style="margin:0;font-size:13px;font-weight:600">Interviews</h2><span style="margin-left:6px;font-size:12px;color:var(--muted)">3</span><i class="icon-plus" style="margin-left:auto;color:var(--muted)"></i></div>
+              <sc-for list="{{ ivs }}" as="iv" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;height:28px"><i class="icon-calendar-check" style="color:var(--success)"></i><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ iv.t }}</span><span style="font-size:12px;color:var(--muted);white-space:nowrap">{{ iv.w }}</span></div></sc-for>
+            </section>
+            <section style="padding:12px 20px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;margin-bottom:4px"><h2 style="margin:0;font-size:13px;font-weight:600">Contacts</h2><span style="margin-left:6px;font-size:12px;color:var(--muted)">3</span><i class="icon-plus" style="margin-left:auto;color:var(--muted)"></i></div>
+              <sc-for list="{{ contacts }}" as="c" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px;height:34px"><span style="width:24px;height:24px;flex:none;border-radius:50%;background:var(--surface-3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.initials }}</span><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="font-weight:600">{{ c.name }}</b> <span style="color:var(--muted);font-size:12px">{{ c.role }}</span></div><span style="font-size:11px;padding:0 7px;border-radius:9px;background:var(--surface-muted);color:var(--muted);white-space:nowrap">{{ c.type }}</span></div></sc-for>
+            </section>
+            <section style="padding:12px 20px;border-bottom:1px solid var(--border)">
+              <h2 style="margin:0 0 4px;font-size:13px;font-weight:600">Documents</h2>
+              <sc-for list="{{ docs }}" as="d" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;padding:3px 0"><i class="icon-file-text" style="color:var(--muted)"></i><div style="min-width:0"><div>{{ d.n }}</div><div style="font-size:11px;color:var(--muted)">{{ d.m }}</div></div></div></sc-for>
+            </section>
+            <section style="padding:12px 20px">
+              <h2 style="margin:0 0 4px;font-size:13px;font-weight:600">Details</h2>
+              <sc-for list="{{ facts }}" as="f" hint-placeholder-count="6"><div style="display:flex;gap:10px;height:22px;font-size:12px"><span style="width:96px;flex:none;color:var(--muted)">{{ f.k }}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.v }}</span></div></sc-for>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ wsOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:var(--scrim)"></div>
+    <div role="menu" aria-label="Switch workspace" style="position:absolute;top:62px;left:10px;width:340px;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+      <div style="padding:10px"><div style="height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--focus);border-radius:7px;box-shadow:0 0 0 3px var(--primary-soft);color:var(--muted)"><i class="icon-search"></i>Find a workspace</div></div>
+      <div style="padding:0 6px 6px">
+        <div style="padding:6px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted)">YOUR WORKSPACES</div>
+        <sc-for list="{{ workspaces }}" as="w" hint-placeholder-count="3">
+          <div role="menuitemradio" aria-checked="{{ w.sel }}" style="display:flex;align-items:center;gap:10px;height:52px;padding:0 8px;border-radius:7px;background:{{ w.bg }}">
+            <span style="width:30px;height:30px;flex:none;border-radius:6px;background:{{ w.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">{{ w.initials }}</span>
+            <div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.name }}</div><div style="font-size:12px;color:var(--muted)">{{ w.meta }}</div></div>
+            <span style="font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;border:1px solid {{ w.roleBd }};color:{{ w.roleColor }}">{{ w.role }}</span>
+            <i class="icon-check" style="width:16px;color:{{ w.checkColor }}"></i>
+          </div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px solid var(--border);padding:6px">
+        <div role="menuitem" style="display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:7px"><i class="icon-settings-2" style="color:var(--muted)"></i>Personal workspace settings</div>
+        <div role="menuitem" style="display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:7px"><i class="icon-plus" style="color:var(--muted)"></i>Create workspace</div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding:10px 16px;font-size:12px;color:var(--muted)">Switching reloads the app in the chosen workspace. The workspace colour appears on the sidebar edge and in the header.</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ownerOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="listbox" aria-label="Filter by owner" style="position:absolute;top:196px;left:{{ ownerLeft }};width:300px;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:var(--shadow);overflow:hidden">
+      <div style="padding:8px"><div style="height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--border-strong);border-radius:7px;color:var(--muted)"><i class="icon-search"></i>Find a member</div></div>
+      <sc-for list="{{ members }}" as="m" hint-placeholder-count="6">
+        <div role="option" aria-selected="{{ m.sel }}" style="display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;background:{{ m.bg }}">
+          <i class="icon-check" style="width:14px;color:{{ m.checkColor }}"></i>
+          <sc-if value="{{ m.notAll }}"><span style="width:24px;height:24px;border-radius:50%;background:var(--surface-3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span></sc-if>
+          <sc-if value="{{ m.all }}"><span style="width:24px;height:24px;border-radius:50%;background:var(--surface-3);display:flex;align-items:center;justify-content:center"><i class="icon-users" style="font-size:12px"></i></span></sc-if>
+          <span style="flex:1;font-weight:{{ m.fw }}">{{ m.name }}</span><span style="font-size:12px;color:var(--muted)">{{ m.n }}</span>
+        </div>
+      </sc-for>
+      <div style="border-top:1px solid var(--border);padding:10px 14px;font-size:12px;color:var(--muted);display:flex;gap:8px"><i class="icon-history" style="margin-top:2px"></i><span>You can edit, archive and delete any member's records here. Changes to another member's records are written to Audit history.</span></div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ mobile }}" hint-placeholder-val="{{ false }}">
+<div data-jqd="d" data-theme="{{ theme }}" data-screen-label="Direction D mobile" style="position:relative;width:390px;height:844px;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;line-height:1.4;font-variant-numeric:tabular-nums;overflow:hidden">
+  <div style="height:44px;flex:none;display:flex;align-items:center;padding:0 24px;font-size:14px;font-weight:600;background:var(--surface)">9:41<span style="margin-left:auto;display:flex;gap:6px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-full"></i></span></div>
+  <header style="flex:none;display:flex;align-items:center;gap:10px;height:52px;padding:0 12px 0 16px;background:var(--surface);border-bottom:1px solid var(--border);border-top:3px solid oklch(0.52 0.13 265)">
+    <sc-if value="{{ mDetail }}" hint-placeholder-val="{{ false }}"><span style="width:44px;height:44px;margin-left:-10px;display:flex;align-items:center;justify-content:center" aria-label="Back to Applications"><i class="icon-chevron-left" style="font-size:22px"></i></span></sc-if>
+    <sc-if value="{{ mNotDetail }}" hint-placeholder-val="{{ true }}"><span role="button" aria-label="Workspace: Personal, User. Switch workspace" style="height:32px;padding:0 8px 0 4px;display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:16px;font-size:13px;font-weight:600"><span style="width:24px;height:24px;border-radius:50%;background:oklch(0.52 0.13 265);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">MO</span>Personal<i class="icon-chevron-down" style="color:var(--muted)"></i></span></sc-if>
+    <b style="font-weight:600;font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mTitle }}</b>
+    <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center" aria-label="Search"><i class="icon-search" style="font-size:20px"></i></span>
+    <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;position:relative" aria-label="Notifications, 4 unread"><i class="icon-bell" style="font-size:20px"></i><span style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger)"></span></span>
+  </header>
+
+  <sc-if value="{{ mDash }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:hidden;padding:14px 16px 0;display:flex;flex-direction:column;gap:14px">
+      <div><div style="font-size:13px;color:var(--muted)">Wednesday, Sep 23</div><div style="font-size:22px;font-weight:600;letter-spacing:-.01em">Needs attention</div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div style="padding:10px;border-radius:10px;background:var(--danger-soft);border:1px solid color-mix(in oklch,var(--danger) 25%,transparent)"><div style="font-size:22px;font-weight:700;color:var(--danger)">4</div><div style="font-size:12px">Overdue</div></div>
+        <div style="padding:10px;border-radius:10px;background:var(--warning-soft);border:1px solid color-mix(in oklch,var(--warning) 25%,transparent)"><div style="font-size:22px;font-weight:700;color:var(--warning)">4</div><div style="font-size:12px">Due today</div></div>
+        <div style="padding:10px;border-radius:10px;background:var(--surface);border:1px solid var(--border)"><div style="font-size:22px;font-weight:700">3</div><div style="font-size:12px">Interviews</div></div>
+      </div>
+      <section style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;background:var(--danger-soft);color:var(--danger);font-size:12px;font-weight:700"><i class="icon-triangle-alert"></i>OVERDUE</div>
+        <sc-for list="{{ mOver }}" as="a" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;border-top:1px solid var(--border)">
+            <span role="checkbox" aria-checked="false" aria-label="Complete: {{ a.next }}" style="width:44px;height:44px;margin-left:-12px;flex:none;display:flex;align-items:center;justify-content:center"><span style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border-strong)"></span></span>
+            <div style="flex:1;min-width:0;margin-left:-8px"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.next }}</div><div style="font-size:13px;color:var(--muted)">{{ a.company }}</div></div>
+            <span style="font-size:13px;font-weight:600;color:var(--danger);white-space:nowrap">{{ a.dueText }}</span>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-top:1px solid var(--border);background:var(--warning-soft);color:var(--warning);font-size:12px;font-weight:700"><i class="icon-clock"></i>TODAY</div>
+        <sc-for list="{{ mToday }}" as="t" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;border-top:1px solid var(--border)">
+            <span style="width:44px;height:44px;margin-left:-12px;flex:none;display:flex;align-items:center;justify-content:center"><span style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border-strong)"></span></span>
+            <div style="flex:1;min-width:0;margin-left:-8px"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.text }}</div><div style="font-size:13px;color:var(--muted)">{{ t.co }}</div></div>
+            <span style="font-size:13px;color:var(--muted);white-space:nowrap">{{ t.metaShort }}</span>
+          </div>
+        </sc-for>
+        <div style="height:44px;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--border);color:var(--primary);font-weight:600;font-size:14px">See all 8 in Tasks & Follow-ups</div>
+      </section>
+      <section style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center">
+        <div style="width:44px;text-align:center;border:1px solid var(--border);border-radius:8px;padding:3px 0"><div style="font-size:10px;font-weight:700;color:var(--muted)">THU</div><div style="font-size:18px;font-weight:700;line-height:1.1">24</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--muted)">Next interview · tomorrow</div><div style="font-weight:600">Halcyon Health</div><div style="font-size:13px;color:var(--muted)">Recruiter screen · 2:30 PM · Video</div></div>
+        <i class="icon-chevron-right" style="color:var(--muted)"></i>
+      </section>
+      <section style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center">
+        <i class="icon-moon" style="font-size:20px;color:var(--muted)"></i>
+        <div style="flex:1"><div style="font-weight:600">37 quiet applications</div><div style="font-size:13px;color:var(--muted)">No activity in 28+ days. Review to keep, mark Ghosted or archive.</div></div>
+        <i class="icon-chevron-right" style="color:var(--muted)"></i>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ mApps }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;background:var(--surface);border-bottom:1px solid var(--border)">
+      <div style="display:flex;gap:8px;padding:10px 16px 8px;overflow:hidden">
+        <sc-for list="{{ mViews }}" as="v" hint-placeholder-count="4"><span style="height:34px;flex:none;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:17px;background:{{ v.bg }};color:{{ v.color }};border:1px solid {{ v.bd }};font-size:14px;font-weight:500;white-space:nowrap">{{ v.label }}<b style="font-weight:700;font-size:12px;color:{{ v.nColor }}">{{ v.n }}</b></span></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px">
+        <span style="height:36px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:8px;border:1px solid var(--border-strong);font-size:14px"><i class="icon-sliders-horizontal"></i>Filter<b style="font-size:11px;padding:0 6px;border-radius:9px;background:var(--primary);color:var(--primary-fg)">1</b></span>
+        <span style="height:36px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:8px;border:1px solid var(--border-strong);font-size:14px;white-space:nowrap"><i class="icon-arrow-up-down"></i>Next action</span>
+        <span style="margin-left:auto;font-size:13px;color:var(--muted)">457</span>
+      </div>
+    </div>
+    <div style="flex:1;overflow:hidden">
+      <sc-for list="{{ mRows }}" as="a" hint-placeholder-count="7">
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;align-items:center;gap:8px"><b style="font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.company }}</b><span style="display:flex;align-items:flex-end;gap:2px;height:12px" aria-label="Priority {{ a.pri }}"><sc-for list="{{ a.priBars }}" as="b"><span style="width:3px;height:{{ b.h }}px;border-radius:1px;background:{{ b.bg }}"></span></sc-for></span></div>
+          <div style="font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden"><span style="overflow:hidden;text-overflow:ellipsis">{{ a.role }}</span><span>·</span><span style="color:var(--fg)">{{ a.stage }}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px"><i class="icon-{{ a.dueIcon }}" style="color:{{ a.dueColor }}"></i><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ a.nextColor }}">{{ a.next }}</span><b style="font-weight:{{ a.dueWeight }};color:{{ a.dueColor }};white-space:nowrap">{{ a.dueText }}</b></div>
+          <div style="font-size:12px;color:{{ a.bandColor }};display:flex;align-items:center;gap:4px"><i class="icon-{{ a.bandIcon }}"></i>{{ a.band }} · {{ a.idleText }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <span style="position:absolute;right:16px;bottom:96px;width:56px;height:56px;border-radius:16px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)" aria-label="New application"><i class="icon-plus" style="font-size:24px"></i></span>
+  </sc-if>
+
+  <sc-if value="{{ mDetail }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:14px 16px 12px;background:var(--surface);border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--muted)">{{ app.company }} · {{ app.loc }}</div>
+        <div style="font-size:21px;font-weight:600;line-height:1.25;margin-top:2px">{{ app.role }}</div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <span style="height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;border-radius:15px;background:var(--primary-soft);color:var(--primary);font-size:13px;font-weight:600"><i class="icon-flag"></i>Final Interview</span>
+          <span style="height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;border-radius:15px;border:1px solid var(--border-strong);font-size:13px">High priority</span>
+          <span style="height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;border-radius:15px;border:1px solid var(--border-strong);font-size:13px">Open</span>
+        </div>
+        <div style="margin-top:12px;padding:12px;border-radius:10px;background:var(--warning-soft);border:1px solid color-mix(in oklch,var(--warning) 30%,transparent)">
+          <div style="font-size:11px;font-weight:700;color:var(--warning)">NEXT ACTION · TODAY</div>
+          <div style="font-weight:600;margin-top:2px">{{ app.next }}</div>
+          <div style="display:flex;gap:8px;margin-top:10px"><span style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:9px;background:var(--primary);color:var(--primary-fg);font-weight:600"><i class="icon-check"></i>Done, set next</span><span style="height:44px;padding:0 14px;display:flex;align-items:center;border-radius:9px;border:1px solid var(--border-strong);background:var(--surface)">Reschedule</span></div>
+        </div>
+      </div>
+      <div role="tablist" style="flex:none;display:flex;margin:10px 16px;padding:3px;border-radius:9px;background:var(--surface-3)">
+        <sc-for list="{{ mTabs }}" as="t" hint-placeholder-count="3"><span role="tab" aria-selected="{{ t.sel }}" style="flex:1;height:36px;display:flex;align-items:center;justify-content:center;border-radius:7px;background:{{ t.bg }};font-size:14px;font-weight:{{ t.fw }};color:{{ t.color }}">{{ t.label }}</span></sc-for>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:0 16px">
+        <sc-for list="{{ mEvents }}" as="e" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--surface-muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)"><i class="icon-{{ e.icon }}"></i></span>
+            <div style="min-width:0"><div style="display:flex;gap:8px"><b style="font-weight:600;flex:1;min-width:0;font-size:14px">{{ e.title }}</b><span style="font-size:12px;color:var(--muted);white-space:nowrap">{{ e.date }}</span></div><div style="font-size:13px;color:var(--muted);text-wrap:pretty">{{ e.summary }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:none;display:flex;gap:8px;padding:10px 16px;background:var(--surface);border-top:1px solid var(--border)">
+        <span style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:9px;border:1px solid var(--border-strong);font-size:14px;font-weight:500"><i class="icon-message-square-plus"></i>Log activity</span>
+        <span style="flex:1;height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:9px;border:1px solid var(--border-strong);font-size:14px;font-weight:500"><i class="icon-flag"></i>Move stage</span>
+        <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid var(--border-strong)" aria-label="More"><i class="icon-ellipsis"></i></span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ mNotDetail }}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Primary" style="flex:none;height:78px;display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:22px;box-sizing:border-box;background:var(--surface);border-top:1px solid var(--border)">
+      <sc-for list="{{ mTabbar }}" as="t" hint-placeholder-count="5"><div aria-current="{{ t.cur }}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:{{ t.color }};font-size:11px;font-weight:{{ t.fw }};position:relative"><i class="icon-{{ t.icon }}" style="font-size:21px"></i>{{ t.label }}<span style="position:absolute;top:6px;left:50%;margin-left:6px;min-width:14px;height:14px;padding:0 3px;box-sizing:border-box;border-radius:7px;background:{{ t.bBg }};color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></div></sc-for>
+    </nav>
+  </sc-if>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:960},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;applications&quot;,&quot;preview&quot;,&quot;detail&quot;,&quot;workspace&quot;,&quot;manager&quot;,&quot;m-dashboard&quot;,&quot;m-applications&quot;,&quot;m-detail&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;manager&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { if (!window.JQD) this.t = setInterval(() => { if (window.JQD) { clearInterval(this.t); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const screen = this.props.screen ?? 'dashboard', theme = this.props.theme ?? 'light';
+    const mobile = screen.startsWith('m-');
+    const mgr = screen === 'manager' || !!this.props.manager;
+    const isPreview = screen === 'preview';
+    const base = { theme, desktop: !mobile, mobile, mgr, fw: isPreview ? '1680px' : '1440px',
+      isDash: screen === 'dashboard' || screen === 'workspace', isApps: ['applications', 'preview', 'manager'].includes(screen), isDetail: screen === 'detail', isPreview, notPreview: !isPreview,
+      wsOpen: screen === 'workspace', ownerOpen: screen === 'manager', ownerOpenStr: screen === 'manager' ? 'true' : 'false',
+      mDash: screen === 'm-dashboard', mApps: screen === 'm-applications', mDetail: screen === 'm-detail', mNotDetail: screen !== 'm-detail',
+      mTitle: { 'm-dashboard': 'Today', 'm-applications': 'Applications', 'm-detail': 'Application' }[screen] || '',
+      crumb: { dashboard: 'Dashboard', workspace: 'Dashboard', applications: 'Applications', preview: 'Applications', manager: 'Applications', detail: 'Applications / Corvid Labs' }[screen] || '' };
+    const D = window.JQD;
+    if (!D) return base;
+    const W = D.workspaces;
+    const wsBase = mgr ? W[1] : W[0];
+    const ws = { ...wsBase, short: mgr ? 'Career Lab' : 'Personal' };
+    const cur = base.isDash ? 'Dashboard' : 'Applications';
+    const H = label => ({ head: true, item: false, label });
+    const I = (icon, label, badge, danger) => { const on = label === cur; return { head: false, item: true, icon, label, cur: on ? 'page' : 'false', badge: badge || '', bBg: badge ? (danger ? 'var(--danger)' : 'var(--surface-3)') : 'transparent', bFg: danger ? '#fff' : 'var(--fg)', bg: on ? 'var(--primary-soft)' : 'transparent', color: on ? 'var(--primary)' : 'var(--fg)', iconColor: on ? 'var(--primary)' : 'var(--muted)', fw: on ? 600 : 400 }; };
+    const nav = [I('layout-dashboard', 'Dashboard'), I('briefcase', 'Applications', mgr ? '5,380' : '457'), I('list-checks', 'Tasks & Follow-ups', '4', true), I('users', 'Contacts'), I('calendar-days', 'Calendar'),
+      H('Track'), I('messages-square', 'Interviews'), I('repeat', 'Habits'), I('notebook-pen', 'Journal'), I('file-text', 'Resumes'),
+      H('Insights'), I('chart-line', 'Analytics')];
+    if (mgr) nav.push(H('Workspace'), I('user-cog', 'Members', '12'), I('arrow-down-up', 'Import & export'), I('workflow', 'Workflow'), I('history', 'Audit history'));
+    const counts = mgr ? ['5,380', '61', '38', '390', '1,834'] : ['457', '7', '11', '38', '143'];
+    const views = ['All active', 'Needs follow-up', 'Interviewing', 'Saved', 'Archived'].map((label, i) => ({ label, n: counts[i], sel: i === 0 ? 'true' : 'false', line: i === 0 ? 'var(--primary)' : 'transparent', color: i === 0 ? 'var(--fg)' : 'var(--muted)', fw: i === 0 ? 600 : 500, nColor: i === 1 ? 'var(--danger)' : 'var(--muted)' }));
+    const viewModes = [['table', 'Table'], ['square-kanban', 'Board'], ['calendar-days', 'Calendar'], ['chart-gantt', 'Timeline']].map(([icon, label], i) => ({ icon, label, text: i === 0 ? label : '', sel: i === 0 ? 'true' : 'false', bg: i === 0 ? 'var(--surface-3)' : 'transparent', color: i === 0 ? 'var(--fg)' : 'var(--muted)', fw: i === 0 ? 600 : 400, bl: i === 0 ? 'transparent' : 'var(--border-strong)' }));
+    const bulk = [['flag', 'Move stage'], ['signal', 'Priority'], ['tag', 'Tag'], ['reply', 'Follow-up'], ['archive', 'Archive'], ['download', 'Export']].map(([icon, label]) => ({ icon, label }));
+    const bulkOn = screen === 'applications';
+    const src = D.active.slice(0, 16);
+    const rows = src.map((a, i) => {
+      let r = { ...a, bandLabel: isPreview ? a.bandShort : a.band, ariaSel: 'false' };
+      if (!mgr) r = { ...r, ownerInitials: 'MO', ownerFirst: 'Maya' };
+      if (bulkOn && (i === 1 || i === 2)) r = { ...r, check: 'square-check', checkColor: 'var(--primary)', rowBg: 'var(--primary-soft)', ariaSel: 'true' };
+      if (isPreview && a.company === 'Corvid Labs') r = { ...r, rowBg: 'var(--primary-soft)', rowLine: 'var(--primary)', ariaSel: 'true' };
+      return r;
+    });
+    const showOwner = mgr, showSource = !isPreview && !mgr;
+    const workspaces = W.map((w, i) => { const on = mgr ? i === 1 : i === 0; return { ...w, sel: on ? 'true' : 'false', bg: on ? 'var(--primary-soft)' : 'transparent', checkColor: on ? 'var(--primary)' : 'transparent', roleColor: w.role === 'Manager' ? 'var(--success)' : 'var(--muted)', roleBd: w.role === 'Manager' ? 'var(--success)' : 'var(--border-strong)' }; });
+    const members = D.members.map((m, i) => ({ ...m, sel: i === 0 ? 'true' : 'false', checkColor: i === 0 ? 'var(--primary)' : 'transparent', bg: i === 0 ? 'var(--primary-soft)' : 'transparent', fw: i === 0 ? 600 : 400 }));
+    const stepShort = ['Saved', 'Prep', 'Applied', 'Assess.', 'Screen', 'Interview', 'Final', 'Offer'];
+    const steps = D.STAGES.map((s, i) => { const done = i < 6, curr = i === 6; const skipped = i === 1 || i === 3; return { short: stepShort[i], bar: curr ? 'var(--primary)' : done ? (skipped ? 'var(--border-strong)' : 'color-mix(in oklch,var(--primary) 55%,var(--surface))') : 'var(--surface-3)', color: curr ? 'var(--fg)' : done && !skipped ? 'var(--fg)' : 'var(--muted)', fw: curr ? 700 : 400 }; });
+    const tabs = [['Timeline', '19', true], ['Job posting', ''], ['Notes', '4']].map(([label, n, on]) => ({ label, n, sel: on ? 'true' : 'false', line: on ? 'var(--primary)' : 'transparent', color: on ? 'var(--fg)' : 'var(--muted)', fw: on ? 600 : 500 }));
+    const tlFilters = ['All', 'Stage', 'Interviews', 'Contacts', 'Notes', 'System'].map((label, i) => ({ label, on: i === 0 ? 'true' : 'false', bg: i === 0 ? 'var(--fg)' : 'transparent', color: i === 0 ? 'var(--bg)' : 'var(--fg)', bd: i === 0 ? 'var(--fg)' : 'var(--border)' }));
+    const summ = e => e.from ? e.from + ' → ' + e.to : e.detail;
+    const events5 = D.events.slice(0, 5).map(e => ({ ...e, summary: summ(e) }));
+    const mViews = [['Active', '457', true], ['Follow-up', '7'], ['Interviewing', '11'], ['Saved', '38']].map(([label, n, on]) => ({ label, n, bg: on ? 'var(--fg)' : 'var(--surface)', color: on ? 'var(--bg)' : 'var(--fg)', bd: on ? 'var(--fg)' : 'var(--border-strong)', nColor: on ? 'var(--bg)' : label === 'Follow-up' ? 'var(--danger)' : 'var(--muted)' }));
+    const mTabs = [['Timeline', true], ['Details'], ['People']].map(([label, on]) => ({ label, sel: on ? 'true' : 'false', bg: on ? 'var(--surface)' : 'transparent', fw: on ? 600 : 500, color: on ? 'var(--fg)' : 'var(--muted)' }));
+    const mCur = { 'm-dashboard': 'Today', 'm-applications': 'Apps' }[screen];
+    const mTabbar = [['house', 'Today', '4'], ['briefcase', 'Apps'], ['list-checks', 'Tasks'], ['users', 'Contacts'], ['menu', 'More']].map(([icon, label, badge]) => { const on = label === mCur; return { icon, label, badge: badge || '', bBg: badge ? 'var(--danger)' : 'transparent', cur: on ? 'page' : 'false', color: on ? 'var(--primary)' : 'var(--muted)', fw: on ? 600 : 500 }; });
+    const mToday = D.queueToday.slice(0, 2).map(t => ({ ...t, metaShort: t.meta.startsWith('Final') ? 'Today' : 'Closes Fri' }));
+    return { ...base, ws, wsBtnBd: base.wsOpen ? 'var(--focus)' : 'var(--border)', wsBtnBg: base.wsOpen ? 'var(--primary-soft)' : 'transparent',
+      nav, views, viewModes, bulk, bulkOn, rows, rowsShown: rows.length, rowTotal: mgr ? '5,380' : '457', rowCount: mgr ? '5380' : '457',
+      countLine: mgr ? '5,380 active · 12 members' : '457 active · 600 total',
+      agingW: isPreview ? '140px' : '196px', nextW: isPreview ? '250px' : '270px', showOwner, showSource,
+      ownerBd: base.ownerOpen ? 'var(--focus)' : 'var(--border-strong)', ownerBg: base.ownerOpen ? 'var(--primary-soft)' : 'var(--surface)', ownerLeft: '712px',
+      queueOver: D.queueOver, queueToday: D.queueToday, interviews: D.interviews, review: D.review.slice(0, 3), activity: D.activity, pipeline: D.pipeline, funnel: D.funnel,
+      app: D.app, groups: D.groups, tasks: D.tasks, ivs: D.ivs, contacts: D.contacts, docs: D.docs, facts: D.facts, steps, tabs, tlFilters, events5,
+      workspaces, members, mViews, mRows: D.active.slice(0, 8), mTabs, mTabbar, mOver: D.queueOver.slice(0, 2), mToday,
+      mEvents: D.events.slice(0, 7).map(e => ({ ...e, summary: summ(e) })) };
+  }
+}
+</script>
+</body>
+</html>

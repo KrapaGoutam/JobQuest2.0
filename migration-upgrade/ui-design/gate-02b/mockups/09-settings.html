@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.snav{width:230px;flex:none;border-right:1px solid var(--border);padding:16px 10px;display:flex;flex-direction:column;gap:1px;background:var(--surface)}
+.snav .h{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+.snav .i{height:32px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:6px;white-space:nowrap}.snav .i i{color:var(--muted);font-size:15px}
+.snav .i.on{background:var(--primary-soft);color:var(--primary);font-weight:600}.snav .i.on i{color:var(--primary)}
+.sbody{flex:1;min-width:0;overflow:hidden;padding:20px 32px;display:flex;flex-direction:column;gap:16px}
+.sec{background:var(--surface);border:1px solid var(--border);border-radius:8px}.sec-h{padding:14px 18px 0}.sec-h h3{margin:0;font-size:14px;font-weight:600}.sec-h p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.sec-b{padding:14px 18px;display:flex;flex-direction:column;gap:14px}.sec-f{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.theme{width:200px;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden}.theme.on{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
+.theme .pv{height:96px;display:flex;gap:4px;padding:8px}.theme .lb{padding:8px 10px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)}</style>
+</head><body><script>
+const { shell, mobile, gallery } = JQ;
+const f = (l, c, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${c}${o.help ? `<div class="help">${o.help}</div>` : ''}</div>`;
+const pw = `<div class="input"><span class="grow" style="letter-spacing:2px">••••••••••••</span><span class="row xs muted" style="gap:4px"><i class="icon-eye"></i>Show</span></div>`;
+
+const NAV = [['#Account'], ['user-round', 'Profile', 'profile'], ['shield-check', 'Security', 'security'], ['at-sign', 'Email & phone', 'contact'], ['#Preferences'], ['sun-moon', 'Appearance', 'appearance'], ['bell-ring', 'Follow-ups & reminders', 'followups'], ['calendar-days', 'Date & time', 'datetime'], ['tags', 'Tags', 'tags'], ['#Connections'], ['puzzle', 'Browser extension', 'extension'], ['#Data'], ['database', 'Import & export', 'data'], ['#This workspace'], ['building-2', 'Workspace settings', 'workspace']];
+const snav = on => `<nav class="snav" aria-label="Settings">${NAV.map(n => n[0][0] === '#' ? `<div class="h">${n[0].slice(1)}</div>` : `<div class="i ${n[2] === on ? 'on' : ''}"><i class="icon-${n[0]}"></i>${n[1]}</div>`).join('')}</nav>`;
+const page = (on, body) => `<div style="flex:1;min-height:0;display:flex">${snav(on)}<div class="sbody">${body}</div></div>`;
+const title = (t, s) => `<div><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">${t}</h1>${s ? `<div class="muted" style="margin-top:2px">${s}</div>` : ''}</div>`;
+
+/* profile */
+const profile = page('profile', `${title('Profile', 'How you appear to members of shared workspaces.')}
+  <div class="sec"><div class="sec-b"><div class="row" style="gap:16px"><span class="av xl">MO</span><div class="small muted">Initials avatar. Photo upload isn't available.</div></div>
+    <div class="fgrid" style="grid-template-columns:1fr 1fr;max-width:640px">${f('Display name', '<div class="input focus">Maya Ortiz</div>', { opt: true, help: 'Shown to co-members. Defaults to your username.' })}
+      ${f('Username', '<div class="input dis">maya.ortiz<span class="sfx"><i class="icon-lock"></i></span></div>', { help: 'Used to sign in. Changing it isn\'t available yet.' })}
+      ${f('Time zone', '<div class="input">America/Chicago · CT<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>', { help: 'Controls "today", due dates and reminders.' })}</div></div>
+    <div class="sec-f"><span class="pill warning"><i class="icon-pencil"></i>Unsaved changes</span><span class="grow"></span><span class="btn">Discard</span><span class="btn primary">Save profile</span></div></div>
+  <div class="sec"><div class="sec-h"><h3>Your workspaces</h3><p>Your role in each. Managers of a shared workspace see only what you create there.</p></div><div class="sec-b" style="gap:6px">
+    ${[['MO', 'oklch(0.52 0.13 265)', 'Personal', 'Only you', 'User'], ['CL', 'oklch(0.55 0.12 160)', 'Career Lab · Cohort 7', '12 members', 'Manager'], ['NB', 'oklch(0.58 0.13 55)', 'Northside Bootcamp', '3 members', 'User']].map(w => `<div class="row" style="height:40px"><span class="ws-tile" style="background:${w[1]}">${w[0]}</span><span class="b">${w[2]}</span><span class="small muted">${w[3]}</span><span class="grow"></span>${w[4] === 'Manager' ? '<span class="pill success">Manager</span>' : '<span class="pill">User</span>'}</div>`).join('')}</div></div>`);
+
+/* security */
+const security = page('security', `${title('Security', 'Password, recovery codes and signed-in devices.')}
+  <div class="sec"><div class="sec-h"><h3>Change password</h3><p>You'll stay signed in here; other devices are signed out.</p></div>
+    <div class="sec-b"><div class="fgrid" style="grid-template-columns:1fr 1fr 1fr">${f('Current password', pw, { req: true })}${f('New password', pw.replace('input', 'input focus'), { req: true })}${f('Confirm new password', pw, { req: true })}</div>
+      <div class="row small" style="gap:14px"><span class="row success-t" style="gap:5px"><i class="icon-circle-check"></i>At least 12 characters</span><span class="row success-t" style="gap:5px"><i class="icon-circle-check"></i>Not a common password</span><span class="row muted" style="gap:5px"><i class="icon-circle"></i>Passwords match</span></div></div>
+    <div class="sec-f"><span class="grow"></span><span class="btn primary disabled">Update password</span></div></div>
+  <div class="sec"><div class="sec-h"><h3>Recovery codes</h3><p>Your way back in if you forget your password${' '}and don't have a verified email.</p></div>
+    <div class="sec-b"><div class="row" style="gap:14px"><span class="tile lg" style="background:var(--success-soft);color:var(--success)"><i class="icon-key-round"></i></span><div class="grow"><div class="b">8 of 10 codes unused</div><div class="small muted">Generated Sep 23, 2026 · last used Sep 30 (code ending …6XRB)</div></div><span class="btn"><i class="icon-refresh-cw"></i>Generate new codes…</span></div>
+      <div class="small muted row" style="gap:6px"><i class="icon-eye-off"></i>Codes can't be shown again after setup. Generating new ones replaces all current codes.</div></div></div>
+  <div class="sec"><div class="sec-h"><h3>Signed-in devices</h3><p>Sessions end after 12 hours of inactivity or 7 days.</p></div>
+    <div class="sec-b" style="gap:0">${[['laptop', 'Chrome on Windows', 'This device · Chicago, US', 'Active now', 1], ['smartphone', 'Safari on iPhone', 'Chicago, US', '2 hours ago'], ['laptop', 'Edge on Windows', 'Denver, US', 'Sep 19']].map(d => `<div class="row" style="height:48px;border-bottom:1px solid var(--border)"><i class="icon-${d[0]} muted" style="font-size:18px"></i><div class="grow"><div class="b">${d[1]}${d[4] ? ' <span class="pill accent">This device</span>' : ''}</div><div class="small muted">${d[2]}</div></div><span class="small muted">${d[3]}</span>${d[4] ? '' : '<span class="btn sm">Sign out</span>'}</div>`).join('')}</div>
+    <div class="sec-f"><span class="small muted">Browser-extension tokens are managed separately.</span><span class="grow"></span><span class="btn danger-o"><i class="icon-log-out"></i>Sign out everywhere else</span></div></div>`);
+
+const regen = `<div class="scrim"></div><div class="dialog" style="width:520px;left:460px;top:170px" role="alertdialog" aria-label="Generate new recovery codes">
+  <div class="dlg-h"><span class="tile lg" style="background:var(--warning-soft);color:var(--warning)"><i class="icon-refresh-cw"></i></span><div><h2>Generate new recovery codes?</h2><div class="small muted">Your 8 unused codes will stop working immediately.</div></div></div>
+  <div class="dlg-b"><div class="banner warning small" style="align-items:flex-start"><i class="icon-triangle-alert warning-t" style="margin-top:2px"></i><span>Delete or replace any copies you saved (password manager, printout). Only the new set will work.</span></div>
+    ${f('Confirm with your password', pw.replace('input', 'input focus'), { req: true })}</div>
+  <div class="dlg-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Generate new codes</span></div></div>`;
+
+/* contact */
+const contact = page('contact', `${title('Email & phone', 'Both are optional. Verified email can be used to reset your password.')}
+  <div class="sec"><div class="sec-h"><h3>Email</h3></div><div class="sec-b">
+    <div class="row" style="gap:12px"><i class="icon-mail muted" style="font-size:18px"></i><div class="grow"><div class="b">maya@example.com <span class="pill success"><i class="icon-badge-check"></i>Verified</span></div><div class="small muted">Used for password reset and security notices (new device, password changed).</div></div><span class="btn">Change</span><span class="btn danger-o">Remove</span></div></div></div>
+  <div class="sec"><div class="sec-h"><h3>Phone</h3></div><div class="sec-b">
+    <div class="row" style="gap:12px"><i class="icon-smartphone muted" style="font-size:18px"></i><div class="grow"><div class="b">+1 555 010 0000 <span class="pill muted">Not verified</span></div><div class="small muted">Stored as contact info only. Phone verification and SMS recovery aren't available yet.</div></div><span class="btn">Change</span><span class="btn danger-o">Remove</span></div></div></div>
+  <div class="sec"><div class="sec-h"><h3>Change email</h3><p>We send a code to the new address. It isn't used until you confirm it.</p></div><div class="sec-b">
+    <div class="fgrid" style="grid-template-columns:1fr 200px;max-width:560px">${f('New email', '<div class="input">maya.ortiz@newmail.example</div>')}${f('Code', '<div class="input mono focus">48 21 _</div>', { help: 'Sent 1 min ago · <a>Resend</a>' })}</div>
+    <div class="banner neutral small"><i class="icon-info muted"></i><span>Until the new address is confirmed, <b>maya@example.com</b> stays active.</span></div></div>
+    <div class="sec-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Confirm new email</span></div></div>`);
+
+/* appearance */
+const tp = (bg, sb, fg, ac) => `<div class="pv" style="background:${bg}"><div style="width:34px;background:${sb};border-radius:4px"></div><div style="flex:1;display:flex;flex-direction:column;gap:5px"><div style="height:10px;width:60%;background:${fg};border-radius:3px;opacity:.8"></div><div style="height:28px;background:${sb};border-radius:4px"></div><div style="height:8px;width:40%;background:${ac};border-radius:3px"></div></div></div>`;
+const appearance = page('appearance', `${title('Appearance', 'Saved to your account and applied on every device.')}
+  <div class="sec"><div class="sec-h"><h3>Theme</h3><p>System follows your device and switches automatically.</p></div><div class="sec-b">
+    <div class="row" style="gap:14px" role="radiogroup" aria-label="Theme">
+      <div class="theme on" role="radio" aria-checked="true"><div style="display:flex;height:96px"><div style="flex:1;overflow:hidden">${tp('#f6f7f9', '#ffffff', '#172033', '#3157d5')}</div><div style="flex:1;overflow:hidden">${tp('#090d16', '#121827', '#edf1f7', '#8098ff')}</div></div><div class="lb"><span class="radio on"></span><i class="icon-monitor"></i><b>System</b><span class="small muted" style="margin-left:auto">Now: Light</span></div></div>
+      <div class="theme">${tp('#f6f7f9', '#ffffff', '#172033', '#3157d5')}<div class="lb"><span class="radio"></span><i class="icon-sun"></i><b>Light</b></div></div>
+      <div class="theme">${tp('#090d16', '#121827', '#edf1f7', '#8098ff')}<div class="lb"><span class="radio"></span><i class="icon-moon"></i><b>Dark</b></div></div></div>
+    <div class="small muted">If your device doesn't report a preference, JobQuest uses Light.</div></div></div>
+  <div class="sec"><div class="sec-h"><h3>Density</h3><p>Row height in tables.</p></div><div class="sec-b"><div class="seg" style="align-self:flex-start"><span class="on">Comfortable · 44px</span><span>Compact · 36px</span></div></div></div>
+  <div class="sec"><div class="sec-h"><h3>Motion</h3></div><div class="sec-b"><label class="row"><span class="switch"></span>Reduce motion <span class="small muted">· also follows your device setting</span></label></div></div>`);
+
+/* follow-ups & datetime */
+const followups = page('followups', `${title('Follow-ups & reminders', 'Defaults for suggested follow-up dates and reminders.')}
+  <div class="sec"><div class="sec-b"><div class="fgrid" style="grid-template-columns:1fr 1fr 1fr;max-width:760px">
+    ${f('First follow-up after', '<div class="input">5<span class="sfx">days</span></div>')}${f('Second follow-up after', '<div class="input">7<span class="sfx">more days</span></div>')}${f('Count days as', '<div class="seg"><span class="on">Business</span><span>Calendar</span></div>')}
+    ${f('Default reminder time', '<div class="input">9:00 AM</div>')}</div>
+    <label class="row"><span class="switch on"></span>Create a reminder automatically when I add a follow-up</label></div>
+    <div class="sec-f"><span class="small muted">Example: applied Mon Sep 21 → 1st follow-up Mon Sep 28 → 2nd Wed Oct 07.</span><span class="grow"></span><span class="btn primary">Save</span></div></div>
+  <div class="sec"><div class="sec-h"><h3>Reminder categories</h3><p>11 built-in categories can't be renamed or deleted. Deleting a custom one asks where to move its reminders.</p></div>
+    <div class="sec-b" style="gap:6px">${[['Application follow-up', 'built-in'], ['Interview preparation', 'built-in'], ['Thank-you note', 'built-in'], ['Portfolio reviews', 'custom · 4 reminders']].map(c => `<div class="row" style="height:34px"><i class="icon-${c[1] === 'built-in' ? 'lock' : 'tag'} muted"></i><span>${c[0]}</span><span class="small muted">${c[1]}</span><span class="grow"></span>${c[1] === 'built-in' ? '' : '<span class="btn sm">Rename</span><span class="btn sm danger-o">Delete…</span>'}</div>`).join('')}<a class="small">Show all 12</a></div></div>`);
+
+/* extension tokens */
+const TK = [['Work laptop · Chrome', 'Personal', 'oklch(0.52 0.13 265)', 'Sep 02', '2 hours ago', 'Dec 01 · 69 days', 'Active'], ['Home desktop · Edge', 'Career Lab · Cohort 7', 'oklch(0.55 0.12 160)', 'Aug 14', 'Sep 19', 'Oct 01 · 8 days', 'Expiring'], ['Old laptop', 'Personal', 'oklch(0.52 0.13 265)', 'Jun 10', 'Aug 30', '—', 'Revoked']];
+const tokens = (o = {}) => page('extension', `${title('Browser extension', 'Connect JobQuest Capture to save jobs from any posting page. Each connection uses its own token, linked to one workspace.')}
+  <div class="row" style="gap:10px"><span class="btn primary"><i class="icon-plug"></i>Connect a browser</span><a class="small">Install the extension</a><span class="grow"></span><span class="small muted">Tokens never include your password.</span></div>
+  <div class="tbl"><div class="tr th" style="grid-template-columns:1.3fr 1.2fr 90px 110px 130px 90px 170px"><span>Name</span><span>Workspace</span><span>Created</span><span>Last used</span><span>Expires</span><span>Status</span><span></span></div>
+    ${TK.map(t => `<div class="tr" style="grid-template-columns:1.3fr 1.2fr 90px 110px 130px 90px 170px;${t[6] === 'Revoked' ? 'color:var(--muted)' : ''}"><span class="row"><i class="icon-puzzle muted"></i><span class="grow"><div class="b ell">${t[0]}</div><div class="xs muted mono">jqx_live_4Kd…</div></span></span><span class="row ell"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${t[2]}"></span>${t[1]}</span><span class="small">${t[3]}</span><span class="small">${t[4]}</span><span class="small ${t[6] === 'Expiring' ? 'warning-t b' : ''}">${t[5]}</span>
+      <span>${t[6] === 'Active' ? '<span class="pill success">Active</span>' : t[6] === 'Expiring' ? '<span class="pill warning">Expiring</span>' : '<span class="pill muted">Revoked</span>'}</span><span class="row" style="justify-content:flex-end;gap:6px">${t[6] === 'Revoked' ? '<span class="small muted">Sep 01 by you</span>' : '<span class="btn sm"><i class="icon-refresh-cw"></i>Replace</span><span class="btn sm danger-o">Revoke</span>'}</span></div>`).join('')}</div>
+  <div class="sec"><div class="sec-h"><h3>What a token can do</h3></div><div class="sec-b small" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px">
+    ${[['circle-check', 'Read your workflow stages and outcomes', 1], ['circle-check', 'Check for duplicate applications', 1], ['circle-check', 'Create applications and job snapshots', 1], ['circle-check', 'List your resumes', 1], ['circle-x', 'Edit or delete existing records', 0], ['circle-x', 'Access other workspaces or your password', 0]].map(s => `<span class="row" style="gap:6px"><i class="icon-${s[0]} ${s[2] ? 'success-t' : 'muted'}"></i>${s[1]}</span>`).join('')}</div></div>`);
+
+const newToken = (shown) => `<div class="scrim"></div><div class="dialog" style="width:560px;left:440px;top:${shown ? 150 : 130}px" role="dialog" aria-label="Connect a browser">
+  <div class="dlg-h"><h2>${shown ? 'Copy your token' : 'Connect a browser'}</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">${shown ? `
+    <div class="small">Paste this into <b>JobQuest Capture › Settings</b>. It's shown <b>only once</b>.</div>
+    <div class="row" style="background:var(--surface-muted);border:1px solid var(--border);border-radius:8px;padding:12px 14px;gap:10px"><span class="mono grow" style="font-size:13px;word-break:break-all">jqx_live_4KdP7Q2MzT8vBn3LxW9rY5sHc1JfGe6aUq</span><span class="btn primary sm"><i class="icon-copy"></i>Copy</span></div>
+    <div class="kv" style="grid-template-columns:100px 1fr"><span>Name</span><span>Work laptop · Chrome</span><span>Workspace</span><span>Personal</span><span>Expires</span><span>Dec 22, 2026 (90 days)</span></div>
+    <div class="banner warning small" style="align-items:flex-start"><i class="icon-eye-off warning-t" style="margin-top:2px"></i><span>Treat it like a password. If you lose it, replace it; we can't show it again. Anyone with it can add applications to this workspace.</span></div>` : `
+    ${f('Name', '<div class="input focus">Work laptop · Chrome</div>', { req: true, help: 'So you can tell your devices apart.' })}
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">${f('Workspace', '<div class="input"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:oklch(0.52 0.13 265)"></span>Personal<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>', { help: 'Captures are saved here.' })}${f('Expires', '<div class="input">90 days<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>', { help: '30, 90, 180 or 365 days.' })}</div>
+    ${f('Access', '<div class="small col" style="gap:4px"><span class="row"><i class="icon-check success-t"></i>Capture jobs and check duplicates</span><span class="row"><i class="icon-check success-t"></i>Read workflow and resumes</span></div>', { help: 'Fixed set. Tokens can\'t edit or delete records.' })}`}
+  </div>
+  <div class="dlg-f"><span class="small muted row" style="gap:5px"><i class="icon-history"></i>Recorded in Audit history</span><span class="grow"></span>${shown ? '<span class="btn primary">Done, I copied it</span>' : '<span class="btn">Cancel</span><span class="btn primary">Create token</span>'}</div></div>`;
+
+const revoke = `<div class="scrim"></div><div class="dialog" style="width:460px;left:490px;top:220px" role="alertdialog" aria-label="Revoke token">
+  <div class="dlg-h"><span class="tile lg" style="background:var(--danger-soft);color:var(--danger)"><i class="icon-plug-zap"></i></span><div><h2>Revoke "Home desktop · Edge"?</h2><div class="small muted">Career Lab · Cohort 7 · last used Sep 19</div></div></div>
+  <div class="dlg-b small">The extension on that browser stops working immediately and shows "Reconnect". Applications it already saved are kept.</div>
+  <div class="dlg-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn danger">Revoke token</span></div></div>`;
+
+const mSettings = mobile({ tab: 'more', title: 'More' }, `
+  ${['#Go to', ['messages-square', 'Interviews'], ['repeat', 'Habits'], ['notebook-pen', 'Journal'], ['file-text', 'Resumes'], ['chart-line', 'Analytics'], '#Settings', ['user-round', 'Profile'], ['shield-check', 'Security'], ['sun-moon', 'Appearance · System'], ['puzzle', 'Browser extension']].map(x => typeof x === 'string' ? `<div class="xs b muted" style="letter-spacing:.05em;margin-top:4px">${x.slice(1).toUpperCase()}</div>` : `<div class="row" style="height:48px;border-bottom:1px solid var(--border);gap:14px"><i class="icon-${x[0]} muted" style="font-size:20px"></i><span style="font-size:15px">${x[1]}</span><span class="grow"></span><i class="icon-chevron-right muted"></i></div>`).join('')}`);
+const mSecurity = mobile({ back: true, title: 'Security', noTabs: true, theme: 'dark' }, `
+  <div class="m-card" style="padding:14px"><div class="b">Password</div><div class="small muted" style="margin:2px 0 10px">Changed Sep 23</div><div class="m-btn">Change password</div></div>
+  <div class="m-card" style="padding:14px"><div class="row"><i class="icon-key-round success-t" style="font-size:20px"></i><div class="grow"><div class="b">Recovery codes</div><div class="small muted">8 of 10 unused</div></div></div><div class="m-btn" style="margin-top:10px">Generate new codes</div></div>
+  <div class="m-card">${[['smartphone', 'Safari on iPhone', 'This device'], ['laptop', 'Chrome on Windows', '2h ago']].map(d => `<div class="m-row"><i class="icon-${d[0]} muted" style="font-size:20px"></i><div class="grow"><div class="b">${d[1]}</div><div class="small muted">${d[2]}</div></div></div>`).join('')}</div>
+  <div class="m-btn" style="color:var(--danger)">Sign out everywhere else</div>`);
+
+gallery('Account settings & extension tokens',
+  'Settings is split into focused pages with a local sub-navigation, not one long page. Raw recovery codes and extension tokens are shown exactly once. Extension tokens are workspace-bound, scoped, expiring and revocable; the list never shows the secret (prefix only).',
+  [
+    { title: 'Account', items: [
+      { cap: 'S1 · Profile', sub: '1440 · light · dirty state', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Profile' }, profile) },
+      { cap: 'S2 · Security', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'settings', crumb: 'Settings / Security' }, security) },
+      { cap: 'S3 · Regenerate recovery codes', sub: '1440 · light · invalidates old set', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Security', overlay: regen }, security) },
+      { cap: 'S4 · Email & phone', sub: '1440 · light · verified email, unverified phone, change flow', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Email & phone' }, contact) }
+    ]},
+    { title: 'Preferences', items: [
+      { cap: 'S5 · Appearance', sub: '1440 · light · System / Light / Dark', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Appearance' }, appearance) },
+      { cap: 'S6 · Follow-ups & reminders', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'settings', crumb: 'Settings / Follow-ups & reminders' }, followups) }
+    ]},
+    { title: 'Browser extension tokens', items: [
+      { cap: 'S7 · Extension tokens', sub: '1440 · light', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Browser extension' }, tokens()) },
+      { cap: 'S8 · Connect a browser', sub: '1440 · light · step 1', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Browser extension', overlay: newToken(false) }, tokens()) },
+      { cap: 'S9 · Token shown once', sub: '1440 · dark · step 2', html: shell({ theme: 'dark', active: 'settings', crumb: 'Settings / Browser extension', overlay: newToken(true) }, tokens()) },
+      { cap: 'S10 · Revoke token', sub: '1440 · light', html: shell({ theme: 'light', active: 'settings', crumb: 'Settings / Browser extension', overlay: revoke }, tokens()) }
+    ]},
+    { title: 'Mobile', items: [
+      { cap: 'S11 · More / settings index', sub: 'mobile · light', html: mSettings },
+      { cap: 'S12 · Security', sub: 'mobile · dark', html: mSecurity }
+    ]}
+  ]);
+</script></body></html>

@@ -1,0 +1,38 @@
+{
+  "run": "1e1652",
+  "started_at": "2026-09-26T15:24:50.819Z",
+  "target": "local",
+  "m10-01-preview-contract": {
+    "aliasesMapped": true,
+    "unknownHardError": true,
+    "ownershipHardError": true,
+    "duplicateDetected": true
+  },
+  "m10-02-owner-manager": {
+    "managerTargetCreated": true,
+    "regularPeerDenied": 403
+  },
+  "m10-03-history-rls": {
+    "ownerRows": 1,
+    "managerRows": 1,
+    "peerRows": 0,
+    "anonymousDenied": true,
+    "rawInputRetained": false
+  },
+  "m10-04-all-or-nothing": {
+    "status": "REJECTED",
+    "applicationDelta": 0,
+    "retainedOutcomes": 2
+  },
+  "m10-05-transaction-rollback": {
+    "routeStatus": 400,
+    "applicationDelta": 0,
+    "batchDelta": 0
+  },
+  "m10-06-exports": {
+    "csvTypes": 13,
+    "xlsx": 200,
+    "jsonWorkspaceScope": true,
+    "formulaNeutralized": true
+  }
+}

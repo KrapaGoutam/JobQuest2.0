@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "deployment_id": "dpl_iYzWoLZhSzGv41SgV4X4uMc4tuDJ",
+  "preview_url": "https://jobquest2-6t54bwyxd-one-piece-5779.vercel.app",
+  "files_scanned": 4,
+  "known_secret_values_checked": 0,
+  "findings": 0,
+  "completed_at": "2026-09-28T10:32:37.027Z"
+}

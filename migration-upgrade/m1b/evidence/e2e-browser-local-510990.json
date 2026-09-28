@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "base_url": "local",
+  "supabase_target": "local",
+  "requests_scanned": 199,
+  "data_responses_scanned": 43,
+  "code_modules_skipped": 78,
+  "network_hits": [],
+  "harness_self_check": {
+    "refreshTokenReadableByScript": false,
+    "accessTokenInWebStorage": false,
+    "credentialMaterialInPage": false,
+    "identityClaimsInJwt": false,
+    "supabaseAuthUserEndpointRevealsIdentity": false
+  },
+  "auth_v1_user_probe": {
+    "status": 403,
+    "bodyKeys": [
+      "code",
+      "error_code",
+      "msg"
+    ]
+  },
+  "surfaces": {
+    "localStorage": false,
+    "sessionStorage": false,
+    "documentCookie": false,
+    "reactState": false,
+    "html": false,
+    "localStorageKeys": [],
+    "sessionStorageKeys": []
+  },
+  "console_contains_forbidden": false,
+  "refresh_cookie": {
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Strict",
+    "path": "/api/auth"
+  },
+  "cookie_names": [
+    "jq_rt (HttpOnly)",
+    "jq_csrf"
+  ],
+  "direct_data_api_calls_from_browser": [
+    "GET /rest/v1/applications",
+    "GET /rest/v1/workflow_definitions",
+    "GET /rest/v1/workspace_members",
+    "HEAD /rest/v1/applications",
+    "POST /rest/v1/applications",
+    "POST /rest/v1/rpc/rpc_list_workspace_members",
+    "POST /rest/v1/rpc/rpc_move_application_stage"
+  ]
+}

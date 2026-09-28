@@ -1,0 +1,84 @@
+{
+  "evidence": {
+    "run": "73808ee5",
+    "started_at": "2026-09-28T02:44:12.307Z",
+    "browser": "playwright chromium persistent context",
+    "package": "jobquest-capture-dev",
+    "target": "vercel-preview",
+    "base_origin": "https://jobquest2-4s4ifimlx-one-piece-5779.vercel.app",
+    "reused_account": false,
+    "extension_loaded": true,
+    "manifest_version": 3,
+    "keyboard_focus_verified": true,
+    "token_created_through_settings": true,
+    "token_raw_revealed_once": true,
+    "local_storage_persisted": true,
+    "extraction_ms": 45,
+    "live_content_script_extraction": true,
+    "popup_ready_ms": 1506,
+    "workflow_loaded": true,
+    "duplicate_api_ms": 1290,
+    "capture_api_ms": 877,
+    "capture_succeeded": true,
+    "deep_link_verified": true,
+    "duplicate_popup_ms": 2977,
+    "rotation_enforced": true,
+    "revocation_enforced": true,
+    "a11y_contexts": 6,
+    "a11y_critical": 0,
+    "a11y_serious": 0,
+    "a11y_blocking": 0,
+    "completed_at": "2026-09-28T02:44:39.434Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "popup-unconfigured",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "extension-options-connected-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-ready-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-capture-success",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-exact-duplicate-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "popup-revoked-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    }
+  ]
+}

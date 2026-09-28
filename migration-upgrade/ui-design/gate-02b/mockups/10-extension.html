@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.px-h{height:48px;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--border);background:var(--surface);border-radius:10px 10px 0 0}
+.mk{width:24px;height:24px;border-radius:6px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.px-b{padding:12px;display:flex;flex-direction:column;gap:10px}.px-f{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--surface);border-radius:0 0 10px 10px}
+.px .input{height:32px}.px .field{gap:3px}.px .label{font-size:11px}
+.det{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.opt2{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px}.opt2.on{border-color:var(--primary);background:var(--primary-soft)}
+.miss{border-color:var(--warning)!important;background:var(--warning-soft)!important}</style>
+</head><body><script>
+const { gallery } = JQ;
+const ws = (n = 'Personal', c = 'oklch(0.52 0.13 265)') => `<span class="row xs b" style="height:24px;padding:0 8px;border:1px solid var(--border);border-radius:12px;gap:5px;margin-left:auto"><span style="width:7px;height:7px;border-radius:2px;background:${c}"></span>${n}</span>`;
+const head = (w = true) => `<div class="px-h"><span class="mk">JQ</span><b>JobQuest Capture</b>${w ? ws() : '<span class="grow"></span>'}<span class="ibtn ghost" style="width:28px;height:28px"><i class="icon-settings"></i></span></div>`;
+const frame = (theme, body, foot) => `<div data-jq class="frame-x px" data-theme="${theme}">${head(!/NOHEAD-WS/.test(body))}<div class="px-b">${body.replace('NOHEAD-WS', '')}</div>${foot ? `<div class="px-f">${foot}</div>` : ''}</div>`;
+const f = (l, v, o = {}) => `<div class="field"><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.det ? `<span class="det" style="margin-left:auto;font-weight:400">${o.det}</span>` : ''}</label><div class="input ${o.cls || ''}">${v}</div>${o.help ? `<div class="help" style="font-size:11px">${o.help}</div>` : ''}</div>`;
+
+const fields = (o = {}) => `
+  <div class="det"><i class="icon-scan-search"></i>${o.src || 'Detected from Greenhouse · structured data'}</div>
+  ${f('Company', o.co === '' ? '<span class="muted">Not found on this page</span>' : (o.co || 'Corvid Labs'), { req: true, cls: o.co === '' ? 'miss' : '' , help: o.co === '' ? '<span class="warning-t">Fill in the company. We never guess it.</span>' : '' })}
+  ${f('Role', o.role || 'Staff Product Designer', { req: true })}
+  <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:8px">${f('Location', o.loc === '' ? '<span class="muted">—</span>' : 'Seattle, WA')}${f('Work', o.loc === '' ? '<span class="muted">—</span>' : 'Hybrid · Full-time')}</div>
+  <div class="row small" style="gap:6px;min-width:0"><i class="icon-link muted"></i><span class="ell muted">${o.url || 'careers.corvidlabs.example/jobs/2291'}</span><span class="grow"></span><span class="pill muted">Req CRV-2291</span></div>`;
+
+const workflow = (sel = 'applied') => `<div class="field"><label class="label">Save as</label><div class="fgrid" style="grid-template-columns:1fr 1fr;gap:6px">
+  <div class="opt2 ${sel === 'saved' ? 'on' : ''}"><span class="radio ${sel === 'saved' ? 'on' : ''}"></span><div><div class="b small">Save for later</div><div class="xs muted">Stage: Saved</div></div></div>
+  <div class="opt2 ${sel === 'applied' ? 'on' : ''}"><span class="radio ${sel === 'applied' ? 'on' : ''}"></span><div><div class="b small">I applied</div><div class="xs muted">Stage: Applied · today</div></div></div></div>
+  <div class="xs muted row" style="gap:4px"><i class="icon-refresh-cw"></i>Stages loaded from JobQuest · <a>other stage</a></div></div>`;
+const resume = `<div class="fgrid" style="grid-template-columns:1fr 1fr;gap:8px">${f('Resume', 'Product v3<i class="icon-chevron-down muted" style="margin-left:auto"></i>')}${f('Next action', '<span class="muted">Optional</span>')}</div>`;
+const snap = `<div class="row small" style="gap:6px;padding:8px 10px;background:var(--surface-muted);border-radius:7px"><i class="icon-file-text muted"></i><span class="grow">Job snapshot: description, 11 requirements, 6 skills</span><a class="xs">Preview</a></div>`;
+
+const dup = (lvl) => {
+  const L = { strong: ['danger', 'copy', 'Strong duplicate', 'Same job URL and requisition ID'], probable: ['warning', 'triangle-alert', 'Probable duplicate', 'Same company and role'], possible: ['info', 'info', 'Possible', '2 other roles at this company'], saved: ['info', 'bookmark', 'Already in your Saved list', 'Same job URL'] }[lvl];
+  return `<div class="banner ${L[0]}" style="flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px" role="${lvl === 'possible' ? 'status' : 'alert'}">
+    <div class="row"><i class="icon-${L[1]} ${L[0]}-t"></i><b class="small">${L[2]}</b><span class="pill ${L[0]}" style="margin-left:auto">${lvl === 'saved' ? 'Saved' : L[2].split(' ')[0]}</span></div>
+    <div class="xs muted">Why: ${L[3]}</div>
+    ${lvl === 'possible' ? '<div class="small">Design Systems Designer <span class="muted">· Offer</span><br>UX Researcher <span class="muted">· Rejected at Interview</span></div>' :
+    `<div class="row" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 9px;gap:8px"><span class="tile">C</span><div class="grow" style="min-width:0"><div class="b small ell">Staff Product Designer</div><div class="xs muted ell">${lvl === 'saved' ? 'Saved Sep 20 · not applied yet' : lvl === 'strong' ? 'Final Interview · Open · applied Sep 01' : 'Recruiter Screen · Open · applied Sep 14 · Boston'}</div></div></div>`}</div>`;
+};
+
+const F = {
+  ready: [fields() + workflow() + resume + snap + `<div class="row small success-t" style="gap:6px" role="status"><i class="icon-circle-check"></i>No duplicates found in Personal</div>`, `<span class="btn">Cancel</span><span class="btn primary grow"><i class="icon-download"></i>Save to JobQuest</span>`],
+  partial: [fields({ co: '', src: 'Detected from page content · low confidence', loc: '' }) + workflow('saved') + `<div class="banner warning small" style="padding:8px 10px"><i class="icon-scan-search warning-t"></i><span>Some details weren't found. Check them before saving.</span></div>`, `<span class="btn">Cancel</span><span class="btn primary grow disabled">Save to JobQuest</span>`],
+  strong: [dup('strong') + fields() + workflow(), `<span class="btn">Cancel</span><span class="btn">View existing</span><span class="btn danger-o grow">Save anyway</span>`],
+  probable: [dup('probable') + fields({ loc: 'x' }).replace('Seattle, WA', 'Remote · US') + workflow(), `<span class="btn">Cancel</span><span class="btn">View existing</span><span class="btn primary grow">Save anyway</span>`],
+  possible: [fields({ co: 'Tessellate', role: 'Senior Product Designer', url: 'tessellate.example/careers/412' }).replace('Req CRV-2291', 'LinkedIn') + dup('possible') + workflow(), `<span class="btn">Cancel</span><span class="btn primary grow"><i class="icon-download"></i>Save to JobQuest</span>`],
+  saved: [dup('saved') + `<div class="small">You saved this posting on Sep 20. Applying now? Open it in JobQuest and use <b>Move stage › Applied</b> so the change is recorded.</div>`, `<span class="btn">Close</span><span class="btn primary grow"><i class="icon-external-link"></i>Open in JobQuest</span>`],
+  success: [`<div class="col" style="align-items:center;text-align:center;gap:8px;padding:16px 0 8px"><span class="tile lg" style="background:var(--success-soft);color:var(--success);border-radius:50%"><i class="icon-check"></i></span><div style="font-size:16px;font-weight:600">Saved to Personal</div><div class="small muted">Corvid Labs · Staff Product Designer<br>Stage: Applied · job snapshot saved</div></div>
+    <div class="banner neutral small" style="padding:8px 10px"><i class="icon-bell-ring muted"></i><span>Follow-up reminder set for <b>Sep 30</b></span></div>`, `<span class="btn">Capture another</span><span class="btn primary grow"><i class="icon-external-link"></i>Open application</span>`],
+  notconn: [`NOHEAD-WS<div class="col" style="gap:4px;padding:6px 0"><div style="font-size:16px;font-weight:600">Connect to JobQuest</div><div class="small muted">Paste a token from <b>Settings › Browser extension</b> in JobQuest. Your password is never used here.</div></div>
+    ${f('JobQuest address', 'app.jobquest.example<i class="icon-chevron-down muted" style="margin-left:auto"></i>', { help: 'Production · Development · Custom (https only)' })}
+    ${f('Token', '<span class="mono muted">jqx_live_…</span>', { cls: 'focus' })}
+    <a class="small row" style="gap:4px"><i class="icon-external-link"></i>Open JobQuest to create a token</a>`, `<span class="btn primary grow"><i class="icon-plug"></i>Connect</span>`],
+  expired: [`<div class="banner danger" style="align-items:flex-start;padding:10px 12px" role="alert"><i class="icon-plug-zap danger-t" style="margin-top:2px"></i><div><b class="small">Connection expired</b><div class="small muted">This browser's token expired on Sep 22 or was revoked. Nothing was saved.</div></div></div>
+    ${fields()}<div class="xs muted row" style="gap:4px"><i class="icon-hard-drive"></i>Details are kept on this device until you reconnect.</div>`, `<span class="btn">Cancel</span><span class="btn primary grow"><i class="icon-plug"></i>Reconnect</span>`],
+  offline: [`<div class="banner danger" style="align-items:flex-start;padding:10px 12px" role="alert"><i class="icon-cloud-off danger-t" style="margin-top:2px"></i><div><b class="small">Can't reach JobQuest</b><div class="small muted">The server didn't respond. Check your connection and try again.</div></div></div>${fields()}`, `<span class="btn">Cancel</span><span class="btn grow"><i class="icon-refresh-cw"></i>Try again</span>`],
+  checkerr: [fields() + workflow() + `<div class="banner warning small" style="padding:8px 10px;align-items:flex-start" role="status"><i class="icon-circle-help warning-t" style="margin-top:2px"></i><span><b>Couldn't check for duplicates.</b> This isn't the same as "no duplicate". You can still save, or <a>retry</a>.</span></div>`, `<span class="btn">Cancel</span><span class="btn primary grow">Save anyway</span>`],
+  wferr: [fields() + `<div class="banner danger small" style="padding:8px 10px;align-items:flex-start" role="alert"><i class="icon-list-x danger-t" style="margin-top:2px"></i><span><b>Couldn't load your stages.</b> Saving is paused so we never send a stage JobQuest doesn't recognise. <a>Retry</a></span></div>`, `<span class="btn">Cancel</span><span class="btn primary grow disabled">Save to JobQuest</span>`],
+  unsupported: [`<div class="col" style="align-items:center;text-align:center;gap:8px;padding:18px 6px 6px"><span class="tile lg"><i class="icon-search-x"></i></span><div style="font-size:15px;font-weight:600">No job posting found</div><div class="small muted">This page doesn't look like a job posting (linkedin.com/feed). Open a specific job, or enter it yourself.</div></div>`, `<span class="btn grow">Enter manually</span><span class="btn primary grow"><i class="icon-external-link"></i>Open JobQuest</span>`]
+};
+const X = (id, name, sub, key, theme) => ({ cap: `${id} · ${name}`, sub: `380 · ${theme}${sub ? ' · ' + sub : ''}`, html: frame(theme, F[key][0], F[key][1]) });
+
+gallery('Browser extension popup · JobQuest Capture',
+  'A compact popup in the same visual language (tokens, type, controls) without the app shell. Extraction is unchanged from JobQuest 1.0 (5-tier hierarchy; never fabricates fields). The workspace comes from the token. Stages come live from JobQuest\'s canonical workflow (no local stage list). Duplicate levels follow BL-003, and a failed check is never shown as "no duplicate".',
+  [
+    { title: 'Connection', items: [X('X1', 'Not connected', 'token setup, dev/prod address', 'notconn', 'light'), X('X2', 'Connection expired / revoked', '', 'expired', 'dark'), X('X3', 'API unavailable', '', 'offline', 'light')] },
+    { title: 'Capture', items: [X('X4', 'Job detected · ready', '', 'ready', 'light'), X('X5', 'Job detected · ready', '', 'ready', 'dark'), X('X6', 'Partially detected', 'required field missing', 'partial', 'light'), X('X7', 'Unsupported page', '', 'unsupported', 'dark'), X('X8', 'Capture success', '', 'success', 'light')] },
+    { title: 'Duplicates & errors', items: [X('X9', 'Strong duplicate', '', 'strong', 'light'), X('X10', 'Probable duplicate', '', 'probable', 'dark'), X('X11', 'Possible (info only)', '', 'possible', 'light'), X('X12', 'Already saved', 'same posting in Saved', 'saved', 'light'), X('X13', 'Duplicate check failed', 'CHECK_ERROR', 'checkerr', 'dark'), X('X14', 'Workflow load failed', 'save disabled', 'wferr', 'light')] }
+  ]);
+</script></body></html>

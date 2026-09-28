@@ -1,0 +1,36 @@
+{
+  "run": "343149",
+  "started_at": "2026-09-25T19:29:35.790Z",
+  "target": "hosted-dev",
+  "m8-01-goals-upsert": {
+    "goalId": "e8ddc799-eb22-4748-be94-ec6a1960b290",
+    "target": 25
+  },
+  "m8-02-peer-isolation": {
+    "peerBobBlocked": true
+  },
+  "m8-03-manager-audit": {
+    "audited": true,
+    "actor": "b8da7765-9a8d-4758-ab6b-8cd873c2b02c"
+  },
+  "m8-04-historical-funnel": {
+    "interviewCount": 1,
+    "interviewFunnel": 1
+  },
+  "m8-05-pipeline-vs-funnel": {
+    "appliedInPipeline": 1,
+    "outcomes": 1
+  },
+  "m8-06-stage-timing": {
+    "transitionsCount": 6,
+    "stuckFound": true
+  },
+  "m8-07-manager-filtering": {
+    "aggTotal": 3,
+    "bobTotal": 1
+  },
+  "m8-08-anonymous-and-foreign-denial": {
+    "anonDenied": true,
+    "foreignDenied": true
+  }
+}

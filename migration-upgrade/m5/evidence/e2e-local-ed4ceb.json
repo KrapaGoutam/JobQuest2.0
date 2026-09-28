@@ -1,0 +1,88 @@
+{
+  "evidence": {
+    "target": "local",
+    "run": "ed4ceb",
+    "started_at": "2026-09-25T07:18:08.778Z",
+    "browser_time_zone": "Europe/Berlin",
+    "E2E-01-route-empty": "PASS",
+    "E2E-02-schedule": "PASS",
+    "E2E-03-dst": {
+      "cst_after_fall_back": "PASS",
+      "spring_forward_gap_rejected": "PASS"
+    },
+    "E2E-04-preparation": "PASS",
+    "E2E-05-edit": "PASS",
+    "E2E-06-profile-timezone": {
+      "chicago": "3:00 PM",
+      "kolkata": "1:30 AM",
+      "browser_zone_ignored": true
+    },
+    "E2E-07-explicit-stage-move": "PASS",
+    "E2E-08-debrief": "PASS",
+    "E2E-09-keyboard": "PASS",
+    "E2E-10-error-retry": "PASS",
+    "E2E-11-mobile": {
+      "overflow_px": 0
+    },
+    "completed_at": "2026-09-25T07:18:25.500Z",
+    "status": "PASS"
+  },
+  "a11y": [
+    {
+      "context": "schedule-form",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "interview-detail",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "interviews-list",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "interviews-list-dark",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "debrief-form",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "application-drawer-interviews",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    },
+    {
+      "context": "mobile-interview",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "violations": [],
+      "blocking": 0
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.lane{width:252px;flex:none;display:flex;flex-direction:column;background:var(--surface-muted);border-radius:8px;min-height:0}
+.lane-h{height:38px;display:flex;align-items:center;gap:6px;padding:0 10px;font-weight:600;position:sticky;top:0}
+.bcard{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;margin:0 8px 6px}
+.bcard.focus{outline:2px solid var(--focus);outline-offset:1px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:28px repeat(5,minmax(0,1fr));min-height:0;border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.cal>div{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:0;overflow:hidden;padding:4px 5px;display:flex;flex-direction:column;gap:2px;background:var(--surface)}
+.cal .dh{min-height:0;height:28px;background:var(--surface-muted);font-size:12px;font-weight:600;color:var(--muted);align-items:center;justify-content:center;flex-direction:row}
+.cal .o{background:var(--bg);color:var(--muted)}.cal .t{box-shadow:inset 0 0 0 2px var(--primary)}
+.ev{font-size:11px;height:19px;border-radius:4px;padding:0 5px;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden}
+.ev.iv{background:var(--primary-soft);color:var(--primary)}.ev.fu{background:var(--info-soft);color:var(--info)}.ev.na{background:var(--surface-muted);color:var(--fg)}.ev.od{background:var(--danger-soft);color:var(--danger)}.ev.dl{background:var(--warning-soft);color:var(--warning)}
+.gt{display:grid;grid-template-columns:260px 1fr;border-bottom:1px solid var(--border);height:40px;align-items:center}
+.gbar{position:absolute;height:14px;top:13px;display:flex;border-radius:3px;overflow:hidden}.gbar i{display:block;height:100%}</style>
+</head><body><script>
+const { shell, mobile, gallery, pips, pri, aging, outcome } = JQ;
+const tabs = sel => `<div class="tabs" role="tablist">${[['All active', '457'], ['Needs follow-up', '7', 'danger'], ['Interviewing', '11'], ['Saved', '38'], ['Archived', '143']].map(t => `<span class="tab ${t[0] === sel ? 'sel' : ''}">${t[0]} <span class="cnt ${t[2] || ''}">${t[1]}</span></span>`).join('')}<span class="tab" style="color:var(--primary)"><i class="icon-plus"></i>Save view</span></div>`;
+const vswitch = on => `<div class="row" style="border:1px solid var(--border-strong);border-radius:7px;overflow:hidden;height:30px;gap:0" role="radiogroup" aria-label="View">${[['table', 'Table'], ['square-kanban', 'Board'], ['calendar', 'Calendar'], ['chart-gantt', 'Timeline']].map(v => `<span class="row" style="height:30px;padding:0 9px;gap:5px;${v[1] === on ? 'background:var(--surface-3);font-weight:600' : 'color:var(--muted)'};border-left:1px solid var(--border)" role="radio" aria-checked="${v[1] === on}"><i class="icon-${v[0]}"></i>${v[1] === on ? v[1] : ''}</span>`).join('')}</div>`;
+const filters = (on, extra) => `<div class="row" style="gap:6px;padding:8px 0 2px"><div class="input ph" style="width:200px;height:32px"><i class="icon-list-filter"></i>Filter this view</div><span class="chip on">Outcome: Open<i class="icon-x"></i></span><span class="chip add"><i class="icon-plus"></i>Stage</span><span class="chip add"><i class="icon-plus"></i>Priority</span><span class="chip add"><i class="icon-plus"></i>Aging</span><span class="chip add"><i class="icon-sliders-horizontal"></i>More</span>${extra || ''}<span class="grow"></span>${vswitch(on)}<span class="ibtn"><i class="icon-settings-2"></i></span></div>`;
+const title = (right) => `<div class="page-title"><h1>Applications</h1><span class="muted">457 active · 600 total</span><span class="spacer"></span>${right || '<span class="btn"><i class="icon-download"></i>Export</span>'}</div>`;
+
+/* ---------- Board ---------- */
+const BD = {
+  'Saved': [38, [['Kestrel Insurance', 'UX Lead', 'Tailor resume', 'Sep 28', '', 'Low', 'New', '2d'], ['Fernway Studio', 'Product Designer', 'Research team', 'Oct 01', '', 'Medium', 'Waiting', '5d'], ['Orchard Labs', 'Design Lead', 'No next action', '', '', 'Medium', 'Follow-Up Recommended', '12d']]],
+  'Preparing': [12, [['Oakridge Energy', 'Senior UX Researcher', 'Tailor resume & apply', 'Today', 'warning', 'Medium', 'Waiting', '4d'], ['Pinecrest Bank', 'Product Designer', 'Portfolio pick', 'Sep 26', '', 'Low', 'New', '1d']]],
+  'Applied': [96, [['Northwind Analytics', 'Product Designer II', 'Send 2nd follow-up', '5d overdue', 'danger', 'Medium', 'Stale', '16d'], ['Meridian Bank', 'UX Designer', 'Final follow-up or close', '4d overdue', 'danger', 'Medium', 'Stale', '21d'], ['Aster Mobility', 'Principal Designer', 'Ask Jonah for intro', '2d overdue', 'danger', 'High', 'Follow-Up Recommended', '11d'], ['Sable & Co.', 'Product Designer', '1st follow-up', 'Sep 29', '', 'Medium', 'Follow-Up Recommended', '8d']]],
+  'Assessment': [9, [['Parallax Games', 'Product Designer', 'Submit design exercise', 'Sep 29', '', 'Low', 'Waiting', '6d']]],
+  'Recruiter Screen': [14, [['Halcyon Health', 'Senior Product Designer', 'Prep recruiter call', 'Tomorrow', '', 'High', 'New', '2d'], ['Lumen Civic', 'Senior Designer', 'Follow up with hiring manager', '1d overdue', 'danger', 'Medium', 'Follow-Up Recommended', '9d'], ['Quarry Health', 'Senior Product Designer', 'Schedule screen', 'Tomorrow', '', 'Medium', 'New', '1d']]],
+  'Interview': [8, [['Brightline Freight', 'Lead UX Designer', 'Portfolio review prep', 'Sep 25', '', 'High', 'New', 'today']]],
+  'Final Interview': [3, [['Corvid Labs', 'Staff Product Designer', 'Send thank-you note', 'Today', 'warning', 'High', 'New', '1d']]],
+  'Offer': [1, [['Tessellate', 'Design Systems Designer', 'Review offer terms', 'Sep 28', '', 'High', 'New', '1d']]]
+};
+const dueChip = (d, c) => !d ? '<span class="muted" style="font-style:italic">No next action</span>' : c === 'danger' ? `<span class="danger-t b row" style="gap:3px"><i class="icon-triangle-alert"></i>${d}</span>` : c === 'warning' ? `<span class="warning-t b row" style="gap:3px"><i class="icon-clock"></i>${d}</span>` : `<span class="muted row" style="gap:3px"><i class="icon-calendar"></i>${d}</span>`;
+const bcard = (c, focus, mgr) => `<div class="bcard ${focus ? 'focus' : ''}" tabindex="0"><div class="row"><span class="tile" style="width:20px;height:20px;font-size:10px">${c[0][0]}</span><b class="ell grow">${c[0]}</b>${mgr ? '<span class="av" style="width:20px;height:20px;font-size:8px">DP</span>' : `<span class="pri">${[1, 2, 3].map(i => `<i class="${i <= { High: 3, Medium: 2, Low: 1 }[c[5]] ? 'on' : ''}"></i>`).join('')}</span>`}</div>
+  <div class="small muted ell">${c[1]}</div><div class="row small" style="gap:6px;min-width:0"><span class="ell grow">${c[2]}</span>${c[3] ? dueChip(c[3], c[4]) : ''}</div><div class="xs">${aging(c[6], c[7])}</div>${focus ? '<div class="row" style="gap:6px;margin-top:2px"><span class="btn sm grow"><i class="icon-arrow-right"></i>Move to…</span><span class="btn sm"><i class="icon-eye"></i></span></div>' : ''}</div>`;
+const board = mgr => `<div class="page" style="gap:6px;padding:16px 0 0 24px">
+  <div style="padding-right:20px">${title()}</div><div style="padding-right:20px">${tabs('All active')}</div><div style="padding-right:20px">${filters('Board', mgr ? '<span class="chip"><i class="icon-user-round"></i>Owner: All members<i class="icon-chevron-down"></i></span>' : '')}</div>
+  <div class="row small muted" style="gap:10px;padding-right:20px"><span>Cards per column: 15 · sorted by next action</span><span class="grow"></span><span>Group cards</span><span class="chip sm">None<i class="icon-chevron-down"></i></span><span class="chip sm"><i class="icon-eye-off"></i>Closed outcomes hidden (143)</span></div>
+  <div class="row" style="gap:10px;align-items:stretch;flex:1;min-height:0;overflow:hidden">
+    ${Object.keys(BD).map((k, ki) => `<div class="lane"><div class="lane-h">${pips([1, 1, 2, 2, 3, 4, 4, 5][ki])}<span class="ell">${k}</span><span class="cnt">${BD[k][0]}</span><span class="grow"></span><i class="icon-chevrons-left-right muted" title="Collapse"></i></div>
+      <div style="overflow:hidden;flex:1">${BD[k][1].map((c, i) => bcard(c, k === 'Applied' && i === 1, mgr)).join('')}${BD[k][0] > BD[k][1].length ? `<div class="small" style="padding:4px 10px"><a>Show ${Math.min(15, BD[k][0]) - BD[k][1].length} more</a> <span class="muted">· ${BD[k][0]} total</span></div>` : ''}</div></div>`).join('')}
+  </div>
+  <div class="toast" style="left:560px;bottom:24px;position:absolute" role="status"><i class="icon-keyboard"></i>Moving Meridian Bank: ← → choose stage · Enter to drop · Esc to cancel</div></div>`;
+
+/* ---------- Calendar ---------- */
+const days = [];
+for (let d = -1; d < 34; d++) days.push(d);
+const EV = { 1: [['fu', 'reply', 'Follow-up · Sable']], 2: [['iv', 'calendar-check', 'Recruiter screen · Quarry']], 7: [['na', 'flag', 'Portfolio pick · Pinecrest']], 15: [['iv', 'calendar-check', 'Interview · Corvid']], 18: [['od', 'triangle-alert', 'Send 2nd follow-up · Northwind'], ['od', 'triangle-alert', 'Final follow-up · Meridian']], 22: [['iv', 'calendar-check', 'Final panel · Corvid'], ['od', 'triangle-alert', 'Follow up · Lumen']], 23: [['na', 'flag', 'Thank-you note · Corvid'], ['dl', 'hourglass', 'Tailor & apply · Oakridge'], ['fu', 'reply', 'Coffee chat · Ana Liu'], ['na', 'flag', '+1 more']], 24: [['iv', 'calendar-check', '2:30 Recruiter · Halcyon']], 25: [['iv', 'calendar-check', '11:00 Portfolio · Brightline'], ['dl', 'hourglass', 'Posting closes · Oakridge']], 28: [['iv', 'calendar-check', '10:00 Offer call · Tessellate'], ['fu', 'reply', 'Follow-up · Halcyon']], 29: [['na', 'flag', 'Design exercise · Parallax'], ['fu', 'reply', '1st follow-up · Sable']], 30: [['iv', 'calendar-check', '3:00 Exercise · Parallax'], ['na', 'flag', 'Follow up decision · Corvid']] };
+const calendar = (standalone) => `<div class="page" style="gap:8px;padding:16px 24px 0">
+  ${standalone ? `<div class="page-title"><h1>Calendar</h1><span class="muted">Interviews, follow-ups, next actions and deadlines</span><span class="spacer"></span><span class="seg"><span class="on">Month</span><span>Week</span><span>Agenda</span></span></div>` : title() + tabs('All active') + filters('Calendar')}
+  <div class="row" style="gap:8px"><span class="ibtn"><i class="icon-chevron-left"></i></span><span class="ibtn"><i class="icon-chevron-right"></i></span><b style="font-size:16px">September 2026</b><span class="btn sm">Today</span><span class="grow"></span>
+    ${[['iv', 'calendar-check', 'Interviews'], ['fu', 'reply', 'Follow-ups'], ['na', 'flag', 'Next actions'], ['dl', 'hourglass', 'Deadlines'], ['od', 'triangle-alert', 'Overdue']].map(l => `<span class="ev ${l[0]}" style="height:24px;font-size:12px;padding:0 8px"><i class="icon-${l[1]}"></i>${l[2]}</span>`).join('')}
+    ${standalone ? '<span class="chip sm"><i class="icon-list-filter"></i>Also: Tasks, Reminders, Goals</span>' : ''}</div>
+  <div style="display:grid;grid-template-columns:1fr ${standalone ? '300px' : '0'};gap:${standalone ? 12 : 0}px;flex:1;min-height:0">
+  <div class="cal">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<div class="dh">${d}</div>`).join('')}
+    ${days.map(d => { const n = d < 0 ? 31 : d >= 30 ? d - 29 : d + 1; const o = d < 0 || d >= 30; const e = o ? [] : (EV[n] || []); return `<div class="${o ? 'o' : ''} ${n === 23 && !o ? 't' : ''}"><span class="small ${n === 23 && !o ? 'b primary-t' : ''}">${n}</span>${e.map(x => `<span class="ev ${x[0]}"><i class="icon-${x[1]}"></i><span class="ell">${x[2]}</span></span>`).join('')}</div>`; }).join('')}
+  </div>
+  ${standalone ? `<div class="card" style="overflow:hidden"><div class="card-h"><span class="card-t">Wed, Sep 23 · Today</span></div><div class="col" style="padding:8px 14px;gap:10px">
+    ${[['flag', 'Send thank-you note', 'Corvid Labs · next action', 'warning'], ['hourglass', 'Tailor resume & apply', 'Oakridge · posting closes Sep 25', ''], ['reply', 'Coffee chat with Ana Liu', '4:30 PM · networking', '']].map(e => `<div class="row" style="align-items:flex-start"><i class="icon-${e[0]} muted" style="margin-top:3px"></i><div><div class="b">${e[1]}</div><div class="small muted">${e[2]}</div></div></div>`).join('')}
+    <div class="hr"></div><div class="small muted">Click a day to see it here. Items open their application, contact or task.</div></div></div>` : ''}</div></div>`;
+
+/* ---------- Timeline (Gantt) ---------- */
+const STC = ['var(--border-strong)', 'color-mix(in oklch,var(--primary) 35%,var(--surface))', 'color-mix(in oklch,var(--primary) 55%,var(--surface))', 'color-mix(in oklch,var(--primary) 75%,var(--surface))', 'var(--primary)'];
+const TODAY = 8.3; // weeks since Jul 27
+// [company, role, segments [[stageIdx, endWeek]...], start week, interview weeks, outcome, stage label]
+const G = [
+  ['Corvid Labs', 'Staff Product Designer', [[2, 1.4], [4, 2.1], [5, 3.1], [6, TODAY]], 0.5, [3.0, 7.9], '', 'Final Interview'],
+  ['Tessellate', 'Design Systems Designer', [[2, 3.4], [4, 5.4], [5, 7.4], [7, TODAY]], 2.2, [6.9], '', 'Offer'],
+  ['Brightline Freight', 'Lead UX Designer', [[2, 4.6], [4, 6.2], [5, TODAY]], 3.5, [7.4], '', 'Interview'],
+  ['Halcyon Health', 'Senior Product Designer', [[2, 7.1], [4, TODAY]], 5.0, [], '', 'Recruiter Screen'],
+  ['Juniper Transit', 'UX Designer', [[2, 1.8], [4, 3.3]], 0.2, [], 'Ghosted', 'Recruiter Screen'],
+  ['Northwind Analytics', 'Product Designer II', [[2, TODAY]], 5.9, [], '', 'Applied'],
+  ['Lumen Civic', 'Senior Designer', [[2, 6.3], [4, TODAY]], 3.2, [], '', 'Recruiter Screen'],
+  ['Harbor Logistics', 'Product Designer', [[2, 2.9], [5, 4.1]], 1.0, [3.9], 'Rejected', 'Interview'],
+  ['Meridian Bank', 'UX Designer', [[2, TODAY]], 5.1, [], '', 'Applied'],
+  ['Quarry Health', 'Senior Product Designer', [[2, 7.7], [4, TODAY]], 6.3, [], '', 'Recruiter Screen'],
+  ['Parallax Games', 'Product Designer', [[2, 6.7], [3, TODAY]], 5.4, [], '', 'Assessment'],
+  ['Vantage Retail', 'Product Designer', [[2, 0.9]], 0.05, [], 'Withdrawn', 'Applied']];
+const SHADE = i => ['var(--border-strong)', 'var(--border-strong)', 'color-mix(in oklch,var(--primary) 30%,var(--surface))', 'color-mix(in oklch,var(--primary) 45%,var(--surface))', 'color-mix(in oklch,var(--primary) 55%,var(--surface))', 'color-mix(in oklch,var(--primary) 72%,var(--surface))', 'color-mix(in oklch,var(--primary) 86%,var(--surface))', 'var(--primary)'][i];
+const WK = 62, X = w => w * WK;
+const timeline = `<div class="page" style="gap:6px;padding:16px 20px 0 24px">${title()}${tabs('All active')}${filters('Timeline', '<span class="chip sm"><i class="icon-zoom-in"></i>Weeks</span>').replace('Outcome: Open', 'Outcome: Any')}
+  <div class="banner neutral small" style="padding:6px 12px"><i class="icon-info muted"></i><span>Each bar is one application's life from applied to today or its outcome. <b>Darker = later stage</b>; <span class="row" style="display:inline-flex;gap:3px"><i class="icon-calendar-check"></i>= interview</span>. For every event on one application, open its detail timeline.</span></div>
+  <div class="tbl" style="flex:1;min-height:0">
+    <div class="gt" style="height:34px;background:var(--surface-muted);font-size:12px;font-weight:600;color:var(--muted)"><span style="padding:0 12px">Application</span><div class="row" style="gap:0;overflow:hidden">${['Jul 27', 'Aug 3', 'Aug 10', 'Aug 17', 'Aug 24', 'Aug 31', 'Sep 7', 'Sep 14', 'Sep 21', 'Sep 28', 'Oct 5', 'Oct 12', 'Oct 19', 'Oct 26'].map(w => `<span style="width:${WK}px;flex:none;border-left:1px solid var(--border);padding-left:4px">${w}</span>`).join('')}</div></div>
+    ${G.map(g => { let prev = g[3]; const segs = g[2].map(sg => { const h = `<i style="position:absolute;left:${X(prev)}px;width:${X(sg[1] - prev)}px;top:13px;height:14px;background:${g[5] ? 'var(--border-strong)' : SHADE(sg[0])}"></i>`; prev = sg[1]; return h; }).join('');
+      const end = g[2][g[2].length - 1][1];
+      return `<div class="gt"><div class="row" style="padding:0 12px;gap:8px;min-width:0"><span class="tile" style="width:20px;height:20px;font-size:10px">${g[0][0]}</span><div class="grow" style="min-width:0"><div class="b ell small">${g[0]}</div><div class="xs muted ell">${g[1]}</div></div><span class="xs muted nowrap">${g[6]}</span></div>
+      <div style="position:relative;height:40px;overflow:hidden;background:repeating-linear-gradient(90deg,var(--border) 0 1px,transparent 1px ${WK}px)">
+        <div style="position:absolute;left:${X(TODAY)}px;top:0;bottom:0;width:2px;background:var(--danger)"></div>${segs}
+        ${g[4].map(m => `<i class="icon-calendar-check" style="position:absolute;top:12px;left:${X(m) - 7}px;font-size:14px;color:var(--fg);background:var(--surface);border-radius:3px"></i>`).join('')}
+        ${g[5] ? `<span style="position:absolute;top:11px;left:${X(end) + 6}px;font-size:11px" class="nowrap">${outcome(g[5])}</span>` : ''}</div></div>`; }).join('')}
+  </div><div class="tfoot" style="border:1px solid var(--border);border-top:0;border-radius:0 0 8px 8px;margin-top:-6px">Rows 1–12 of 600 · sorted by date applied · virtualized<span class="grow"></span><span class="row" style="gap:4px"><span style="width:2px;height:12px;background:var(--danger)"></span>Today</span></div></div>`;
+
+/* ---------- Archived + bulk ---------- */
+const AR = [['Vantage Retail', 'Product Designer', 'Withdrawn', 'Sep 02', 'Applied', 'You'], ['Juniper Transit', 'UX Designer', 'Ghosted', 'Aug 31', 'Recruiter Screen', 'You · from quiet review'], ['Kite Mobility', 'Product Designer', 'Rejected', 'Aug 20', 'Interview', 'You'], ['Glassline', 'UX Designer', 'Position Closed', 'Aug 18', 'Applied', 'You'], ['Mosaic Health', 'Senior Designer', 'Rejected', 'Aug 11', 'Recruiter Screen', 'You'], ['Driftwood AI', 'Product Designer', 'Open', 'Aug 02', 'Saved', 'You · not pursued']];
+const archived = `<div class="page" style="gap:6px;padding:16px 20px 0 24px">${title()}${tabs('Archived')}
+  <div class="row" style="gap:6px;padding:8px 0 2px"><div class="input ph" style="width:200px;height:32px"><i class="icon-list-filter"></i>Filter archived</div><span class="chip add"><i class="icon-plus"></i>Outcome</span><span class="chip add"><i class="icon-plus"></i>Archived date</span><span class="grow"></span><span class="small muted">Archived applications still count in analytics.</span></div>
+  <div class="tbl">
+    <div class="tr" style="background:var(--inverse-bg);color:var(--inverse-fg);height:40px;grid-template-columns:auto auto auto auto 1fr auto"><span class="row b"><i class="icon-square-minus"></i>2 selected</span><span class="chip sm" style="background:transparent;color:inherit;border-color:color-mix(in oklch,var(--inverse-fg) 30%,transparent)"><i class="icon-archive-restore"></i>Restore</span><span class="chip sm" style="background:transparent;color:inherit;border-color:color-mix(in oklch,var(--inverse-fg) 30%,transparent)"><i class="icon-download"></i>Export</span><span class="chip sm" style="background:transparent;color:var(--danger);border-color:color-mix(in oklch,var(--danger) 55%,transparent)"><i class="icon-trash-2"></i>Delete permanently…</span><span></span><i class="icon-x"></i></div>
+    <div class="tr th" style="grid-template-columns:16px 1.4fr 160px 150px 120px 1fr 110px"><span class="cb"></span><span>Company · Role</span><span>Outcome</span><span>Reached stage</span><span>Archived</span><span>By</span><span></span></div>
+    ${AR.map((a, i) => `<div class="tr ${i < 2 ? 'sel' : ''}" style="grid-template-columns:16px 1.4fr 160px 150px 120px 1fr 110px"><span class="cb ${i < 2 ? 'on' : ''}">${i < 2 ? '<i class="icon-check"></i>' : ''}</span><span class="row"><span class="tile">${a[0][0]}</span><span><div class="b">${a[0]}</div><div class="small muted">${a[1]}</div></span></span><span>${outcome(a[2])}</span><span class="small">${a[4]}</span><span class="small muted row" style="gap:5px"><i class="icon-archive"></i>${a[3]}</span><span class="small muted ell">${a[5]}</span><span class="row" style="justify-content:flex-end"><span class="btn sm"><i class="icon-archive-restore"></i>Restore</span></span></div>`).join('')}
+  </div></div>`;
+
+/* ---------- Saved views + export ---------- */
+const listBody = (modified) => `<div class="page" style="gap:6px;padding:16px 20px 0 24px">${title()}
+  <div class="tabs" role="tablist">${[['All active', '457'], ['Needs follow-up', '7', 'danger'], ['Interviewing', '11'], ['Saved', '38'], ['Archived', '143']].map(t => `<span class="tab ${t[0] === 'Needs follow-up' ? 'sel' : ''}">${t[0]}${t[0] === 'Needs follow-up' && modified ? '<span style="width:6px;height:6px;border-radius:50%;background:var(--warning)" title="Modified"></span>' : ''} <span class="cnt ${t[2] || ''}">${t[1]}</span></span>`).join('')}<span class="tab" style="color:var(--primary)"><i class="icon-plus"></i>Save view</span><span class="tab"><i class="icon-settings-2"></i>Manage</span></div>
+  ${modified ? `<div class="row" style="gap:6px;padding:8px 0 2px"><div class="input ph" style="width:200px;height:32px"><i class="icon-list-filter"></i>Filter this view</div><span class="chip on">Outcome: Open<i class="icon-x"></i></span><span class="chip on">Next action: overdue<i class="icon-x"></i></span><span class="chip on" style="border-style:dashed">Priority: High<i class="icon-x"></i></span><span class="grow"></span><span class="small warning-t row b" style="gap:5px"><i class="icon-pencil"></i>View changed</span><span class="btn sm">Reset</span><span class="btn sm">Save as new…</span><span class="btn sm primary">Update view</span></div>` : filters('Table')}
+  <div class="tbl">${['Northwind Analytics', 'Meridian Bank', 'Aster Mobility', 'Lumen Civic', 'Corvid Labs', 'Oakridge Energy', 'Halcyon Health'].map((c, i) => `<div class="tr ${modified ? '' : i < 2 ? 'sel' : ''}" style="grid-template-columns:16px 1fr 150px 190px 250px"><span class="cb ${!modified && i < 2 ? 'on' : ''}">${!modified && i < 2 ? '<i class="icon-check"></i>' : ''}</span><span class="row"><span class="tile">${c[0]}</span><b>${c}</b></span><span class="row">${pips(2)}Applied</span><span>${aging('Stale', '16d')}</span><span class="danger-t row b"><i class="icon-triangle-alert"></i>${5 - (i % 4)}d overdue</span></div>`).join('')}</div></div>`;
+const saveView = `<div class="menu" style="width:340px;left:1000px;top:198px;padding:14px;gap:12px" role="dialog" aria-label="Save view">
+  <div class="b">Save as new view</div>
+  <div class="field"><label class="label">Name</label><div class="input focus">Overdue · high priority</div></div>
+  <div class="small muted">Saves: 3 filters · sort by next action · Table · visible columns</div>
+  <div class="field"><label class="label">Visible to</label><div class="seg"><span class="on">Only me</span><span style="opacity:.55">Workspace <span class="pill muted" style="height:18px">P2</span></span></div></div>
+  <label class="check small"><span class="cb"></span>Make it my default view</label>
+  <div class="row"><span class="grow"></span><span class="btn sm">Cancel</span><span class="btn sm primary">Save view</span></div></div>`;
+const exportDlg = `<div class="scrim"></div><div class="dialog" style="width:560px;left:440px;top:110px" role="dialog" aria-label="Export applications">
+  <div class="dlg-h"><h2>Export applications</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    <div class="field"><label class="label">What to export</label><div class="col" style="gap:6px">
+      ${[['2 selected applications', 'Northwind Analytics, Meridian Bank', 1], ['Current view · 457', '"All active" with Outcome: Open', 0], ['Everything in Personal · 600', 'Active and archived applications', 0]].map(o => `<div class="opt2 row" style="border:1px solid ${o[2] ? 'var(--primary)' : 'var(--border-strong)'};${o[2] ? 'background:var(--primary-soft);' : ''}border-radius:8px;padding:8px 10px;gap:10px"><span class="radio ${o[2] ? 'on' : ''}"></span><div><div class="b">${o[0]}</div><div class="small muted">${o[1]}</div></div></div>`).join('')}</div></div>
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label class="label">Format</label><div class="seg"><span class="on">CSV</span><span>Excel</span><span>JSON</span></div></div>
+      <div class="field"><label class="label">Columns</label><div class="seg"><span class="on">Visible (7)</span><span>All (32)</span></div></div></div>
+    <label class="check small"><span class="cb on"><i class="icon-check"></i></span>Include timeline events (separate file in a .zip)</label>
+    <div class="banner neutral small" style="align-items:flex-start"><i class="icon-shield-check success-t" style="margin-top:2px"></i><span>Cells starting with <span class="mono">= + - @</span> are prefixed with an apostrophe so spreadsheets don't run them as formulas.</span></div>
+    <a class="small">Need contacts, tasks, notes or a full backup? Go to Import &amp; export</a></div>
+  <div class="dlg-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary"><i class="icon-download"></i>Export 2 applications</span></div></div>`;
+
+/* mobile board alternative */
+const mBoard = mobile({ tab: 'apps', title: 'Applications', theme: 'dark' }, `
+  <div class="row" style="gap:8px"><span class="chip" style="height:36px"><i class="icon-square-kanban"></i>Board<i class="icon-chevron-down"></i></span><span class="grow"></span><span class="chip" style="height:36px"><i class="icon-list-filter"></i>Filter</span></div>
+  <div class="row" style="gap:6px;overflow:hidden;margin:0 -16px;padding:0 16px">${['Applied 96', 'Screen 14', 'Interview 8', 'Final 3'].map((t, i) => `<span class="chip ${i === 0 ? 'inv' : ''}" style="height:34px;border-radius:17px">${t}</span>`).join('')}</div>
+  <div class="small muted">One stage at a time · swipe between stages · tap ⋯ to move</div>
+  ${BD.Applied[1].map(c => `<div class="m-card" style="padding:10px 14px"><div class="row"><b class="grow ell">${c[0]}</b><span class="m-ib" style="width:36px;height:36px"><i class="icon-ellipsis"></i></span></div><div class="small muted">${c[1]}</div><div class="row small" style="margin-top:4px;gap:6px"><span class="grow ell">${c[2]}</span>${dueChip(c[3], c[4])}</div></div>`).join('')}`);
+
+gallery('Applications · alternate views, archive, saved views, export',
+  'Table stays the default (approved). Board, Calendar and Timeline are alternates in the same view switcher, sharing saved views, filters and the Owner filter. Every drag has a keyboard or "Move to…" alternative, and moving to a closed outcome still asks for confirmation.',
+  [
+    { title: 'Board', items: [
+      { cap: 'V1 · Board', sub: '1440 · light · 15 cards/column, keyboard move in progress', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications' }, board(false)) },
+      { cap: 'V2 · Board (manager)', sub: '1440 · dark · owner avatars', html: shell({ theme: 'dark', ws: 'lab', active: 'applications', crumb: 'Applications' }, board(true)) },
+      { cap: 'V3 · Board on mobile', sub: 'mobile · dark · one stage at a time', html: mBoard }
+    ]},
+    { title: 'Calendar & Timeline', items: [
+      { cap: 'V4 · Applications › Calendar', sub: '1440 · light · application dates only', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications' }, calendar(false)) },
+      { cap: 'V5 · Calendar (sidebar)', sub: '1440 · dark · all dated items + day agenda', html: shell({ theme: 'dark', active: 'calendar', crumb: 'Calendar' }, calendar(true)) },
+      { cap: 'V6 · Applications › Timeline', sub: '1440 · light · cross-application lifecycle', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications' }, timeline) }
+    ]},
+    { title: 'Archive, saved views, export', items: [
+      { cap: 'V7 · Archived', sub: '1440 · light · restore + permanent delete', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications' }, archived) },
+      { cap: 'V8 · Saved view changed + save', sub: '1440 · light', html: shell({ theme: 'light', active: 'applications', crumb: 'Applications', overlay: saveView }, listBody(true)) },
+      { cap: 'V9 · Export', sub: '1440 · dark · selected / view / workspace', html: shell({ theme: 'dark', active: 'applications', crumb: 'Applications', overlay: exportDlg }, listBody(false)) }
+    ]}
+  ]);
+</script></body></html>

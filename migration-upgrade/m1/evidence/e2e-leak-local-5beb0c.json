@@ -1,0 +1,25 @@
+{
+  "status": "FAIL",
+  "base_url": "local",
+  "requests_scanned": 32,
+  "responses_scanned": 31,
+  "network_hits": [
+    "response:/src/App.tsx"
+  ],
+  "harness_self_check": {},
+  "surfaces": {
+    "localStorage": false,
+    "sessionStorage": false,
+    "documentCookie": false,
+    "reactState": false,
+    "html": false,
+    "localStorageKeys": [],
+    "sessionStorageKeys": []
+  },
+  "all_cookies_contain_alias": false,
+  "console_contains_alias": false,
+  "cookie_names": [
+    "jq_rt (HttpOnly)",
+    "jq_csrf"
+  ]
+}

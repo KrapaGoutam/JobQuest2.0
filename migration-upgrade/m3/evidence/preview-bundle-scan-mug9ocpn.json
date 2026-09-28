@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "target": "vercel-preview",
+  "files": 3,
+  "bytes": 649109,
+  "known_secret_values_checked": 3,
+  "findings": 0,
+  "rules": "secret API keys, privileged JWTs, private keys/JWKs, DB URLs with passwords, access tokens, server env names, exact known values"
+}

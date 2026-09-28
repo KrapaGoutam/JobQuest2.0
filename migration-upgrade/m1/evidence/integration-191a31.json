@@ -1,0 +1,215 @@
+{
+  "run": "191a31",
+  "started_at": "2026-09-24T18:59:20.702Z",
+  "T01": {
+    "direct_gotrue_signup_bypass": "signup_disabled",
+    "status": "PASS",
+    "recovery_codes": 10,
+    "code_format": "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX (160 bits; 140 secret)",
+    "stored": "argon2id verifiers only",
+    "personal_workspace": "PERSONAL",
+    "membership_role": "MANAGER",
+    "email_optional": true,
+    "phone_optional": true,
+    "user_accounts_columns": [
+      "id",
+      "user_id",
+      "username",
+      "username_clean",
+      "status",
+      "failed_login_count",
+      "locked_until",
+      "failed_recovery_count",
+      "recovery_locked_until",
+      "created_at",
+      "updated_at"
+    ],
+    "duplicate_username_case_insensitive": 409,
+    "weak_password": 422
+  },
+  "T02": {
+    "status": "PASS",
+    "http": 200,
+    "refresh_cookie": "HttpOnly; Secure; SameSite=Strict; Path=/api/auth",
+    "body_user_keys": [
+      "id",
+      "username",
+      "display_name",
+      "active_workspace_id"
+    ],
+    "wrong_vs_unknown_identical": true
+  },
+  "T04": {
+    "status": "PASS",
+    "profiles_visible": 1,
+    "jwt_sub_equals_user_accounts_user_id": true,
+    "forged_owner_insert": "42501"
+  },
+  "T05": {
+    "status": "PASS",
+    "user_A_rows_all_own": true,
+    "user_B_rows_all_own": true,
+    "manager_sees_both": true,
+    "peer_update_rows": 0,
+    "manager_update_rows": 1,
+    "user_insert_for_peer": "denied",
+    "user_adds_member": "denied",
+    "manager_insert_for_non_member": "denied",
+    "manager_cross_workspace_rows": 0,
+    "peer_cross_workspace_rows": 0,
+    "anon_rows": 0,
+    "system_tables_via_postgrest": {
+      "user_accounts": 0,
+      "auth_recovery_codes": 0
+    },
+    "last_manager": {
+      "demote": "blocked",
+      "remove": "blocked",
+      "service_role_demote": "blocked",
+      "leave_personal": "blocked"
+    },
+    "removed_member_rows": 0,
+    "removed_member_records_retained_and_attributed": true,
+    "tenant_move": "blocked"
+  },
+  "T06": {
+    "status": "PASS",
+    "stages": [
+      "SAVED",
+      "PREPARING",
+      "APPLIED",
+      "ASSESSMENT",
+      "RECRUITER_SCREEN",
+      "INTERVIEW",
+      "FINAL_INTERVIEW",
+      "OFFER"
+    ],
+    "outcomes": [
+      "ACCEPTED",
+      "REJECTED",
+      "WITHDRAWN",
+      "GHOSTED",
+      "POSITION_CLOSED"
+    ],
+    "legacy_values_represented": 13,
+    "node_equals_postgrest": true,
+    "manager_update_rows": 0,
+    "manager_insert": "denied",
+    "anon_rows": 0,
+    "unknown_stage_insert": "rejected (23514)"
+  },
+  "T08": {
+    "status": "PASS",
+    "logout_http": 200,
+    "cookies_cleared": true,
+    "old_access_token_postgrest_rows": 0,
+    "old_access_token_postgrest_http": 200,
+    "old_access_token_gotrue_http": 403,
+    "other_session_refresh_after_global": 401,
+    "note": "PostgREST returns 200 [] (RLS session check) rather than 401: access JWTs are stateless until expiry."
+  },
+  "T10": {
+    "status": "PASS",
+    "per_account": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      429
+    ],
+    "correct_password_while_locked": 429,
+    "per_ip_21st": 429,
+    "different_ip_unaffected": 401,
+    "recovery_attempts": [
+      401,
+      401,
+      401,
+      429
+    ],
+    "shared_ip_probe": {
+      "valid_logins_attempted": 35,
+      "throttled_by_supabase_auth": 0,
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ]
+    }
+  },
+  "SEC-01_02": {
+    "status": "PASS",
+    "recover": 200,
+    "remaining_after_use": 9,
+    "replay": 401,
+    "prior_session_rows_after_recovery": 0,
+    "used_at_tracked": true,
+    "regenerate": 200,
+    "old_unused_code_after_regeneration": 401
+  },
+  "T03": {
+    "status": "FAIL",
+    "api_responses_scanned": 103,
+    "api_responses_with_alias": 0,
+    "responses_blocked_by_guard": 0,
+    "jwt_claim_keys": [
+      "aal",
+      "amr",
+      "app_metadata",
+      "aud",
+      "email",
+      "exp",
+      "iat",
+      "is_anonymous",
+      "iss",
+      "phone",
+      "role",
+      "session_id",
+      "sub",
+      "user_metadata"
+    ],
+    "jwt_email_claim_empty": true,
+    "jwt_claims_contain_alias": false,
+    "gotrue_user_endpoint_http": 200,
+    "gotrue_user_endpoint_with_browser_token_contains_alias": true
+  },
+  "T12": {
+    "status": "PASS",
+    "alias_identities": 16,
+    "identities_with_any_mail_sent_timestamp": 0,
+    "auth_audit_actions_last_3h": [],
+    "mail_triggering_actions": []
+  }
+}

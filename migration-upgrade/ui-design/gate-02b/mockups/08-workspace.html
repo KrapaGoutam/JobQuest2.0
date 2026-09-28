@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>.swatch{width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff}
+.swatch.on{outline:2px solid var(--fg);outline-offset:2px}
+.sgrid{display:grid;grid-template-columns:240px 1fr;gap:32px;padding:20px 24px;border-bottom:1px solid var(--border)}
+.sgrid h3{margin:0;font-size:14px;font-weight:600}.sgrid p{margin:4px 0 0;font-size:12px;color:var(--muted);line-height:1.5}</style>
+</head><body><script>
+const { shell, mobile, gallery } = JQ;
+const f = (l, c, o = {}) => `<div class="field" ${o.span ? `style="grid-column:span ${o.span}"` : ''}><label class="label">${l}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">optional</span>' : ''}</label>${c}${o.help ? `<div class="help">${o.help}</div>` : ''}</div>`;
+const role = r => r === 'Manager' ? '<span class="pill success"><i class="icon-shield-check"></i>Manager</span>' : '<span class="pill">User</span>';
+const M = [
+  ['Maya Ortiz', 'MO', 'maya.ortiz', 'Manager', 'Active', '612', 'Now', 'Mar 02', true],
+  ['Jordan Blake', 'JB', 'jblake', 'Manager', 'Active', '0', '2d ago', 'Mar 02'],
+  ['Dev Patel', 'DP', 'devp', 'User', 'Active', '438', '1h ago', 'Mar 09'],
+  ['Lena Kim', 'LK', 'lena.kim', 'User', 'Active', '702', 'Today', 'Mar 09'],
+  ['Sam Rivera', 'SR', 'samr', 'User', 'Active', '521', '3d ago', 'Mar 10'],
+  ['Ari Novak', 'AN', 'ari.novak', 'User', 'Active', '389', 'Yesterday', 'Mar 10'],
+  ['Priyanka Rao', 'PR', 'prao', 'User', 'Suspended', '244', 'Aug 12', 'Mar 11'],
+  ['Tom Weiss', 'TW', 'tweiss', 'User', 'Active', '810', 'Today', 'Mar 11'],
+  ['Hana Ito', 'HI', 'hana.i', 'User', 'Active', '455', 'Today', 'Mar 14'],
+  ['Luis Ortega', 'LO', 'lortega', 'User', 'Active', '667', '5h ago', 'Mar 14']];
+const cols = '1.5fr 150px 110px 110px 110px 100px 40px';
+
+const members = (o = {}) => `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Members</h1><span class="muted">12 members · 2 managers · 1 pending invite</span><span class="spacer"></span><span class="btn primary"><i class="icon-user-plus"></i>Invite members</span></div>
+  <div class="banner neutral small"><i class="icon-shield-check success-t"></i><span><b>Managers</b> can view, edit, archive and delete every member's records in this workspace, manage members, and configure workflow. <b>Users</b> see only their own records. Access never extends to other workspaces.</span></div>
+  <div class="row" style="gap:6px"><div class="input ph" style="width:240px;height:32px"><i class="icon-search"></i>Find a member</div><span class="chip sm">Role: All<i class="icon-chevron-down"></i></span><span class="chip sm">Status: All<i class="icon-chevron-down"></i></span></div>
+  <div class="tbl">
+    <div class="tr th" style="grid-template-columns:${cols}"><span>Member</span><span>Role</span><span>Status</span><span>Applications</span><span>Last active</span><span>Joined</span><span></span></div>
+    ${M.map((m, i) => `<div class="tr ${o.menu && i === 2 ? 'sel' : ''}" style="grid-template-columns:${cols};${m[4] === 'Suspended' ? 'color:var(--muted)' : ''}"><span class="row"><span class="av" style="width:28px;height:28px">${m[1]}</span><span class="grow"><div class="b ell">${m[0]}${m[8] ? ' <span class="muted" style="font-weight:400">(you)</span>' : ''}</div><div class="small muted">@${m[2]}</div></span></span>
+      <span>${role(m[3])}</span><span>${m[4] === 'Active' ? '<span class="row small" style="gap:5px"><i class="icon-circle-check success-t"></i>Active</span>' : '<span class="row small" style="gap:5px"><i class="icon-circle-pause"></i>Suspended</span>'}</span><span class="small">${m[5]}</span><span class="small muted">${m[6]}</span><span class="small muted">${m[7]}</span><span class="ibtn ghost"><i class="icon-ellipsis"></i></span></div>`).join('')}
+  </div>
+  <div class="card"><div class="card-h"><span class="card-t">Pending invites</span><span class="small muted">Codes are shown only when created</span></div>
+    <div class="tr" style="grid-template-columns:1.5fr 110px 150px 150px 120px;border:0"><span class="row"><i class="icon-ticket muted"></i><span class="mono">JQI-••••-7Q2M</span><span class="small muted">Cohort 7 spring intake</span></span><span>${role('User')}</span><span class="small">Used 3 of 10</span><span class="small muted">Expires Sep 30</span><span class="row" style="justify-content:flex-end"><span class="btn sm danger-o">Revoke</span></span></div></div>
+  ${o.menu ? `<div class="menu" style="width:230px;left:1170px;top:${285 + 2 * 44}px"><div class="mi"><i class="icon-shield-check"></i>Make manager</div><div class="mi"><i class="icon-briefcase"></i>View their applications</div><div class="mi"><i class="icon-circle-pause"></i>Suspend access</div><div class="hr" style="margin:4px 0"></div><div class="mi danger"><i class="icon-user-minus"></i>Remove from workspace…</div></div>` : ''}
+  </div>`;
+
+const invite = `<div class="scrim"></div><div class="dialog" style="width:540px;left:450px;top:120px" role="dialog" aria-label="Invite members">
+  <div class="dlg-h"><h2>Invite members</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">
+    <div class="small muted">Create an invite code and share it privately. People enter it at <b style="color:var(--fg)">Workspaces › Join</b> after signing in.</div>
+    <div class="fgrid" style="grid-template-columns:1fr 1fr">
+      ${f('Join as', '<div class="seg"><span class="on">User</span><span>Manager</span></div>', { help: 'Managers get full access to all records.' })}
+      ${f('Uses', '<div class="input">Up to 10 people<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>')}
+      ${f('Expires', '<div class="input">In 7 days · Sep 30<i class="icon-chevron-down muted" style="margin-left:auto"></i></div>')}
+      ${f('Label', '<div class="input">Cohort 7 spring intake</div>', { opt: true })}
+    </div>
+    <div class="banner success" style="flex-direction:column;align-items:stretch;gap:8px"><div class="row small b success-t"><i class="icon-circle-check"></i>Invite code created</div>
+      <div class="row"><span class="mono" style="font-size:18px;letter-spacing:.06em">JQI-4KDP-7Q2M</span><span class="grow"></span><span class="btn sm"><i class="icon-copy"></i>Copy code</span><span class="btn sm"><i class="icon-link"></i>Copy link</span></div>
+      <div class="small muted">You won't see the full code again. Revoke it anytime from Pending invites.</div></div>
+  </div>
+  <div class="dlg-f"><span class="small muted row" style="gap:5px"><i class="icon-history"></i>Recorded in Audit history</span><span class="grow"></span><span class="btn primary">Done</span></div></div>`;
+
+const remove = `<div class="scrim"></div><div class="dialog" style="width:520px;left:460px;top:170px" role="alertdialog" aria-label="Remove Dev Patel">
+  <div class="dlg-h"><span class="tile lg" style="background:var(--danger-soft);color:var(--danger)"><i class="icon-user-minus"></i></span><div><h2>Remove Dev Patel?</h2><div class="small muted">@devp · User · joined Mar 09</div></div></div>
+  <div class="dlg-b"><ul class="small" style="margin:0;padding-left:18px;line-height:1.7">
+    <li>Dev loses access to <b>Career Lab · Cohort 7</b> immediately.</li>
+    <li>Their <b>438 applications</b>, contacts and history <b>stay in this workspace</b>, still owned by Dev.</li>
+    <li>Their browser-extension tokens for this workspace are revoked.</li>
+    <li>Their personal workspace and other memberships aren't affected.</li></ul>
+    <div class="banner neutral small"><i class="icon-lightbulb muted"></i><span>To pause access and keep them listed, <a>suspend</a> instead.</span></div></div>
+  <div class="dlg-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn danger">Remove member</span></div></div>`;
+
+const lastMgr = `<div class="menu" style="width:320px;left:760px;top:282px"><div class="mi" style="opacity:.5"><i class="icon-user"></i>Change to User</div>
+  <div class="small muted" style="padding:6px 10px 8px;line-height:1.45;white-space:normal"><i class="icon-lock"></i> You're the only active manager. Make someone else a manager first; a workspace always needs one.</div></div>`;
+
+const settings = (personal) => `<div class="page" style="gap:0;padding:0">
+  <div style="padding:16px 24px 12px" class="page-title"><h1>Workspace settings</h1><span class="muted">${personal ? 'Personal · only you' : 'Career Lab · Cohort 7'}</span></div>
+  <div style="background:var(--surface);border-top:1px solid var(--border);flex:1;overflow:hidden">
+    <div class="sgrid"><div><h3>General</h3><p>Name and colour appear in the switcher, sidebar edge and breadcrumb.</p></div>
+      <div class="col" style="gap:14px;max-width:560px">${f('Workspace name', `<div class="input">${personal ? 'Personal' : 'Career Lab · Cohort 7'}</div>`, { req: true })}
+        ${f('Colour', `<div class="row" style="gap:8px">${['oklch(0.52 0.13 265)', 'oklch(0.55 0.12 160)', 'oklch(0.58 0.13 55)', 'oklch(0.55 0.15 25)', 'oklch(0.52 0.12 320)', 'oklch(0.5 0.02 250)'].map((c, i) => `<span class="swatch ${i === (personal ? 0 : 1) ? 'on' : ''}" style="background:${c}">${i === (personal ? 0 : 1) ? '<i class="icon-check"></i>' : ''}</span>`).join('')}</div>`, { help: 'Colour is decorative and never the only cue.' })}
+        ${personal ? '' : f('Description', '<div class="input">Spring 2026 cohort, job search support</div>', { opt: true })}</div></div>
+    <div class="sgrid"><div><h3>Members</h3><p>${personal ? 'Personal workspaces have one member. Create a shared workspace to collaborate.' : '12 members · 2 managers.'}</p></div>
+      <div class="row" style="gap:8px">${personal ? '<span class="btn"><i class="icon-plus"></i>Create shared workspace</span>' : '<span class="btn"><i class="icon-users"></i>Manage members</span><span class="btn"><i class="icon-user-plus"></i>Invite</span>'}</div></div>
+    <div class="sgrid"><div><h3>Data</h3><p>Import, export and workflow for this workspace.</p></div>
+      <div class="row" style="gap:8px"><span class="btn"><i class="icon-upload"></i>Import</span><span class="btn"><i class="icon-download"></i>Export workspace data</span>${personal ? '' : '<span class="btn"><i class="icon-settings-2"></i>Workflow</span>'}</div></div>
+    <div class="sgrid" style="border-bottom:0"><div><h3 class="danger-t">Danger zone</h3><p>Archiving hides the workspace for everyone. Nothing is deleted.</p></div>
+      <div class="col" style="gap:10px;max-width:560px">${personal ? '<div class="banner neutral small"><i class="icon-lock muted"></i><span>Your personal workspace can\'t be archived or left.</span></div>' :
+        `<div class="row card" style="padding:12px 14px"><div class="grow"><div class="b">Leave workspace</div><div class="small muted">Unavailable: you're one of 2 managers; the other must stay a manager.</div></div><span class="btn">Leave</span></div>
+         <div class="row card" style="padding:12px 14px;border-color:color-mix(in oklch,var(--danger) 35%,var(--surface))"><div class="grow"><div class="b">Archive workspace</div><div class="small muted">Members lose access. Restorable by a manager for 90 days.</div></div><span class="btn danger-o">Archive…</span></div>`}</div></div>
+  </div></div>`;
+
+const create = `<div class="scrim"></div><div class="dialog" style="width:480px;left:480px;top:170px" role="dialog" aria-label="Create workspace">
+  <div class="dlg-h"><h2>Create workspace</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">${f('Name', '<div class="input focus">Northside Bootcamp · Fall</div>', { req: true })}
+    ${f('Colour', `<div class="row" style="gap:8px">${['oklch(0.52 0.13 265)', 'oklch(0.55 0.12 160)', 'oklch(0.58 0.13 55)', 'oklch(0.55 0.15 25)', 'oklch(0.52 0.12 320)'].map((c, i) => `<span class="swatch ${i === 2 ? 'on' : ''}" style="background:${c}">${i === 2 ? '<i class="icon-check"></i>' : ''}</span>`).join('')}</div>`)}
+    <div class="banner info small" style="align-items:flex-start"><i class="icon-shield-check info-t" style="margin-top:2px"></i><span>You'll be this workspace's <b>Manager</b>. Next, invite members with a code. Your personal workspace stays separate.</span></div></div>
+  <div class="dlg-f"><a class="small">Have an invite code? Join instead</a><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Create workspace</span></div></div>`;
+
+const join = `<div class="scrim"></div><div class="dialog" style="width:440px;left:500px;top:200px" role="dialog" aria-label="Join a workspace">
+  <div class="dlg-h"><h2>Join a workspace</h2><span class="grow"></span><span class="ibtn ghost"><i class="icon-x"></i></span></div>
+  <div class="dlg-b">${f('Invite code', '<div class="input mono focus">JQI-4KDP-7Q2M</div>')}
+    <div class="card row" style="padding:10px 12px"><span class="ws-tile" style="background:oklch(0.55 0.12 160)">CL</span><div class="grow"><div class="b">Career Lab · Cohort 7</div><div class="small muted">You'll join as <b>User</b> · managed by Maya Ortiz, Jordan Blake</div></div></div>
+    <div class="small muted">Managers of this workspace will be able to see and edit the records you create <b>in it</b>. They can't see your personal workspace.</div></div>
+  <div class="dlg-f"><span class="grow"></span><span class="btn">Cancel</span><span class="btn primary">Join workspace</span></div></div>`;
+
+const STG = [['saved', 'Saved', 38, 1], ['preparing', 'Preparing', 12, 1], ['applied', 'Applied', 96, 1], ['assessment', 'Assessment', 9, 1], ['recruiter_screen', 'Recruiter Screen', 14, 1], ['interview', 'Interview', 8, 1], ['final_interview', 'Final Interview', 3, 1], ['offer', 'Offer', 1, 1]];
+const workflow = `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Workflow</h1><span class="pill warning"><i class="icon-flask-conical"></i>Concept · customization deferred (D-29)</span><span class="spacer"></span><span class="btn disabled">Save changes</span></div>
+  <div class="banner info small" style="align-items:flex-start"><i class="icon-info info-t" style="margin-top:2px"></i><span>JobQuest uses one canonical workflow shared by the web app, imports and the browser extension. Managers may <b>rename</b>, <b>reorder</b> within limits and <b>hide</b> stages for this workspace. <b>Keys never change</b>, so history, analytics and the extension stay correct.</span></div>
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;flex:none;align-items:start">
+    <div class="card"><div class="card-h"><span class="card-t">Stages</span><span class="small muted">Where an application is in the pipeline</span></div>
+      <div class="tr th" style="grid-template-columns:20px 150px 1fr 90px 70px;gap:10px"><span></span><span>Key</span><span>Label in this workspace</span><span>Open apps</span><span>Visible</span></div>
+      ${STG.map((s, i) => `<div class="tr" style="grid-template-columns:20px 150px 1fr 90px 70px;gap:10px"><i class="icon-grip-vertical muted"></i><span class="mono small muted row" style="gap:4px"><i class="icon-lock"></i>${s[0]}</span><div class="input" style="height:30px">${i === 4 ? 'Phone screen' : s[1]}${i === 4 ? '<span class="sfx xs">was "Recruiter Screen"</span>' : ''}</div><span class="small">${s[2]}</span><span class="switch ${i === 1 ? '' : 'on'}"></span></div>`).join('')}
+      <div class="banner warning small" style="margin:10px 12px"><i class="icon-triangle-alert warning-t"></i><span>Hiding <b>Preparing</b>: 12 open applications are in it. Move them first, or keep it visible. Past events keep the original stage.</span></div></div>
+    <div class="col" style="gap:12px">
+      <div class="card"><div class="card-h"><span class="card-t">Outcomes</span><span class="small muted">How an application closes</span></div>
+        ${[['open', 'Open', 'circle-dot', 'Default'], ['accepted', 'Accepted', 'circle-check', 'Closed · positive'], ['rejected', 'Rejected', 'circle-x', 'Closed'], ['withdrawn', 'Withdrawn', 'undo-2', 'Closed'], ['ghosted', 'Ghosted', 'ghost', 'Closed'], ['position_closed', 'Position Closed', 'ban', 'Closed']].map(o => `<div class="tr" style="grid-template-columns:130px 1fr 120px;gap:10px"><span class="mono small muted">${o[0]}</span><span class="row"><i class="icon-${o[2]}"></i>${o[1]}</span><span class="small muted">${o[3]}</span></div>`).join('')}
+        <div class="small muted" style="padding:10px 12px">Outcomes can be relabelled but not added or removed (analytics depend on them).</div></div>
+      <div class="card"><div class="card-h"><span class="card-t">Rules</span></div><div class="card-b col small" style="gap:8px">
+        <label class="row"><span class="switch on"></span>Allow moving to any stage, forward or back <span class="muted">(JobQuest 1.0 behaviour)</span></label>
+        <label class="row"><span class="switch on"></span>Confirm before closing with an outcome</label>
+        <label class="row" style="opacity:.55"><span class="switch on"></span>Record every change on the timeline <span class="muted">(always on)</span></label></div></div>
+    </div></div></div>`;
+
+const AUD = [['Sep 23, 10:14', 'Maya Ortiz', 'Edited a member\'s application', 'Dev Patel', 'Northwind Analytics · next action'], ['Sep 23, 09:02', 'Jordan Blake', 'Created invite code', '—', 'JQI-••••-7Q2M · User · 10 uses'], ['Sep 22, 17:40', 'Maya Ortiz', 'Exported workspace data', 'All members', 'Applications · CSV · 5,380 rows'], ['Sep 22, 11:05', 'Lena Kim', 'Revoked extension token', 'Lena Kim', '"Work laptop · Chrome"'], ['Sep 21, 15:22', 'Maya Ortiz', 'Suspended member', 'Priyanka Rao', ''], ['Sep 20, 08:47', 'Maya Ortiz', 'Deleted application permanently', 'Sam Rivera', 'Vantage Retail · Product Designer'], ['Sep 19, 16:30', 'Jordan Blake', 'Imported applications', 'Tom Weiss', '48 created · 3 skipped'], ['Sep 18, 12:10', 'Maya Ortiz', 'Changed role', 'Jordan Blake', 'User → Manager']];
+const audit = `<div class="page" style="gap:12px;padding:16px 24px 0">
+  <div class="page-title"><h1>Audit history</h1><span class="muted">Sensitive and cross-member actions · read-only</span><span class="spacer"></span><span class="btn"><i class="icon-download"></i>Export</span></div>
+  <div class="row" style="gap:6px"><span class="chip sm">Actor: Anyone<i class="icon-chevron-down"></i></span><span class="chip sm">Affected member: Anyone<i class="icon-chevron-down"></i></span><span class="chip sm">Action: All<i class="icon-chevron-down"></i></span><span class="chip sm"><i class="icon-calendar-range"></i>Last 30 days</span></div>
+  <div class="tbl">${[['When', 'Actor', 'Action', 'Affected member', 'Details']].concat(AUD).map((r, i) => `<div class="tr ${i ? '' : 'th'}" style="grid-template-columns:130px 150px 1.2fr 150px 1.3fr;gap:12px">${r.map((c, j) => `<span class="ell ${j === 2 && /Deleted|Suspended|Revoked/.test(c) ? 'danger-t' : ''} ${j === 0 && i ? 'small muted' : ''}">${c}</span>`).join('')}</div>`).join('')}</div>
+  <div class="small muted">Routine edits to your own records aren't listed here; they appear on each record's timeline.</div></div>`;
+
+const mMembers = mobile({ back: true, title: 'Members', ws: 'lab', noTabs: true, actions: '<span class="m-ib"><i class="icon-user-plus"></i></span>' }, `
+  <div class="m-input" style="height:44px"><i class="icon-search muted"></i><span class="muted">Find a member</span></div>
+  <div class="m-card">${M.slice(0, 7).map(m => `<div class="m-row"><span class="av lg">${m[1]}</span><div class="grow" style="min-width:0"><div class="b ell">${m[0]}</div><div class="small muted">${m[5]} applications · ${m[6]}</div></div>${m[3] === 'Manager' ? '<span class="pill success">Manager</span>' : m[4] === 'Suspended' ? '<span class="pill muted">Suspended</span>' : ''}<i class="icon-chevron-right muted"></i></div>`).join('')}</div>`);
+
+gallery('Workspace management',
+  'Workspace screens reuse the normal app styling; there is no separate admin console. Destructive membership actions spell out what happens to the member\'s data. The last-manager safeguard is per workspace. Workflow customization is shown as a concept only: keys are immutable so history cannot be corrupted.',
+  [
+    { title: 'Members', items: [
+      { cap: 'W1 · Members', sub: '1440 · light · manager, row menu open', html: shell({ theme: 'light', ws: 'lab', active: 'members', crumb: 'Members' }, members({ menu: true })) },
+      { cap: 'W2 · Invite members', sub: '1440 · light · code shown once', html: shell({ theme: 'light', ws: 'lab', active: 'members', crumb: 'Members', overlay: invite }, members()) },
+      { cap: 'W3 · Remove member', sub: '1440 · dark', html: shell({ theme: 'dark', ws: 'lab', active: 'members', crumb: 'Members', overlay: remove }, members()) },
+      { cap: 'W4 · Last-manager safeguard', sub: '1440 · light · role menu', html: shell({ theme: 'light', ws: 'lab', active: 'members', crumb: 'Members', overlay: lastMgr }, members()) }
+    ]},
+    { title: 'Settings, create & join', items: [
+      { cap: 'W5 · Workspace settings', sub: '1440 · light · shared workspace', html: shell({ theme: 'light', ws: 'lab', active: 'settings', crumb: 'Workspace settings' }, settings(false)) },
+      { cap: 'W6 · Workspace settings', sub: '1440 · dark · personal workspace', html: shell({ theme: 'dark', active: 'settings', crumb: 'Workspace settings' }, settings(true)) },
+      { cap: 'W7 · Create workspace', sub: '1440 · dark', html: shell({ theme: 'dark', active: 'dashboard', crumb: 'Dashboard', overlay: create }, settings(true)) },
+      { cap: 'W8 · Join workspace', sub: '1440 · light', html: shell({ theme: 'light', active: 'dashboard', crumb: 'Dashboard', overlay: join }, settings(true)) }
+    ]},
+    { title: 'Workflow & audit', items: [
+      { cap: 'W9 · Workflow settings (concept)', sub: '1440 · light', html: shell({ theme: 'light', ws: 'lab', active: 'workflow', crumb: 'Workflow' }, workflow) },
+      { cap: 'W10 · Audit history', sub: '1440 · dark', html: shell({ theme: 'dark', ws: 'lab', active: 'audit', crumb: 'Audit history' }, audit) },
+      { cap: 'W11 · Members', sub: 'mobile · light', html: mMembers }
+    ]}
+  ]);
+</script></body></html>

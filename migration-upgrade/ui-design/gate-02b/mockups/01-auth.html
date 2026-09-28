@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/lucide.css"><link rel="stylesheet" href="assets/jq.css"><script src="assets/jq.js"></script>
+<style>
+.auth { flex:1; display:flex; flex-direction:column; align-items:center; overflow:hidden; }
+.brand { display:flex; align-items:center; gap:10px; font-size:17px; font-weight:650; letter-spacing:-.01em; }
+.brand .mk { width:30px; height:30px; border-radius:7px; background:var(--primary); color:var(--primary-fg); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+.acard { background:var(--surface); border:1px solid var(--border); border-radius:10px; }
+.steps { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+.steps b { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; background:var(--surface-3); color:var(--fg); }
+.steps .on { color:var(--fg); font-weight:600; } .steps .on b { background:var(--primary); color:var(--primary-fg); }
+.steps .done b { background:var(--success); color:#fff; }
+.steps .ln { width:28px; height:1px; background:var(--border-strong); }
+.codes { display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; padding:14px 18px; background:var(--surface-muted); border:1px solid var(--border); border-radius:8px; font-size:15px; letter-spacing:.04em; }
+.codes span { display:flex; gap:10px; } .codes span em { font-style:normal; color:var(--muted); font-size:12px; width:16px; text-align:right; letter-spacing:0; padding-top:2px; }
+.rule { display:flex; align-items:center; gap:6px; font-size:12px; }
+</style></head><body><script>
+const { shell, mobile, gallery } = JQ;
+
+const brand = `<div class="brand"><span class="mk">JQ</span>JobQuest</div>`;
+const foot = `<div class="row xs muted" style="gap:14px;margin-top:auto;padding:18px 0"><span>Help</span><span>Privacy</span><span class="row" style="gap:4px"><i class="icon-monitor"></i>Theme: System</span></div>`;
+const pw = (val, extra) => `<div class="input ${extra || ''}"><span class="grow" style="letter-spacing:2px">${val}</span><span class="row xs muted" style="gap:4px"><i class="icon-eye"></i>Show</span></div>`;
+
+function authFrame(theme, inner, top) {
+  return `<div data-jq class="frame-d" data-theme="${theme}"><div class="auth" style="padding-top:${top || 120}px">${inner}${foot}</div></div>`;
+}
+
+/* ---------- Login ---------- */
+const login = (err) => `
+  <div class="col" style="width:400px;gap:20px">
+    ${brand}
+    <div class="acard" style="padding:28px 28px 24px;display:flex;flex-direction:column;gap:16px">
+      <div><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Sign in</h1><div class="muted" style="margin-top:4px">Use your JobQuest username and password.</div></div>
+      ${err === 'err' ? `<div class="banner danger" role="alert"><i class="icon-circle-alert danger-t"></i><span>Username or password is incorrect.</span></div>` : ''}
+      ${err === 'lock' ? `<div class="banner warning" role="alert" style="align-items:flex-start"><i class="icon-lock warning-t" style="margin-top:2px"></i><span>Too many attempts. Try again in <b>5 minutes</b>, or <a>use a recovery code</a>.</span></div>` : ''}
+      <div class="field"><label class="label">Username</label><div class="input ${err ? '' : 'focus'}">maya.ortiz</div></div>
+      <div class="field"><div class="row"><label class="label">Password</label><a class="small" style="margin-left:auto">Forgot password?</a></div>${pw('••••••••••••••', err === 'err' ? 'err' : '')}</div>
+      <label class="check small"><span class="cb on"><i class="icon-check"></i></span>Keep me signed in on this device</label>
+      <div class="btn lg primary ${err === 'lock' ? 'disabled' : ''}" style="width:100%">Sign in</div>
+      <div class="hr"></div>
+      <div class="row small" style="justify-content:space-between"><span class="muted">New to JobQuest? <a>Create an account</a></span><a>Have a claim code?</a></div>
+    </div>
+  </div>`;
+
+/* ---------- Registration ---------- */
+const steps = n => `<div class="steps">${['Account', 'Recovery codes', 'Confirm'].map((s, i) => `${i ? '<span class="ln"></span>' : ''}<span class="row ${i + 1 === n ? 'on' : i + 1 < n ? 'done' : ''}" style="gap:6px"><b>${i + 1 < n ? '<i class="icon-check"></i>' : i + 1}</b>${s}</span>`).join('')}</div>`;
+
+const register = `
+  <div class="col" style="width:560px;gap:16px">
+    <div class="row" style="justify-content:space-between">${brand}${steps(1)}</div>
+    <div class="acard" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Create your account</h1><div class="muted" style="margin-top:4px">Only a username and password are required. You'll get a personal workspace right away.</div></div>
+      <div class="fsec" style="border-top:0;padding-top:0">
+        <div class="fsec-h"><span class="sec-t">Required</span></div>
+        <div class="field"><label class="label">Username <span class="req" aria-hidden="true">*</span></label>
+          <div class="input">maya.ortiz<span class="sfx row success-t xs" style="gap:4px"><i class="icon-circle-check"></i>Available</span></div>
+          <div class="help">3–32 characters: letters, numbers, dot, dash, underscore. This is how you sign in.</div></div>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr">
+          <div class="field"><label class="label">Password <span class="req" aria-hidden="true">*</span></label>${pw('••••••••••••••', 'focus')}</div>
+          <div class="field"><label class="label">Confirm password <span class="req" aria-hidden="true">*</span></label>${pw('••••••••••••••')}</div>
+        </div>
+        <div class="row" style="gap:14px;flex-wrap:nowrap" aria-live="polite">
+          <span class="rule success-t"><i class="icon-circle-check"></i>At least 12 characters</span>
+          <span class="rule success-t"><i class="icon-circle-check"></i>Not a common password</span>
+          <span class="rule success-t"><i class="icon-circle-check"></i>Passwords match</span><span class="rule muted"><i class="icon-info"></i>Max 72 characters</span>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-h"><span class="sec-t">Optional</span><span class="small muted">Helps you get back in if you forget your password.</span></div>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr">
+          <div class="field"><label class="label">Display name <span class="opt">optional</span></label><div class="input">Maya Ortiz</div></div>
+          <div class="field"><label class="label">Email <span class="opt">optional</span></label><div class="input ph">you@example.com</div></div>
+          <div class="field"><label class="label">Phone <span class="opt">optional</span></label><div class="input ph">+1 555 010 0000</div></div>
+          <div class="field" style="justify-content:flex-end"><div class="help">We verify email and phone before using them for recovery. Nothing is shared.</div></div>
+        </div>
+        <div class="banner neutral small" style="align-items:flex-start"><i class="icon-key-round muted" style="margin-top:2px"></i><span>Next you'll get <b>10 recovery codes</b>. If you skip email and phone, they're the only way back into your account if you forget your password.</span></div>
+      </div>
+      <div class="row"><span class="small muted">Already have an account? <a>Sign in</a></span><span class="grow"></span><div class="btn lg primary">Create account<i class="icon-arrow-right"></i></div></div>
+    </div>
+  </div>`;
+
+/* ---------- Recovery codes ---------- */
+const CODES = ['7KQ4-M2XP-9RDT', 'H3VN-8WQL-2FZC', 'P9TA-4KEM-6XRB', 'Z2LD-7HNW-3QGV', 'C8RF-5TJY-1MPK', 'W6XE-3BQA-8LNS', 'N4GH-9CVR-5DKT', 'B1MZ-6PLW-7TQF', 'Q5YS-2HDX-4RJC', 'F7KV-1NGB-9ZWE'];
+const codeGrid = (masked) => `<div class="codes mono" aria-label="Recovery codes">${CODES.map((c, i) => `<span><em>${i + 1}</em>${masked && i > 1 ? '••••-••••-' + c.slice(-4) : c}</span>`).join('')}</div>`;
+
+const recovery = (theme) => `
+  <div class="col" style="width:560px;gap:16px">
+    <div class="row" style="justify-content:space-between">${brand}${steps(2)}</div>
+    <div class="acard" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div class="row" style="align-items:flex-start;gap:12px"><span class="tile lg" style="background:var(--success-soft);color:var(--success)"><i class="icon-shield-check"></i></span>
+        <div><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Save your recovery codes</h1><div class="muted" style="margin-top:4px">Account created for <b style="color:var(--fg)">maya.ortiz</b>. Use one of these if you ever forget your password.</div></div></div>
+      ${codeGrid(false)}
+      <div class="row" style="gap:8px"><div class="btn"><i class="icon-copy"></i>Copy all</div><div class="btn"><i class="icon-download"></i>Download .txt</div><div class="btn"><i class="icon-printer"></i>Print</div><span class="grow"></span><span class="small success-t row" style="gap:4px" aria-live="polite"><i class="icon-check"></i>Copied</span></div>
+      <ul class="small" style="margin:0;padding-left:18px;color:var(--muted);line-height:1.6">
+        <li><b style="color:var(--fg)">Each code works once.</b> Using one signs out your other sessions and asks for a new password.</li>
+        <li><b style="color:var(--fg)">We can't show these again.</b> You can generate a new set later in Settings › Security, which replaces this one.</li>
+        <li>Store them somewhere other than this device, such as a password manager.</li></ul>
+      <label class="check"><span class="cb on"><i class="icon-check"></i></span>I've saved these codes somewhere safe</label>
+      <div class="row"><span class="grow"></span><div class="btn lg primary">Continue<i class="icon-arrow-right"></i></div></div>
+    </div>
+  </div>`;
+
+const confirmCodes = `
+  <div class="col" style="width:480px;gap:16px">
+    <div class="row" style="justify-content:space-between">${brand}${steps(3)}</div>
+    <div class="acard" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Check you saved them</h1><div class="muted" style="margin-top:4px">Type or paste <b style="color:var(--fg)">code 4</b> from your saved copy. This doesn't use up the code.</div></div>
+      <div class="field"><label class="label">Recovery code 4</label><div class="input focus mono" style="letter-spacing:.06em">Z2LD-7HNW-3QGV<span class="sfx success-t row xs" style="gap:4px;letter-spacing:0"><i class="icon-circle-check"></i>Matches</span></div></div>
+      <div class="banner success small"><i class="icon-circle-check success-t"></i><span>You're set. We created your <b>Personal</b> workspace, where you're the only member.</span></div>
+      <div class="row"><a class="small"><i class="icon-arrow-left"></i> Back to codes</a><span class="grow"></span><div class="btn lg primary">Go to JobQuest<i class="icon-arrow-right"></i></div></div>
+    </div>
+    <div class="small muted" style="text-align:center">Wrong code? You can go back and re-copy them. They stay valid.</div>
+  </div>`;
+
+/* ---------- Account recovery ---------- */
+const recover = (done) => `
+  <div class="col" style="width:440px;gap:20px">
+    ${brand}
+    <div class="acard" style="padding:28px;display:flex;flex-direction:column;gap:16px">
+      ${done ? `
+      <div class="row" style="align-items:flex-start;gap:12px"><span class="tile lg" style="background:var(--success-soft);color:var(--success)"><i class="icon-circle-check"></i></span>
+      <div><h1 style="margin:0;font-size:22px;font-weight:600">Password reset</h1><div class="muted" style="margin-top:4px">You're signed in. All other sessions were signed out.</div></div></div>
+      <div class="banner warning small" style="align-items:flex-start"><i class="icon-key-round warning-t" style="margin-top:2px"></i><span><b>9 recovery codes left.</b> Code 3 is now used up. Consider generating a fresh set.</span></div>
+      <div class="row" style="gap:8px"><div class="btn">Generate new codes</div><span class="grow"></span><div class="btn primary">Continue to JobQuest</div></div>` : `
+      <div><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Recover your account</h1><div class="muted" style="margin-top:4px">Enter your username, one unused recovery code, and a new password.</div></div>
+      <div class="field"><label class="label">Username</label><div class="input">maya.ortiz</div></div>
+      <div class="field"><label class="label">Recovery code</label><div class="input mono focus" style="letter-spacing:.06em">P9TA-4KEM-6XRB</div><div class="help">Dashes and spaces are optional. Codes are single-use.</div></div>
+      <div class="field"><label class="label">New password</label>${pw('••••••••••••••')}</div>
+      <div class="field"><label class="label">Confirm new password</label>${pw('••••••••••••••')}</div>
+      <div class="btn lg primary" style="width:100%">Reset password and sign in</div>
+      <div class="hr"></div>
+      <div class="small muted">Lost your codes too? If you added a <b style="color:var(--fg)">verified email</b>, you can <a>get a reset link</a>. Otherwise your account can't be recovered securely, and your data stays private.</div>`}
+    </div>
+  </div>`;
+
+/* ---------- Legacy claim ---------- */
+const claim = `
+  <div class="col" style="width:460px;gap:20px">
+    ${brand}
+    <div class="acard" style="padding:28px;display:flex;flex-direction:column;gap:16px">
+      <div><span class="pill info" style="margin-bottom:8px"><i class="icon-history"></i>Moving from JobQuest 1.0</span><h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em">Claim your account</h1><div class="muted" style="margin-top:4px">PIN sign-in has been retired. Your applications, contacts and history are already here. Set a password to continue.</div></div>
+      <div class="field"><label class="label">Username</label><div class="input">maya</div><div class="help">Your JobQuest 1.0 username.</div></div>
+      <div class="field"><label class="label">Claim code</label><div class="input mono focus">JQC-8F2K-TX7M-Q4LA</div><div class="help">Sent to you by your JobQuest administrator. Expires Oct 07.</div></div>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr"><div class="field"><label class="label">New password</label>${pw('••••••••••')}</div><div class="field"><label class="label">Confirm</label>${pw('••••••••••')}</div></div>
+      <div class="btn lg primary" style="width:100%">Claim account</div>
+      <div class="small muted">Next you'll save recovery codes, same as a new account.</div>
+    </div>
+  </div>`;
+
+/* ---------- Mobile ---------- */
+const mLogin = mobile({ noHeader: true, noTabs: true, bodyStyle: 'padding:48px 20px 20px;gap:18px' }, `
+  ${brand}
+  <div><h1 style="margin:14px 0 4px;font-size:26px;font-weight:600;letter-spacing:-.01em">Sign in</h1><div class="muted">Use your JobQuest username and password.</div></div>
+  <div class="field"><label class="label" style="font-size:14px">Username</label><div class="m-input" style="border-color:var(--focus);box-shadow:0 0 0 3px var(--primary-soft)">maya.ortiz</div></div>
+  <div class="field"><label class="label" style="font-size:14px">Password</label><div class="m-input"><span class="grow" style="letter-spacing:2px">••••••••••••</span><span class="m-ib" style="width:36px;height:36px"><i class="icon-eye"></i></span></div></div>
+  <a style="font-size:15px">Forgot password?</a>
+  <div class="m-btn primary" style="height:50px">Sign in</div>
+  <div style="flex:1"></div>
+  <div class="m-btn">Create an account</div>
+  <div class="muted" style="text-align:center;font-size:14px">Have a claim code? <a>Claim account</a></div>`);
+
+const mRegister = mobile({ noHeader: false, back: true, title: 'Create account', actions: '<span class="small muted" style="padding-right:10px">1 of 3</span>', noTabs: true, bodyStyle: 'gap:14px;padding-bottom:0',
+  bottom: `<div style="padding:12px 16px 30px;border-top:1px solid var(--border);background:var(--surface)"><div class="m-btn primary" style="height:50px">Create account</div></div>` }, `
+  <div class="xs b muted" style="letter-spacing:.05em">REQUIRED</div>
+  <div class="field"><label class="label" style="font-size:14px">Username <span class="req">*</span></label><div class="m-input">maya.ortiz<span class="sfx success-t" style="margin-left:auto;font-size:13px"><i class="icon-circle-check"></i> Available</span></div></div>
+  <div class="field"><label class="label" style="font-size:14px">Password <span class="req">*</span></label><div class="m-input"><span class="grow" style="letter-spacing:2px">••••••••••••••</span><i class="icon-eye muted"></i></div>
+    <span class="rule success-t" style="font-size:13px"><i class="icon-circle-check"></i>12+ characters · not a common password</span></div>
+  <div class="field"><label class="label" style="font-size:14px">Confirm password <span class="req">*</span></label><div class="m-input"><span class="grow" style="letter-spacing:2px">••••••••••••••</span><i class="icon-eye muted"></i></div></div>
+  <div class="xs b muted" style="letter-spacing:.05em;margin-top:6px">OPTIONAL · FOR ACCOUNT RECOVERY</div>
+  <div class="field"><label class="label" style="font-size:14px">Email <span class="opt">optional</span></label><div class="m-input muted">you@example.com</div></div>
+  <div class="field"><label class="label" style="font-size:14px">Phone <span class="opt">optional</span></label><div class="m-input muted">+1 555 010 0000</div></div>`);
+
+const mCodes = mobile({ back: true, title: 'Recovery codes', actions: '<span class="small muted" style="padding-right:10px">2 of 3</span>', noTabs: true,
+  bottom: `<div style="padding:12px 16px 30px;border-top:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:10px"><label class="check" style="font-size:15px"><span class="cb on" style="width:22px;height:22px"><i class="icon-check"></i></span>I've saved these codes</label><div class="m-btn primary" style="height:50px">Continue</div></div>` }, `
+  <div class="muted" style="font-size:14px">Each code works once. We can't show them again.</div>
+  <div class="codes mono" style="grid-template-columns:1fr;gap:4px;font-size:16px">${CODES.slice(0, 10).map((c, i) => `<span><em>${i + 1}</em>${c}</span>`).join('')}</div>
+  <div class="row" style="gap:10px"><div class="m-btn grow"><i class="icon-copy"></i>Copy</div><div class="m-btn grow"><i class="icon-share"></i>Save / share</div></div>`);
+
+gallery('Authentication & account recovery',
+  'Username + password required; email and phone optional. PIN sign-in is retired. Recovery codes are shown once, confirmed, and single-use. No internal identity (Supabase user id or alias email) is ever displayed. Pre-auth pages use the approved tokens without the app shell.',
+  [
+    { title: 'Sign in', items: [
+      { cap: 'A1 · Login', sub: '1440 · light · default', html: authFrame('light', login()) },
+      { cap: 'A2 · Login', sub: '1440 · dark · generic error (no username enumeration)', html: authFrame('dark', login('err')) },
+      { cap: 'A3 · Login', sub: '1440 · light · lockout (5 attempts / 5 min)', html: authFrame('light', login('lock')) }
+    ]},
+    { title: 'Registration', desc: 'Three steps: Account → Recovery codes → Confirm. After step 3 the user lands on their Personal workspace dashboard.', items: [
+      { cap: 'A4 · Registration · step 1', sub: '1440 · light', html: authFrame('light', register, 80) },
+      { cap: 'A5 · Recovery codes · step 2', sub: '1440 · light · one-time display', html: authFrame('light', recovery('light'), 80) },
+      { cap: 'A6 · Recovery codes · step 2', sub: '1440 · dark', html: authFrame('dark', recovery('dark'), 80) },
+      { cap: 'A7 · Confirm saved codes · step 3', sub: '1440 · light', html: authFrame('light', confirmCodes, 120) }
+    ]},
+    { title: 'Recovery & legacy claim', items: [
+      { cap: 'A8 · Account recovery', sub: '1440 · light', html: authFrame('light', recover(false), 90) },
+      { cap: 'A9 · Recovery complete', sub: '1440 · dark', html: authFrame('dark', recover(true), 140) },
+      { cap: 'A10 · Claim a JobQuest 1.0 account', sub: '1440 · light', html: authFrame('light', claim, 90) }
+    ]},
+    { title: 'Mobile (390)', items: [
+      { cap: 'A11 · Login', sub: 'mobile · light', html: mLogin },
+      { cap: 'A12 · Registration step 1', sub: 'mobile · light', html: mRegister },
+      { cap: 'A13 · Recovery codes', sub: 'mobile · dark', html: mCodes.replace('data-theme="light"', 'data-theme="dark"') }
+    ]}
+  ]);
+</script></body></html>

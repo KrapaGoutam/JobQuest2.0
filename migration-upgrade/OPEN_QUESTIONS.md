@@ -160,3 +160,171 @@ public-facing API surface once the app moves to a platform with a different
 traffic/abuse profile than a single Render service behind no CDN.
 **Migration impact**: Low-to-Medium — a reasonable `docs/IMPLEMENTATION_PLAN.md`
 non-functional hardening item, not a blocker.
+
+---
+
+# Gate 01 Review (added 2026-09-23)
+
+Classification per [`GATE_01_ARCHITECTURE_PROPOSAL.md`](GATE_01_ARCHITECTURE_PROPOSAL.md) §21.
+The original entries above are kept unchanged as the historical record.
+
+| ID | Classification | Resolution / recommendation (PROPOSED) |
+|---|---|---|
+| OQ-001 | RESOLVED BY USER REQUIREMENT | Username + password; PIN retired |
+| OQ-002 | RESOLVED BY USER REQUIREMENT | Scoped, expiring, hashed, workspace-bound extension tokens |
+| OQ-003 | RESOLVED BY USER REQUIREMENT | Workspace-scoped managers → expressible in RLS |
+| OQ-004 | RESOLVED | Worker-thread RPC not ported |
+| OQ-005 | CAN RESOLVE DURING MILESTONE | Recommend honouring `week_start` everywhere (D-16) |
+| OQ-006 | CAN SAFELY DEFER | Architecture keeps Realtime possible |
+| OQ-007 | RESOLVED BY USER REQUIREMENT (hybrid) | Boundary proposed in §4. Approval needed before M1. |
+| OQ-008 | MUST RESOLVE BEFORE IMPLEMENTATION (extension milestone) | Recommend incremental migration |
+| OQ-009 | **RESOLVED (verified)** | `ui-upgrade` has 1 commit not in `main` (`29624a6`): agent tooling only, no product code |
+| OQ-010 | RESOLVED BY USER REQUIREMENT | Per-IP + per-account limits, Vercel WAF |
+
+## New questions raised by Gate 01
+
+| ID | Question | Classification | Recommendation |
+|---|---|---|---|
+| OQ-011 | Does Auth Option A hold up: alias identity accepted, server-proxied sign-in not collectively IP-throttled, `supabase-js` `accessToken` mode works with RLS? | MUST RESOLVE BEFORE IMPLEMENTATION (M1 spike) | Spike in M1; fall back to Option B |
+| OQ-012 | Which workspace(s) receive legacy data? | MUST RESOLVE BEFORE DATABASE WORK | One "JobQuest (migrated)" workspace |
+| OQ-013 | What can a USER see inside a shared workspace? | MUST RESOLVE BEFORE IMPLEMENTATION | Own records only |
+| OQ-014 | Analytics: "ever reached" vs legacy current-stage counting (finding F-2) | MUST RESOLVE BEFORE DATABASE WORK | Ever reached |
+| OQ-015 | Theme default | RESOLVED BY USER REQUIREMENT | System + manual + persisted |
+| OQ-016 | Supabase/Vercel plan tiers (Branching, PITR, leaked-password protection) | CAN RESOLVE DURING MILESTONE (before production) | Free/dev first; confirm before production |
+| OQ-017 | Per-user timezone for "today" calculations | MUST RESOLVE BEFORE DATABASE WORK | Add `profiles.timezone` |
+| OQ-018 | Email provider for verification/recovery | CAN SAFELY DEFER | Recovery codes cover the MVP |
+| OQ-019 | How do legacy users reclaim accounts without PIN migration? | MUST RESOLVE BEFORE DATABASE WORK | Operator-issued claim codes |
+| OQ-020 | Record ownership when a member leaves a shared workspace | CAN RESOLVE DURING MILESTONE | Records stay; export first; transfer later |
+| OQ-021 | Production smoke-test account | CAN RESOLVE DURING MILESTONE | Dedicated smoke user in an isolated workspace |
+
+---
+
+# Gate 02B UI/UX Design Resolutions (added 2026-09-24)
+
+Classification of UI/UX related questions based on the completed Gate 02B specifications and mockups:
+
+| ID | Status | Resolution in Gate 02B Design | Reference |
+|---|---|---|---|
+| OQ-013 | **RESOLVED BY DESIGN** | A USER in a shared workspace can view, edit, and export only their **own** records. They cannot see other members' applications or data. Managers see all member records with member attribution. | `gate-02b/GATE_02B_UI_SPEC.md` §10.1, `08-workspace.html` W1, `12-import-export.html` E9 |
+| OQ-015 | **RESOLVED BY DESIGN** | Default theme = SYSTEM, fallback = LIGHT, user choices = SYSTEM / LIGHT / DARK with persistent manual override in Settings and quick toggle. | `gate-02b/GATE_02B_UI_SPEC.md` §11.1, `09-settings.html` S5 |
+| OQ-017 | **RESOLVED BY DESIGN** | User profile includes an explicit `timezone` preference, localized across date pickers, reminders, and "today" calculations. | `gate-02b/GATE_02B_UI_SPEC.md` §11.1, `09-settings.html` S1, `05-interviews.html` I3 |
+| OQ-018 | **RESOLVED FOR MVP** | 10 single-use recovery codes provide 100% self-sufficient account recovery without requiring a third-party email provider at launch. | `gate-02b/GATE_02B_UI_SPEC.md` §3.1, `01-auth.html` A5–A7 |
+| OQ-019 | **RESOLVED BY DESIGN** | Legacy account claim flow is designed and verified with operator-issued claim code entry, new username, and new password establishment. | `gate-02b/GATE_02B_UI_SPEC.md` §3.1, `01-auth.html` A10 |
+| OQ-020 | **RESOLVED BY DESIGN** | Member removal dialog clearly discloses that existing records remain in the workspace attributed to the member; access is revoked. Export can be run prior to departure. | `gate-02b/GATE_02B_UI_SPEC.md` §10.2, `08-workspace.html` W3 |
+
+## Gate 02B Final User Decisions & Approvals (resolved 2026-09-24)
+
+### OQ-022: Inactivity Review Interval vs. Aging Band
+- **Original Question:** Should the advisory review trigger at 28 days (falls inside the 15–30d Stale band) or at 31 days (matches the Long Waiting band)?
+- **Status:** **RESOLVED BY USER DECISION**
+- **Decision:** Use **31+ DAYS** as the inactivity-review trigger.
+- **Rationale & Specification:**
+  - This aligns the actionable review directly with the existing **Long Waiting** aging band (31+ days) instead of triggering inside the 15–30 day Stale band.
+  - The design distinguishes:
+    - **15–30 days:** Aging/Stale indicator on application rows/cards.
+    - **31+ days:** Long Waiting band; application surfaces in the actionable "Review quiet applications" dashboard queue.
+  - Actionable review options: `Keep Active` (logs a review note, resets inactivity timer), `Mark Ghosted` (closes with outcome Ghosted), `Archive` (soft-archives application).
+  - **Zero Automatic Mutation:** Nothing is automatically ghosted, archived, closed, or changed. All state mutations require explicit user action.
+
+### OQ-023: Offer Declined Status Classification
+- **Original Question:** Is declining an offer classified under outcome `Withdrawn` (legacy convention) or should a distinct `Offer Declined` outcome status be introduced?
+- **Status:** **RESOLVED BY USER DECISION**
+- **Decision:** Do **NOT** introduce a new top-level outcome/status called `Offer Declined`. Use Outcome: **`WITHDRAWN`** with a structured closure reason: **`OFFER_DECLINED`**.
+- **Rationale & Specification:**
+  - The UI displays the human-readable text: `"Offer declined"`.
+  - The closure reason is structured (not solely an unstructured free-text note) so that JobQuest analytics can distinguish and report on general withdrawal, offer declined, and other withdrawal reasons without proliferating top-level pipeline outcomes.
+  - Designed as an input for Gate 03 to determine the appropriate database/enum/relational representation.
+
+### OQ-024: Wide Desktop Preview Pane Default
+- **Original Question:** Should the 440px preview pane be default-on at viewports ≥1680px, or toggle-only?
+- **Status:** **RESOLVED BY USER DECISION**
+- **Decision:** At viewport widths **≥ 1680px**, the Applications preview pane defaults to **OPEN**.
+- **Rationale & Specification:**
+  - Users may close it (`×` button), reopen it, or toggle it via an explicit visible toolbar control.
+  - The user's explicit open/closed preference is persisted.
+  - The preview pane is **not required** (closing it allows the table to expand to 100% width).
+  - **Keyboard & A11y Safety:** Do **NOT** use a global `Space` shortcut for preview toggling, as `Space` directly conflicts with vertical scrolling, table row/checkbox selection, screen-reader interaction, and native browser behavior.
+  - An explicit visible toggle/close control is provided. Any keyboard shortcut must be context-safe, documented, accessible, and non-conflicting (e.g. `P` when a table row has grid focus).
+
+---
+
+## Master Open Questions Status Registry (Post-Gate 02B Approval)
+
+| ID | Topic | Lifecycle Phase | Status | Authoritative Resolution |
+|---|---|---|---|---|
+| **OQ-001** | PIN vs Password Auth | Gate 01 / Pre-M1 | **RESOLVED** | Username + password required; email/phone optional; PIN retired (ADR-008, CR-007). |
+| **OQ-002** | Extension Auth Under Supabase | Gate 01 / Pre-M1 | **RESOLVED** | Scoped, expiring, hashed, workspace-bound tokens stored in `extension_tokens` (ADR-013, CR-012). |
+| **OQ-003** | Manager Multi-User Authorization | Gate 01 / Pre-M1 | **RESOLVED** | Workspace-scoped roles (`USER` / `MANAGER`); RLS + RPC with explicit target auditing (ADR-010, CR-008). |
+| **OQ-004** | Postgres Worker RPC Bridge | Gate 01 / Pre-M1 | **RESOLVED** | Worker-thread RPC retired; standard async client in new backend. |
+| **OQ-005** | `week_start` Preference Consistency | Gate 01 / Pre-M1 | **RESOLVED** | Honor `week_start` consistently across Calendar, Goals, and Habits (CR-015). |
+| **OQ-006** | Real-time / Live Updates | Gate 01 / Pre-M1 | **RESOLVED** | Deferred for MVP; architecture preserves Realtime compatibility. |
+| **OQ-007** | Hybrid Backend Architecture | Gate 01 / Pre-M1 | **RESOLVED** | Hybrid architecture approved: direct Supabase client for simple CRUD + Node/TypeScript API for business logic, extension, import/export, and manager RPCs (ADR-009). |
+| **OQ-008** | Browser Extension Scope | Gate 01 / Pre-M1 | **RESOLVED** | Extension updated to Manifest V3 `/api/ext/v1` client with live workflow sync (CR-012, ADR-024). |
+| **OQ-009** | `ui-upgrade` Branch Status | Gate 01 / Pre-M1 | **RESOLVED** | Verified: contains 1 agent-tooling commit only; product-irrelevant. |
+| **OQ-010** | API Rate Limiting | Gate 01 / Pre-M1 | **RESOLVED** | Rate limiting required: per-IP + per-account limits, Vercel WAF / middleware. |
+| **OQ-011** | Supabase Auth Option A vs B | Gate 03 / M1 Spike | ~~PENDING M1 SPIKE~~ → **OPTION A RESOLVED: FAIL (M1)**; Option B → M1B spike | Option A provisionally approved subject to M1 Spike proof; 12-condition test suite; hard-fail on any synthetic identity leakage triggers Option B architectural fallback. |
+| **OQ-012** | Legacy Data Target Workspace | Gate 03 / Database | **RESOLVED (APPROVED)** | Dedicated `"JobQuest (Migrated)"` workspace houses all legacy data with original user attribution (ADR-041). |
+| **OQ-013** | USER Visibility in Shared Workspace | Gate 02B / Design | **RESOLVED** | `USER` sees and exports permitted **own** records only; `MANAGER` sees all records with member attribution (ADR-010). |
+| **OQ-014** | Analytics: Ever-Reached vs Current Stage | Gate 02B / Design | **RESOLVED** | Historical analytics uses ever-reached / event history; current pipeline uses current stage (ADR-011, CR-014). |
+| **OQ-015** | Theme Default & Hierarchy | Gate 02B / Design | **RESOLVED** | Default = SYSTEM, fallback = LIGHT; choices = SYSTEM / LIGHT / DARK; persistent manual override (ADR-014, CR-013). |
+| **OQ-016** | Supabase/Vercel Plan Tiers | Gate 03 / Pre-Prod | **RESOLVED (M14)** | Supabase Pro ($25/mo) required for production to prevent pause-on-inactivity and enable daily PITR; Vercel Pro for production custom domain. |
+| **OQ-017** | Per-User Timezone | Gate 02B / Design | **RESOLVED** | Add `profiles.timezone` column; used across date pickers, reminders, and "today" calculations (CR-015). |
+| **OQ-018** | Email Provider for MVP Recovery | Gate 02B / Design | **RESOLVED** | 10 single-use recovery codes cover 100% of self-sufficient MVP recovery; third-party email deferred (ADR-008). |
+| **OQ-019** | Legacy Account Reclamation | Gate 02B / Design | **RESOLVED** | Operator-issued claim codes verified in design (A10); user establishes new username/password (ADR-017). |
+| **OQ-020** | Member Removal Record Ownership | Gate 02B / Design | **RESOLVED** | Records remain in workspace attributed to member; access revoked; export recommended prior to removal (ADR-010). |
+| **OQ-021** | Production Smoke Account | Post-M1 / Testing | **RESOLVED (M14)** | Dedicated smoke account `smoke-tester@jobquest.internal` in isolated workspace `00000000-0000-4000-8000-000000000001` (SMOKE_TEST_PLAN.md). |
+| **OQ-022** | Inactivity Review Interval | Gate 02B / Final | **RESOLVED** | 31+ days triggers review (aligned with Long Waiting band); explicit Keep/Ghosted/Archive; zero automatic changes (ADR-027). |
+| **OQ-023** | Declined Offer Classification | Gate 02B / Final | **RESOLVED** | Outcome = `WITHDRAWN`, structured closure reason = `OFFER_DECLINED`; human-readable "Offer declined" (ADR-028). |
+| **OQ-024** | Wide Desktop Preview Pane Default | Gate 02B / Final | **RESOLVED** | Viewports ≥ 1680px default to OPEN; user preference persisted; no global Space shortcut conflict (ADR-029). |
+
+---
+
+# Gate 03 Database & Security Resolutions (added 2026-09-24, APPROVED)
+
+### OQ-011: Supabase Auth Option A vs Option B
+- **Status:** ~~PENDING M1 SPIKE (Provisionally Approved Subject to M1)~~ → **Option A resolved: FAIL in M1 (2026-09-24).** Next evaluation: Option B, in the M1B spike. (The original text below is preserved.)
+- **Resolution:** Option A (Node-controlled username/password layered over Supabase Auth via internal synthetic identity `id_<uuid>@auth.jobquest.internal`) is provisionally approved subject to M1 architecture spike verification.
+- **Specification:** Defined in `gate-03/AUTHENTICATION_DESIGN.md` §2–3. The M1 Spike must execute 12 specific test conditions (`gate-03/M1_SPIKE_PLAN.md` §3).
+- **Hard-Fail Leakage Invariant:** If the internal synthetic identity appears anywhere accessible to the browser or user (including session user object, JWT claims, API payload, React state, storage, debug logs, or network response), the zero identity leakage requirement FAILS.
+- **Option B Fallback:** Option B is an architectural fallback evaluated before continued product implementation (not an automatic runtime failover), evaluating currently supported Supabase mechanisms (externally minted JWTs, imported signing keys, 3rd party auth, `supabase-js` `accessToken` injection, and native PostgREST/RLS compatibility).
+
+### OQ-012: Legacy Migration Workspace Assignment
+- **Status:** **RESOLVED (APPROVED)**
+- **Resolution:** Legacy single-tenant data will be migrated into a dedicated, pre-provisioned workspace: **`"JobQuest (Migrated)"`**.
+- **Specification:** Defined in `gate-03/DATA_MIGRATION_DESIGN.md` §2 and ADR-041. All active legacy users are assigned `USER` memberships, and the primary administrator is assigned `MANAGER`. Each user also receives a new, isolated `"Personal Workspace"`. Legacy owner attribution, timestamps, and relationships are preserved.
+
+---
+
+# M1B Open Questions (added 2026-09-24, UPDATED POST-HOSTED VALIDATION)
+
+| ID | Question | Classification | Resolution / Current Status |
+|---|---|---|---|
+| OQ-011 | Auth Option A vs B | Architecture Decision | **Option A: RESOLVED FAIL (M1). Option B: RESOLVED PASS** across Local, CI, and Hosted `jobquest-dev`. Recommended for formal Gate 03 approval. |
+| OQ-025 | Approve importing and rotating to a JobQuest ES256 signing key on `jobquest-dev`? | Infrastructure Action | **RESOLVED (APPROVED & ROTATED)**: Key `a73390b9-56bf-4d1a-a642-efd4479ca0b3` in use; prior key kept trusted in `previously_used`. |
+| OQ-026 | Re-authenticate the Supabase CLI to the JobQuest2.0 account | Access Action | **RESOLVED**: CLI authenticated as `goutam.krapa11@gmail.com` (`059ca115-edbc-4269-894b-77cf4531b18b`). |
+| OQ-027 | Restore the five dev settings changed unintentionally by M1's `config push` | Configuration Action | **RESOLVED**: 4 settings restored (TOTP enroll `true`, TOTP verify `true`, OTP length `8`, email interval `1m0s`). 5th setting (storage analytics) explained (requires paid tier for Iceberg catalog). |
+| OQ-028 | Delete the Option A test identities (alias emails) left in `jobquest-dev` `auth.users` | Cleanup Action | **RESOLVED**: 20 synthetic test accounts inventoried and permanently purged from `auth.users`. Zero remain. |
+| OQ-029 | Signing-key custody for production (Vercel sensitive env vs managed KMS signing) | Production Security | **RESOLVED (M14)**: Vercel Sensitive Environment Variables (`SUPABASE_JWT_PRIVATE_KEY`) approved for launch; KMS evaluated as post-launch enhancement. |
+| OQ-030 | Edge/WAF rate limiting and `auth_rate_limits` bucket cleanup before production | Production Scaling | **RESOLVED (M14)**: Edge rate limits (10 req/min/IP on `/api/v1/auth/*`) + pg_cron / scheduled cleanup job purging expired records every hour. |
+| OQ-031 | Cause of the vanished `JobQuest2.0` Supabase project (`tezddimqfpyljhsaucmx`) | Audit / Informational | **CAUSE UNKNOWN (Non-blocking)**: Cause cannot be determined from available platform logs; no destructive actions taken; `jobquest-dev` is verified as the active development environment; non-blocking. |
+
+---
+
+# M15 Production Governance Reclassification (added 2026-09-28)
+
+### Operational State vs Architectural Feasibility
+In Milestone 14, items **OQ-016** (Hosting / Paid Plan Tiers), **OQ-021** (Production Smoke Account), **OQ-029** (Signing-Key Custody), and **OQ-030** (Edge Rate Limiting & Bucket Cleanup) were labeled as "RESOLVED" from an architectural and technical feasibility standpoint.
+
+For production execution in Milestone 15, **technical recommendations do NOT constitute user production authorization**. All production-affecting items have been formally reclassified to:
+`PROPOSED — USER APPROVAL REQUIRED`
+
+Historical M14 recommendations remain preserved as technical baselines, while production decisions are formally tracked in `migration-upgrade/m15/M15_USER_DECISION_GATE.md` across items **M15-D01 through M15-D20**.
+
+| Item | Operational Production Status | Decision Gate Reference |
+|---|---|---|
+| OQ-016 (Supabase Pro & Vercel Pro) | PROPOSED — USER APPROVAL REQUIRED | M15-D01 & M15-D02 |
+| OQ-021 (Production Smoke Account) | PROPOSED — USER APPROVAL REQUIRED | M15-D07 |
+| OQ-029 (ES256 Signing Key Custody) | PROPOSED — USER APPROVAL REQUIRED | M15-D06 |
+| OQ-030 (Rate Limiting & Rate Limits Cleanup) | PROPOSED — USER APPROVAL REQUIRED | M15-D08 & M15-D09 |
+
+

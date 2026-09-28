@@ -229,3 +229,40 @@ Supabase's native observability tooling before adding any third-party APM.
   behavior.
 - **NFR-005**: No secret value is ever logged, screenshotted, or committed —
   carry forward the existing CI secret-scanning gate.
+
+## 22. Gate 01 Target Architecture (PROPOSED, 2026-09-23)
+
+§3 (Target Architecture), §4 (Frontend) and §5 (Backend) above are the
+pre-Gate-01 baseline. The Gate 01 proposal refines them. It resolves OQ-007
+(hybrid boundary), chooses concrete libraries, and adds workspaces, the
+username/password façade, the canonical workflow package and the event model.
+See [`../GATE_01_ARCHITECTURE_PROPOSAL.md`](../GATE_01_ARCHITECTURE_PROPOSAL.md)
+§1–§18. None of it is approved yet.
+
+## 23. Gate 02B Frontend Component & State Architecture (PROPOSED, 2026-09-24)
+
+Based on the completed Gate 02B UI/UX specifications (`../ui-design/gate-02b/`):
+
+- **Component Layering:** Standardized on React 19 + TypeScript + Radix UI primitives (`@radix-ui/*`) styled via semantic Tailwind v4 tokens (`assets/jq.css`).
+- **State Architecture:**
+  - *Server State:* Managed by `@tanstack/react-query` with optimistic cache updates for rapid feedback (e.g. stage moves, task check-off).
+  - *URL State:* Managed by `@tanstack/react-router` binding all table filters, sorts, saved views, and detail drawer IDs directly to URL query parameters.
+  - *Local Form State:* Managed by `react-hook-form` + `zod` for zero-re-render typing performance and immediate client-side validation.
+  - *No Global Store:* Global stores (Redux, Zustand) remain explicitly omitted; server state + router query state handle all cross-cutting data needs.
+- **Accessibility & CSS Architecture:**
+  - Zero inline styles in production React bundle.
+  - Full WCAG 2.2 AA keyboard parity and focus-visible styling (`ACCESSIBILITY_MATRIX.md`).
+  - Strict formula-injection sanitization for CSV/XLSX export generation via `@jobquest/export-utils`.
+- **Extension Architecture:** Vanilla JS / Manifest V3 calling `/api/ext/v1` with scoped, expiring, pepper-hashed tokens and live workflow synchronization.
+
+## 24. Gate 03 Database, Auth & RLS Architecture (UPDATED POST-M1B OPTION B ADOPTION, 2026-09-24)
+
+Based on the completed Gate 03 architecture and the approved M1B Auth Option B amendment (`../gate-03/GATE_03_AUTH_OPTION_B_AMENDMENT.md`):
+
+- **Database Engine & Primary Keys:** Supabase PostgreSQL with canonical UUIDv4 (`gen_random_uuid()`) primary keys across all 29 permanent target tables plus 2 migration tracking tables (31 total tables; 11 foundational tables implemented in M1/M1B), backed by compound unique keys for multi-tenancy (`TARGET_SCHEMA.md`).
+- **Engine-Level Multi-Tenancy:** Composite foreign keys `(id, workspace_id)` across child tables guarantee cross-workspace data isolation at the engine level where they materially prevent tenant leakage (`GATE_03_ARCHITECTURE.md` §4).
+- **Authentication Strategy (Option B Approved):** Option A (synthetic email in GoTrue) was evaluated in M1 and FAILED due to synthetic identity exposure via `/auth/v1/user`. Option B is formally APPROVED based on complete proof across Local, CI, and Hosted `jobquest-dev`. Node API owns credentials (`user_credentials` with Argon2id), sessions (`auth_sessions`), single-use rotating refresh tokens (`auth_refresh_tokens`), and fixed-window rate limits (`auth_rate_limits`). It mints 15-minute ES256 access JWTs directly trusted by the Supabase Data API via an imported project signing key. Zero `auth.users` identities; zero synthetic emails; `auth.uid()` binds directly to `sub` (`user_accounts.user_id`).
+- **Session Transport & Security:** 4-tier CSRF defense-in-depth model; secure HttpOnly cookies (`jq_rt`); zero grace window single-use refresh token rotation; 10 single-use recovery codes with >=128 bits CSPRNG entropy each; 30-day default claim code validity (`AUTHENTICATION_DESIGN.md` §5–7, `GATE_03_AUTH_OPTION_B_AMENDMENT.md`).
+- **Row Level Security (RLS):** Classification taxonomy covering all target tables; helper functions `app.user_is_member_of()`, `app.user_has_role_in()`, and `app.session_is_active()`; strict peer isolation across all user activity tables (applications, contacts, interactions, job snapshots, tasks, habits, journals); manager coaching access to journals audited in `audit_events` (`AUTHORIZATION_RLS_DESIGN.md`).
+- **Client Routing Contract:** Strict 3-tier boundary: Direct PostgREST (`supabase-js` via custom `accessToken` injection) for reads/CRUD, Database RPCs for atomic multi-table mutations, Node Façade (`/api/*`) for auth, tokens, and file handling (`RPC_DOMAIN_OPERATIONS.md`).
+- **Stored Aging Telemetry:** Persisted `last_activity_at TIMESTAMPTZ` on `applications` updated atomically via domain events and explicit `rpc_keep_application_active` with zero automatic mutations (`RPC_DOMAIN_OPERATIONS.md` §4).

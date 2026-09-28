@@ -1,0 +1,131 @@
+{
+  "run": "705448",
+  "started_at": "2026-09-25T00:49:32.247Z",
+  "target": "local",
+  "B01": {
+    "status": "PASS",
+    "http": 201,
+    "recovery_codes": 10,
+    "code_format": "8 groups of 4 Crockford Base32 (160 bits; 140 secret)",
+    "credential_store": "user_credentials.password_hash",
+    "password_algorithm": "argon2id",
+    "argon2_params": "m=19456,t=2,p=1",
+    "recovery_code_verifiers": "argon2id",
+    "personal_workspace": "PERSONAL",
+    "membership_role": "MANAGER",
+    "supabase_auth_user_exists": false,
+    "duplicate_username_case_insensitive": 409,
+    "weak_password": 422,
+    "invalid_email": 422,
+    "optional_email_and_phone_accepted": 201
+  },
+  "B02": {
+    "status": "PASS",
+    "http": 200,
+    "body_keys": [
+      "session",
+      "user"
+    ],
+    "user_keys": [
+      "active_workspace_id",
+      "display_name",
+      "id",
+      "username"
+    ],
+    "session_keys": [
+      "access_token",
+      "expires_at",
+      "token_type"
+    ],
+    "refresh_cookie": "HttpOnly; Secure; SameSite=Strict; Path=/api/auth",
+    "wrong_vs_unknown_identical": true
+  },
+  "B13": {
+    "status": "PASS",
+    "session_row": true,
+    "session_absolute_days": 30,
+    "refresh_token_entropy_bits": 256,
+    "stored_verifier": "sha256 hex (64)",
+    "raw_token_stored": false,
+    "ip_stored": "sha256 only",
+    "user_agent_stored": true
+  },
+  "B21": {
+    "status": "PASS",
+    "per_account": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      429
+    ],
+    "correct_password_while_locked": 429,
+    "failed_login_count": 5,
+    "lock_store": "user_accounts (Postgres)",
+    "recovery_attempts": [
+      401,
+      401,
+      401,
+      429
+    ]
+  },
+  "B22": {
+    "status": "PASS",
+    "store": "Postgres auth_rate_limits via rpc_rate_limit_hit (shared across instances)",
+    "limit": 20,
+    "twenty_first_from_same_ip": 429,
+    "different_ip_unaffected": 401,
+    "stored_key": "sha256(ip), raw IP not stored",
+    "cross_client_shared_counter": [
+      "allowed",
+      "allowed",
+      "allowed",
+      "blocked"
+    ]
+  },
+  "B25": {
+    "status": "PASS",
+    "auth_v1_user_http": 403,
+    "auth_v1_user_error_code": "bad_jwt",
+    "body_keys": [
+      "code",
+      "error_code",
+      "msg"
+    ],
+    "body_contains_email_or_username": false,
+    "supabase_auth_users_for_test_accounts": 0,
+    "gotrue_signup_http": 422,
+    "gotrue_password_grant_http": 422
+  },
+  "SEC": {
+    "status": "PASS",
+    "system_tables_with_user_token": {
+      "user_accounts": "PGRST301",
+      "user_credentials": "PGRST301",
+      "auth_sessions": "PGRST301",
+      "auth_refresh_tokens": "PGRST301",
+      "auth_rate_limits": "PGRST301",
+      "auth_recovery_codes": "PGRST301"
+    },
+    "privileged_rpcs_with_user_token": {
+      "rpc_create_session": "PGRST301",
+      "rpc_change_password": "PGRST301",
+      "rpc_rate_limit_hit": "PGRST301",
+      "rpc_register_account": "PGRST301"
+    }
+  },
+  "B03-api": {
+    "status": "PASS",
+    "target": "local",
+    "api_responses_scanned": 81,
+    "findings": {
+      "argon2_verifier_in_body": false,
+      "password_hash_field_in_body": false,
+      "refresh_token_in_body": false,
+      "refresh_token_outside_set_cookie": false,
+      "synthetic_email_pattern": false,
+      "private_key_material": false
+    }
+  }
+}

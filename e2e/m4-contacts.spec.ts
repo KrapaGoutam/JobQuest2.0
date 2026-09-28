@@ -91,6 +91,7 @@ test.describe('Milestone 4 — Contacts & Networking E2E', () => {
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
 
     // 2. Navigate to /contacts
     await page.click('a[href="#/contacts"], button:has-text("Contacts")');

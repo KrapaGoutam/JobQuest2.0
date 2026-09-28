@@ -65,6 +65,7 @@ test.describe('Milestone 10 · Import & Export E2E', () => {
       await registration.getByRole('button', { name: 'Create account' }).click();
       await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
       await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
       await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
       // Seed an initial application for duplicate detection & export verification

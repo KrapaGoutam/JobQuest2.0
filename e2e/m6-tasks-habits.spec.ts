@@ -85,6 +85,7 @@ test.describe('Milestone 6 — Tasks, Habits & Unified Queue E2E', () => {
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Notifications' })).toBeVisible(); // no fake unread count
 

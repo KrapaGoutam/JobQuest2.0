@@ -60,6 +60,7 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
     // 2. Create sample applications to populate pipeline and analytics

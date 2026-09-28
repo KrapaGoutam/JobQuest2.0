@@ -155,6 +155,7 @@ test.describe('Milestone 12 · Workspace Management & Manager Functions E2E', ()
     await pageB.goto('/');
     await settle(pageB);
 
+    await pageB.getByRole('button', { name: 'Create account' }).click();
     const registerB = pageB.getByRole('form', { name: 'Register' });
     await registerB.getByLabel('Username (required)').fill(userB_name);
     await registerB.getByLabel('Password (required)').fill(userB_pass);

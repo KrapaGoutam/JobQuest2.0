@@ -75,6 +75,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
     // The workspace switcher reflects the real membership (personal workspace creator = MANAGER).
     await expect(page.getByRole('button', { name: /Switch workspace/ })).toContainText('MANAGER');

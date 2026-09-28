@@ -77,6 +77,7 @@ test('B03 (browser) · no private identity or credential material reaches the br
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications'); // this is fine since it doesn't interrupt a fetch
   }
 
   await page.goto('/settings');

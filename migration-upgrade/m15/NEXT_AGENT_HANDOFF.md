@@ -1,27 +1,27 @@
 # Next Agent Handoff: Milestone 15 — Production Launch Execution
 
-**Current State**: Milestone 15 Phase C (Legacy Neon Backup, Read-Only Export, Real-Schema Reconciliation & Production Pre-Flight) is **100% COMPLETE & VERIFIED**.  
+**Current State**: Milestone 15 Phase D (Final Legacy Freeze, Final Backup, Live Production Data Migration & Reconciliation) is **100% COMPLETE & VERIFIED**.  
 **Current Branch**: `feature/m15-production-launch-cutover`  
 **Base Commit on `development`**: `5b67c4c630dbd94cbcca8d13058aaa59afa87fe8` (M14 merge, CI `36432957662` **SUCCESS**)  
-**Production Authorization Status**: **PHASE M15-C COMPLETE — AWAITING EXPLICIT USER APPROVAL FOR PHASE M15-D LIVE MIGRATION**  
-**Production Mutation Status**: **ZERO LIVE PRODUCTION MUTATIONS (ONLY READ-ONLY PRE-FLIGHT EXECUTED ON PROD)**
+**Production Authorization Status**: **PHASE M15-D COMPLETE — AWAITING EXPLICIT USER APPROVAL FOR PHASE M15-E PRODUCTION WEB DEPLOYMENT & CUTOVER**  
+**Production Target Status**: **DATA MIGRATION COMPLETED, RECONCILED (222 APPS, 89 SNAPSHOTS, 533 EVENTS, 1 USER, 0 ORPHANS, 0 PIN HASHES), POST-MIGRATION RECOVERY POINT CAPTURED**
 
 ---
 
 ## 1. Critical Operational Guardrail for the Next Agent
 
 > [!CAUTION]
-> **DO NOT PROCEED TO PHASE M15-D LIVE DATA INGESTION UNTIL THE USER EXPLICITLY REPLIES TO AUTHORIZE LIVE MIGRATION.**
-> - You MUST inspect the user's latest response for explicit authorization to execute live production data migration (`M15-D`).
-> - **NEVER** merge into `main` without explicit approval (`M15-D13`).
-> - **NEVER** run `vercel deploy --prod` without explicit approval (`M15-D14`).
-> - **NEVER** mutate legacy Neon (`default_transaction_read_only=on` strictly enforced).
-> - **NEVER** edit files in `../JobQuest1.0/` or retire JobQuest 1.0 (`M15-D20`).
-> - **NEVER** echo, print, or commit passwords, tokens, or connection strings into Git, logs, or markdown.
+> **DO NOT PROCEED TO PHASE M15-E PRODUCTION WEB DEPLOYMENT UNTIL THE USER EXPLICITLY REPLIES TO AUTHORIZE M15-E.**
+> - You MUST inspect the user's latest response for explicit authorization to execute production web deployment (`M15-E`).
+> - **NEVER** merge `development` or `feature/m15-production-launch-cutover` into `main` without explicit approval.
+> - **NEVER** run `vercel deploy --prod` without explicit approval.
+> - **NEVER** modify DNS or publish the Chrome extension without explicit approval.
+> - **NEVER** edit files in `../JobQuest1.0/` or retire JobQuest 1.0 (JobQuest 1.0 remains in read-only standby).
+> - **NEVER** echo, print, or commit passwords, tokens, claim codes, or connection strings into Git, logs, or markdown.
 
 ---
 
-## 2. Completed Phase Deliverables (M15-A, M15-B, M15-C)
+## 2. Completed Phase Deliverables (M15-A, M15-B, M15-C, M15-D)
 
 ### 2.1 Phase M15-A: Pre-Flight & Planning (100% Complete)
 - Pre-flight audit, runbooks, checklists, and user decision gate documented in `migration-upgrade/m15/`.
@@ -34,46 +34,47 @@
 - **Vercel Prod Environment:** 10 environment variables configured on `jobquest2`.
 
 ### 2.3 Phase M15-C: Legacy Backup, Export & Pre-Flight (100% Complete)
-- **Verified Backups (Stored Outside Repos):**
-  - Location: `C:\Users\krapa\Documents\Job Search\JobTrackerProjects\_secure-backups\jobquest1\20260928_110500\`
-  - `legacy_neon_schema_20260928_110500.sql` (67,048 bytes, SHA256: `e04dc17b194b16fbf2f137b55f5cbc7e8e5f81093dd9367906f5e155f8509268`)
-  - `legacy_neon_data_20260928_110500.dump` (261,376 bytes, SHA256: `4c3d0dc9b2d2def3337f8f9b7d751694f753fb6008894018c340fb22f62f5e52`)
-- **Offline Docker Restore:** Container `jobquest1_m15c_restore_20260928_110500` (PG 18.6, 999ms, 0 errors, 34 tables, 62 FKs, 0 orphans).
-- **Export Artifact:** `legacy_neon_export_20260928_110500.json` (1,819,301 bytes, SHA256: `4fa64c13413d2175b74a74461c3ac4418dbdc2a790c9763599bcbd074f1c9afc`).
-- **Schema Reconciliation:** Handled `users.email: null`, `users.role: 'MANAGER'`, `users.theme_preference: 'dark'`, applications `stage`, 36 `'Internship'` applications via native tags, and `salary_range` notes.
-- **Migration Tooling:** Pure transformation layer added to `scripts/migrate-legacy-data.mjs` and typed in `scripts/migrate-legacy-data.d.ts` / `tests/ambient.d.ts`.
-- **Rehearsal Tests:** 13 unit tests + 4 integration tests + 331 full repo tests pass cleanly.
-- **Production Preflight:** Strictly read-only audit executed against `jobquest-prod` (`kwmnljvyvqvbvimypnmw`) — all 6 checks PASS.
+- **Baseline Backups Captured & Verified Offline:** `legacy_neon_schema_20260928_110500.sql` and `legacy_neon_data_20260928_110500.dump`.
+- **Offline Container Restore:** 34 tables, 0 FK orphans.
+- **Read-Only Preflight:** 6/6 checks PASS on `jobquest-prod`.
+
+### 2.4 Phase M15-D: Final Backup, Live Migration & Reconciliation (100% Complete)
+- **Source Freeze:** Verified `SHOW transaction_read_only = on`, max timestamp `2026-09-23T22:09:39.463Z`.
+- **Final Backup (Outside Git):**
+  - Schema: `legacy_neon_schema_20260928_120500.sql` (67,048 bytes, SHA256: `2dba0a45e1d30f7edbdd3db1070f511657f3660262b09c17fc05a32fa7b02638`)
+  - Full Dump: `legacy_neon_data_20260928_120500.dump` (261,377 bytes, SHA256: `0703950fab48886043001f3257274649d47d1ba92ef497dabca39b0832580810`)
+  - Verified restore container: 1,029 ms, 0 errors, 0 orphans.
+  - Final Export: `legacy_neon_export_20260928_120500.json` (1,819,301 bytes, SHA256: `f7eff96083bc2d825631de91d0f8301d51da716f31fd39dbcdc2e1a547e6422e`)
+- **Source Delta:** Exactly 0 deltas from M15-C baseline.
+- **Migration Tool Lock:** `M15D_PRODUCTION_MIGRATION_LOCK` established.
+- **Live Migration Execution:** Batch `ed7955f4-b315-4ffc-99d5-db8aaef8da75` completed in 73,129 ms (0 errors).
+- **Security Invariant:** `pin_hashes_migrated = 0` strictly verified.
+- **Claim Code:** 1 generated for `jack` (hint `d106...98`), stored outside Git in `_secure-backups\jobquest1\20260928_120500\claim_codes.json`.
+- **Reconciliation:**
+  - 222 applications (185 Applied, 37 Saved; 188 Open, 34 Closed; 36 Internship tagged).
+  - 89 job snapshots.
+  - 533 application events.
+  - 49 distinct tags.
+  - 0 FK orphans across all relationships.
+  - 0 unexplained deltas.
+- **Post-Migration Target Recovery Dump:** `jobquest_prod_post_migration_20260928_122000.dump` (869,912 bytes, SHA256: `75aa90028bcb82440a5dd71bfc39275bd78b42d3b2820307f90a2231ddbf2551`, 902 TOC entries).
+- **Target Validations:** RLS confirmed (anon denied, owner allowed, cross-workspace denied, smoke workspace isolated), search/analytics verified.
+- **Tests & Scans:** 36/36 test files passed, 332/332 tests passed, 0 TypeScript errors, 878 files scanned with 0 secret findings.
 
 ---
 
-## 3. Sequential Execution Workflow Once User Authorizes Phase M15-D
+## 3. Sequential Execution Workflow Once User Authorizes Phase M15-E
 
-Once the user approves starting live production data migration:
+Once the user approves starting Milestone 15-E (Production Web Deployment & Cutover):
 
-### Phase M15-D: Production Data Migration & Reconciliation
-1. Follow [`migration-upgrade/m15/PRODUCTION_MIGRATION_RUNBOOK.md`](file:///C:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/m15/PRODUCTION_MIGRATION_RUNBOOK.md).
-2. Execute live migration using the verified export file:
+### Phase M15-E: Web Deployment, Cutover & Verification
+1. Merge branch `feature/m15-production-launch-cutover` into `main` (if authorized).
+2. Execute production deployment:
    ```bash
-   node scripts/migrate-legacy-data.mjs \
-     --source "C:/Users/krapa/Documents/Job Search/JobTrackerProjects/_secure-backups/jobquest1/20260928_110500/legacy_neon_export_20260928_110500.json" \
-     --target "$PROD_DATABASE_URL" \
-     --workspace "018f0000-0000-4000-8000-000000000001" \
-     --report "migration-upgrade/m15/M15D_MIGRATION_REPORT.json"
+   npx vercel --prod --yes
    ```
-3. Follow [`migration-upgrade/m15/PRODUCTION_RECONCILIATION_PLAN.md`](file:///C:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/m15/PRODUCTION_RECONCILIATION_PLAN.md).
-4. Verify 100% row balance (222 applications, 89 snapshots, 533 events), 0 foreign key orphans, and exactly 0 legacy PIN hashes migrated (`pin_hashes_migrated: 0`).
-5. Securely vault claim codes outside Git.
-
-### Phase M15-E: Production Deployment & Cutover
-1. Follow [`migration-upgrade/m15/CUTOVER_RUNBOOK.md`](file:///C:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/m15/CUTOVER_RUNBOOK.md).
-2. Merge `development` into `main`. Wait for exact-SHA CI on `main` to pass.
-3. Deploy to production: `vercel deploy --prod`.
-4. Follow [`migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md`](file:///C:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md) and execute 9 smoke checkpoints.
-5. Present Go / No-Go checklist to user for final cutover signoff (`M15-D17`).
-
-### Phase M15-F: Post-Launch Stabilization
-1. Follow [`migration-upgrade/m15/POST_LAUNCH_STABILIZATION_PLAN.md`](file:///C:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/m15/POST_LAUNCH_STABILIZATION_PLAN.md).
-2. Monitor production error rates, connection pools, and claim code redemptions for 14 days.
-3. Maintain JobQuest 1.0 in read-only standby.
-4. Prompt user for separate post-stabilization retirement authorization (`M15-D20`).
+3. Verify production origin responds at `https://jobquest2.vercel.app`.
+4. Perform production smoke test using the existing smoke account `smoke-tester`.
+5. Verify Option B claim code redemption flow for user `jack` (using the secured claim code).
+6. Verify live web application data loading for `JobQuest (Migrated)` workspace.
+7. Maintain JobQuest 1.0 in 14-day read-only standby.

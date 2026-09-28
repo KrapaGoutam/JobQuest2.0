@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   mapLegacyUser,
   mapLegacyApplication,
-  mapLegacyStatus,
   normalizeLegacyTimestamp,
   mapLegacyTask,
   mapLegacyReminder,

@@ -9,19 +9,19 @@ import {
 
 const { Client } = pg;
 
-describe('M15-C Real Data Rehearsal & Reconciliation Integration Test', () => {
+const exportPath = process.env.M15C_EXPORT_PATH || 'C:/Users/krapa/Documents/Job Search/JobTrackerProjects/_secure-backups/jobquest1/20260928_110500/legacy_neon_export_20260928_110500.json';
+const hasExport = existsSync(exportPath);
+
+describe.skipIf(!hasExport)('M15-C Real Data Rehearsal & Reconciliation Integration Test', () => {
   const localPort = '55322';
   const targetDbUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || `postgresql://postgres:${process.env.PGPASSWORD || 'postgres'}@127.0.0.1:${localPort}/postgres`;
-  const exportPath = 'C:/Users/krapa/Documents/Job Search/JobTrackerProjects/_secure-backups/jobquest1/20260928_110500/legacy_neon_export_20260928_110500.json';
   const realDataWorkspaceId = '018f0000-0000-4000-8000-000000000002';
   const workspaceName = 'JobQuest Real Data Rehearsal';
 
   let db: any;
 
   beforeAll(async () => {
-    if (!existsSync(exportPath)) {
-      throw new Error(`Real export file not found at: ${exportPath}`);
-    }
+    if (!hasExport) return;
 
     db = new Client({ connectionString: targetDbUrl });
     await db.connect();
@@ -35,13 +35,15 @@ describe('M15-C Real Data Rehearsal & Reconciliation Integration Test', () => {
   });
 
   afterAll(async () => {
-    // Cleanup rehearsal workspace after tests
-    await rollbackMigration({
-      targetUrl: targetDbUrl,
-      workspaceId: realDataWorkspaceId,
-      confirmNonProduction: true
-    }).catch(() => {});
-    await db.end();
+    if (db) {
+      // Cleanup rehearsal workspace after tests
+      await rollbackMigration({
+        targetUrl: targetDbUrl,
+        workspaceId: realDataWorkspaceId,
+        confirmNonProduction: true
+      }).catch(() => {});
+      await db.end();
+    }
   });
 
   it('verifies read-only target preflight succeeds against target database', async () => {

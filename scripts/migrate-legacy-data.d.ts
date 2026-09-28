@@ -63,7 +63,7 @@ export declare function mapLegacyStatus(rawStatus: string): {
   closureReason: string | null;
   eventType: string;
 };
-export declare function mapLegacyUser(u: Record<string, any>): {
+export declare function mapLegacyUser(u: Record<string, unknown>): {
   username: string;
   cleanUsername: string;
   fullName: string;
@@ -72,7 +72,7 @@ export declare function mapLegacyUser(u: Record<string, any>): {
   weekStart: number;
   role: string;
 };
-export declare function mapLegacyApplication(a: Record<string, any>, existingTags?: string[]): {
+export declare function mapLegacyApplication(a: Record<string, unknown>, existingTags?: string[]): {
   companyName: string;
   roleTitle: string;
   stage: string;
@@ -97,10 +97,10 @@ export declare function mapLegacyApplication(a: Record<string, any>, existingTag
   hasSnapshot: boolean;
   jobDescription: string | null;
 };
-export declare function mapLegacyTask(t: Record<string, any>): Record<string, any>;
-export declare function mapLegacyReminder(f: Record<string, any>): Record<string, any>;
-export declare function mapLegacyNote(n: Record<string, any>): Record<string, any>;
-export declare function mapLegacyResume(r: Record<string, any>): Record<string, any>;
+export declare function mapLegacyTask(t: Record<string, unknown>): Record<string, unknown>;
+export declare function mapLegacyReminder(f: Record<string, unknown>): Record<string, unknown>;
+export declare function mapLegacyNote(n: Record<string, unknown>): Record<string, unknown>;
+export declare function mapLegacyResume(r: Record<string, unknown>): Record<string, unknown>;
 export declare function runProductionPreflight(options: { targetUrl: string }): Promise<{
   success: boolean;
   readOnly: boolean;

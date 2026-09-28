@@ -2,9 +2,9 @@ name: M1B CI
 
 on:
   push:
-    branches: [feature/**, development]
+    branches: [feature/**, development, main]
   pull_request:
-    branches: [development]
+    branches: [development, main]
   workflow_dispatch:
 
 concurrency:

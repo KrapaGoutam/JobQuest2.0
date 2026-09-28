@@ -21,6 +21,7 @@ import {
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
+  Building2,
 } from 'lucide-react';
 
 export interface SidebarProps {
@@ -62,6 +63,7 @@ export function Sidebar({
   ];
 
   const sharedWorkspaceNav = [
+    { id: 'ws-settings', path: '/workspace/settings', label: 'Workspace settings', icon: Building2 },
     { id: 'ws-imports', path: '/workspace/imports', label: 'Import & Export', icon: ArrowDownUp },
   ];
 

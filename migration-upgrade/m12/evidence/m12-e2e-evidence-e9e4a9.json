@@ -1,0 +1,124 @@
+{
+  "run": "e9e4a9",
+  "started_at": "2026-09-28T06:23:32.253Z",
+  "screenshots": [],
+  "a11y": [
+    {
+      "context": "personal_workspace_settings",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "create_workspace_modal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "shared_workspace_settings",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "members_roster",
+      "total": 1,
+      "critical": 1,
+      "serious": 0,
+      "blocking": 1,
+      "violations": [
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "description": "Ensure select element has an accessible name",
+          "nodes": [
+            {
+              "html": "<select style=\"border: 0px; outline: 0px; background: transparent; color: inherit; font-family: inherit; font-size: inherit; width: 100%; appearance: none; cursor: pointer;\"><option value=\"ALL\">Role: All</option><option value=\"MANAGER\">Managers</option><option value=\"USER\">Users</option></select>",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "html": "<select style=\"border: 0px; outline: 0px; background: transparent; color: inherit; font-family: inherit; font-size: inherit; width: 100%; appearance: none; cursor: pointer;\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "context": "invite_member_modal_code_created",
+      "total": 1,
+      "critical": 1,
+      "serious": 0,
+      "blocking": 1,
+      "violations": [
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "description": "Ensure select element has an accessible name",
+          "nodes": [
+            {
+              "html": "<select style=\"border: 0px; outline: 0px; background: transparent; color: inherit; font-family: inherit; font-size: inherit; width: 100%; appearance: none; cursor: pointer;\"><option value=\"ALL\">Role: All</option><option value=\"MANAGER\">Managers</option><option value=\"USER\">Users</option></select>",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "html": "<select style=\"border: 0px; outline: 0px; background: transparent; color: inherit; font-family: inherit; font-size: inherit; width: 100%; appearance: none; cursor: pointer;\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "context": "join_workspace_modal_preview",
+      "total": 1,
+      "critical": 0,
+      "serious": 1,
+      "blocking": 1,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "html": "<div class=\"ws-tile\" style=\"width: 34px; height: 34px; border-radius: var(--radius-sm); background: oklch(0.58 0.13 55); color: rgb(255, 255, 255); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;\">C8</div>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.48 (foreground color: #ffffff, background color: #b3621e, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "context": "mobile_members_roster",
+      "total": 1,
+      "critical": 1,
+      "serious": 0,
+      "blocking": 1,
+      "violations": [
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "description": "Ensure select element has an accessible name",
+          "nodes": [
+            {
+              "html": "<select style=\"border: 0px; outline: 0px; background: transparent; color: inherit; font-family: inherit; font-size: inherit; width: 100%; appearance: none; cursor: pointer;\"><option value=\"ALL\">Role: All</option><option value=\"MANAGER\">Managers</option><option value=\"USER\">Users</option></select>",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "html": "<select style=\"border: 0px; outline: 0px; background: transparent; color: inherit; font-family: inherit; font-size: inherit; width: 100%; appearance: none; cursor: pointer;\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "completed_at": "2026-09-28T06:23:49.184Z"
+}

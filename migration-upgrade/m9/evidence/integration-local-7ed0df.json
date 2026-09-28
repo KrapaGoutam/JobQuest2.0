@@ -1,0 +1,14 @@
+{
+  "run": "7ed0df",
+  "started_at": "2026-09-28T06:20:06.928Z",
+  "target": "local",
+  "m9-01-owner-round-trip": {
+    "objectSaved": true,
+    "malformedRejected": "23514"
+  },
+  "m9-02-profile-isolation": {
+    "peerRows": 0,
+    "managerRows": 0,
+    "anonymousDenied": true
+  }
+}

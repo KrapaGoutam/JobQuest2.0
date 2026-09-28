@@ -1,0 +1,25 @@
+{
+  "run": "b10394",
+  "started_at": "2026-09-28T06:28:35.940Z",
+  "target": "hosted-dev",
+  "m12-integration-report": {
+    "status": "PASS",
+    "sharedWorkspaceId": "fda1859c-3110-4748-8c38-13eae2099fd1",
+    "actionsAudited": [
+      "member.left",
+      "member.removed",
+      "member.role_changed",
+      "member.status_changed",
+      "member.status_changed",
+      "member.role_changed",
+      "member.joined",
+      "member.joined",
+      "invitation.revoked",
+      "invitation.created",
+      "invitation.created",
+      "workspace.updated",
+      "workspace.created"
+    ],
+    "testsPassed": 10
+  }
+}

@@ -13,7 +13,7 @@
   - URL normalization (stripping UTM params, sorting query parameters, lowercase protocol/host, trailing slash stripping).
   - Text normalization (whitespace collapse, unicode hyphen/quote normalization, case insensitivity, retaining seniority variants like "Senior" vs "Junior").
 - **Extraction Engine Unit Tests:**
-  - 16/16 legacy HTML fixtures pass unchanged in linkedom / DOM testing.
+  - All six verified legacy HTML fixture files and 11 named extractor cases pass unchanged in linkedom / DOM testing.
   - JSON-LD parsing, ATS adapters (Greenhouse, Lever, Indeed), DOM heading extraction, meta tag fallback, and brand-name collision guard.
 - **Deep-Link Security Unit Tests (BL-015):**
   - Strict origin validation in `buildSecureJobQuestUrl`.

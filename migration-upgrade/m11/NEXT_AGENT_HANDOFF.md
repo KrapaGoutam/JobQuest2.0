@@ -1,42 +1,34 @@
 # QUICK RECOVERY - MILESTONE 11
 
-## Active Milestone
+## Status
 
-Milestone 11 - Browser Extension Migration
+M11 Browser Extension Migration is complete, fully verified, and intentionally unmerged on `feature/m11-browser-extension`.
 
-## Active Branch / HEAD
+## Exact executable checkpoint
 
-`feature/m11-browser-extension` at pushed final executable checkpoint `e4799e01067a88c8c1eecd46595ab64c13dc3330`. First API/security checkpoint: `717e33dcae9aa57ef26a40e7d7382761d8b66108`; web/extension checkpoint: `6784fc59bde7cc77fb74a917b1c75d8e301e0b0e`; initial browser checkpoint: `3b9b3970fa579269852ab42b561a04b26d46b4fd`.
+`a49399ea59dd055c4af1887c857342913d166a07`
 
-## Completed Locally
+- Exact-SHA CI run `36370670193`: PASS.
+- Static job `108766160772`: PASS.
+- Database/integration/extension/browser job `108766160686`: PASS.
 
-- Extension token schema/RLS/lifecycle RPCs and atomic capture RPC.
-- Dedicated HMAC bearer auth and `/api/ext/v1` me/workflow/documents/duplicates/captures facade.
-- Settings token-management UI with one-time secret reveal.
-- MV3 extension source, strict CSP, local credential storage, six legacy fixtures, 11 named extractor cases, popup state matrix, dynamic workflow, duplicate UX, capture, and safe deep links.
-- Web application deep-link routing and drawer recovery.
-- Dev/prod packages and verified legacy icons.
-- Focused API/web typecheck, changed-file lint, token/security tests (29/29), and post-reset M11 integration (7/7) passed.
-- Extension tests (27/27), typecheck, both packages, and bundle secret scan (40 files, 0 findings) passed.
-- Web/extension checkpoint adds persisted System/Light/Dark themes, approved X1-X14 state mapping, deep-link routing, and manifest/CSP/content-script integrity coverage.
-- Unpacked persistent Chromium verification passes the real Settings token flow, options storage, live content-script extraction, workflow, atomic capture, deep link, exact duplicate, dark theme, and revoked-token state. Six axe contexts have 0 critical/serious findings. Exact-current evidence: `browser-local-0df44867.json` plus six screenshots.
-- Browser verification found and fixed comma-separated salary parsing and dark primary-button contrast; the salary regression raises the current extension total to 27/27.
+## Hosted state
 
-## Current Caveat
+- Supabase development only: `jobquest-dev` / `xpnkasclquplmrcmhsif`.
+- Migration `20261005100000_m11_extension_tokens.sql` applied; hosted M11 integration 7/7.
+- Final Vercel Preview: `https://jobquest2-4s4ifimlx-one-piece-5779.vercel.app`.
+- Deployment `dpl_Bynq1FZg7G2kD5vR9M1S6KTDPMx8`: READY, Preview, health 200.
+- Final Preview unpacked-extension lifecycle: PASS; six axe contexts, 0 blocking findings.
+- Production remains untouched.
 
-The local database reset, targeted M11 integration (7/7), and full integration regression (134/134) passed after the final safe-column grant hardening. Hosted `jobquest-dev` now has the M11 migration and hosted focused integration passes 7/7 (`integration-hosted-dev-9ba597.json`). Authenticated direct verifier-column SELECT is denied. Token display prefixes are 12 characters with four non-secret random discriminator characters.
+## Next exact action
 
-API PID `2596` on 8787 and web PID `52920` on 5173 are healthy and were reused. Local Supabase is running on 55321 after a clean reset through M11. The browser test deletes its temporary persistent profile after every run.
+Commit and push the docs-only closeout package, confirm the feature worktree is clean, and stop. Do not merge M11 or start M12.
 
-## Next Exact Action
+## M12 authority
 
-1. Commit/push the locally verified CI workflow/package and M10 date-fixture fixes as a new executable checkpoint.
-2. Require green GitHub Actions on that exact SHA.
-3. Deploy/validate that exact SHA Preview-only, then finalize M11 reports and recovery docs; do not merge M11.
+Gate 01 names M12 **Workspace Management & Manager Functions**. This is recorded for the future only; M12 has not started.
 
-## Hard Guardrails
+## Guardrails
 
-- JobQuest1.0 is read-only.
-- Supabase later: `jobquest-dev` / `xpnkasclquplmrcmhsif` only.
-- Vercel later: `jobquest2` Preview under `one-piece-5779` only.
-- Never merge M11, touch `main`/Production, start M12, reset, rebase, or force-push.
+Never reset, rebase, force-push, merge M11, touch `main`/`development`/Production, or edit JobQuest1.0.

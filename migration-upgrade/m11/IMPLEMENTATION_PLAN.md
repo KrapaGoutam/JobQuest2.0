@@ -99,7 +99,7 @@
   - Resume attachment picker.
 - Extraction Engine:
   - 5-tier source-quality cascade: (1) JSON-LD `JobPosting`, (2) ATS adapters (Greenhouse, Lever, Indeed), (3) Semantic DOM headings, (4) Meta tags with generic title filter, (5) Generic fallbacks.
-  - Full compatibility with existing 16 HTML fixture tests.
+  - Full compatibility with the verified legacy source set: six HTML fixture files and 11 named extractor cases.
 - Secure Deep-Linking:
   - `buildSecureJobQuestUrl` ensuring strict origin binding (`${origin}/w/${workspaceId}/applications/${id}`).
 

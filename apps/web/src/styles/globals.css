@@ -1027,3 +1027,57 @@ button.chip:focus-visible, .circ-btn:focus-visible, .trow-main:focus-visible, .c
 @media (max-width: 1099px) {
   .hdr .search { width: 220px; }
 }
+
+/* M11 · Browser extension token settings */
+.extension-settings-page { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; margin: 0 auto; }
+.extension-settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.extension-settings-heading h1 { margin: 2px 0 5px; font-size: 26px; }
+.extension-settings-heading p { margin: 0; }
+.extension-settings-heading .eyebrow { color: var(--color-accent); font-size: var(--font-size-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.extension-settings-alert { display: flex; align-items: center; gap: 9px; padding: 10px 12px; color: var(--color-danger); background: var(--color-danger-soft); border: 1px solid color-mix(in oklch, var(--color-danger) 40%, var(--color-border)); border-radius: var(--radius-md); }
+.extension-settings-alert span { flex: 1; }
+.extension-settings-alert button { border: 0; background: none; color: inherit; cursor: pointer; font-size: 18px; }
+.extension-token-card-body { padding: 0; }
+.extension-token-empty { min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 30px; text-align: center; }
+.extension-token-empty h3, .extension-token-empty p { margin: 0; }
+.extension-token-table-wrap { overflow-x: auto; }
+.extension-token-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+.extension-token-table th, .extension-token-table td { padding: 11px 14px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: middle; white-space: nowrap; }
+.extension-token-table th { color: var(--color-text-muted); background: var(--color-surface-2); font-size: var(--font-size-xs); font-weight: 600; }
+.extension-token-table tr:last-child td { border-bottom: 0; }
+.extension-token-table tr.revoked { color: var(--color-text-muted); }
+.extension-token-name { display: inline-flex; align-items: center; gap: 9px; }
+.extension-token-name > span { display: flex; flex-direction: column; gap: 2px; }
+.extension-token-name code { color: var(--color-text-muted); font-size: 11px; }
+.extension-token-actions { display: inline-flex; justify-content: flex-end; gap: 6px; }
+.extension-token-status { display: inline-flex; align-items: center; height: 23px; padding: 0 8px; border-radius: var(--radius-pill); font-size: var(--font-size-xs); font-weight: 700; text-transform: capitalize; }
+.extension-token-status.active { color: var(--color-success); background: var(--color-success-soft); }
+.extension-token-status.expiring { color: var(--color-warning); background: var(--color-warning-soft); }
+.extension-token-status.expired, .extension-token-status.revoked { color: var(--color-text-muted); background: var(--color-surface-3); }
+.extension-scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
+.extension-scope-grid > span { display: flex; align-items: center; gap: 7px; font-size: var(--font-size-sm); }
+.scope-yes { display: flex; color: var(--color-success); }
+.scope-no { display: flex; color: var(--color-text-muted); }
+.extension-token-form { display: flex; flex-direction: column; gap: 8px; }
+.extension-token-form label { font-size: var(--font-size-sm); font-weight: 600; }
+.extension-token-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+.extension-token-fields > div, .extension-token-form > div { display: flex; flex-direction: column; gap: 6px; }
+.extension-readonly-field { min-height: 36px; display: flex; align-items: center; padding: 0 10px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.extension-fixed-access { padding: 10px 12px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.extension-fixed-access span { display: flex; align-items: center; gap: 6px; color: var(--color-success); font-size: var(--font-size-sm); }
+.extension-reveal { display: flex; flex-direction: column; gap: 14px; }
+.extension-secret { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.extension-secret code { flex: 1; min-width: 0; overflow-wrap: anywhere; user-select: all; font-size: 12px; }
+.extension-reveal dl { display: grid; grid-template-columns: 90px 1fr; gap: 7px 12px; margin: 0; font-size: var(--font-size-sm); }
+.extension-reveal dt { color: var(--color-text-muted); }
+.extension-reveal dd { margin: 0; }
+.dlg-f .small { display: inline-flex; align-items: center; gap: 5px; }
+
+@media (max-width: 767px) {
+  .extension-settings-heading { flex-direction: column; }
+  .extension-settings-heading .btn { width: 100%; justify-content: center; }
+  .extension-scope-grid, .extension-token-fields { grid-template-columns: 1fr; }
+  .extension-token-table th:nth-child(2), .extension-token-table td:nth-child(2),
+  .extension-token-table th:nth-child(3), .extension-token-table td:nth-child(3) { display: none; }
+  .extension-secret { align-items: stretch; flex-direction: column; }
+}

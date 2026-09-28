@@ -26,6 +26,8 @@ export function loadEnv(): boolean {
   // Test-only knobs: many registrations come from one machine; keep the real defaults elsewhere.
   process.env.REGISTER_IP_MAX_PER_HOUR = '500';
   process.env.AUTH_FAILURE_FLOOR_MS = '0';
+  process.env.EXTENSION_TOKEN_PEPPER ??= randomBytes(32).toString('base64url');
+  process.env.EXTENSION_TOKEN_ENV ??= 'dev';
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SECRET_KEY && process.env.JQ_JWT_PRIVATE_JWK);
 }
 

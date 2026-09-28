@@ -12,6 +12,16 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-explicit-any': 'off', '@typescript-eslint/no-non-null-asserted-optional-chain': 'off' },
   },
   {
+    files: ['apps/extension/**/*.js'],
+    languageOptions: { globals: { ...globals.webextensions } },
+  },
+  {
+    // These source-compatible legacy extractors intentionally ignore selector
+    // failures and retain a defensive fallback assignment verified by fixtures.
+    files: ['apps/extension/content.js', 'apps/extension/extractors/**/*.js'],
+    rules: { 'no-empty': 'off', 'no-useless-assignment': 'off' },
+  },
+  {
     // The browser bundle must never reference server secrets.
     files: ['apps/web/**'],
     rules: {

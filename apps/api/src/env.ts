@@ -36,6 +36,12 @@ const schema = z.object({
   RECOVERY_LOCK_MINUTES: z.coerce.number().int().positive().default(60),
   RECOVERY_IP_MAX_PER_HOUR: z.coerce.number().int().positive().default(10),
   PASSWORD_CHANGE_MAX_PER_HOUR: z.coerce.number().int().positive().default(3),
+  /** Browser-extension personal access tokens (M11). */
+  EXTENSION_TOKEN_PEPPER: z.string().min(32),
+  EXTENSION_TOKEN_ENV: z.enum(['dev', 'live']).default('dev'),
+  EXTENSION_TOKEN_RATE_LIMIT: z.coerce.number().int().positive().default(120),
+  /** Optional comma-separated chrome-extension:// origins that receive CORS headers. */
+  EXTENSION_ORIGINS: z.string().default(''),
   /** Minimum response time for failed auth, to blunt username-enumeration timing. */
   AUTH_FAILURE_FLOOR_MS: z.coerce.number().int().nonnegative().default(600),
 });
@@ -74,4 +80,13 @@ export function allowedOrigins(): Set<string> {
     if (v) set.add(`https://${v}`);
   }
   return set;
+}
+
+export function allowedExtensionOrigins(): Set<string> {
+  return new Set(
+    env()
+      .EXTENSION_ORIGINS.split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => /^chrome-extension:\/\/[a-p]{32}$/.test(origin)),
+  );
 }

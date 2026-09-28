@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { bearer } from '../lib/security';
 import { userClient } from '../lib/db';
+import { admin } from '../lib/db';
 import { verifyAccessToken } from '../lib/tokens';
 
 export interface Caller {
@@ -15,6 +16,11 @@ export async function caller(c: Context): Promise<Caller | null> {
   if (!token) return null;
   const claims = await verifyAccessToken(token);
   if (!claims) return null;
+  const { data: sessionIsLive } = await admin().rpc('rpc_session_is_live', {
+    p_session_id: claims.session_id,
+    p_user_id: claims.sub,
+  });
+  if (sessionIsLive !== true) return null;
   return { token, userId: claims.sub, client: userClient(token) };
 }
 

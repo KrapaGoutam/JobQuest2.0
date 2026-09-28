@@ -14,9 +14,11 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
+    "test:extension": "pnpm --filter @jobquest/extension test",
     "test:e2e": "playwright test",
     "db:push": "supabase db push",
     "check:bundle": "node scripts/check-bundle.mjs",
+    "check:extension": "node scripts/check-bundle.mjs --extension",
     "check:secrets": "node scripts/check-bundle.mjs --tracked",
     "local:key": "node scripts/gen-local-signing-key.mjs",
     "local:env": "node scripts/m1b-local-env.mjs"

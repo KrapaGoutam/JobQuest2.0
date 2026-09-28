@@ -76,6 +76,8 @@ export interface ApplicationsViewProps {
   probeStatus?: string;
   log?: string[];
   activeWorkspaceId?: string | null;
+  initialApplicationId?: string | null;
+  onDeepLinkMissing?: () => void;
   userRole?: 'USER' | 'MANAGER';
   onRefresh: () => Promise<unknown>;
   onLogout: (scope: 'local' | 'global') => Promise<void>;
@@ -123,6 +125,8 @@ export function ApplicationsView({
   probeStatus = '',
   log = [],
   activeWorkspaceId,
+  initialApplicationId = null,
+  onDeepLinkMissing,
   userRole = 'USER',
   onRefresh,
   onLogout,
@@ -157,6 +161,7 @@ export function ApplicationsView({
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
   /** Bumped after every mutation so the drawer/rail refetch their event history. */
   const [historyVersion, setHistoryVersion] = useState(0);
+  const handledDeepLink = useRef<string | null>(null);
 
   // Filters, search & sort
   const [activeStage, setActiveStage] = useState('ALL');
@@ -283,9 +288,31 @@ export function ApplicationsView({
   useEffect(() => {
     if (!drawerAppId || applications.some((a) => a.id === drawerAppId)) return;
     fetchApplicationDetail(drawerAppId)
-      .then(setDrawerFallback)
+      .then((application) => {
+        setDrawerFallback(application);
+        if (application) {
+          setActiveId(application.id);
+          return;
+        }
+        if (drawerAppId === initialApplicationId) {
+          setDrawerAppId(null);
+          addToast({
+            title: 'Application unavailable',
+            description: 'This application was removed or is not available in your workspace.',
+            type: 'warning',
+          });
+          onDeepLinkMissing?.();
+        }
+      })
       .catch(() => setDrawerFallback(null));
-  }, [drawerAppId, applications, historyVersion]);
+  }, [drawerAppId, applications, historyVersion, initialApplicationId, addToast, onDeepLinkMissing]);
+
+  useEffect(() => {
+    if (!initialApplicationId || handledDeepLink.current === initialApplicationId) return;
+    handledDeepLink.current = initialApplicationId;
+    setDrawerFallback(null);
+    setDrawerAppId(initialApplicationId);
+  }, [initialApplicationId]);
 
   const openDetail = useCallback((app: Application) => {
     setDrawerFallback(app);

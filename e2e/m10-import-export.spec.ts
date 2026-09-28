@@ -83,13 +83,16 @@ test.describe('Milestone 10 · Import & Export E2E', () => {
 
     // Step 1: Choose source (structured text)
     await page.getByRole('radio', { name: 'Structured text' }).click();
+    // The create modal persists applied_at with the database's current date. Keep
+    // this fixture aligned so duplicate detection remains deterministic across days.
+    const appliedDate = new Date().toISOString().slice(0, 10);
     const structuredInput = `company: Acme Corp ${run}
 job_title: Senior Systems Engineer
-date_applied: 2026-09-26
+date_applied: ${appliedDate}
 ---
 company: Stellar Dynamics ${run}
 job_title: Staff Cloud Architect
-date_applied: 2026-09-26
+date_applied: ${appliedDate}
 salary_min: 180000
 salary_max: 220000
 location: Remote

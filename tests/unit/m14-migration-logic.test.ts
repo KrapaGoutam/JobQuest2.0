@@ -192,7 +192,7 @@ describe('M14 Migration Logic Unit Tests', () => {
     });
 
     it('passes for local or non-production test URLs with confirmation', () => {
-      expect(assertSafeTarget('postgresql://postgres:postgres@127.0.0.1:55322/postgres', true)).toBe(true);
+      expect(assertSafeTarget('postgresql://postgres:placeholder@127.0.0.1:55322/postgres', true)).toBe(true);
       expect(assertSafeTarget('postgresql://postgres@aws-0-us-west-2.pooler.supabase.com:5432/jobquest-dev', true)).toBe(true);
     });
   });

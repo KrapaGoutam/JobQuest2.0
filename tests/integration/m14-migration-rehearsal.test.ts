@@ -10,7 +10,8 @@ import {
 const { Client } = pg;
 
 describe('M14 Migration Rehearsal & Reconciliation Integration Test', () => {
-  const targetDbUrl = process.env.SUPABASE_DB_URL || 'postgresql://postgres:postgres@127.0.0.1:55322/postgres';
+  const localPort = '55322';
+  const targetDbUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || `postgresql://postgres:${process.env.PGPASSWORD || 'postgres'}@127.0.0.1:${localPort}/postgres`;
   const fixturePath = resolve(__dirname, '../fixtures/legacy-representative-export.json');
   const rehearsalWorkspaceId = '018f0000-0000-4000-8000-000000000001';
 

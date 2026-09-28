@@ -3,7 +3,8 @@ import { Client } from 'pg';
 import path from 'path';
 import { runMigration, rollbackMigration } from '../../scripts/migrate-legacy-data.mjs';
 
-const targetDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:55322/postgres';
+const localPort = '55322';
+const targetDbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || `postgresql://postgres:${process.env.PGPASSWORD || 'postgres'}@127.0.0.1:${localPort}/postgres`;
 const parityWorkspaceId = '018f0000-0000-4000-8000-000000000002';
 const fixturePath = path.resolve(__dirname, '../fixtures/legacy-representative-export.json');
 

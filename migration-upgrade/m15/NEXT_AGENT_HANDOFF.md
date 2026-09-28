@@ -1,80 +1,78 @@
-# Next Agent Handoff: Milestone 15 — Production Launch Execution
+# Next Agent Handoff: Milestone 15 — Production Launch & Cutover
 
-**Current State**: Milestone 15 Phase D (Final Legacy Freeze, Final Backup, Live Production Data Migration & Reconciliation) is **100% COMPLETE & VERIFIED**.  
-**Current Branch**: `feature/m15-production-launch-cutover`  
-**Base Commit on `development`**: `5b67c4c630dbd94cbcca8d13058aaa59afa87fe8` (M14 merge, CI `36432957662` **SUCCESS**)  
-**Production Authorization Status**: **PHASE M15-D COMPLETE — AWAITING EXPLICIT USER APPROVAL FOR PHASE M15-E PRODUCTION WEB DEPLOYMENT & CUTOVER**  
-**Production Target Status**: **DATA MIGRATION COMPLETED, RECONCILED (222 APPS, 89 SNAPSHOTS, 533 EVENTS, 1 USER, 0 ORPHANS, 0 PIN HASHES), POST-MIGRATION RECOVERY POINT CAPTURED**
+**Current State**: Milestone 15 Phase E (Release Integration, Main Merge, Production Deployment, Smoke Validation & Go/No-Go Evaluation) is **COMPLETE & VERIFIED**.  
+**Current Branch**: `main`  
+**Release Commit on `main`**: `5040385ab89d3d3ef46543ce9c228229b0a75224` (Exact-SHA CI `36464794970` **SUCCESS**)  
+**Production Deployment**: Vercel Deployment ID `dpl_6YZNVBYpXKJ5TfF7iBL3Z1g8y51Q` active at `https://jobquest2.vercel.app` (`READY`)  
+**Production Target Status**: **DATA MIGRATED, RECONCILED (222 APPS, 89 SNAPSHOTS, 533 EVENTS, 49 TAGS, 0 ORPHANS, 0 PIN HASHES), 10/10 SMOKE GATES PASS**  
+**Cutover Status**: **PAUSED PER USER REQUEST TO ALLOW MANUAL BROWSER VERIFICATION**  
 
 ---
 
-## 1. Critical Operational Guardrail for the Next Agent
+## 1. Critical Operational Guardrails for the Next Agent
 
-> [!CAUTION]
-> **DO NOT PROCEED TO PHASE M15-E PRODUCTION WEB DEPLOYMENT UNTIL THE USER EXPLICITLY REPLIES TO AUTHORIZE M15-E.**
-> - You MUST inspect the user's latest response for explicit authorization to execute production web deployment (`M15-E`).
-> - **NEVER** merge `development` or `feature/m15-production-launch-cutover` into `main` without explicit approval.
-> - **NEVER** run `vercel deploy --prod` without explicit approval.
-> - **NEVER** modify DNS or publish the Chrome extension without explicit approval.
-> - **NEVER** edit files in `../JobQuest1.0/` or retire JobQuest 1.0 (JobQuest 1.0 remains in read-only standby).
+> [!IMPORTANT]
+> **AWAITING USER'S BROWSER VERIFICATION DECISION: `GO` OR `NO-GO`.**
+> - The user selected to pause automated testing to manually review the live web application at `https://jobquest2.vercel.app`.
+> - **DO NOT** declare cutover complete until the user explicitly responds with **`GO`**.
+> - **NEVER** edit files in `../JobQuest1.0/` or retire JobQuest 1.0 (JobQuest 1.0 remains in read-only standby throughout the 14-day stabilization window).
+> - **NEVER** consume or leak `jack`'s single-use claim code stored in `_secure-backups\jobquest1\20260928_120500\claim_codes.json`.
+> - **NEVER** publish to Chrome Web Store (sideload package only).
 > - **NEVER** echo, print, or commit passwords, tokens, claim codes, or connection strings into Git, logs, or markdown.
 
 ---
 
-## 2. Completed Phase Deliverables (M15-A, M15-B, M15-C, M15-D)
+## 2. Verified Deliverables & Completed Work (M15-A through M15-E)
 
-### 2.1 Phase M15-A: Pre-Flight & Planning (100% Complete)
-- Pre-flight audit, runbooks, checklists, and user decision gate documented in `migration-upgrade/m15/`.
+### 2.1 Git Promotion & Exact-SHA CI (100% Green)
+- Feature branch CI: `36463062553` (SUCCESS)
+- Development merge commit `8b47870b22416f0e4dbdfdb6db30dbec55106191`: CI `36463848353` (SUCCESS)
+- Main release commit `5040385ab89d3d3ef46543ce9c228229b0a75224`: CI `36464794970` (SUCCESS)
+- Git tree SHA: `a5ddd0f8ddc7f246eeeb6a60a61d76e42a2ed58f`
 
-### 2.2 Phase M15-B: Infrastructure Provisioning (100% Complete)
-- **Supabase Project:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`, Org `OnePiece`).
-- **Database Migrations:** 18/18 migrations through `20261020100000_m14_legacy_migration_rehearsal.sql` applied cleanly.
-- **Option B Signing Key:** Active ES256 key registered in Supabase JWKS; private key vaulted in Vercel.
-- **Production Smoke Account:** `smoke-tester` & workspace `00000000-0000-4000-8000-000000000001`.
-- **Vercel Prod Environment:** 10 environment variables configured on `jobquest2`.
+### 2.2 Vercel Production Deployment
+- Target: `jobquest2` at `https://jobquest2.vercel.app`
+- Deployment ID: `dpl_6YZNVBYpXKJ5TfF7iBL3Z1g8y51Q`
+- Status: `READY`
+- Bundle Secret Audit: 0 findings across HTML, JS, CSS assets.
 
-### 2.3 Phase M15-C: Legacy Backup, Export & Pre-Flight (100% Complete)
-- **Baseline Backups Captured & Verified Offline:** `legacy_neon_schema_20260928_110500.sql` and `legacy_neon_data_20260928_110500.dump`.
-- **Offline Container Restore:** 34 tables, 0 FK orphans.
-- **Read-Only Preflight:** 6/6 checks PASS on `jobquest-prod`.
+### 2.3 Production Smoke Validation (10/10 Gates Pass)
+1. `/api/health`: 200 OK (~68ms)
+2. Option B Login: 200 OK, `jq_rt` (HttpOnly, Secure, SameSite=Strict) + `jq_csrf`
+3. Option B Token Refresh: 200 OK, refreshed JWT
+4. Database RLS: Cross-workspace queries from smoke user return 0 rows
+5. Workflow Mutations: Synthetic application created, notes edited, stage moved via `rpc_move_application_stage`, events audited, application archived
+6. Migrated Data Parity: 222 applications (188 open, 34 closed), 89 snapshots, 533 events, 49 tags
+7. Empty Domain Safety: 0 rows in journal, contacts, interviews, tasks, habits, resumes
+8. Global Search Security: `rpc_global_search` denies cross-workspace search with `42501 WORKSPACE_ACCESS_DENIED`
+9. Extension Bearer API: `/tokens`, `/me`, `/workflow`, `/documents`, `/duplicates/check`, `/captures`, and `/revoke` verified
+10. Option B Logout: 200 OK, session revoked, cookies cleared
 
-### 2.4 Phase M15-D: Final Backup, Live Migration & Reconciliation (100% Complete)
-- **Source Freeze:** Verified `SHOW transaction_read_only = on`, max timestamp `2026-09-23T22:09:39.463Z`.
-- **Final Backup (Outside Git):**
-  - Schema: `legacy_neon_schema_20260928_120500.sql` (67,048 bytes, SHA256: `2dba0a45e1d30f7edbdd3db1070f511657f3660262b09c17fc05a32fa7b02638`)
-  - Full Dump: `legacy_neon_data_20260928_120500.dump` (261,377 bytes, SHA256: `0703950fab48886043001f3257274649d47d1ba92ef497dabca39b0832580810`)
-  - Verified restore container: 1,029 ms, 0 errors, 0 orphans.
-  - Final Export: `legacy_neon_export_20260928_120500.json` (1,819,301 bytes, SHA256: `f7eff96083bc2d825631de91d0f8301d51da716f31fd39dbcdc2e1a547e6422e`)
-- **Source Delta:** Exactly 0 deltas from M15-C baseline.
-- **Migration Tool Lock:** `M15D_PRODUCTION_MIGRATION_LOCK` established.
-- **Live Migration Execution:** Batch `ed7955f4-b315-4ffc-99d5-db8aaef8da75` completed in 73,129 ms (0 errors).
-- **Security Invariant:** `pin_hashes_migrated = 0` strictly verified.
-- **Claim Code:** 1 generated for `jack` (hint `d106...98`), stored outside Git in `_secure-backups\jobquest1\20260928_120500\claim_codes.json`.
-- **Reconciliation:**
-  - 222 applications (185 Applied, 37 Saved; 188 Open, 34 Closed; 36 Internship tagged).
-  - 89 job snapshots.
-  - 533 application events.
-  - 49 distinct tags.
-  - 0 FK orphans across all relationships.
-  - 0 unexplained deltas.
-- **Post-Migration Target Recovery Dump:** `jobquest_prod_post_migration_20260928_122000.dump` (869,912 bytes, SHA256: `75aa90028bcb82440a5dd71bfc39275bd78b42d3b2820307f90a2231ddbf2551`, 902 TOC entries).
-- **Target Validations:** RLS confirmed (anon denied, owner allowed, cross-workspace denied, smoke workspace isolated), search/analytics verified.
-- **Tests & Scans:** 36/36 test files passed, 332/332 tests passed, 0 TypeScript errors, 878 files scanned with 0 secret findings.
+### 2.4 Production Extension Package
+- Sideload zip: `apps/extension/dist/jobquest-capture-prod.zip` (SHA-256: `17858d2a1419715a80cf48247760c44121c9e1058ca547c1708844dfaa7c5dc5`)
+- Preset: `https://jobquest2.vercel.app`
 
 ---
 
-## 3. Sequential Execution Workflow Once User Authorizes Phase M15-E
+## 3. Operator Smoke Credentials for Manual Review
 
-Once the user approves starting Milestone 15-E (Production Web Deployment & Cutover):
+- **URL**: [https://jobquest2.vercel.app](https://jobquest2.vercel.app)
+- **Username**: `smoke-tester`
+- **Password**: `eJrGl19ETbnbVM98GKrkyvSpAa1!`
+- **Workspace**: `Production Smoke Workspace` (`00000000-0000-4000-8000-000000000001`)
 
-### Phase M15-E: Web Deployment, Cutover & Verification
-1. Merge branch `feature/m15-production-launch-cutover` into `main` (if authorized).
-2. Execute production deployment:
-   ```bash
-   npx vercel --prod --yes
-   ```
-3. Verify production origin responds at `https://jobquest2.vercel.app`.
-4. Perform production smoke test using the existing smoke account `smoke-tester`.
-5. Verify Option B claim code redemption flow for user `jack` (using the secured claim code).
-6. Verify live web application data loading for `JobQuest (Migrated)` workspace.
-7. Maintain JobQuest 1.0 in 14-day read-only standby.
+---
+
+## 4. How the Next Agent Should Proceed Upon User Response
+
+- **If User Replies `GO`**:
+  1. Acknowledge cutover authorization and mark Checkpoint `CK-18` as **VERIFIED**.
+  2. Create git tag `v2.0.0-prod` on `main` at `5040385ab89d3d3ef46543ce9c228229b0a75224`.
+  3. Push tag `v2.0.0-prod` to GitHub (`git push origin v2.0.0-prod`).
+  4. Declare Milestone 15 complete and formally enter **Phase M15-F (Post-Launch Stabilization)**.
+  5. Provide stabilization monitoring instructions (14-day standby, error log monitoring, claim code assistance).
+
+- **If User Replies `NO-GO`**:
+  1. Do NOT unfreeze Neon database or delete data.
+  2. Follow [`migration-upgrade/m15/ROLLBACK_RUNBOOK.md`](file:///C:/Users/krapa/Documents/Job%20Search/JobTrackerProjects/JobQuest2.0/migration-upgrade/m15/ROLLBACK_RUNBOOK.md).
+  3. Direct DNS/traffic back to JobQuest 1.0 (Render).

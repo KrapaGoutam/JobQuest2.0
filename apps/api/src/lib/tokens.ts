@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { SignJWT, importJWK, jwtVerify, type CryptoKey, type JWK, type JWTPayload } from 'jose';
+import type { CryptoKey, JWK, JWTPayload } from 'jose';
 import { env } from '../env';
+
+const getJose = async () => await import('jose');
 
 /**
  * Option B access tokens: short-lived ES256 JWTs minted by the Node API and verified by
@@ -45,6 +47,7 @@ export function signingMaterial(): Promise<SigningMaterial> {
     // Import only key material: generated JWKs may carry key_ops ['sign','verify'],
     // which WebCrypto rejects for an ECDSA private key.
     const publicJwk: JWK = { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y };
+    const { importJWK } = await getJose();
     return {
       kid: jwk.kid,
       privateKey: (await importJWK({ ...publicJwk, d: jwk.d, alg: ACCESS_ALG }, ACCESS_ALG)) as CryptoKey,
@@ -67,6 +70,7 @@ export interface MintedAccess {
 
 export async function mintAccessToken(userId: string, sessionId: string, ttlSeconds = env().ACCESS_TOKEN_TTL_SECONDS): Promise<MintedAccess> {
   const { kid, privateKey } = await signingMaterial();
+  const { SignJWT } = await getJose();
   const now = Math.floor(Date.now() / 1000);
   const exp = now + ttlSeconds;
   const access_token = await new SignJWT({ role: ACCESS_ROLE, session_id: sessionId })
@@ -91,6 +95,7 @@ export interface AccessClaims extends JWTPayload {
 export async function verifyAccessToken(token: string): Promise<AccessClaims | null> {
   try {
     const { publicKey } = await signingMaterial();
+    const { jwtVerify } = await getJose();
     const { payload } = await jwtVerify(token, publicKey, {
       algorithms: [ACCESS_ALG],
       issuer: env().JQ_JWT_ISSUER,

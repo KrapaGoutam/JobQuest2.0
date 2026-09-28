@@ -102,7 +102,6 @@ test('B03 (browser) · no private identity or credential material reaches the br
   await login.getByLabel('Username').fill(username);
   await login.getByLabel('Password').fill(password);
   await login.getByRole('button', { name: 'Sign in' }).click();
-  await page.goto('/applications');
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('Corvid Labs');
 
   await page.goto('/settings');

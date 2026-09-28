@@ -2,34 +2,27 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover  
-**Phase M15-D: Final Legacy Freeze, Final Backup, Live Production Data Migration & Reconciliation (100% COMPLETE & VERIFIED)**  
-**Gate Status: Ready for Phase M15-E (Production Web Deployment & Cutover) — PENDING EXPLICIT USER APPROVAL**
+**Phase M15-E: Release Integration, Main Merge, Production Deployment, Smoke Validation & Cutover (IN PROGRESS)**  
+**Gate Status: Feature CI Green -> Release Integration into Development Authorized**
 
 ## Phase Status Summary
 - **Milestone:** M15
-- **Phase:** M15-D
+- **Phase:** M15-E
 - **Branch:** `feature/m15-production-launch-cutover`
-- **HEAD Commit:** `30676334331d60a9019819bff9ffb42c0183a1b7`
-- **Final Source Freeze:** ACTIVE (`SHOW transaction_read_only = on`, max timestamp `2026-09-23T22:09:39.463Z`)
-- **Final Backup Status:** SUCCESS (Offline restore verified in container, 0 errors, 0 orphans)
-- **Final Backup SHA (Full Dump):** `0703950fab48886043001f3257274649d47d1ba92ef497dabca39b0832580810`
-- **Final Backup SHA (Schema):** `2dba0a45e1d30f7edbdd3db1070f511657f3660262b09c17fc05a32fa7b02638`
-- **Final Export SHA:** `f7eff96083bc2d825631de91d0f8301d51da716f31fd39dbcdc2e1a547e6422e`
-- **Source Delta Status:** VERIFIED IDENTICAL (0 row delta, 0 timestamp delta, 0 schema drift)
-- **Production Migration Lock:** `M15D_PRODUCTION_MIGRATION_LOCK` (Tool SHA `514a22f2...`, Export SHA `f7eff960...`, Dump SHA `0703950f...`)
-- **Target:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`)
+- **Feature HEAD:** `bfb9884437290afb5b02a106886659c3f4e11062`
+- **Feature CI:** `36459165216` / `SUCCESS` (100% Green)
+- **Production DB Migration:** COMPLETE (`jobquest-prod` / `kwmnljvyvqvbvimypnmw`)
 - **Migration Batch:** `ed7955f4-b315-4ffc-99d5-db8aaef8da75` / `COMPLETED`
-- **Row Reconciliation:** 100% PASS (222/222 apps, 89/89 snapshots, 533/533 events, 49/49 tags, 1/1 users, ZERO unexplained deltas)
-- **FK Reconciliation:** 100% PASS (0 orphans across all 8 tested relationships)
-- **ID Mapping:** 100% PASS (223 mappings, 0 collisions, bijective)
-- **Timestamp Reconciliation:** 100% PASS (min/max timestamps match source to millisecond)
-- **PIN Hashes Migrated:** **0** (Strict Security Invariant Enforced)
-- **Claim Codes:** 1 generated (hint `d106...98`, plaintext secured in external backup directory outside Git)
-- **Production Target Backup Status:** SUCCESS (`jobquest_prod_post_migration_20260928_122000.dump`, 869,912 bytes, SHA256 `75aa90028bcb82440a5dd71bfc39275bd78b42d3b2820307f90a2231ddbf2551`, 902 TOC entries)
-- **Main Merge:** **NOT AUTHORIZED / NOT EXECUTED**
-- **Vercel Production Deployment:** **NOT AUTHORIZED / NOT EXECUTED**
-- **Public Cutover:** **NOT AUTHORIZED / NOT EXECUTED**
-- **JobQuest1 Retirement:** **NOT AUTHORIZED / NOT EXECUTED**
+- **Production Recovery Backup:** VERIFIED (`75aa90028bcb82440a5dd71bfc39275bd78b42d3b2820307f90a2231ddbf2551`)
+- **Legacy Source:** READ-ONLY STANDBY (transaction_read_only = on)
+- **Development Merge:** PENDING
+- **Development CI:** PENDING
+- **Main Merge:** PENDING
+- **Main CI:** PENDING
+- **Production Deployment:** PENDING
+- **Cutover:** PENDING
+- **Rollback:** STANDBY
+- **JobQuest1 Retirement:** NOT AUTHORIZED
 
 ## Feature Freeze Notice
 FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: launch blockers, security defects, migration defects, production configuration defects, critical P0/P1 regressions, critical accessibility defects, and critical performance defects materially threatening launch. All other items belong in POST_LAUNCH_DEFERRED.md.

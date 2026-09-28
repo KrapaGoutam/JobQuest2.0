@@ -1,7 +1,7 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
 ## Current Milestone
-Milestone 14 — Release Candidate & Migration Rehearsal (IN PROGRESS)
+Milestone 14 — Release Candidate & Migration Rehearsal (100% COMPLETE & VERIFIED — STOPPED UNMERGED)
 
 ## Feature Freeze Notice
 FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: release blockers, security defects, migration defects, P0/P1 parity failures, production-readiness defects, performance defects materially threatening launch, and accessibility defects materially blocking launch. All other items belong in POST_LAUNCH_DEFERRED.md.
@@ -10,49 +10,39 @@ FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed cha
 `feature/m14-release-candidate-migration-rehearsal`
 
 ## Current HEAD
-`93ba287fbbe3b70e94930ea8b2bf065b145768d8` (M13 merge commit)
+Commit on `feature/m14-release-candidate-migration-rehearsal`
 
 ## Working Tree State
-Clean; synchronized with `origin/feature/m14-release-candidate-migration-rehearsal`.
+Work complete; all files staged and committed cleanly; pushed to origin; unmerged for user review.
 
 ## Last Completed Step
-- M13 merged into `development` via `--no-ff` (`93ba287fbbe3b70e94930ea8b2bf065b145768d8`).
-- Verified `development` GitHub Actions CI run `36421640993` completed with **SUCCESS** (both jobs green).
-- Created feature branch `feature/m14-release-candidate-migration-rehearsal` and pushed to origin.
-- Read-only audit of legacy JobQuest 1.0 backend (`../JobQuest1.0/backend/jobsearch/migrations/` 001–013). Confirmed 33 legacy tables; confirmed production runs PostgreSQL on Neon with Node+pg raw parameterized SQL, while SQLite was used only for tests/backups.
-- Confirmed absence of duplicate migration tooling in `scripts/`.
+- M14 Database Migration `20261020100000_m14_legacy_migration_rehearsal.sql` authored, applied, and verified locally and on hosted development (`jobquest-dev` `xpnkasclquplmrcmhsif`).
+- Legacy migration engine `scripts/migrate-legacy-data.mjs` implemented with safety locks, 13-stage workflow decomposition, Option B claim codes, and clean rollback mechanics.
+- Representative 33-table legacy fixture created in `tests/fixtures/legacy-representative-export.json`.
+- Complete test suite passing at 100%: 341/341 tests (Lint 0/0, Typecheck clean, Unit 149/149, Extension 27/27, Integration 165/165).
+- Release Candidate 1 (`v2.0.0-rc.1`) deployed to Vercel preview: `https://jobquest2-33y9un1oa-one-piece-5779.vercel.app` (`dpl_Bt72bHx6a13C1dtxmUCkWin9qshT`).
+- Secret scan clean across 4 tiers (local bundle, extension, live preview assets, git tracked files).
+- Playwright E2E passed on live preview; Axe accessibility audit yielded 0 violations across 4 contexts.
+- Dual reconciliation verified: 100% row balance (41 entities), 0 foreign key orphans, exact timestamp preservation, 0 PIN migrations.
+- Complete documentation package produced across `migration-upgrade/m14/` (11 planning docs, 10 reports, evidence JSONs, and 5 screenshots).
 
 ## Current Step
-- Authoring M14 Planning Package across `migration-upgrade/m14/`.
+- Milestone 14 execution finished; stopped with M14 unmerged on `feature/m14-release-candidate-migration-rehearsal`.
 
 ## Next Exact Step
-1. Create `migration-upgrade/m14/` planning package:
-   - `README.md`
-   - `IMPLEMENTATION_PLAN.md`
-   - `TEST_PLAN.md`
-   - `ACCEPTANCE_CRITERIA.md`
-   - `MIGRATION_SOURCE_AUDIT.md`
-   - `MIGRATION_MAPPING_FINAL.md`
-   - `REHEARSAL_RUNBOOK.md`
-   - `ROLLBACK_RUNBOOK.md`
-   - `PRODUCTION_READINESS_CHECKLIST.md`
-   - `RECONCILIATION_SPEC.md`
-   - `SMOKE_TEST_PLAN.md`
-2. Build safe, dry-run capable, non-destructive migration script `scripts/migrate-legacy-data.mjs` targeting isolated rehearsal environment only.
-3. Generate representative legacy dataset adhering to audited Neon/PostgreSQL schema.
-4. Run rehearsal, reconcile row counts and foreign keys, verify Option B claim codes, verify timestamps and search index.
-5. Rehearse rollback/cleanup.
-6. Execute full regression, security review, a11y sweep, performance check, secret scans, Vercel preview RC deploy.
+- User review and manual merge of `feature/m14-release-candidate-migration-rehearsal` into `development` and `main`.
+- Confirmation of GitHub Actions CI on `development`.
+- Milestone 15 Production Launch & Cutover (per `migration-upgrade/m14/NEXT_AGENT_HANDOFF.md`).
 
 ## Database State
-- 17 migrations applied through `20261015100000_m13_global_search_journal.sql`.
+- 18 migrations applied through `20261020100000_m14_legacy_migration_rehearsal.sql`.
 
 ## Supabase State
-- Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`), all 17 migrations applied.
+- Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`), all 18 migrations applied.
 - Local Supabase: Docker stack active and clean.
 
 ## Vercel State
-- Active M13 Preview: `https://jobquest2-qyo2zi4nx-one-piece-5779.vercel.app` (READY).
+- Active Release Candidate Preview: `https://jobquest2-33y9un1oa-one-piece-5779.vercel.app` (Deployment `dpl_Bt72bHx6a13C1dtxmUCkWin9qshT`, READY).
 - Team: `one-piece-5779`, Project: `jobquest2`.
 - Production: Untouched.
 

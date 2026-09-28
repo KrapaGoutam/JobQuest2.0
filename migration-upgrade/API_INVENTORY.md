@@ -276,7 +276,17 @@ is rejected. Content-Type is inferred from extension with security headers
 (`X-Content-Type-Options: nosniff`, the CSP). If the requested file isn't found,
 falls back to `index.html` with a 200 (SPA-style catch-all, used only for the
 extension's `?application=<id>` deep-link case, since the app has no other
-URL-based routing).
+## 18. Milestone 13 · Global Search & Career Journal Endpoints (JobQuest 2.0)
+
+Added in Milestone 13 to resolve `FEATURE-NOTE-001` (Career Journal launch parity) and `P0` Global Search (`Cmd+K`/`Ctrl+K`).
+
+| Method | Path / RPC | Purpose | Auth | Key Request Fields | Key Response Fields | Tables | Source |
+|---|---|---|---|---|---|---|---|
+| POST | `/rest/v1/rpc/rpc_global_search` | Workspace-scoped multi-domain search | JWT session | `p_query, p_workspace_id, p_domain?, p_limit?` | array of `{id, domain, title, subtitle, snippet, metadata, created_at, relevance}` | `applications`, `contacts`, `journal_entries`, `interviews`, `documents` | `supabase/migrations/20261015100000_m13_global_search_journal.sql` |
+| POST | `/rest/v1/rpc/rpc_create_journal_entry` | Create career journal entry with workspace isolation & audit | JWT session | `p_workspace_id, p_title, p_content, p_entry_type?, p_application_id?, p_tags?, p_is_pinned?` | `{id, workspace_id, user_id, title, content, entry_type, application_id, tags, is_pinned, created_at, updated_at}` | `journal_entries`, `audit_events` | `supabase/migrations/20261015100000_m13_global_search_journal.sql` |
+| POST | `/rest/v1/rpc/rpc_update_journal_entry` | Update career journal entry with manager/owner governance | JWT session | `p_entry_id, p_title?, p_content?, p_entry_type?, p_application_id?, p_tags?, p_is_pinned?` | `{id, ...updated_fields}` | `journal_entries`, `audit_events` | `supabase/migrations/20261015100000_m13_global_search_journal.sql` |
+| POST | `/rest/v1/rpc/rpc_delete_journal_entry` | Delete career journal entry with manager/owner governance | JWT session | `p_entry_id` | `{deleted: true, id}` | `journal_entries`, `audit_events` | `supabase/migrations/20261015100000_m13_global_search_journal.sql` |
+| GET / POST / PATCH / DELETE | `/rest/v1/journal_entries` | PostgREST CRUD on journal entries | JWT session | query params or row payload | Journal entry row(s) | `journal_entries` (governed by RLS `p_journal_entries_read`, `p_journal_entries_write`, etc.) | `supabase/migrations/20261015100000_m13_global_search_journal.sql` |
 
 ## Cross-cutting notes for migration
 

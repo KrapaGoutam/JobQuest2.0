@@ -1,0 +1,33 @@
+{
+  "run": "2b86c6",
+  "started_at": "2026-09-28T10:48:37.030Z",
+  "screenshots": [],
+  "completed_at": "2026-09-28T10:48:51.397Z",
+  "a11y": [
+    {
+      "context": "journal_view",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "global_search_modal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    },
+    {
+      "context": "mobile_journal",
+      "total": 0,
+      "critical": 0,
+      "serious": 0,
+      "blocking": 0,
+      "violations": []
+    }
+  ],
+  "blocking_a11y_violations": 0
+}

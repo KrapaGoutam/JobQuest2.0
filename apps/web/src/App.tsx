@@ -23,9 +23,9 @@ import { WorkspaceSettingsView } from './views/WorkspaceSettingsView';
 import { AuditHistoryView } from './views/AuditHistoryView';
 import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
+import { JournalView } from './views/JournalView';
 import {
   Calendar,
-  BookOpen,
   UserPlus,
   AlertCircle,
 } from 'lucide-react';
@@ -494,11 +494,11 @@ function AppContent() {
 
     if (currentPath === '/journal') {
       return (
-        <PlaceholderView
-          title="Job Search Journal"
-          subtitle="Personal reflections, career milestones, and search logs"
-          icon={<BookOpen size={24} />}
-          milestoneOwner="Milestone 8"
+        <JournalView
+          activeWorkspaceId={activeWs}
+          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          currentUserId={user?.id ?? null}
+          onNavigateToApp={(appId) => navigate(`/w/${activeWs}/applications/${appId}`)}
         />
       );
     }
@@ -618,6 +618,7 @@ function AppContent() {
         onLogout={onLogout}
         applicationsCount={apps.length}
         pageTitle={getPageTitle(currentPath)}
+        activeWorkspaceId={activeWs}
       >
         {renderRouteView()}
       </AppShell>

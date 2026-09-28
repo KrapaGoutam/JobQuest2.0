@@ -2,9 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
-import { Dialog } from '../ui/Dialog';
-import { Input } from '../ui/Input';
-import { Search } from 'lucide-react';
+import { GlobalSearchModal } from '../search/GlobalSearchModal';
 import { requestNewApplication } from '../../lib/newApplicationIntent';
 import type { PublicSession, PublicUser } from '../../api';
 
@@ -19,6 +17,7 @@ export interface AppShellProps {
   pageTitle: string;
   children: ReactNode;
   previewPane?: ReactNode; // Wide desktop (>=1680px) persistent preview rail
+  activeWorkspaceId?: string | null;
 }
 
 export function AppShell({
@@ -32,6 +31,7 @@ export function AppShell({
   pageTitle,
   children,
   previewPane,
+  activeWorkspaceId,
 }: AppShellProps) {
   const [isRail, setIsRail] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -76,7 +76,10 @@ export function AppShell({
         target?.tagName === 'SELECT' ||
         target?.isContentEditable;
 
-      if (e.key === '/' && !isInput) {
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      } else if (e.key === '/' && !isInput) {
         e.preventDefault();
         setIsSearchOpen(true);
       } else if (e.key.toLowerCase() === 'q' && !isInput && !e.metaKey && !e.ctrlKey) {
@@ -191,40 +194,13 @@ export function AppShell({
         </div>
       </div>
 
-      {/* Global Search Dialog Modal */}
-      <Dialog
+      {/* Global Command Palette Search Modal */}
+      <GlobalSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        title="Quick Search"
-        description="Search across all entities in your active workspace"
-        maxWidth={560}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input
-            autoFocus
-            placeholder="Type a company, role, contact, or note..."
-            leftIcon={<Search size={16} />}
-          />
-          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-            Search results grouped by entity: <b>Applications</b>, <b>Contacts</b>, <b>Notes</b>, <b>Tasks</b>.
-          </div>
-          <div className="card" style={{ padding: '12px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-              RECENT SEARCHES
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Staff Frontend Engineer · Stripe</span>
-                <span className="pill muted">Application</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Sarah Connor · Technical Recruiter</span>
-                <span className="pill muted">Contact</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Dialog>
+        activeWorkspaceId={activeWorkspaceId ?? null}
+        onNavigate={onNavigate}
+      />
 
     </div>
   );

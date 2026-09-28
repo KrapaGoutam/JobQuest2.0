@@ -165,7 +165,7 @@ password change + recovery codes (Account › Security). Status: PROPOSED
 | CR-014 | Analytics interview/offer counts use "ever reached" from history instead of current stage (fixes finding F-2) | Gate 01 analysis | FEATURE-ANALYTICS-001, DASH-001, RES-001 | §0, §20 | PROPOSED: needs approval (D-15) |
 | CR-015 | Honour `week_start` everywhere + per-user timezone | Gate 01 analysis (OQ-005) | Calendar, goals, habits | §20 | PROPOSED |
 | CR-016 | Import error-report CSV + cursor pagination for tasks/notes | Gate 01 analysis | FEATURE-IMPEXP-001, TASK-001, NOTE-001 | §20 | PROPOSED |
-| CR-017 | Global search across applications, contacts, notes, tasks (Postgres FTS + trigram) | Gate 01 prompt ("Global Search") | New | §23 M13 | PROPOSED |
+| CR-017 | Global search across applications, contacts, notes, interviews, documents (`rpc_global_search` + command palette modal `Cmd+K`/`Ctrl+K`) | Gate 01 prompt ("Global Search") | New | §23 M13 | APPROVED & IMPLEMENTED (M13) |
 | CR-018 | Visual column-matching step in bulk import wizard with alias auto-matching | Gate 02B design (`12-import-export.html` E3) | FEATURE-IMPEXP-001 | `gate-02b/GATE_02B_UI_SPEC.md` §13.1 | APPROVED |
 | CR-019 | Keyboard "Move to stage..." modal alternative (`M` key) for Kanban drag-and-drop | Gate 02B a11y (`11-application-views.html` V1) | FEATURE-APP-002 | `gate-02b/ACCESSIBILITY_MATRIX.md` §2 | APPROVED |
 | CR-020 | Split-pane master-detail view on Tasks & Follow-ups desktop workbench | Gate 02B design (`04-tasks.html` T2) | FEATURE-TASK-001 | `gate-02b/GATE_02B_UI_SPEC.md` §6 | APPROVED |

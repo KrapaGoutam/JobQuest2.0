@@ -17,6 +17,7 @@ import { DesignSystemShowcase } from './views/DesignSystemShowcase';
 import { ResumesView } from './views/ResumesView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { ImportExportView } from './views/ImportExportView';
+import { SettingsView } from './views/SettingsView';
 import { ExtensionSettingsView } from './views/ExtensionSettingsView';
 import { MembersView } from './views/MembersView';
 import { WorkspaceSettingsView } from './views/WorkspaceSettingsView';
@@ -179,6 +180,15 @@ function AppContent() {
 
   useEffect(() => { if (session) void loadData(); }, [session, loadData]);
 
+  useEffect(() => {
+    if (currentPath === '/calendar') {
+      navigate('/interviews');
+    } else if (currentPath === '/workspace/workflow') {
+      navigate('/workspace/settings');
+    }
+  }, [currentPath, navigate]);
+
+
   async function onRegister(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setAuthError(null);
@@ -195,6 +205,7 @@ function AppContent() {
     adopt(r.data.session, r.data.user);
     bc?.postMessage('login');
     note(`registered ${r.data.user.username}; personal workspace created`);
+    navigate('/settings');
   }
 
   async function onLogin(e: FormEvent<HTMLFormElement>) {
@@ -242,6 +253,22 @@ function AppContent() {
     }
     adopt(r.data.session ?? null);
     note(`recovered; ${r.data.remaining_codes} codes left; all other sessions revoked`);
+  }
+
+  async function onClaim(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setAuthError(null);
+    const f = new FormData(e.currentTarget);
+    const r = await api<{ session?: PublicSession; error?: { message: string } }>('/auth/claim', {
+      username: f.get('username'), code: f.get('code'), new_password: f.get('password'),
+    });
+    if (r.status !== 200) {
+      const msg = r.data.error?.message ?? `Claim failed with code ${r.status}`;
+      setAuthError(msg);
+      return note(`claim ${r.status}: ${msg}`);
+    }
+    adopt(r.data.session ?? null);
+    note(`account claimed successfully`);
   }
 
   async function onRegenerate(e: FormEvent<HTMLFormElement>) {
@@ -333,6 +360,7 @@ function AppContent() {
         onRegister={onRegister}
         onLogin={onLogin}
         onRecover={onRecover}
+        onClaim={onClaim}
         authError={authError}
       />
     );
@@ -403,12 +431,6 @@ function AppContent() {
           user={user}
           session={session}
           apps={apps}
-          wfDirect={wfDirect}
-          wfNode={wfNode}
-          recoveryCodes={codes}
-          leakResults={leak}
-          probeStatus={probe}
-          log={log}
           activeWorkspaceId={routeWorkspaceId}
           initialApplicationId={routeApplicationId}
           onDeepLinkMissing={handleDeepLinkMissing}
@@ -418,10 +440,6 @@ function AppContent() {
           onCreateApp={onCreateApp}
           onStageChange={onStage}
           onArchive={onArchive}
-          onLoadWorkflow={loadWorkflow}
-          onPasswordChange={onPassword}
-          onRegenerateCodes={onRegenerate}
-          onLeakCheck={leakCheck}
           onDismissCodes={() => setCodes(null)}
         />
       );
@@ -461,16 +479,6 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/calendar') {
-      return (
-        <PlaceholderView
-          title="Interview Calendar"
-          subtitle="Schedule of recruiter screenings, technical assessments, and panel loops"
-          icon={<Calendar size={24} />}
-          milestoneOwner="Milestone 7"
-        />
-      );
-    }
 
     if (currentPath === '/interviews') {
       return (
@@ -583,10 +591,23 @@ function AppContent() {
 
     if (currentPath === '/settings' || currentPath === '/settings/extension') {
       return (
-        <ExtensionSettingsView
+        <SettingsView
           activeWorkspaceId={activeWs}
           activeWorkspaceName={memberships.find((membership) => membership.workspace_id === activeWs)?.workspaces?.name ?? 'Current workspace'}
           session={session}
+          onPasswordChange={onPassword}
+          onRegenerateCodes={onRegenerate}
+          onLeakCheck={leakCheck}
+          leakResults={leak}
+          probeStatus={probe}
+          log={log}
+          wfDirect={wfDirect}
+          wfNode={wfNode}
+          onLoadWorkflow={loadWorkflow}
+          recoveryCodes={codes}
+          onDismissCodes={() => setCodes(null)}
+          onRefreshSession={refresh}
+          onLogout={onLogout}
         />
       );
     }

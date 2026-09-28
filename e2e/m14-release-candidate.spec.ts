@@ -73,6 +73,7 @@ test.describe('Milestone 14 · Release Candidate & Migration Parity E2E', () => 
     await settle(page);
 
     // 1. Register User
+    await page.getByRole('button', { name: 'Create account' }).click();
     const registerForm = page.getByRole('form', { name: 'Register' });
     await registerForm.getByLabel('Username (required)').fill(username);
     await registerForm.getByLabel('Password (required)').fill(password);

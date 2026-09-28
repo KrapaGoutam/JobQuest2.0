@@ -84,6 +84,7 @@ test.describe('Milestone 4 — Contacts & Networking E2E', () => {
     // 1. Register account
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m4_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Contacts-Pulse-${run}-Key!`);

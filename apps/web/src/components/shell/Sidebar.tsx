@@ -48,7 +48,6 @@ export function Sidebar({
     { id: 'applications', path: '/applications', label: 'Applications', icon: Briefcase, count: applicationsCount },
     { id: 'tasks', path: '/tasks', label: 'Tasks & Follow-ups', icon: CheckSquare },
     { id: 'contacts', path: '/contacts', label: 'Contacts', icon: Users },
-    { id: 'calendar', path: '/calendar', label: 'Calendar', icon: Calendar },
   ];
 
   const trackNav = [
@@ -69,7 +68,6 @@ export function Sidebar({
 
   const managerWorkspaceNav = [
     { id: 'ws-members', path: '/workspace/members', label: 'Members', icon: UserPlus },
-    { id: 'ws-workflow', path: '/workspace/workflow', label: 'Workflow', icon: GitBranch },
     { id: 'ws-audit', path: '/workspace/audit', label: 'Audit History', icon: ShieldCheck },
   ];
 

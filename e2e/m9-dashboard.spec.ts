@@ -58,7 +58,8 @@ test.describe('Milestone 9 · Dashboard parity E2E', () => {
       await login.getByRole('button', { name: 'Sign in' }).click();
       await expect(page.getByTestId('new-application-btn')).toBeVisible();
     } else {
-      const registration = page.getByRole('form', { name: 'Register' });
+      await page.getByRole('button', { name: 'Create account' }).click();
+    const registration = page.getByRole('form', { name: 'Register' });
       await registration.getByLabel('Username (required)').fill(username);
       await registration.getByLabel('Password (required)').fill(password);
       await registration.getByRole('button', { name: 'Create account' }).click();

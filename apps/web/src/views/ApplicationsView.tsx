@@ -601,31 +601,7 @@ export function ApplicationsView({
         </section>
       )}
 
-      {/* Session Strip for Identity & Token Rotation */}
-      <section aria-label="Session">
-        <Card>
-          <CardBody style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <b>{user?.username}</b>
-              <span className="muted">·</span>
-              <span className="muted small">
-                Session expires {session?.expires_at ? new Date(session.expires_at * 1000).toLocaleTimeString() : '?'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={13} />} onClick={() => void onRefresh()}>
-                Refresh now
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => void onLogout('local')}>
-                Sign out
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => void onLogout('global')}>
-                Sign out everywhere
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
+
 
       {/* Inactivity advisory (31+ days review; 15–30 stale). Advisory only: nothing changes automatically. */}
       <AgingBanner
@@ -882,105 +858,7 @@ export function ApplicationsView({
         onEdit={setEditingApp}
       />
 
-      {/* Canonical Workflow Section */}
-      {onLoadWorkflow && (
-        <section aria-label="Workflow">
-          <Card>
-            <CardHeader action={<Button size="sm" variant="secondary" onClick={() => void onLoadWorkflow()}>Load (PostgREST + Node)</Button>}>
-              <CardTitle>Canonical Workflow (Data API + Node)</CardTitle>
-            </CardHeader>
-            <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              <div>
-                <b>PostgREST:</b> {wfDirect?.stages ? wfDirect.stages.map((s) => s.label).join(' → ') : 'Click load to query'}
-                {wfDirect?.outcomes && <span> | outcomes: {wfDirect.outcomes.map((o) => o.label).join(', ')}</span>}
-              </div>
-              <div>
-                <b>Node API:</b> {wfNode?.stages ? wfNode.stages.map((s) => s.label).join(' → ') : 'Pending'}
-              </div>
-            </CardBody>
-          </Card>
-        </section>
-      )}
 
-      {/* Account Security Section */}
-      {onPasswordChange && onRegenerateCodes && (
-        <section aria-label="Account security">
-          <Card>
-            <CardHeader>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <KeyRound size={16} className="primary-t" />
-                <CardTitle>Account Security</CardTitle>
-              </div>
-            </CardHeader>
-            <CardBody style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-              <form onSubmit={onPasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <b>Change Password</b>
-                <Input name="current" type="password" placeholder="Current password" required aria-label="Current password" autoComplete="current-password" />
-                <Input name="next" type="password" placeholder="New password" required aria-label="New password" autoComplete="new-password" />
-                <Button variant="secondary" size="sm" style={{ alignSelf: 'flex-start' }}>
-                  Change
-                </Button>
-              </form>
-
-              <form onSubmit={onRegenerateCodes} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <b>Regenerate Recovery Codes</b>
-                <Input name="password" type="password" placeholder="Password to confirm" required aria-label="Password to regenerate codes" />
-                <Button variant="secondary" size="sm" style={{ alignSelf: 'flex-start' }}>
-                  Regenerate
-                </Button>
-              </form>
-            </CardBody>
-          </Card>
-        </section>
-      )}
-
-      {/* Leak Self-Check Section */}
-      {onLeakCheck && (
-        <section aria-label="Leak self-check">
-          <Card>
-            <CardHeader action={<Button size="sm" variant="secondary" leftIcon={<ShieldCheck size={14} />} onClick={() => void onLeakCheck()}>Scan for exposed identity or credentials</Button>}>
-              <CardTitle>B03 Exposure Self-Check</CardTitle>
-            </CardHeader>
-            <CardBody>
-              {leakResults && (
-                <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {Object.entries(leakResults).map(([key, isFound]) => (
-                    <li key={key} data-leak={key} data-found={String(isFound)} style={{ fontSize: '13px' }}>
-                      <b>{key}:</b>{' '}
-                      <span style={{ color: isFound ? 'var(--color-danger)' : 'var(--color-success)', fontWeight: 600 }}>
-                        {isFound ? 'FOUND (exposure)' : 'clean'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {probeStatus && (
-                <div data-testid="auth-user-probe-status" style={{ marginTop: '10px', fontSize: '13px' }}>
-                  Supabase /auth/v1/user with my token → HTTP {probeStatus}
-                </div>
-              )}
-            </CardBody>
-          </Card>
-        </section>
-      )}
-
-      {/* Activity Log */}
-      {log.length > 0 && (
-        <section aria-label="Log">
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity Log</CardTitle>
-            </CardHeader>
-            <CardBody>
-              <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }} className="mono muted">
-                {log.map((l, i) => (
-                  <li key={i}>{l}</li>
-                ))}
-              </ul>
-            </CardBody>
-          </Card>
-        </section>
-      )}
     </div>
   );
 }

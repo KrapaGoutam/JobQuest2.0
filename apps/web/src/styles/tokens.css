@@ -4,6 +4,7 @@
 
 :root,
 [data-jq] {
+  color-scheme: light;
   /* Canvas & Surfacing */
   --color-canvas: #f6f7f9;
   --color-sidebar: #ffffff;
@@ -139,6 +140,7 @@
 /* Dark Theme Overrides */
 [data-theme="dark"],
 [data-jq][data-theme="dark"] {
+  color-scheme: dark;
   --color-canvas: #090d16;
   --color-sidebar: #0d1220;
   --color-surface-1: #121827;

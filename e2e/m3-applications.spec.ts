@@ -64,6 +64,7 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('jobquest_preview_rail_open'));
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m3_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Quantum-Pulse-${run}-Key!`);

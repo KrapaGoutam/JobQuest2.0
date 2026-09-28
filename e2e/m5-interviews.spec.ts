@@ -68,6 +68,7 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     // ---------------------------------------------------------------- register (Option B)
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m5_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Interview-Pulse-${run}-Key!`);

@@ -57,6 +57,7 @@ test.describe('Milestone 12 · Workspace Management & Manager Functions E2E', ()
     await settle(page);
 
     // 1. Register User A (Manager of personal workspace)
+    await page.getByRole('button', { name: 'Create account' }).click();
     const registerA = page.getByRole('form', { name: 'Register' });
     await registerA.getByLabel('Username (required)').fill(userA_name);
     await registerA.getByLabel('Password (required)').fill(userA_pass);

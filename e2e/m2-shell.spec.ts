@@ -7,7 +7,8 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
     await page.goto('/');
 
     // Verify all 3 auth forms are accessible
-    const regForm = page.getByRole('form', { name: 'Register' });
+    await page.getByRole('button', { name: 'Create account' }).click();
+    const registerForm = page.getByRole('form', { name: 'Register' });
     const loginForm = page.getByRole('form', { name: 'Sign in' });
     const recoverForm = page.getByRole('form', { name: 'Recover account' });
 

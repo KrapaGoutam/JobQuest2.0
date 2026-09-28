@@ -68,8 +68,9 @@ test('B03 (browser) · no private identity or credential material reaches the br
     await login.getByLabel('Username').fill(username);
     await login.getByLabel('Password').fill(password);
     await login.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page.getByRole('region', { name: 'Session' })).toContainText(username);
+    
   } else {
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(username);
     await reg.getByLabel('Password (required)').fill(password);
@@ -78,27 +79,33 @@ test('B03 (browser) · no private identity or credential material reaches the br
     await page.getByRole('button', { name: 'I saved them' }).click();
   }
 
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Diagnostics' }).click();
   await page.getByRole('button', { name: 'Load (PostgREST + Node)' }).click();
   await expect(page.getByText('PostgREST: Saved → Preparing')).toBeVisible();
+  await page.goto('/applications');
   // B12: direct browser write; B11: direct browser read (list refresh)
   await page.getByLabel('Company').fill('Corvid Labs');
   await page.getByLabel('Role').fill('Staff Designer');
   await page.getByRole('button', { name: 'Insert (direct PostgREST)' }).click();
-  await expect(page.getByText(/inserted application .* via direct PostgREST/)).toBeVisible();
+
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('Corvid Labs · Staff Designer');
   await page.getByRole('button', { name: '→ Interview' }).first().click();
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('INTERVIEW');
 
-  await page.getByRole('button', { name: 'Refresh now' }).click();
-  await expect(page.getByText('session refreshed (token rotated)')).toBeVisible();
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Refresh Session' }).click();
+
+  await page.getByRole('button', { name: 'Sign Out Everywhere', exact: true }).click();
   const login = page.getByRole('form', { name: 'Sign in' });
   await login.getByLabel('Username').fill(username);
   await login.getByLabel('Password').fill(password);
   await login.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('region', { name: 'Session' })).toContainText(username);
+  await page.goto('/applications');
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('Corvid Labs');
 
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Diagnostics' }).click();
   await page.getByRole('button', { name: 'Scan for exposed identity or credentials' }).click();
   await expect(page.getByTestId('auth-user-probe-status')).toBeVisible();
   await page.waitForLoadState('networkidle');

@@ -45,6 +45,7 @@ test.describe('Milestone 7 · Documents & Resumes E2E', () => {
     await page.goto('/');
 
     // 1. Register new user
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(username);
     await reg.getByLabel('Password (required)').fill(password);

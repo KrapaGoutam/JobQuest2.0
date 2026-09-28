@@ -6,8 +6,8 @@ import { randomBytes } from 'node:crypto';
 
 const extensionPath = resolve('apps/extension/dist/jobquest-capture-dev');
 const fixtureHtml = readFileSync(resolve('apps/extension/fixtures/jsonld_job.html'), 'utf8');
-const evidenceDir = resolve('migration-upgrade/m11/evidence');
-const shotsDir = resolve('migration-upgrade/m11/screenshots');
+const evidenceDir = resolve('test-results/evidence');
+const shotsDir = resolve('test-results/screenshots');
 mkdirSync(evidenceDir, { recursive: true });
 mkdirSync(shotsDir, { recursive: true });
 

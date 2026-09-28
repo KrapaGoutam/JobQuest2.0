@@ -9,8 +9,8 @@ import { randomBytes } from 'node:crypto';
  * API and Supabase (local stack by default; set M1_BASE_URL for a Vercel preview).
  * One registered user per run (the deployed register limit is 3/hour/IP).
  */
-const shotsDir = resolve('migration-upgrade/m3/screenshots');
-const evidenceDir = resolve('migration-upgrade/m3/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 

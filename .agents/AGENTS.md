@@ -42,8 +42,22 @@ git reset --hard
 git rebase shared branches
 git push --force
 git add .
+git add -A
+git add --all
+git commit -a
 
 Stage files explicitly.
+
+Before EVERY commit:
+
+1. git status --short
+2. git diff --cached --name-status
+3. inspect every staged path
+4. confirm every staged file is intentional
+5. stage only exact paths
+
+If an unexpected generated file is present:
+do not stage it.
 
 Promotion:
 

@@ -130,9 +130,9 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
     expect(darkAudit.violations.filter((v) => v.impact === 'critical')).toHaveLength(0);
 
     // Save evidence
-    mkdirSync('migration-upgrade/m2/evidence', { recursive: true });
+    mkdirSync('test-results/evidence', { recursive: true });
     writeFileSync(
-      'migration-upgrade/m2/evidence/a11y-audit.json',
+      'test-results/evidence/a11y-audit.json',
       JSON.stringify(
         {
           timestamp: new Date().toISOString(),

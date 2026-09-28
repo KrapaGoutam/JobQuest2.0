@@ -143,8 +143,8 @@ test('B03 (browser) · no private identity or credential material reaches the br
     cookie_names: allCookies.map((c) => `${c.name}${c.httpOnly ? ' (HttpOnly)' : ''}`),
     direct_data_api_calls_from_browser: [...new Set(dataApiCalls)].sort(),
   };
-  mkdirSync('migration-upgrade/m1b/evidence', { recursive: true });
-  writeFileSync(`migration-upgrade/m1b/evidence/e2e-browser-${evidence.supabase_target}-${run}.json`, JSON.stringify(evidence, null, 2));
+  mkdirSync('test-results/evidence', { recursive: true });
+  writeFileSync(`test-results/evidence/e2e-browser-${evidence.supabase_target}-${run}.json`, JSON.stringify(evidence, null, 2));
 
   expect(Object.keys(selfCheck)).toHaveLength(5); // the self-check really ran
   expect(authUserProbe).not.toBeNull();

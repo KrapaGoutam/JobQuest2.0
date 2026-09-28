@@ -20,8 +20,8 @@ import { randomBytes } from 'node:crypto';
  * - Visual regression screenshot captures
  */
 
-const shotsDir = resolve('migration-upgrade/m4/screenshots');
-const evidenceDir = resolve('migration-upgrade/m4/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 

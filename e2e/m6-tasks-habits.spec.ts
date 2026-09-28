@@ -10,8 +10,8 @@ import { createClient } from '@supabase/supabase-js';
  * One registered user per run (the deployed register limit is 3/hour/IP).
  * Browser zone Europe/Berlin; profile zone America/Chicago — dates follow the profile.
  */
-const shotsDir = resolve('migration-upgrade/m6/screenshots');
-const evidenceDir = resolve('migration-upgrade/m6/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 

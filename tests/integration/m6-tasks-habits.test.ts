@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import { Actor, loadEnv, serviceDb, anonDb, makeRecorder } from './harness';
 
-const record = makeRecorder('migration-upgrade/m6/evidence', 'integration');
+const record = makeRecorder('test-results/evidence', 'integration');
 const ready = loadEnv();
 const DAY = 86_400_000;
 

@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { Actor, anonDb, loadEnv, makeRecorder, serviceDb } from './harness';
 
 const ready = loadEnv();
-const record = makeRecorder('migration-upgrade/m10/evidence', 'integration');
+const record = makeRecorder('test-results/evidence', 'integration');
 
 function csv(rows: string[][]): string {
   return rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(',')).join('\r\n');

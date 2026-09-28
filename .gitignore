@@ -32,3 +32,17 @@ signing_keys.json
 .env*
 scratch/
 
+
+# generated local QA / integration evidence
+migration-upgrade/**/evidence/*-local-*.json
+migration-upgrade/**/evidence/**/*.png
+migration-upgrade/**/evidence/**/*.jpg
+migration-upgrade/**/evidence/**/*.jpeg
+migration-upgrade/**/evidence/**/*.webp
+migration-upgrade/**/evidence/**/*.html
+
+# generated visual diff artefacts
+migration-upgrade/**/screenshots/*-actual.*
+migration-upgrade/**/screenshots/*-diff.*
+migration-upgrade/**/screenshots/*-generated.*
+

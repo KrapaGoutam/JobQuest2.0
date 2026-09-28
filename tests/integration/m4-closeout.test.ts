@@ -13,7 +13,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import { Actor, loadEnv, serviceDb, anonDb, makeRecorder } from './harness';
 
-const record = makeRecorder('migration-upgrade/m4/evidence', 'closeout');
+const record = makeRecorder('test-results/evidence', 'closeout');
 const ready = loadEnv();
 
 describe.skipIf(!ready)('Milestone 4 closeout — archive-first, append-only, tenant FKs, manager audit', () => {

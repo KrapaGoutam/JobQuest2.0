@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { Actor, anonDb, loadEnv, makeRecorder, serviceDb } from './harness';
 
 const ready = loadEnv();
-const record = makeRecorder('migration-upgrade/m13/evidence', 'integration');
+const record = makeRecorder('test-results/evidence', 'integration');
 
 describe.skipIf(!ready)('Milestone 13 — Global Search, Hardening & Final Product Parity Sweep', () => {
   const run = randomBytes(3).toString('hex');

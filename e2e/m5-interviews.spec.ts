@@ -10,8 +10,8 @@ import { randomBytes } from 'node:crypto';
  * The browser runs in Europe/Berlin while the profile uses America/Chicago and
  * then Asia/Kolkata: every time on screen must follow the PROFILE zone.
  */
-const shotsDir = resolve('migration-upgrade/m5/screenshots');
-const evidenceDir = resolve('migration-upgrade/m5/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 

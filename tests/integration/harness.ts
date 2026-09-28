@@ -132,5 +132,5 @@ export function makeRecorder(dir: string, prefix: string): (id: string, data: un
   };
 }
 
-/** M1B evidence (migration-upgrade/m1b/evidence). */
-export const record = makeRecorder('migration-upgrade/m1b/evidence', 'integration');
+/** M1B evidence (test-results/evidence). */
+export const record = makeRecorder('test-results/evidence', 'integration');

@@ -5,8 +5,8 @@ import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 
-const shotsDir = resolve('migration-upgrade/m14/screenshots');
-const evidenceDir = resolve('migration-upgrade/m14/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 

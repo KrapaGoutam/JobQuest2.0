@@ -2,7 +2,7 @@ import { test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const outDir = resolve('migration-upgrade/m2/screenshots');
+const outDir = resolve('test-results/screenshots');
 mkdirSync(outDir, { recursive: true });
 
 test.describe('M2 Visual Regression Baseline Captures', () => {

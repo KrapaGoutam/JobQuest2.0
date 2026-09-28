@@ -1,0 +1,14 @@
+{
+  "run": "beedf3",
+  "started_at": "2026-09-28T10:23:11.083Z",
+  "target": "local",
+  "m13-04-search-security": {
+    "peerResultsCount": 0
+  },
+  "m13-05-member-denial": {
+    "charlieUserId": "a8b7a3aa-6b04-4a71-8dcb-52a99989d2d2"
+  },
+  "m13-06-hardening-sweep": {
+    "tableCount": 2
+  }
+}

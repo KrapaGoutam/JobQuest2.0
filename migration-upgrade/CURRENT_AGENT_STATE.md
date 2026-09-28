@@ -1,96 +1,73 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
 ## Current Milestone
-Milestone 12 — Workspace Management & Manager Functions (COMPLETED — STOPPED WITH M12 UNMERGED)
+Milestone 13 — Global Search, Hardening & Final Product Parity Sweep (IN PROGRESS)
 
 ## Current Branch
-`feature/m12-workspace-manager`
+`feature/m13-global-search-hardening-parity`
 
 ## Current HEAD
-Commit `fea2fcb7` (`feat(m12): implement workspace management and manager governance ui`)
+Commit `4dc15e87` (`merge: approve M12 workspace management and manager governance`)
 
 ## Last Pushed Commit
-Commit `fea2fcb7` on `origin/feature/m12-workspace-manager`
+Commit `4dc15e87` on `origin/feature/m13-global-search-hardening-parity`
 
 ## Working Tree State
-Clean; M12 documentation and test evidence staged/committed.
+M13 planning package authored; local Supabase active; baseline tests verified green (120/120 unit, 27/27 extension, 144/144 integration).
 
 ## Last Completed Step
-Milestone 12 implementation, verification, and documentation complete:
-- Additive database migration `20261010100000_m12_workspace_management.sql` created and applied locally + hosted dev (`jobquest-dev` / `xpnkasclquplmrcmhsif`);
-- 13 security-definer RPCs + ADR-036 trigger safeguard + ADR-037 durable member removal verified;
-- Web UI (`WorkspaceSwitcher`, `MembersView`, `WorkspaceSettingsView`, `JoinWorkspaceModal`, `AuditHistoryView`) built and verified;
-- Vercel Preview deployment `dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1` is READY at `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (health 200, E2E passed, Option B privacy verified);
-- 12 visual regression screenshots captured in `migration-upgrade/m12/screenshots/`;
-- 0 blocking WCAG accessibility violations;
-- Secret scan passed (0 findings across web bundle, extension bundle, and tracked repo);
-- Full documentation suite authored in `migration-upgrade/m12/`.
+- Step 0 development CI run 36406950737 confirmed SUCCESS.
+- Synchronized local development with remote merge commit `4dc15e87`.
+- Created feature branch `feature/m13-global-search-hardening-parity` and pushed to origin.
+- Authored complete M13 Planning Package:
+  - `migration-upgrade/m13/README.md`
+  - `migration-upgrade/m13/IMPLEMENTATION_PLAN.md`
+  - `migration-upgrade/m13/TEST_PLAN.md`
+  - `migration-upgrade/m13/ACCEPTANCE_CRITERIA.md`
+  - `migration-upgrade/m13/FINAL_PARITY_MATRIX.md` (10 mandatory columns, strictly allowed dispositions, zero blanks)
+  - `migration-upgrade/m13/P0_P1_LAUNCH_CHECKLIST.md`
+  - `migration-upgrade/m13/POST_LAUNCH_DEFERRED.md`
+- Verified local baselines: 120/120 unit tests PASS, 27/27 extension tests PASS, 144/144 integration tests PASS.
 
 ## Current Step
-Stopped at final prompt boundary as directed: **DO NOT START M13. DO NOT MERGE M12. DO NOT MERGE MAIN. DO NOT TOUCH PRODUCTION.**
+Implementing database migration `supabase/migrations/20261015100000_m13_global_search_journal.sql` for `journal_entries` table and `rpc_global_search`.
 
-## Next Exact Step (For User / Next Agent)
-1. User reviews Milestone 12 on `feature/m12-workspace-manager` and Vercel Preview.
-2. Upon user approval, merge `feature/m12-workspace-manager` into `development`:
-   ```bash
-   git checkout development
-   git pull origin development
-   git merge --no-ff feature/m12-workspace-manager -m "merge: approve M12 workspace management and manager governance"
-   git push origin development
-   ```
-3. Verify `development` CI is green.
-4. Begin Milestone 13 (`M13 — Global Search, Hardening & Parity Sweep`).
+## Next Exact Step
+1. Commit planning package to feature branch.
+2. Author and apply additive migration `20261015100000_m13_global_search_journal.sql`.
+3. Implement `apps/web/src/views/JournalView.tsx` and integrate route `/#/journal`.
+4. Implement `apps/web/src/components/search/GlobalSearchModal.tsx` and integrate `Cmd+K` command palette.
+5. Author comprehensive integration tests `tests/integration/m13-global-search-parity.test.ts`.
 
 ## Database State
-- 16 migrations applied through `20261010100000_m12_workspace_management.sql` (both locally and on `jobquest-dev`).
+- 16 migrations applied through `20261010100000_m12_workspace_management.sql`.
+- Pending M13 migration: `20261015100000_m13_global_search_journal.sql`.
 
 ## Supabase State
 - Hosted development: `jobquest-dev` (`xpnkasclquplmrcmhsif`), all 16 migrations applied.
 - Local Supabase: Docker stack active and clean.
 
-## Pending Migrations
-- None.
-
 ## Vercel State
-- Active M12 Preview: `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (Deployment `dpl_4wobD3ahiqwS2PBYKiCRFBxwdJC1`, READY).
+- Active M12 Preview: `https://jobquest2-bdn3j1nmj-one-piece-5779.vercel.app` (READY).
 - Team: `one-piece-5779`, Project: `jobquest2`.
 - Production: Untouched.
 
 ## CI State
-- CI run `36386722142` for commit `fea2fcb7` on `feature/m12-workspace-manager` (passing all checks).
+- Development CI run `36406950737` passing.
 
 ## Local Tests
-- Unit: 120/120 PASS (17 test files)
-- Extension: 27/27 PASS (3 test files)
-- Local Integration: 144/144 PASS (12 test files)
-- Secret scans: 0 findings (web bundle, extension, tracked files)
-- Playwright E2E: PASS (0 blocking a11y violations)
-
-## Hosted Tests
-- Hosted development `jobquest-dev`: 10/10 M12 integration tests PASS.
-- Vercel Preview: /api/health HTTP 200, E2E full lifecycle PASS, Option B leak test PASS.
-
-## Background Processes
-- None currently running.
+- Unit: 120/120 PASS
+- Extension: 27/27 PASS
+- Local Integration: 144/144 PASS
+- Lint & Typecheck: PASS (0 errors)
 
 ## Decisions
-- ADR-036: Last active manager safeguard strictly enforced via database trigger on demotion, suspension, leave, and removal.
-- ADR-037: Durable member removal deletes membership row but preserves historical records attributed to original `user_id`.
-- ADR-047: Role is never placed in access tokens; dynamically queried from `workspace_members`.
-- Active Workspace Persistence: Saved in `localStorage` under `jq_active_ws` to survive reloads, cleared on logout.
-- Accessible OKLCH Palette: All workspace accent colors calibrated to <= 0.52 lightness to guarantee >= 4.5:1 text contrast.
+- ADR-048 (Planned): Multi-domain global search RPC (`rpc_global_search`) with workspace and role enforcement.
+- ADR-049 (Planned): Journal and freeform structured notes resolution (`journal_entries` table, 5 entry types, application linking).
 
 ## Do Not Repeat
-- Do NOT merge M12 to development without user consent.
+- Do NOT merge M13 to development without user consent.
 - Do NOT merge development to main.
 - Do NOT touch production Supabase or Vercel.
 - Do NOT edit `../JobQuest1.0/`.
-- Do NOT start M13 until M12 is merged and development CI is green.
-
-## Safe Resume Commands
-```powershell
-git status
-git log -3 --oneline
-pnpm test:unit
-pnpm test:integration
-```
+- STOP WITH M13 UNMERGED on `feature/m13-global-search-hardening-parity`.

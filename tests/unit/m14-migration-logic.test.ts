@@ -195,5 +195,10 @@ describe('M14 Migration Logic Unit Tests', () => {
       expect(assertSafeTarget('postgresql://postgres:placeholder@127.0.0.1:55322/postgres', true)).toBe(true);
       expect(assertSafeTarget('postgresql://postgres@aws-0-us-west-2.pooler.supabase.com:5432/jobquest-dev', true)).toBe(true);
     });
+
+    it('passes for production URLs when confirmProduction is explicitly true', () => {
+      expect(assertSafeTarget('postgresql://postgres:placeholder@db.kwmnljvyvqvbvimypnmw.supabase.co:5432/postgres', false, true)).toBe(true);
+      expect(assertSafeTarget('postgresql://admin@jobquest-prod.supabase.co/db', false, true)).toBe(true);
+    });
   });
 });

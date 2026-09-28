@@ -37,10 +37,10 @@ for (const entry of sourceEntries) {
 
 const preset = {
   environment: mode,
-  // Production stays intentionally unbound until a reviewed permanent origin exists.
-  instanceUrl: mode === 'dev' ? 'http://localhost:5173' : '',
+  instanceUrl: mode === 'dev' ? 'http://localhost:5173' : (process.env.JOBQUEST_PROD_URL || 'https://jobquest2.vercel.app'),
 };
 writeFileSync(join(outputDir, 'instance-preset.json'), `${JSON.stringify(preset, null, 2)}\n`, 'utf8');
+
 
 const archive = {};
 function addDirectory(directory) {

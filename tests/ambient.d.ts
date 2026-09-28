@@ -25,20 +25,30 @@ declare module '*migrate-legacy-data.mjs' {
     dryRun?: boolean;
     validateOnly?: boolean;
     confirmNonProduction?: boolean;
+    confirmProduction?: boolean;
     reportPath?: string | null;
+    claimCodesPath?: string | null;
   }
 
   export interface RollbackOptions {
     targetUrl: string;
     workspaceId: string;
     confirmNonProduction?: boolean;
+    confirmProduction?: boolean;
   }
 
   export const DEFAULT_MIGRATED_WORKSPACE_ID: string;
   export const DEFAULT_MIGRATED_WORKSPACE_NAME: string;
 
-  export function assertSafeTarget(url: string, confirmNonProduction: boolean): void;
+  export function assertSafeTarget(url: string, confirmNonProduction?: boolean, confirmProduction?: boolean): void;
   export function mapLegacyStage(stageStr: string): {
+    stage: string;
+    status: string;
+    outcome: string | null;
+    closureReason: string | null;
+    eventType: string;
+  };
+  export function mapLegacyStatus(rawStatus: string): {
     stage: string;
     status: string;
     outcome: string | null;
@@ -48,7 +58,52 @@ declare module '*migrate-legacy-data.mjs' {
   export function mapLegacyNoteType(rawType: string | null | undefined): string;
   export function mapLegacyRecurrence(raw: string | null | undefined): string | null;
   export function parseLegacyDate(dateStr: string | null | undefined): string | null;
+  export function normalizeLegacyTimestamp(dateStr: string | null | undefined): string | null;
   export function generateClaimCode(): { token: string; hint: string; hash: string };
+  export function mapLegacyUser(u: Record<string, any>): {
+    username: string;
+    cleanUsername: string;
+    fullName: string;
+    email: string | null;
+    themePref: string;
+    weekStart: number;
+    role: string;
+  };
+  export function mapLegacyApplication(a: Record<string, any>, existingTags?: string[]): {
+    companyName: string;
+    roleTitle: string;
+    stage: string;
+    status: string;
+    outcome: string | null;
+    closureReason: string | null;
+    eventType: string;
+    workArrangement: string | null;
+    employmentType: string | null;
+    location: string | null;
+    jobUrl: string | null;
+    externalJobId: string | null;
+    salaryMin: number | null;
+    salaryMax: number | null;
+    salaryCurrency: string;
+    priority: string;
+    notes: string | null;
+    tags: string[];
+    appliedAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    hasSnapshot: boolean;
+    jobDescription: string | null;
+  };
+  export function mapLegacyTask(t: Record<string, any>): Record<string, any>;
+  export function mapLegacyReminder(f: Record<string, any>): Record<string, any>;
+  export function mapLegacyNote(n: Record<string, any>): Record<string, any>;
+  export function mapLegacyResume(r: Record<string, any>): Record<string, any>;
+  export function runProductionPreflight(options: { targetUrl: string }): Promise<{
+    success: boolean;
+    readOnly: boolean;
+    checks: Array<{ name: string; status: string; detail: string }>;
+    timestamp: string;
+  }>;
   export function runMigration(options: RunMigrationOptions): Promise<MigrationReport>;
   export function rollbackMigration(options: RollbackOptions): Promise<{ success: boolean; workspace_id: string; message: string }>;
 }

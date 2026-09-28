@@ -132,18 +132,24 @@ export function Topbar({
       )}
 
       {/* Global Search Bar */}
-      <div
+      <button
+        type="button"
         className="search focus-ring"
         onClick={onSearchFocus}
-        role="search"
-        style={{ cursor: 'pointer' }}
+        aria-label="Search applications, contacts, notes, docs..."
+        style={{
+          cursor: 'pointer',
+          font: 'inherit',
+          textAlign: 'left',
+          color: 'inherit',
+        }}
       >
         <Search size={15} color="var(--color-text-muted)" aria-hidden="true" />
         <span style={{ fontSize: '13px', flex: 1, color: 'var(--color-text-muted)' }}>
-          Search applications, contacts, notes...
+          Search applications, contacts, notes, docs...
         </span>
-        <span className="kbd" aria-label="Keyboard shortcut: forward slash">/</span >
-      </div>
+        <span className="kbd" aria-label="Keyboard shortcut: Command K or Control K">⌘K</span>
+      </button>
 
       {/* Notification Bell */}
       <button

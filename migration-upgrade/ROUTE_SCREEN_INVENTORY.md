@@ -125,6 +125,8 @@ page covering the same data — a gap worth closing in the migrated UI.
 | Profile | `profile` (no nav entry) | Settings → "Profile" | `renderProfile()` | none (reads `state.user`) | Read-only |
 | User Management | `users` | Manager nav section | `renderUsers()` | `GET /api/manager/users`, `PATCH .../:id` | Promote/demote, activate/deactivate (last-manager safeguard server-side) |
 | Audit History | `audit` | Manager nav section | `renderAudit()` | `GET /api/manager/audit` | Read-only |
+| Career Journal (M13) | `/#/journal` | Sidebar (Activity) / direct hash route | `JournalView.tsx` | `rpc_create_journal_entry`, `rpc_update_journal_entry`, `rpc_delete_journal_entry`, `journal_entries` PostgREST | Complete career journal workbench: 5 types, pinning, search, mobile reader/editor |
+| Global Search Palette (M13) | `GlobalSearchModal` | Topbar search bar / `Cmd+K` / `Ctrl+K` | `GlobalSearchModal.tsx` | `rpc_global_search` | Accessible command palette with keyboard navigation, recent searches, domain pills (applications, contacts, notes, interviews, documents) |
 
 ## Cross-cutting frontend patterns (relevant to a React/TS rebuild)
 

@@ -132,6 +132,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
         await login.getByLabel('Password').fill(`M11-Extension-${accountRun}-P@ss!`);
         await login.getByRole('button', { name: 'Sign in' }).click();
       } else {
+        await webPage.getByRole('button', { name: 'Create account' }).click();
         const registration = webPage.getByRole('form', { name: 'Register' });
         await registration.getByLabel('Username (required)').fill(`m11_ext_${accountRun}`);
         await registration.getByLabel('Password (required)').fill(`M11-Extension-${accountRun}-P@ss!`);

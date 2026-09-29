@@ -2,8 +2,8 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: Extension remediation Step 12A Manual Capture Fallback / Parity Fix COMPLETE — PASS. Awaiting Operator Manual Extension QA & Step 13 Final Security Review (Claude Opus).**
-**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — full implementation + Step 12A manual capture fallback complete, local quality gate PASS, exact-head CI PASS (run 36631704633, SHA e90ef9af), Preview deployed (dpl_GawFiRmFBswMeSQjev5MdMrjwUDX), m11-extension and m15e-extension-sidepanel E2E PASS against Preview. NOT merged. Production UNCHANGED.**
+**Phase M15-E: Extension Step 13 Final Security Review (Claude Opus/High) — BLOCKED. Two client-side duplicate-protection blockers (B1, B2) require targeted remediation before Step 15 promotion.**
+**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — implementation + Step 12A complete, local gate PASS, exact-head CI PASS (run 36631704633, tested SHA e90ef9afc15938b8ae1309b8689475de68117d12), Preview automated QA PASS, operator manual QA PASS (operator-reported), Opus security review BLOCKED (server auth/tenant isolation PASS). NOT merged. Development/Main/Production UNCHANGED.**
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)
@@ -19,7 +19,7 @@ Milestone 15 — Production Launch & Cutover
 
 ## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12 & Step 12A COMPLETE)
 - **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
-- **Branch HEAD:** `e90ef9af` (pushed; matches origin). Code SHA: `e90ef9af66d4001d9f485db5ee73bce495be8959`
+- **Branch HEAD:** `f656d2e846864b95e139bd7c0895dd27407bf745` (docs-only, pushed; matches origin before the Step 13 docs commit). **Application/tested code SHA:** `e90ef9afc15938b8ae1309b8689475de68117d12` (CI run `36631704633` ran on this exact SHA; the later HEAD differs only by 3 `migration-upgrade/*.md` files). Note: earlier docs showed this SHA mistyped as `e90ef9af66d4…8959`; corrected here.
 - **Phase A (audit):** DONE, read-only.
 - **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, token masking, whitespace normalization, WCAG AA button contrast.
 - **Phase C (Claude Design import):** DONE. Imported from Claude Design mockup (`cbb3d92b`).
@@ -29,7 +29,7 @@ Milestone 15 — Production Launch & Cutover
   - `REGISTER_IP_MAX_PER_HOUR=20` configured on Vercel for `preview` and `development` scopes ONLY. Production remains unchanged.
   - Preview backend verified: `xpnkasclquplmrcmhsif` (`jobquest-dev`), AWS `us-west-2`. `PREVIEW_BACKEND_IS_PRODUCTION = false`.
 - **Phase 12 (Automated Preview/Dev Extension QA): COMPLETE — PASS**
-  - Deployed SHA `cb9418fe` to Vercel Preview (`dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`).
+  - Deployed SHA `cb9418fe052d65cf4a55ac7a4d6fbea197fd4423` to Vercel Preview (`dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`); exact-head CI run `36621437672` confirmed on that SHA.
   - Test synchronization fix: `e2e/m11-extension.spec.ts` line 244 updated to await canonical stages and `playwright.config.ts` timeout set to 15s.
   - Verified: Connection save/test, persistent Side Panel, Capture extraction/save, duplicate detection (strong/probable/possible), dynamic workflow stages, Mini Dashboard stats, compact Analytics stats, Settings masked token & return navigation, Light/Dark/System themes, responsive widths (360/430/480 zero overflow), active-tab changes, browser restart persistence.
 - **Phase 12A (Manual Capture Fallback / Parity Fix): COMPLETE — PASS**
@@ -39,10 +39,16 @@ Milestone 15 — Production Launch & Cutover
   - Maintained strict tab draft isolation: switching tabs re-extracts and resets inputs, preventing draft leakage across tabs.
   - Guarded asynchronous `initialize()` against overwriting the active view if the user navigated to Dashboard/Analytics (`e90ef9af`).
   - Local verification: unit tests (163/163 web/api, 59/59 extension), lint & typecheck PASS, package dev & bundle secret scan (48 files, 0 findings).
-  - Exact-head CI: PASS — run `36631704633`, SHA `e90ef9af66d4001d9f485db5ee73bce495be8959`, `static` (53s) and `database` (7m18s) jobs `completed/success`.
+  - Exact-head CI: PASS — run `36631704633`, SHA `e90ef9afc15938b8ae1309b8689475de68117d12`, `static` (53s) and `database` (7m18s) jobs `completed/success`.
   - Fresh Vercel Preview: deployment `dpl_GawFiRmFBswMeSQjev5MdMrjwUDX`, URL `https://jobquest2-ns7438ypn-one-piece-5779.vercel.app`, target: `null` (Preview).
   - Automated Preview QA: `e2e/m15e-extension-sidepanel.spec.ts` PASS (32.5s) and `e2e/m11-extension.spec.ts` PASS (27.7s) against live Preview.
-- **Phase 13 (Release Security Review):** PENDING Claude Opus independent review. Awaiting operator manual re-test.
+- **Phase 14 (Operator Manual Extension QA):** PASS (operator-reported) against tested SHA `e90ef9af` on the Preview above. The duplicate flows change in remediation, so re-verify them on the remediated Preview.
+- **Phase 13 (Release Security Review): BLOCKED.** `release-security-reviewer` (Opus/High) invoked ONCE over `origin/fix/m15e-site-functional-remediation...f656d2e8` (26 files, +5227/-62). **Do not re-invoke automatically.** Blockers (verified against source by the main session):
+  - **B1** — `bypassDuplicate` set by "Save as New Application Anyway" (`apps/extension/sidepanel.js:540`) is only reset in `scheduleDuplicateCheck` (`:240`), never in `runCaptureFlow` (`:364-383`); after one override, later jobs get no duplicate warning and `save()` sends `duplicate_override: true` (`:644`). Server duplicate enforcement is advisory only, so the client check is the sole control.
+  - **B2** — editing Company/Title/URL after the duplicate check (`:948-953`) redraws the duplicate card but never recomputes `currentCaptureScreen`, so the primary button stays "Save to JobQuest"; `save()` (`:590-662`) does not re-check duplicates at save time. Tests do not cover either path (Test Adequacy FAIL).
+  - Non-blocking: N1 late 350 ms duplicate timer can redraw on another tab (fixed by B1's timer clear); N2 reconnect leaves cached stats/resumes/capture state (display staleness only); N3 manual Job URL / `captureSchema.job_url` not scheme-checked (pre-existing; mitigated by React 19 + CSP); N4 setup token input not cleared after setup/Disconnect.
+  - All other areas PASS: token security/validation, workspace/tenant isolation, manifest/permissions, content/XSS, URL safety, API authorization, Dashboard/Analytics isolation, workflow integrity, active-tab concurrency, settings/token UI, environment isolation, secret leakage. Production changes detected: NO.
+  - Full detail: `migration-upgrade/m15-extension/M15E_EXTENSION_EXECUTION_CHECKLIST.md` (Phase 13).
 
 
 ## Cross-cutting / unchanged by either branch
@@ -59,13 +65,12 @@ Milestone 15 — Production Launch & Cutover
   format and cannot be verified by `/auth/claim` as it now exists. Reissuing it is a
   production write requiring explicit operator authorization; NOT performed this
   session. Do not attempt the claim with the currently-vaulted code.
-- **Register rate limit on Preview/dev:** `REGISTER_IP_MAX_PER_HOUR` is configured
-  for `production` scope only in Vercel; no `preview`/`development`-scoped value
-  exists, so Preview currently uses the code default (3/hour). Not changed this
-  session (requires separate authorization); worth raising before heavy manual QA
-  that registers several accounts back-to-back. (Distinct from the local dev-only
-  rate-limit bucket cleared above, which only affected this machine's local
-  Supabase Docker instance.)
+- **Register rate limit on Preview/dev:** `REGISTER_IP_MAX_PER_HOUR=20` is now set
+  for the Vercel `preview` and `development` scopes ONLY (Phase 11, operator-authorized;
+  supersedes the earlier "3/hour default" note). Production value unchanged. This
+  session's Step 13 could not independently re-read Vercel env (MCP disconnected);
+  it relies on the Phase 11 record. (Distinct from the local dev-only rate-limit
+  bucket cleared earlier, which only affected this machine's local Docker Supabase.)
 
 ## Feature Freeze Notice
 FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: launch blockers, security defects, migration defects, production configuration defects, critical P0/P1 regressions, critical accessibility defects, and critical performance defects materially threatening launch.
@@ -125,7 +130,10 @@ exactly (`rgb(255,255,255)`/`rgb(23,32,51)`), logout returns to Sign In, and 390
 has zero page-level horizontal overflow (`scrollWidth === 390`).
 
 ## Next Exact Step
-**AWAITING OPERATOR MANUAL EXTENSION RE-TEST** of the unpacked extension against the fresh Preview:
+**SECURITY REMEDIATION REQUIRED (Step 13 BLOCKED).** A separate remediation prompt should: fix B1/B2 (+N1, optionally N2/N4; N3 server-side http/https check is a pre-existing gap and needs an explicit scope decision) in `apps/extension/sidepanel.js`; add E2E coverage for "edit into a duplicate identity, then save" and "Save anyway on Job A, then switch to Job B"; run targeted then full regression; push a new application SHA; exact-head CI; new Preview; QA; and decide whether a focused re-review of the fix commit is required. No merge to development/main, no production action until then.
+
+*(Historical — the operator manual scenarios below were already executed and reported PASS against `e90ef9af`; re-run only the duplicate scenarios after remediation.)*
+Operator manual extension test of the unpacked extension against the Preview:
 - **Preview Deployment:** `https://jobquest2-ns7438ypn-one-piece-5779.vercel.app` (`dpl_GawFiRmFBswMeSQjev5MdMrjwUDX`)
 - **Unpacked Extension Path:** `apps/extension/dist/jobquest-capture-dev`
 - **Verification Scenarios:**

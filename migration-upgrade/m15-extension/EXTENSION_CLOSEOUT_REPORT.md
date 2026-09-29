@@ -133,12 +133,12 @@ performed or attempted.
 ## Step 12 — Preview/Dev Automated Extension QA (COMPLETE — PASS)
 
 - **Branch:** `fix/m15e-extension-connection-ui`
-- **HEAD:** `cb9418fe72df9fe59c1b7e64117869aa64b857703` (pushed, matches origin)
+- **HEAD:** `cb9418fe052d65cf4a55ac7a4d6fbea197fd4423` (pushed, matches origin)
 - **Vercel Preview Deployment:**
   - Deployment ID: `dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`
   - URL: `https://jobquest2-jtp7jvwkl-one-piece-5779.vercel.app`
   - Target: `null` (Preview, not production)
-  - Git SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
+  - Git SHA: `cb9418fe052d65cf4a55ac7a4d6fbea197fd4423`
   - Backend: `jobquest-dev` (`xpnkasclquplmrcmhsif`, AWS `us-west-2`). `PREVIEW_BACKEND_IS_PRODUCTION = false`.
 - **Environment Configuration:**
   - `REGISTER_IP_MAX_PER_HOUR=20` verified on Vercel for `Preview` and `Development` scopes ONLY.
@@ -163,7 +163,7 @@ performed or attempted.
   - No product code was altered.
 - **Exact-Head CI:**
   - Run: `36621437672`
-  - SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
+  - SHA: `cb9418fe052d65cf4a55ac7a4d6fbea197fd4423`
   - Result: **PASS** — `static` (51s) and `database` (7m18s) jobs both completed successfully.
 - **Next Step:**
   - Proceeded to Step 12A for manual capture fallback / parity remediation.
@@ -173,10 +173,10 @@ performed or attempted.
 ## Step 12A — Manual Capture Fallback / Parity Fix (COMPLETE — PASS)
 
 - **Branch:** `fix/m15e-extension-connection-ui`
-- **HEAD:** `e90ef9af66d4001d9f485db5ee73bce495be8959` (pushed, matches origin)
+- **HEAD:** `e90ef9afc15938b8ae1309b8689475de68117d12` (pushed, matches origin)
 - **Commits:**
   - `0563d033f7f868d952f110d719a38afe11667197`: `fix(extension): restore manual review and edit capture fallback in sidepanel (Step 12A)`
-  - `e90ef9af66d4001d9f485db5ee73bce495be8959`: `fix(extension): guard initial view switch against overwriting active user tab`
+  - `e90ef9afc15938b8ae1309b8689475de68117d12`: `fix(extension): guard initial view switch against overwriting active user tab`
 - **Problem Resolved:**
   - The previous extension allowed the operator to manually edit job fields before saving.
   - The initial Side Panel release relied purely on automatic extraction, leaving operators unable to manually correct or complete job information when extraction was incomplete, erroneous, or empty.
@@ -210,7 +210,7 @@ performed or attempted.
   - Deployment ID: `dpl_GawFiRmFBswMeSQjev5MdMrjwUDX`
   - URL: `https://jobquest2-ns7438ypn-one-piece-5779.vercel.app`
   - Target: `null` (Preview, not production)
-  - Git SHA: `e90ef9af66d4001d9f485db5ee73bce495be8959`
+  - Git SHA: `e90ef9afc15938b8ae1309b8689475de68117d12`
   - Backend: `jobquest-dev` (`xpnkasclquplmrcmhsif`, AWS `us-west-2`). `PREVIEW_BACKEND_IS_PRODUCTION = false`.
 - **Quality Gates:**
   - Unit Tests: Web/API 163/163 PASS, Extension 59/59 PASS (`apps/extension/tests/sidepanel-logic.test.js` added 1 new unit test for manual override snapshot assembling).
@@ -227,12 +227,33 @@ performed or attempted.
 
 ---
 
-## Future Enhancements Log (Post-M15)
+## Step 13 — Final Security / Release Review (BLOCKED)
 
-The following non-blocking feature requests were identified during M15 extension development and are deferred to post-launch milestones per Feature Freeze rules:
+- **Reviewer:** `release-security-reviewer`, Opus / High, invoked ONCE (do not re-invoke automatically).
+- **Review range:** `origin/fix/m15e-site-functional-remediation...f656d2e846864b95e139bd7c0895dd27407bf745` (merge-base `0a534b45`, 26 files, +5227/-62).
+- **Application/tested SHA:** `e90ef9afc15938b8ae1309b8689475de68117d12` — CI run `36631704633` PASS (static + database). Current docs HEAD `f656d2e8…` differs only by 3 docs files and was not itself application-tested. (Earlier docs mistyped the tested SHA as `e90ef9af66d4…8959`; corrected.)
+- **Verdict: BLOCKED.** Server-side token security/validation, workspace/tenant isolation, manifest/permissions, content/XSS, URL safety, API authorization, Dashboard/Analytics isolation, workflow integrity, active-tab concurrency, settings/token UI, environment isolation and secret leakage all PASS. Production changes detected: NO.
+- **B1:** duplicate override (`bypassDuplicate`, `apps/extension/sidepanel.js:540`) persists across jobs; only reset in `scheduleDuplicateCheck` (`:240`), never in `runCaptureFlow` (`:364-383`). After one "Save anyway", later jobs get no duplicate warning and `save()` sends `duplicate_override: true` (`:644`). Server duplicate enforcement is advisory only (`rpc_extension_capture` stores the flag), so the client check is the only control. Introduced by the persistent Side Panel (popup state was discarded on close).
+- **B2:** editing Company/Title/URL after the duplicate check (`:948-953`) never recomputes `currentCaptureScreen`, so the primary button stays "Save to JobQuest" for a job edited into a strong duplicate; `save()` (`:590-662`) does not re-check at save time or wait for the 350 ms pending check.
+- **Test adequacy FAIL:** no E2E for "edit into a duplicate then save" or "Save anyway on Job A, then switch to Job B".
+- **Non-blocking:** N1 late duplicate timer vs tab switch (resolved by B1 timer clear); N2 reconnect leaves cached stats/resumes/capture state (display only); N3 manual Job URL / `captureSchema.job_url` scheme unchecked (pre-existing, mitigated by React 19 + CSP); N4 setup token input not cleared after setup/Disconnect.
+- **Verification note:** the main session re-read the cited source lines and confirmed B1's mechanism and B2's edit-callback behavior before recording.
+- **Next:** separate targeted security-remediation prompt (client-only fix in `sidepanel.js` + two E2E tests, targeted → full regression → new SHA → exact-head CI → new Preview → QA; decide on a focused re-review). Step 15 promotion is NOT authorized until then. Development/Main/Production UNCHANGED.
 
-- **[F01] Custom Theme Palettes:** Expand theme selection beyond Light / Dark / System to include custom branding palettes and high-contrast accessibility modes.
-- **[F02] Auto-Detect Toggle:** Add user preference toggle in Settings to control whether the Side Panel automatically opens upon detecting a supported job board listing.
-- **[F03] Direct Resume Uploads:** Allow operators to upload new PDF/DOCX resumes directly from the extension Side Panel (currently supports selecting existing uploaded resumes or specifying a manual label/filename).
+---
+
+## Future Scope Log (Post-M15) — all DEFERRED, NON-BLOCKING for M15-E
+
+Corrected to the agreed feature definitions. Do not implement during M15-E.
+
+- **[F01] Structured Application Documents:** choose an existing document; create a new Plain Text document; create structured JSON document data; future structured parsing/rendering; equivalent create/link behavior for other document types.
+- **[F02] Default Application Tasks & Follow-ups:** Settings-level generic task templates; follow-up templates; optional automatic creation for new applications; future relative due-date behavior; optional future stage-trigger behavior.
+- **[F03] Application Contact Linking UX:** select an existing contact from an Application; create a contact from an Application; automatically link the contact to the application; preserve the company/application relationship.
+
+### Separate backlog ideas (previously mislabeled as F01–F03; retained, not scheduled)
+
+- **[B01] Custom theme palettes:** themes beyond Light / Dark / System (custom branding, high-contrast modes).
+- **[B02] Side Panel auto-open on supported job listings:** note that an auto-detect *rescan* preference (`autoDetectJobPages`) already ships in Settings > Capture Preferences; B02 only concerns automatically opening the panel.
+- **[B03] Direct resume upload from the Side Panel:** currently supports selecting an existing uploaded resume or a manual label/filename.
 
 

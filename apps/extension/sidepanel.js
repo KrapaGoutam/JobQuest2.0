@@ -25,7 +25,9 @@ import {
   testConnection,
 } from './api/jobquest.js';
 import {
+  authorizeDuplicateOverride,
   buildCaptureDraft,
+  canSafelySave,
   classifyConnectionScreen,
   classifyExtraction,
   clampPercent,
@@ -34,9 +36,13 @@ import {
   DASHBOARD_PIPELINE_STAGES,
   describeEnvironment,
   formatStatValue,
-  mapDuplicateLevel,
+  initDuplicateContext,
+  isDuplicateOverriddenFor,
   mapPipelineForDisplay,
   nextRovingIndex,
+  onDuplicateCheckResult,
+  onDuplicateCheckStart,
+  onIdentityChange,
   resolveCaptureScreen,
   saveAsToStageId,
   shouldRescanForTabChange,
@@ -68,7 +74,8 @@ let captured = {};
 let userManuallyToggledDetails = false;
 /** @type {{ level: 'error' | 'strong' | 'none' | 'possible' | 'saved' | 'probable', match: object | null }} */
 let duplicateInfo = { level: 'none', match: null };
-let bypassDuplicate = false;
+/** @type {import('./sidepanel-logic.js').DuplicateState} */
+let duplicateState = initDuplicateContext(0);
 let duplicateTimer = 0;
 
 let currentActiveTab = /** @type {{ id?: number, url?: string } | null} */ (null);
@@ -222,25 +229,35 @@ function currentCaptureIdentity(locationOverride) {
   };
 }
 
-async function runDuplicateCheck() {
-  if (bypassDuplicate || !capturePreferences.warnOnDuplicates) {
+async function runDuplicateCheck(identityOverride) {
+  const identity = identityOverride || currentCaptureIdentity();
+  if (!capturePreferences.warnOnDuplicates) {
     duplicateInfo = { level: 'none', match: null };
-    return;
+    return duplicateInfo;
   }
-  const identity = currentCaptureIdentity();
+  if (isDuplicateOverriddenFor(duplicateState, identity)) {
+    duplicateInfo = { level: 'none', match: null };
+    return duplicateInfo;
+  }
   if (!identity.jobUrl && !identity.company) {
     duplicateInfo = { level: 'none', match: null };
-    return;
+    return duplicateInfo;
   }
+  const currentContextSeq = captureRequestSeq;
+  const { checkSeq } = onDuplicateCheckStart(duplicateState);
   const result = await checkDuplicate(settings.instanceUrl, settings.apiToken, identity);
-  duplicateInfo = mapDuplicateLevel(result);
+  const outcome = onDuplicateCheckResult(duplicateState, currentContextSeq, checkSeq, identity, result);
+  if (!outcome.ignored) {
+    duplicateInfo = duplicateState.info;
+  }
+  return duplicateInfo;
 }
 
 function scheduleDuplicateCheck(onDone) {
-  bypassDuplicate = false;
   window.clearTimeout(duplicateTimer);
-  duplicateTimer = window.setTimeout(() => {
-    void runDuplicateCheck().then(() => onDone?.());
+  duplicateTimer = window.setTimeout(async () => {
+    await runDuplicateCheck();
+    onDone?.();
   }, 350);
 }
 
@@ -350,7 +367,8 @@ function renderEditDetails(screen) {
   const extractionScreen = classifyExtraction(captured);
   updateEditToggleTitle(extractionScreen);
 
-  if (!userManuallyToggledDetails) {
+  const isEditing = byId('edit-fields-section')?.contains(document.activeElement);
+  if (!userManuallyToggledDetails && !isEditing) {
     if (screen === 'partial') {
       setEditDetailsExpanded(true);
     } else {
@@ -363,6 +381,10 @@ function renderEditDetails(screen) {
  * check, then renders the resolved Capture screen. */
 async function runCaptureFlow(tab, { showScanning = true } = {}) {
   const seq = ++captureRequestSeq;
+  window.clearTimeout(duplicateTimer);
+  duplicateTimer = 0;
+  duplicateState = initDuplicateContext(seq);
+  duplicateInfo = duplicateState.info;
   userManuallyToggledDetails = false;
   if (showScanning && currentCaptureScreen !== 'none' && currentCaptureScreen !== 'offline') {
     byId('scan-indicator').hidden = false;
@@ -537,7 +559,10 @@ function renderFooter() {
     secondary.hidden = false;
     secondary.classList.add('outline');
     secondary.textContent = 'Save as New Application Anyway';
-    secondary.onclick = () => { bypassDuplicate = true; void save(); };
+    secondary.onclick = () => {
+      authorizeDuplicateOverride(duplicateState, currentCaptureIdentity());
+      void save();
+    };
     return;
   }
 
@@ -617,6 +642,38 @@ async function save() {
     const appliedAtDate = input('edit-date')?.value || new Date().toISOString().slice(0, 10);
     const notes = /** @type {HTMLTextAreaElement | null} */ (byId('edit-notes'))?.value?.trim() || captured.notes || '';
 
+    const saveIdentity = {
+      company,
+      jobTitle,
+      location,
+      jobUrl,
+      source,
+      externalJobId: String(captured.externalJobId || ''),
+    };
+
+    // Cancel pending duplicate timer so it cannot fire after save begins
+    window.clearTimeout(duplicateTimer);
+    duplicateTimer = 0;
+
+    // Save-time duplicate defense (B2 & B1):
+    let safetyCheck = canSafelySave(duplicateState, saveIdentity);
+    if (!safetyCheck.canSave) {
+      if (safetyCheck.reason === 'NEEDS_CHECK') {
+        await runDuplicateCheck(saveIdentity);
+        safetyCheck = canSafelySave(duplicateState, saveIdentity);
+      }
+    }
+
+    if (!safetyCheck.canSave && safetyCheck.reason === 'BLOCKED_DUPLICATE') {
+      currentCaptureScreen = 'duplicate';
+      renderCapture('duplicate');
+      primary.disabled = false;
+      primary.textContent = originalLabel;
+      return;
+    }
+
+    const isDuplicateOverridden = Boolean(safetyCheck.duplicateOverride);
+
     // Resume selection
     const resumeMode = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="sidepanel-resume-mode"]:checked'))?.value || 'existing';
     const resumeSelect = select('edit-resume');
@@ -641,13 +698,16 @@ async function save() {
       salary,
       notes,
       appliedAtDate,
-      duplicateOverride: bypassDuplicate,
+      duplicateOverride: isDuplicateOverridden,
       resumeId,
       resumeLabel,
     });
     const result = await createCapture(settings.instanceUrl, settings.apiToken, draft);
     createdPath = result.deep_link_path;
     byId('saved-meta').textContent = `Stage: ${workflow.stages?.find((s) => s.id === stageId)?.label || stageId} · ${formatTimestamp()}`;
+    // Clear duplicate state on save completion to prevent stale override from lingering (B1)
+    duplicateState = initDuplicateContext(captureRequestSeq);
+    duplicateInfo = duplicateState.info;
     renderCapture('saved');
     showToast('Saved to JobQuest');
   } catch (error) {
@@ -945,11 +1005,27 @@ function setupEditInputs() {
     }
     renderChips();
     renderCompleteness();
+
+    // Invalidate previous duplicate evaluation & override immediately (B2)
+    onIdentityChange(duplicateState, currentCaptureIdentity());
+    duplicateInfo = duplicateState.info;
+    renderDuplicateCard();
+
+    const extractionScreen = classifyExtraction(captured);
+    updateEditToggleTitle(extractionScreen);
+
+    // Recompute provisional capture screen and footer
+    const provisionalScreen = resolveCaptureScreen(extractionScreen, duplicateInfo.level);
+    currentCaptureScreen = provisionalScreen;
+    renderFooter();
+
     scheduleDuplicateCheck(() => {
-      const extractionScreen = classifyExtraction(captured);
+      const finalExtraction = classifyExtraction(captured);
+      const resolvedScreen = resolveCaptureScreen(finalExtraction, duplicateInfo.level);
+      currentCaptureScreen = resolvedScreen;
       renderDuplicateCard();
       renderFooter();
-      updateEditToggleTitle(extractionScreen);
+      updateEditToggleTitle(finalExtraction);
     });
   };
 
@@ -998,6 +1074,14 @@ function setupCaptureFallbackActions() {
     if (url) {
       captured = { ...captured, jobUrl: url, source: captured.source || 'Manual entry' };
       populateEditFields(captured);
+      onIdentityChange(duplicateState, currentCaptureIdentity());
+      scheduleDuplicateCheck(() => {
+        const extraction = classifyExtraction(captured);
+        const screen = resolveCaptureScreen(extraction, duplicateInfo.level);
+        currentCaptureScreen = screen;
+        renderDuplicateCard();
+        renderFooter();
+      });
     }
     userManuallyToggledDetails = false;
     renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level));

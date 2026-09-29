@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  buildCaptureDraft, classifyConnectionScreen, classifyExtraction, clampPercent, computeCaptureCompleteness,
+  authorizeDuplicateOverride,
+  buildCaptureDraft, canSafelySave, classifyConnectionScreen, classifyExtraction, clampPercent, computeCaptureCompleteness,
+  computeDuplicateIdentityKey,
   computeGoalRemainder, DASHBOARD_PIPELINE_STAGES, describeEnvironment, formatStageLabel, formatStatValue,
-  mapDuplicateLevel, mapPipelineForDisplay, nextRovingIndex, resolveCaptureScreen, saveAsToStageId,
+  initDuplicateContext, isDuplicateOverriddenFor,
+  mapDuplicateLevel, mapPipelineForDisplay, nextRovingIndex, normalizeIdentity,
+  onDuplicateCheckResult, onDuplicateCheckStart, onIdentityChange,
+  resolveCaptureScreen, saveAsToStageId,
   shouldRescanForTabChange, stagePipCount,
 } from '../sidepanel-logic.js';
 import { getCapturePreferences, saveCapturePreferences } from '../api/jobquest.js';
@@ -284,5 +289,209 @@ describe('capture preferences storage (new chrome.storage.local keys)', () => {
     await expect(getCapturePreferences()).resolves.toEqual({
       defaultStage: '', warnOnDuplicates: true, autoDetectJobPages: false, openCaptureOnDetect: false,
     });
+  });
+});
+
+describe('duplicate lifecycle hardening (B1, B2, N1)', () => {
+  const jobA = {
+    company: 'Stripe',
+    jobTitle: 'Staff Software Engineer',
+    jobUrl: 'https://stripe.com/jobs/123',
+    externalJobId: '123',
+    source: 'Stripe Careers',
+    location: 'Remote',
+  };
+
+  const jobB = {
+    company: 'Notion',
+    jobTitle: 'Senior Product Manager',
+    jobUrl: 'https://notion.so/jobs/456',
+    externalJobId: '456',
+    source: 'Notion Careers',
+    location: 'San Francisco, CA',
+  };
+
+  it('normalizes identity fields with safe whitespace trimming and defaults', () => {
+    expect(normalizeIdentity({ company: '  Acme  ', jobTitle: ' Lead ' })).toEqual({
+      company: 'Acme',
+      jobTitle: 'Lead',
+      jobUrl: '',
+      externalJobId: '',
+      source: '',
+      location: '',
+    });
+  });
+
+  it('B1-A: Duplicate Job A -> Save Anyway -> duplicate_override true for Job A only', () => {
+    let state = initDuplicateContext(1);
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
+      match_type: 'EXACT_POSTING',
+      matches: [{ application: { company_name: 'Stripe', role_title: 'Staff Software Engineer' } }],
+    });
+
+    // Verify it is recognized as duplicate
+    expect(canSafelySave(state, jobA)).toEqual({ canSave: false, reason: 'BLOCKED_DUPLICATE' });
+
+    // Operator chooses "Save Anyway"
+    authorizeDuplicateOverride(state, jobA);
+    expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
+    expect(canSafelySave(state, jobA)).toEqual({ canSave: true, duplicateOverride: true, reason: 'OVERRIDDEN' });
+
+    // Override does NOT apply to a different job
+    expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
+  });
+
+  it('B1-B: After Job A override -> initialize Job B -> bypass/override false', () => {
+    let state = initDuplicateContext(1);
+    authorizeDuplicateOverride(state, jobA);
+    expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
+
+    // Switch to Job B / next context sequence
+    state = initDuplicateContext(2);
+    expect(isDuplicateOverriddenFor(state, jobA)).toBe(false);
+    expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
+    expect(state.overrideKey).toBeNull();
+  });
+
+  it('B1-C: After Job A override -> later duplicate Job B -> normal duplicate warning appears', () => {
+    let state = initDuplicateContext(1);
+    authorizeDuplicateOverride(state, jobA);
+
+    // Switch to Job B
+    state = initDuplicateContext(2);
+    const startB = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 2, startB.checkSeq, jobB, {
+      match_type: 'SAME_ROLE',
+      matches: [{ application: { company_name: 'Notion', role_title: 'Senior Product Manager' } }],
+    });
+
+    expect(state.info.level).toBe('probable');
+    expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
+    expect(canSafelySave(state, jobB)).toEqual({ canSave: false, reason: 'BLOCKED_DUPLICATE' });
+  });
+
+  it('B2-A: Duplicate check completes, then Company changes -> previous duplicate state invalidated -> duplicate check reruns', () => {
+    let state = initDuplicateContext(1);
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
+      match_type: 'EXACT_POSTING',
+      matches: [{ application: { company_name: 'Stripe' } }],
+    });
+    expect(state.info.level).toBe('strong');
+
+    // Operator edits company
+    const edited = { ...jobA, company: 'Stripe Payments' };
+    onIdentityChange(state, edited);
+
+    expect(state.isStale).toBe(true);
+    expect(state.info.level).toBe('none');
+    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
+
+    // Recheck completes for new identity
+    const nextStart = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, nextStart.checkSeq, edited, { match_type: 'NONE', matches: [] });
+    expect(state.isStale).toBe(false);
+    expect(state.info.level).toBe('none');
+    expect(canSafelySave(state, edited)).toEqual({ canSave: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' });
+  });
+
+  it('B2-B: Duplicate check completes, then Job Title changes -> previous duplicate state invalidated', () => {
+    let state = initDuplicateContext(1);
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
+      match_type: 'EXACT_POSTING',
+      matches: [{ application: { role_title: 'Staff Software Engineer' } }],
+    });
+    expect(state.info.level).toBe('strong');
+
+    const edited = { ...jobA, jobTitle: 'Principal Engineer' };
+    onIdentityChange(state, edited);
+
+    expect(state.isStale).toBe(true);
+    expect(state.info.level).toBe('none');
+    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
+  });
+
+  it('B2-C: Duplicate check completes, then Job URL changes -> previous duplicate state invalidated', () => {
+    let state = initDuplicateContext(1);
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
+      match_type: 'EXACT_POSTING',
+      matches: [{ application: { job_url: 'https://stripe.com/jobs/123' } }],
+    });
+    expect(state.info.level).toBe('strong');
+
+    const edited = { ...jobA, jobUrl: 'https://stripe.com/jobs/999' };
+    onIdentityChange(state, edited);
+
+    expect(state.isStale).toBe(true);
+    expect(state.info.level).toBe('none');
+    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
+  });
+
+  it('B2-D: Save cannot use duplicate result for old identity values', () => {
+    let state = initDuplicateContext(1);
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, { match_type: 'NONE', matches: [] });
+
+    // Old identity was safe
+    expect(canSafelySave(state, jobA)).toEqual({ canSave: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' });
+
+    // But if submitted with changed fields without checking, save must reject with NEEDS_CHECK
+    const edited = { ...jobA, company: 'Google' };
+    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
+  });
+
+  it('B2-E: Explicit override becomes invalid if identity changes afterward', () => {
+    let state = initDuplicateContext(1);
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
+      match_type: 'EXACT_POSTING',
+      matches: [{ application: { company_name: 'Stripe' } }],
+    });
+
+    authorizeDuplicateOverride(state, jobA);
+    expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
+
+    // Operator edits company after clicking Save Anyway
+    const edited = { ...jobA, company: 'Stripe Inc' };
+    onIdentityChange(state, edited);
+
+    expect(isDuplicateOverriddenFor(state, edited)).toBe(false);
+    expect(isDuplicateOverriddenFor(state, jobA)).toBe(false);
+    expect(state.overrideKey).toBeNull();
+    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
+  });
+
+  it('N1: Scheduled duplicate Job A -> switch to Job B -> late Job A timer/result cannot change Job B state/UI', () => {
+    // Context 1 for Job A
+    let state = initDuplicateContext(1);
+    const checkA = onDuplicateCheckStart(state);
+
+    // Context switches to 2 for Job B before checkA completes
+    state = initDuplicateContext(2);
+    const checkB = onDuplicateCheckStart(state);
+
+    // Check A completes late with contextSeq 1
+    const lateOutcomeA = onDuplicateCheckResult(state, 1, checkA.checkSeq, jobA, {
+      match_type: 'EXACT_POSTING',
+      matches: [{ application: { company_name: 'Stripe' } }],
+    });
+
+    expect(lateOutcomeA.ignored).toBe(true);
+    expect(lateOutcomeA.reason).toBe('CONTEXT_SUPERSEDED');
+    // Job B state is NOT corrupted by Job A's late duplicate result
+    expect(state.checkedKey).toBeNull();
+    expect(state.info.level).toBe('none');
+
+    // Check B completes with current contextSeq 2
+    const outcomeB = onDuplicateCheckResult(state, 2, checkB.checkSeq, jobB, {
+      match_type: 'NONE',
+      matches: [],
+    });
+    expect(outcomeB.ignored).toBe(false);
+    expect(state.info.level).toBe('none');
+    expect(computeDuplicateIdentityKey(jobB)).toBe(state.checkedKey);
   });
 });

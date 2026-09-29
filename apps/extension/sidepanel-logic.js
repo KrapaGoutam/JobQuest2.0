@@ -32,6 +32,171 @@ export function mapDuplicateLevel(result) {
   return { level: 'none', match: null };
 }
 
+/**
+ * Normalizes capture identity fields to a stable representation.
+ * @param {Record<string, unknown>} [raw]
+ * @returns {{ company: string, jobTitle: string, jobUrl: string, externalJobId: string, source: string, location: string }}
+ */
+export function normalizeIdentity(raw = {}) {
+  return {
+    company: String(raw.company || '').trim(),
+    jobTitle: String(raw.jobTitle || '').trim(),
+    jobUrl: String(raw.jobUrl || '').trim(),
+    externalJobId: String(raw.externalJobId || '').trim(),
+    source: String(raw.source || '').trim(),
+    location: String(raw.location || '').trim(),
+  };
+}
+
+/**
+ * Computes a stable fingerprint string for duplicate identity comparison.
+ * Any difference in company, jobTitle, jobUrl, externalJobId, source, or location
+ * yields a different key.
+ * @param {Record<string, unknown>} [raw]
+ * @returns {string}
+ */
+export function computeDuplicateIdentityKey(raw = {}) {
+  const id = normalizeIdentity(raw);
+  return [
+    id.company.toLowerCase(),
+    id.jobTitle.toLowerCase(),
+    id.jobUrl.toLowerCase(),
+    id.externalJobId,
+    id.source.toLowerCase(),
+    id.location.toLowerCase(),
+  ].join('::');
+}
+
+/**
+ * @typedef {Object} DuplicateState
+ * @property {number} contextSeq - Active capture context sequence
+ * @property {number} checkSeq - Sequence for in-flight duplicate checks within context
+ * @property {string | null} checkedKey - Identity key of last completed check
+ * @property {{ level: 'strong' | 'probable' | 'saved' | 'possible' | 'error' | 'none', match: object | null }} info - Cached result
+ * @property {boolean} isStale - True if identity changed or check is pending
+ * @property {string | null} overrideKey - Identity key explicitly authorized for duplicate bypass
+ */
+
+/**
+ * Creates a fresh, isolated duplicate lifecycle state for a given capture context.
+ * B1 guarantee: overrideKey starts as null, preventing any previous override from leaking.
+ * @param {number} [contextSeq=0]
+ * @returns {DuplicateState}
+ */
+export function initDuplicateContext(contextSeq = 0) {
+  return {
+    contextSeq,
+    checkSeq: 0,
+    checkedKey: null,
+    info: { level: 'none', match: null },
+    isStale: true,
+    overrideKey: null,
+  };
+}
+
+/**
+ * Called when any identity field changes.
+ * B2 guarantee: invalidates previous duplicate result and revokes any prior override.
+ * @param {DuplicateState} state
+ * @param {Record<string, unknown>} nextIdentity
+ * @returns {DuplicateState}
+ */
+export function onIdentityChange(state, nextIdentity) {
+  const nextKey = computeDuplicateIdentityKey(nextIdentity);
+  if (state.checkedKey !== nextKey) {
+    state.isStale = true;
+    state.info = { level: 'none', match: null };
+  }
+  if (state.overrideKey && state.overrideKey !== nextKey) {
+    state.overrideKey = null;
+  }
+  return state;
+}
+
+/**
+ * Authorizes a duplicate override exclusively for the current identity.
+ * @param {DuplicateState} state
+ * @param {Record<string, unknown>} identity
+ * @returns {DuplicateState}
+ */
+export function authorizeDuplicateOverride(state, identity) {
+  state.overrideKey = computeDuplicateIdentityKey(identity);
+  return state;
+}
+
+/**
+ * Checks whether duplicate bypass is authorized for a specific identity.
+ * B1 guarantee: only returns true if the exact identity matches the authorized overrideKey.
+ * @param {DuplicateState} state
+ * @param {Record<string, unknown>} identity
+ * @returns {boolean}
+ */
+export function isDuplicateOverriddenFor(state, identity) {
+  if (!state.overrideKey) return false;
+  return state.overrideKey === computeDuplicateIdentityKey(identity);
+}
+
+/**
+ * Determines whether save can proceed safely without risking saving a duplicate.
+ * B2 guarantee: verifies that the duplicate check was run against the exact current identity
+ * and was not a blocking duplicate, or that an explicit override was authorized for this exact identity.
+ * @param {DuplicateState} state
+ * @param {Record<string, unknown>} identity
+ * @returns {{ canSave: boolean, duplicateOverride?: boolean, reason: 'OVERRIDDEN' | 'VERIFIED_SAFE' | 'NEEDS_CHECK' | 'BLOCKED_DUPLICATE' }}
+ */
+export function canSafelySave(state, identity) {
+  if (isDuplicateOverriddenFor(state, identity)) {
+    return { canSave: true, duplicateOverride: true, reason: 'OVERRIDDEN' };
+  }
+
+  const key = computeDuplicateIdentityKey(identity);
+  if (state.isStale || state.checkedKey !== key) {
+    return { canSave: false, reason: 'NEEDS_CHECK' };
+  }
+
+  const level = state.info.level;
+  if (level === 'strong' || level === 'probable' || level === 'saved') {
+    return { canSave: false, reason: 'BLOCKED_DUPLICATE' };
+  }
+
+  return { canSave: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' };
+}
+
+/**
+ * Marks the start of a duplicate check request.
+ * @param {DuplicateState} state
+ * @returns {{ checkSeq: number }}
+ */
+export function onDuplicateCheckStart(state) {
+  state.checkSeq += 1;
+  return { checkSeq: state.checkSeq };
+}
+
+/**
+ * Processes a completed duplicate check response.
+ * N1 guarantee: checks both contextSeq (tab switch) and checkSeq (newer check within context)
+ * to prevent late responses from overwriting newer state or other tabs.
+ * @param {DuplicateState} state
+ * @param {number} contextSeq
+ * @param {number} checkSeq
+ * @param {Record<string, unknown>} identity
+ * @param {{ match_type?: string, matches?: Array<{ application?: { stage?: string } }> }} result
+ * @returns {{ ignored: boolean, reason?: string, level?: string, match?: object | null }}
+ */
+export function onDuplicateCheckResult(state, contextSeq, checkSeq, identity, result) {
+  if (contextSeq !== state.contextSeq) {
+    return { ignored: true, reason: 'CONTEXT_SUPERSEDED' };
+  }
+  if (checkSeq !== state.checkSeq) {
+    return { ignored: true, reason: 'CHECK_SUPERSEDED' };
+  }
+
+  state.checkedKey = computeDuplicateIdentityKey(identity);
+  state.info = mapDuplicateLevel(result);
+  state.isStale = false;
+  return { ignored: false, level: state.info.level, match: state.info.match };
+}
+
 /** The real field superset content.js's extractors populate (see its return
  * shapes) that the Capture tab's completeness checklist tracks. Core fields
  * missing from EITHER company or jobTitle drive the `partial` classification;

@@ -395,6 +395,70 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       await shot(sidePanel, 'm15e-sidepanel-capture-duplicate');
 
       // -----------------------------------------------------------------
+      // Step 13A Remediation: B1 — Override isolation (does not leak across jobs)
+      // -----------------------------------------------------------------
+      // Job B is currently a duplicate. Operator clicks "Save as New Application Anyway".
+      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
+      await sidePanel.locator('#footer-secondary').click();
+      await expect(sidePanel.locator('#saved-card')).toBeVisible();
+      await expect(sidePanel.locator('#toast')).toContainText('Saved to JobQuest');
+
+      // Now switch to Job A (Stripe / Staff Software Engineer)
+      await fixtureA.bringToFront();
+      await expect(sidePanel.locator('#job-title')).toHaveText('Staff Software Engineer');
+      await expect(sidePanel.locator('#job-company')).toHaveText('Stripe');
+      // Save Job A as a separate application
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#saved-card')).toBeVisible();
+
+      // Now switch away to Job B and then back to Job A to force re-scan of Job A
+      await fixtureB.bringToFront();
+      await fixtureA.bringToFront();
+      // Job A is now an existing application in JobQuest -> MUST display duplicate warning!
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#dup-title')).toContainText('Strong duplicate');
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
+      evidence.b1_override_isolation_verified = true;
+
+      // -----------------------------------------------------------------
+      // Step 13A Remediation: B2 — Editing identity fields re-evaluates duplicate
+      // -----------------------------------------------------------------
+      if (await sidePanel.locator('#edit-fields-section').isHidden()) {
+        await sidePanel.locator('#edit-toggle-btn').click();
+      }
+      // Edit company and title to an unrecorded role -> duplicate card disappears
+      await sidePanel.locator('#edit-company').fill('Acme NonDuplicate Corp');
+      await sidePanel.locator('#edit-title').fill('Unique Engineering Fellow');
+      await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
+      await expect(sidePanel.locator('#footer-secondary')).toBeHidden();
+
+      // Now edit company and title back to match Job B (Notion / Senior Product Manager)
+      await sidePanel.locator('#edit-company').fill('Notion');
+      await sidePanel.locator('#edit-title').fill('Senior Product Manager');
+      // Duplicate detection re-evaluates -> duplicate card returns and blocks ordinary save
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#dup-title')).toContainText('duplicate');
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toBeVisible();
+      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
+      evidence.b2_edit_duplicate_protection_verified = true;
+
+      // -----------------------------------------------------------------
+      // Step 13A Remediation: N1 — Late debounced duplicate timer safety
+      // -----------------------------------------------------------------
+      // Type in Job A, then immediately switch to Job B before the 350ms timer fires
+      await sidePanel.locator('#edit-company').fill('Late Timer Safety Corp');
+      await fixtureB.bringToFront();
+      // Wait longer than 350ms debounce
+      await sidePanel.waitForTimeout(450);
+      // Job B must remain untouched and not show Job A's values
+      await expect(sidePanel.locator('#job-company')).toHaveText('Notion');
+      await expect(sidePanel.locator('#job-title')).toHaveText('Senior Product Manager');
+      evidence.n1_timer_safety_verified = true;
+
+      // -----------------------------------------------------------------
       // Item 8: Settings — opened from a non-Capture tab, must return to
       // that same tab (not always Capture) on Back, and must never render
       // the raw token.

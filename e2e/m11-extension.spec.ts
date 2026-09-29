@@ -161,7 +161,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       await expect(webPage.getByRole('row', { name: new RegExp(tokenName) })).toContainText('active');
 
       // Configure via the actual extension options page and verify local persistence.
-      const optionsPage = await context.newPage();
+      let optionsPage = await context.newPage();
       await optionsPage.goto(`${extensionOrigin}/options.html`);
       await expect(optionsPage.locator('#instance-url')).not.toHaveValue('');
       await optionsPage.locator('#instance-url').fill(baseURL);
@@ -169,11 +169,33 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       await optionsPage.locator('#theme').selectOption('dark');
       try {
         await optionsPage.getByRole('button', { name: 'Save Settings' }).click();
-        await expect(optionsPage.locator('#status-box')).toContainText('Connected. JobQuest accepted this token.');
+        await expect(optionsPage.locator('#status-box')).toContainText('Saved. Connected — JobQuest accepted this token.');
       } finally {
         // Prevent Playwright error context snapshots from serializing a live token value.
         await optionsPage.locator('#api-token').evaluate((element: HTMLInputElement) => { element.value = ''; });
       }
+
+      // The stored token must never be re-displayed after saving: the field
+      // is cleared and shows a masked placeholder, not the raw secret.
+      await expect(optionsPage.locator('#api-token')).toHaveValue('');
+      const maskedPlaceholder = await optionsPage.locator('#api-token').getAttribute('placeholder');
+      expect(maskedPlaceholder).toMatch(/^jqx_dev_••••[A-Za-z0-9]{4} — paste a new token to replace it$/);
+      expect(maskedPlaceholder).not.toContain(rawToken);
+
+      // Reopening the options page (simulating a browser restart/reload) must
+      // show the same masked state, never the raw token, and the connection
+      // must already be usable without re-entering it.
+      await optionsPage.close();
+      const reopenedOptionsPage = await context.newPage();
+      await reopenedOptionsPage.goto(`${extensionOrigin}/options.html`);
+      await expect(reopenedOptionsPage.locator('#api-token')).toHaveValue('');
+      const reopenedPlaceholder = await reopenedOptionsPage.locator('#api-token').getAttribute('placeholder');
+      expect(reopenedPlaceholder).toBe(maskedPlaceholder);
+      await expect(reopenedOptionsPage.locator('#status-box')).toContainText('Connection settings are stored locally in this browser.');
+      await reopenedOptionsPage.getByRole('button', { name: 'Test Connection' }).click();
+      await expect(reopenedOptionsPage.locator('#status-box')).toContainText('Connection successful.');
+      optionsPage = reopenedOptionsPage;
+
       await expect(optionsPage.locator('html')).toHaveAttribute('data-theme', 'dark');
       a11y.push(await audit(optionsPage, 'extension-options-connected-dark'));
       await shot(optionsPage, 'm11-options-connected-dark');
@@ -306,7 +328,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       await optionsPage.locator('#api-token').fill(replacementToken);
       try {
         await optionsPage.getByRole('button', { name: 'Save Settings' }).click();
-        await expect(optionsPage.locator('#status-box')).toContainText('Connected. JobQuest accepted this token.');
+        await expect(optionsPage.locator('#status-box')).toContainText('Saved. Connected — JobQuest accepted this token.');
       } finally {
         await optionsPage.locator('#api-token').evaluate((element: HTMLInputElement) => { element.value = ''; });
       }

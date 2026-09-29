@@ -2,8 +2,8 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: TWO active fix branches — site remediation (manual Preview QA PASS, awaiting promotion authorization) and extension remediation (Phase A/B done, still blocked at Phase C on design-system authorization)**
-**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — Phase A/B local quality gate PASS, exact-head CI PASS, blocked before Phase C (see below — not resolved by a prior `/design-login` attempt). NOT merged. Production UNCHANGED.**
+**Phase M15-E: Extension remediation Step 12 Preview/Dev Automated QA COMPLETE — PASS. Awaiting Step 13 Final Security Review (Claude Opus).**
+**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — full implementation complete, local quality gate PASS, test synchronization fix applied, exact-head CI PASS (run 36621437672, SHA cb9418fe), Preview deployed (dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a), m11-extension and m15e-extension-sidepanel E2E PASS against Preview. NOT merged. Production UNCHANGED.**
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)
@@ -15,53 +15,28 @@ Milestone 15 — Production Launch & Cutover
 - **Cutover Status:** Site remediation manual QA complete. Still PAUSED before
   any merge/production action: jack's claim-code reissue, then
   `fix -> development -> main -> production` promotion gates all remain
-  separately authorized steps, not yet executed. Extension remediation
-  (separate branch, below) has not reached manual QA yet.
+  separately authorized steps, not yet executed.
 
-## Branch: fix/m15e-extension-connection-ui (extension remediation — NEW this session)
+## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12 COMPLETE)
 - **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
-- **Branch HEAD:** `d0e8c34a` (pushed; matches origin). Tested code SHA: `20943423`
-  (CI ran against this; the `d0e8c34a` HEAD on top of it is docs-only).
+- **Branch HEAD:** `cb9418fe` (pushed; matches origin). Code SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
 - **Phase A (audit):** DONE, read-only.
-- **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, full
-  raw token re-displayed on every Settings reopen, and inconsistent
-  Save-vs-Test whitespace handling. Also fixed a real WCAG AA contrast failure
-  in the dark-theme primary button, found by the same test's real axe-core scan.
-  Full detail in `migration-upgrade/m15-extension/EXTENSION_CONNECTION_AUDIT.md`
-  and `EXTENSION_CLOSEOUT_REPORT.md`.
-- **Phase C (Claude Design import): STILL BLOCKED, confirmed on a second check.**
-  No `claude_design` MCP tool exists in this session — checked exhaustively both
-  times. On this second check, the closest available tool (`DesignSync`, which
-  handles the user's own writable design-*system* projects, not arbitrary shared
-  `claude.ai/design/p/...` URLs) returned an explicit error: **design-system
-  authorization is missing, and `/design-login` cannot run in this
-  non-interactive (headless/SDK) session** — it must be run from an
-  **interactive** Claude Code session on this machine first; this session would
-  then reuse that authorization on a later resume. A prior `/design-login`
-  attempt (per the task that resumed this branch) did not resolve this.
-  **Operator action: open an interactive Claude Code session on this machine
-  and run `/design-login` there, then resume this task.** Everything downstream
-  (Phase D Side Panel, E Dashboard/Analytics/Settings, their QA, and the final
-  release review) remains blocked. Per explicit instruction, no design work was
-  inferred or reconstructed from memory or the earlier textual description.
-- **Local quality gate (Phase A/B scope):** lint PASS, typecheck PASS, unit
-  163/163 PASS, integration 182/182 PASS (unaffected — no `apps/api/**` touched),
-  extension unit 30/30 PASS, full E2E 20/20 PASS, build PASS, extension package
-  built (`apps/extension/dist/jobquest-capture-dev/`), secret scans PASS
-  (tracked 912/0, web bundle 3/0, extension bundle 40/0).
-- **Exact-head CI:** PASS — run `36561875844`, SHA `20943423`, triggered via
-  `workflow_dispatch`, both `static` and `database` jobs `completed/success`.
-- **Release security review:** NOT invoked. Per instruction, invoked only after
-  the full implementation (through Phase E) passes Preview/dev QA — blocked on
-  Phase C, so implementation is not yet complete.
-- Note: during this branch's full-E2E run, `e2e/m2-shell.spec.ts`'s theme-sync
-  test failed reproducibly. Diagnosed (via `test-debugger`, independently
-  confirmed with a direct read-only query) as the **local** `register-ip`
-  rate-limit bucket having accumulated 21 hits against the 3/hour limit, from
-  many hours of repeated manual E2E runs earlier today — not a code defect, not
-  `apps/web`-related. Cleared by deleting that one bucket row in the local-only
-  Supabase Docker Postgres (no Preview/production data involved). Confirmed
-  passing afterward.
+- **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, token masking, whitespace normalization, WCAG AA button contrast.
+- **Phase C (Claude Design import):** DONE. Imported from Claude Design mockup (`cbb3d92b`).
+- **Phase D (Side Panel & Capture):** DONE. Persistent MV3 Side Panel (`sidepanel.html`/`sidepanel.js`), active-tab tracking, dynamic workflow stages, duplicate detection levels (`11d22429`).
+- **Phase E (Dashboard, Analytics, Settings):** DONE. Compact Mini Dashboard, Analytics, GET `/ext/v1/stats`, Settings return navigation, theme sync (`8c8bfc73`, `f4f8eecc`, `572b531f`, `71d99557`).
+- **Phase 11 (Preview Environment):**
+  - `REGISTER_IP_MAX_PER_HOUR=20` configured on Vercel for `preview` and `development` scopes ONLY. Production remains unchanged.
+  - Preview backend verified: `xpnkasclquplmrcmhsif` (`jobquest-dev`), AWS `us-west-2`. `PREVIEW_BACKEND_IS_PRODUCTION = false`.
+- **Phase 12 (Automated Preview/Dev Extension QA): COMPLETE — PASS**
+  - Deployed exact SHA `cb9418fe` to Vercel Preview: deployment `dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`, URL `https://jobquest2-jtp7jvwkl-one-piece-5779.vercel.app`, target: `null` (Preview, not production).
+  - Test synchronization fix: `e2e/m11-extension.spec.ts` line 244 updated to wait for canonical stages to finish populating before asserting count (avoiding race with static placeholder option `<option value="">Loading canonical stages…</option>`), and `playwright.config.ts` configured with `expect: { timeout: 15_000 }` for network latency tolerance against remote Preview.
+  - `e2e/m11-extension.spec.ts` against live Preview: PASS (51.9s)
+  - `e2e/m15e-extension-sidepanel.spec.ts` against live Preview: PASS (27.1s)
+  - Verified: Connection save/test, persistent Side Panel, Capture extraction/save, duplicate detection (strong/probable/possible), dynamic workflow stages, Mini Dashboard stats, compact Analytics stats, Settings masked token & return navigation, Light/Dark/System themes, responsive widths (360/430/480 zero overflow), active-tab changes, browser restart persistence.
+- **Exact-head CI:** PASS — run `36621437672`, SHA `cb9418fe72df9fe59c1b7e64117869aa64b857703`, both `static` (51s) and `database` (7m18s) jobs `completed/success`.
+- **Phase 13 (Release Security Review):** PENDING Claude Opus independent review. Step 12 STOP gate observed.
+
 
 ## Cross-cutting / unchanged by either branch
 - **Main HEAD Commit:** Pending PR Merge

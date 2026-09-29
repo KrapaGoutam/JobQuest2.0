@@ -127,3 +127,44 @@ correctly still pending.
 Development: UNCHANGED. Main: UNCHANGED. Production: UNCHANGED. No production
 claim-code reissue. No production extension token configuration. No merges
 performed or attempted.
+
+---
+
+## Step 12 — Preview/Dev Automated Extension QA (COMPLETE — PASS)
+
+- **Branch:** `fix/m15e-extension-connection-ui`
+- **HEAD:** `cb9418fe72df9fe59c1b7e64117869aa64b857703` (pushed, matches origin)
+- **Vercel Preview Deployment:**
+  - Deployment ID: `dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`
+  - URL: `https://jobquest2-jtp7jvwkl-one-piece-5779.vercel.app`
+  - Target: `null` (Preview, not production)
+  - Git SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
+  - Backend: `jobquest-dev` (`xpnkasclquplmrcmhsif`, AWS `us-west-2`). `PREVIEW_BACKEND_IS_PRODUCTION = false`.
+- **Environment Configuration:**
+  - `REGISTER_IP_MAX_PER_HOUR=20` verified on Vercel for `Preview` and `Development` scopes ONLY.
+  - Production `REGISTER_IP_MAX_PER_HOUR` remains unchanged.
+- **QA Results Against Live Preview:**
+  - `e2e/m11-extension.spec.ts`: PASS (51.9s)
+  - `e2e/m15e-extension-sidepanel.spec.ts`: PASS (27.1s)
+- **Verified Capabilities:**
+  - **Connection:** Save connection, Test connection, connected status, masked token (`jqx_dev_••••{last4}`), reload persistence, invalid token error handling.
+  - **Side Panel Shell:** MV3 Side Panel (`sidepanel.html`), persistent focus behavior, roving tablist navigation, embedded Setup screen.
+  - **Capture:** Real JSON-LD extraction, dynamic workflow stages (never "Bookmarked"), atomic capture to `/api/ext/v1/captures`, duplicate detection mapping (`strong`/`probable`/`saved`/`possible`), success card + toast + deep link.
+  - **Mini Dashboard:** Real stats from `GET /ext/v1/stats`, Today/Yesterday cards, goal progress.
+  - **Analytics:** Real metrics from `GET /ext/v1/stats`, loading state, empty state handling.
+  - **Settings:** Workspace display, connection diagnostics, environment info, masked token safety, return navigation to triggering tab.
+  - **Themes:** Light, Dark, System; native selects/options readability and WCAG AA contrast.
+  - **Responsive:** 360px, 430px, 480px single-column layout without horizontal page overflow (`scrollWidth === clientWidth`).
+  - **Active Tab Tracking:** Dynamic re-extraction on tab switch (Job A → Job B), state preservation when switching to non-job tabs.
+  - **Restart Persistence:** `chrome.storage.local` persistence across context close/reopen; raw token never exposed.
+- **Test Fix Summary (TEST_BUG):**
+  - `e2e/m11-extension.spec.ts`: line 244 updated to assert `not.toContainText('Loading canonical stages')` and `option:not([value=""])` so Playwright properly awaits async workflow population rather than immediately resolving against the static placeholder option.
+  - `playwright.config.ts`: added `expect: { timeout: 15_000 }` to accommodate remote cross-country network round-trip latency to Vercel/Supabase.
+  - No product code was altered.
+- **Exact-Head CI:**
+  - Run: `36621437672`
+  - SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
+  - Result: **PASS** — `static` (51s) and `database` (7m18s) jobs both completed successfully.
+- **Next Step:**
+  - Step 12 is complete. Step 13 (Independent Security & Release Review by Claude Opus) is pending.
+

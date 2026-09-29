@@ -1098,10 +1098,11 @@ export async function runProductionPreflight({ targetUrl }) {
     const migCheck = await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;');
     const appliedVersions = migCheck.rows.map(r => r.version);
     const hasM14 = appliedVersions.includes('20261020100000');
+    const hasM15Claim = appliedVersions.includes('20261021100000');
     checks.push({
       name: 'migrations',
-      status: appliedVersions.length === 18 && hasM14 ? 'PASS' : 'WARN',
-      detail: `${appliedVersions.length}/18 migrations applied (latest: ${appliedVersions[appliedVersions.length - 1]})`
+      status: appliedVersions.length === 19 && hasM14 && hasM15Claim ? 'PASS' : 'WARN',
+      detail: `${appliedVersions.length}/19 migrations applied (latest: ${appliedVersions[appliedVersions.length - 1]})`
     });
 
     // 3. Required legacy migration columns

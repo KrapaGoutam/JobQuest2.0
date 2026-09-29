@@ -83,6 +83,39 @@ cb9418fe72df9fe59c1b7e64117869aa64b857703
 [x] restart persistence
 [x] artifact hygiene
 
+## Step 12A — Manual Capture Fallback / Parity Fix
+
+Status:
+IN PROGRESS
+
+Reason:
+Operator manual Preview QA found a parity regression:
+auto-extraction has no adequate manual edit/fill fallback for fields
+that were editable in the previous extension.
+
+Checklist:
+
+[ ] audit previous editable capture fields
+[ ] map fields to current capture API
+[ ] design minimal Side Panel edit/fill interaction
+[ ] preserve automatic extraction
+[ ] missing fields manually fillable
+[ ] detected values manually correctable
+[ ] manual values use existing capture payload
+[ ] duplicate detection respects edited values
+[ ] workflow stages remain canonical/dynamic
+[ ] active-tab changes cannot leak manual Job A values into Job B
+[ ] accessibility
+[ ] targeted unit tests
+[ ] targeted E2E
+[ ] full required regression
+[ ] package
+[ ] secret scan
+[ ] exact-head CI
+[ ] fresh Preview/dev deployment/package
+[ ] automated Preview QA
+[ ] operator manual retest pending
+
 ## Phase 13 — Final Security Review
 [ ] Claude Opus review
 
@@ -132,16 +165,17 @@ DO NOT COMPLETE IN THIS SESSION.
 
 ---
 
-CURRENT PHASE: Phase 12 — Automated Preview/dev Extension QA (COMPLETE - PASS)
-CURRENT SUBTASK: Handoff to Step 13 (Independent Security Review — Claude Opus)
+CURRENT PHASE: M15-E Step 12A — Manual Capture Fallback / Parity Fix
+CURRENT SUBTASK: Audit previous editable capture fields vs API contract
 BRANCH: fix/m15e-extension-connection-ui
-HEAD: cb9418fe72df9fe59c1b7e64117869aa64b857703
-REMOTE HEAD: cb9418fe72df9fe59c1b7e64117869aa64b857703
-WORKING TREE: Clean (untracked checklist and docs updated)
+LOCAL HEAD: 7d0d20cd2268e0760b5b140b0c3308fc827a817d
+REMOTE HEAD: 7d0d20cd2268e0760b5b140b0c3308fc827a817d
+WORKING TREE: M15E_EXTENSION_EXECUTION_CHECKLIST.md modified
+LAST COMPLETED ACTION: Step 12 automated preview QA passed & checklist initialized
 LAST GREEN TEST: unit 163/163, integration 186/186, extension 58/58, m11-extension E2E PASS (51.9s), m15e-extension-sidepanel E2E PASS (27.1s)
 LAST CI: 36621437672 (PASS, exact SHA cb9418fe)
 PREVIEW: https://jobquest2-jtp7jvwkl-one-piece-5779.vercel.app (deployment dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a, target: preview, exact SHA cb9418fe)
 BACKEND: jobquest-dev (ref: xpnkasclquplmrcmhsif, PREVIEW_BACKEND_IS_PRODUCTION = false)
-BLOCKERS: None. Step 12 is fully complete.
+BLOCKERS: None
 PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw, AWS us-east-1)
-NEXT EXACT ACTION: Claude Opus final extension security/release review (Step 13)
+NEXT EXACT ACTION: Audit previous editable fields in popup.html/js and map to Side Panel capture flow

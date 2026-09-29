@@ -98,23 +98,108 @@
           <p class="muted small" id="completeness-missing"></p>
         </div>
 
-        <div class="card" id="partial-card" hidden>
-          <p class="card-title">Fill in the missing details</p>
-          <div class="grid-2" id="partial-fields">
-            <div class="field" id="partial-location-field" hidden>
-              <label for="partial-location">Location</label>
-              <input type="text" id="partial-location" class="text-input" placeholder="e.g. Austin, TX" autocomplete="off">
+        <!-- Review & Edit Details Card (Phase 12A Parity) -->
+        <div class="card" id="edit-details-card">
+          <button type="button" class="edit-toggle-btn" id="edit-toggle-btn" aria-expanded="false" aria-controls="edit-fields-section">
+            <span class="edit-toggle-title" id="edit-toggle-title">Review &amp; edit details</span>
+            <span class="edit-toggle-icon" id="edit-toggle-icon" aria-hidden="true">&#9662;</span>
+          </button>
+
+          <div id="edit-fields-section" class="edit-fields-section" hidden>
+            <div class="field">
+              <label for="edit-company">Company <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="edit-company" class="text-input" required maxlength="100" placeholder="e.g. Acme Corp" autocomplete="off">
             </div>
-            <div class="field" id="partial-employment-field" hidden>
-              <label for="partial-employment">Employment Type</label>
-              <select id="partial-employment" class="select">
-                <option value="">Select…</option>
-                <option value="Full-time">Full-time</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Contract">Contract</option>
-                <option value="Internship">Internship</option>
-                <option value="Temporary">Temporary</option>
-              </select>
+
+            <div class="field">
+              <label for="edit-title">Job Title <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="edit-title" class="text-input" required maxlength="100" placeholder="e.g. Software Engineer" autocomplete="off">
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label for="edit-location">Location</label>
+                <input type="text" id="edit-location" class="text-input" maxlength="100" placeholder="e.g. Austin, TX" autocomplete="off">
+              </div>
+
+              <div class="field">
+                <label for="edit-arrangement">Work Arrangement</label>
+                <select id="edit-arrangement" class="select">
+                  <option value="">Select…</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Onsite">Onsite</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label for="edit-employment">Employment Type</label>
+                <select id="edit-employment" class="select">
+                  <option value="">Select…</option>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                  <option value="Temporary">Temporary</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="edit-salary">Salary Range</label>
+                <input type="text" id="edit-salary" class="text-input" placeholder="e.g. $120k - $150k" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="edit-date">Date Applied</label>
+              <input type="date" id="edit-date" class="text-input">
+            </div>
+
+            <div class="field">
+              <label for="edit-url">Job URL</label>
+              <input type="url" id="edit-url" class="text-input" placeholder="https://…" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="edit-source">Source / Board</label>
+              <input type="text" id="edit-source" class="text-input" placeholder="e.g. LinkedIn, Indeed, Greenhouse" autocomplete="off">
+            </div>
+
+            <!-- Tailored Resume -->
+            <div class="field">
+              <label>Tailored Resume</label>
+              <div class="resume-mode-selector">
+                <label class="resume-mode-option">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-existing" value="existing" checked>
+                  <span>Select existing</span>
+                </label>
+                <label class="resume-mode-option">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-manual" value="manual">
+                  <span>Enter manually</span>
+                </label>
+                <label class="resume-mode-option">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-none" value="none">
+                  <span>None</span>
+                </label>
+              </div>
+
+              <div id="sidepanel-group-resume-existing">
+                <select id="edit-resume" class="select" aria-label="Select existing resume">
+                  <option value="">None selected</option>
+                </select>
+              </div>
+
+              <div id="sidepanel-group-resume-manual" hidden>
+                <input type="text" id="edit-resume-manual" class="text-input" placeholder="e.g. QA Automation v96" maxlength="100" aria-label="Enter resume version manually" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="edit-notes">Notes</label>
+              <textarea id="edit-notes" class="text-input textarea" rows="2" placeholder="Optional notes…"></textarea>
             </div>
           </div>
         </div>

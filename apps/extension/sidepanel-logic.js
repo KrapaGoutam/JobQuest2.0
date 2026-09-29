@@ -199,7 +199,10 @@ export function buildCaptureDraft({
       description: captured.description || null,
       requirements: captured.requirements || null,
       skills: captured.skills || null,
-      raw_payload: { extraction_confidence: captured.confidence || null },
+      raw_payload: {
+        extraction_confidence: captured.confidence || null,
+        salary_range: captured.salaryRange || null,
+      },
     },
     resume_id: resumeId || null,
     resume_label: resumeLabel || null,

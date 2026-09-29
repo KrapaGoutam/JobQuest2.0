@@ -136,7 +136,7 @@ describe('active-tab change detection', () => {
 describe('capture draft assembly', () => {
   it('builds the same shape popup.js\'s save() posts to /captures', () => {
     const draft = buildCaptureDraft({
-      captured: { externalJobId: 'ext-1', salaryCurrency: 'USD', description: 'desc' },
+      captured: { externalJobId: 'ext-1', salaryCurrency: 'USD', description: 'desc', salaryRange: '$100k - $150k' },
       company: 'Acme', jobTitle: 'Engineer', stageId: 'APPLIED', jobUrl: 'https://a.test',
       source: 'LinkedIn', location: 'Remote', workArrangement: 'Remote', employmentType: 'Full-time',
       salary: { min: 100000, max: 150000 }, notes: 'note', appliedAtDate: '2026-01-01',
@@ -148,6 +148,53 @@ describe('capture draft assembly', () => {
       applied_at: '2026-01-01T12:00:00.000Z',
     });
     expect(draft.snapshot.description).toBe('desc');
+    expect(draft.snapshot.raw_payload.salary_range).toBe('$100k - $150k');
+  });
+
+  it('respects manual review and edit overrides for all capture fields', () => {
+    const originalExtracted = {
+      company: 'Original Inc',
+      jobTitle: 'Original Title',
+      location: 'New York, NY',
+      workArrangement: 'Onsite',
+      employmentType: 'Contract',
+      confidence: 0.85,
+    };
+    const draft = buildCaptureDraft({
+      captured: originalExtracted,
+      company: 'Edited Corp',
+      jobTitle: 'Lead Architect',
+      stageId: 'SAVED',
+      jobUrl: 'https://edited.jobs/123',
+      source: 'Direct Career Page',
+      location: 'Remote, US',
+      workArrangement: 'Remote',
+      employmentType: 'Full-time',
+      salary: { min: 180000, max: 220000 },
+      notes: 'Applied with referral code REF-99',
+      appliedAtDate: '2026-03-29',
+      duplicateOverride: false,
+      resumeId: null,
+      resumeLabel: 'Architecture Resume v3',
+    });
+
+    expect(draft).toMatchObject({
+      company: 'Edited Corp',
+      job_title: 'Lead Architect',
+      stage: 'SAVED',
+      job_url: 'https://edited.jobs/123',
+      source: 'Direct Career Page',
+      location: 'Remote, US',
+      work_arrangement: 'Remote',
+      employment_type: 'Full-time',
+      salary_min: 180000,
+      salary_max: 220000,
+      notes: 'Applied with referral code REF-99',
+      applied_at: '2026-03-29T12:00:00.000Z',
+      resume_id: null,
+      resume_label: 'Architecture Resume v3',
+      duplicate_override: false,
+    });
   });
 });
 

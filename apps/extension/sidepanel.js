@@ -10,6 +10,7 @@ import {
   checkDuplicate,
   clearSettings,
   createCapture,
+  getActiveResumes,
   getCapturePreferences,
   getSettings,
   getStats,
@@ -58,11 +59,13 @@ let capturePreferences = { defaultStage: '', warnOnDuplicates: true, autoDetectJ
 let workspace = null;
 let workflow = { stages: [], default_action: '' };
 let workflowReady = false;
+let resumes = /** @type {Array<any>} */ ([]);
 let connectionOnline = false;
 let lastConnectionError = /** @type {{ state: string, message: string } | null} */ (null);
 
 /** @type {Record<string, any>} */
 let captured = {};
+let userManuallyToggledDetails = false;
 /** @type {{ level: 'error' | 'strong' | 'none' | 'possible' | 'saved' | 'probable', match: object | null }} */
 let duplicateInfo = { level: 'none', match: null };
 let bypassDuplicate = false;
@@ -256,16 +259,118 @@ async function loadWorkflow() {
   }
 }
 
+async function loadResumes() {
+  const resumeSelect = select('edit-resume');
+  if (!resumeSelect) return;
+  resumeSelect.replaceChildren(new Option('None selected', ''));
+  try {
+    resumes = await getActiveResumes(settings.instanceUrl, settings.apiToken);
+    for (const resume of resumes) {
+      const option = new Option(
+        `${resume.name} · ${resume.version_label}${resume.target_role ? ` (${resume.target_role})` : ''}`,
+        resume.id,
+      );
+      option.dataset.version = resume.version_label;
+      resumeSelect.append(option);
+    }
+  } catch {
+    resumes = [];
+  }
+}
+
+function setResumeMode(mode) {
+  const existingGroup = byId('sidepanel-group-resume-existing');
+  if (existingGroup) existingGroup.hidden = mode !== 'existing';
+  const manualGroup = byId('sidepanel-group-resume-manual');
+  if (manualGroup) manualGroup.hidden = mode !== 'manual';
+  if (mode !== 'existing') {
+    const resSelect = select('edit-resume');
+    if (resSelect) resSelect.value = '';
+  }
+  if (mode !== 'manual') {
+    const resManual = input('edit-resume-manual');
+    if (resManual) resManual.value = '';
+  }
+}
+
+function populateEditFields(data = {}) {
+  const comp = input('edit-company');
+  if (comp) comp.value = data.company || '';
+  const tit = input('edit-title');
+  if (tit) tit.value = data.jobTitle || '';
+  const loc = input('edit-location');
+  if (loc) loc.value = data.location || '';
+  const arr = select('edit-arrangement');
+  if (arr) arr.value = data.workArrangement || '';
+  const emp = select('edit-employment');
+  if (emp) emp.value = data.employmentType || '';
+  const sal = input('edit-salary');
+  if (sal) sal.value = data.salaryRange || '';
+  const url = input('edit-url');
+  if (url) url.value = data.jobUrl || '';
+  const src = input('edit-source');
+  if (src) src.value = data.source || '';
+  const dat = input('edit-date');
+  if (dat) dat.value = new Date().toISOString().slice(0, 10);
+  const nts = /** @type {HTMLTextAreaElement | null} */ (byId('edit-notes'));
+  if (nts) nts.value = data.notes || '';
+
+  const existingRadio = /** @type {HTMLInputElement | null} */ (byId('sidepanel-mode-resume-existing'));
+  if (existingRadio) existingRadio.checked = true;
+  setResumeMode('existing');
+  const resSelect = select('edit-resume');
+  if (resSelect) resSelect.value = '';
+  const resManual = input('edit-resume-manual');
+  if (resManual) resManual.value = '';
+}
+
+function setEditDetailsExpanded(expanded) {
+  const section = byId('edit-fields-section');
+  const btn = byId('edit-toggle-btn');
+  if (section) section.hidden = !expanded;
+  if (btn) btn.setAttribute('aria-expanded', String(expanded));
+}
+
+function updateEditToggleTitle(extractionScreen) {
+  const title = byId('edit-toggle-title');
+  if (!title) return;
+  if (extractionScreen === 'partial') {
+    title.textContent = 'Complete missing details';
+  } else {
+    title.textContent = 'Review & edit details';
+  }
+}
+
+function renderEditDetails(screen) {
+  const card = byId('edit-details-card');
+  if (!card) return;
+  card.hidden = screen === 'offline' || screen === 'none';
+  if (card.hidden) return;
+
+  const extractionScreen = classifyExtraction(captured);
+  updateEditToggleTitle(extractionScreen);
+
+  if (!userManuallyToggledDetails) {
+    if (screen === 'partial') {
+      setEditDetailsExpanded(true);
+    } else {
+      setEditDetailsExpanded(false);
+    }
+  }
+}
+
 /** Runs the full real capture pipeline for a given tab: extraction, duplicate
  * check, then renders the resolved Capture screen. */
 async function runCaptureFlow(tab, { showScanning = true } = {}) {
   const seq = ++captureRequestSeq;
+  userManuallyToggledDetails = false;
   if (showScanning && currentCaptureScreen !== 'none' && currentCaptureScreen !== 'offline') {
     byId('scan-indicator').hidden = false;
   }
   const extracted = await extractFromTab(tab);
   if (seq !== captureRequestSeq) return; // superseded by a newer tab-change request
   captured = extracted;
+  populateEditFields(captured);
   const extractionScreen = classifyExtraction(captured);
   if (extractionScreen === 'none') {
     duplicateInfo = { level: 'none', match: null };
@@ -315,16 +420,6 @@ function renderCompleteness() {
     list.append(li);
   }
   byId('completeness-missing').textContent = missing.length ? `Not found: ${missing.join(', ')}` : '';
-}
-
-function renderPartialFields() {
-  const needsLocation = !captured.location;
-  const needsEmployment = !captured.employmentType;
-  byId('partial-card').hidden = currentCaptureScreen !== 'partial';
-  byId('partial-location-field').hidden = !needsLocation;
-  byId('partial-employment-field').hidden = !needsEmployment;
-  input('partial-location').value = captured.location || '';
-  select('partial-employment').value = captured.employmentType || '';
 }
 
 function matchDescription(match) {
@@ -475,7 +570,7 @@ function renderCapture(screen) {
     byId('job-source-name').textContent = captured.source || 'this page';
     byId('job-source-url').textContent = captured.jobUrl || '';
     renderCompleteness();
-    renderPartialFields();
+    renderEditDetails(screen);
     renderPossibleCard();
     renderDuplicateCard();
     byId('saved-card').hidden = screen !== 'saved';
@@ -499,25 +594,56 @@ async function save() {
   const originalLabel = primary.textContent;
   primary.textContent = 'Saving…';
   try {
-    const salary = parseSalaryRange(captured.salaryRange, captured.salaryMin, captured.salaryMax);
+    const company = input('edit-company')?.value?.trim() || captured.company || '';
+    const jobTitle = input('edit-title')?.value?.trim() || captured.jobTitle || '';
+    if (!company || !jobTitle) {
+      setEditDetailsExpanded(true);
+      const banner = byId('capture-banner');
+      banner.hidden = false;
+      banner.className = 'banner warning';
+      banner.textContent = 'Company and Job Title are required.';
+      primary.disabled = false;
+      primary.textContent = originalLabel;
+      return;
+    }
+
+    const location = input('edit-location')?.value?.trim() || captured.location || '';
+    const workArrangement = select('edit-arrangement')?.value || captured.workArrangement || '';
+    const employmentType = select('edit-employment')?.value || captured.employmentType || '';
+    const salaryStr = input('edit-salary')?.value?.trim() || captured.salaryRange || '';
+    const salary = parseSalaryRange(salaryStr, captured.salaryMin, captured.salaryMax);
+    const jobUrl = input('edit-url')?.value?.trim() || captured.jobUrl || input('none-paste-url')?.value?.trim() || '';
+    const source = input('edit-source')?.value?.trim() || captured.source || '';
+    const appliedAtDate = input('edit-date')?.value || new Date().toISOString().slice(0, 10);
+    const notes = /** @type {HTMLTextAreaElement | null} */ (byId('edit-notes'))?.value?.trim() || captured.notes || '';
+
+    // Resume selection
+    const resumeMode = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="sidepanel-resume-mode"]:checked'))?.value || 'existing';
+    const resumeSelect = select('edit-resume');
+    const resumeManualInput = input('edit-resume-manual');
+    const selectedResume = resumeSelect?.selectedOptions?.[0];
+    const resumeId = resumeMode === 'existing' && resumeSelect?.value ? resumeSelect.value : null;
+    const resumeLabel = resumeMode === 'manual' ? resumeManualInput?.value?.trim() || null : (selectedResume?.dataset?.version || null);
+
     const saveAs = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="save-as"]:checked'))?.value;
     const stageId = selectedStageId || saveAsToStageId(saveAs === 'applied' ? 'applied' : 'later', workflow);
+
     const draft = buildCaptureDraft({
       captured,
-      company: captured.company || '',
-      jobTitle: captured.jobTitle || '',
+      company,
+      jobTitle,
       stageId,
-      jobUrl: captured.jobUrl || input('none-paste-url')?.value?.trim(),
-      source: captured.source || '',
-      location: input('partial-location')?.value?.trim() || captured.location || '',
-      workArrangement: captured.workArrangement || '',
-      employmentType: select('partial-employment')?.value || captured.employmentType || '',
+      jobUrl,
+      source,
+      location,
+      workArrangement,
+      employmentType,
       salary,
-      notes: '',
-      appliedAtDate: new Date().toISOString().slice(0, 10),
+      notes,
+      appliedAtDate,
       duplicateOverride: bypassDuplicate,
-      resumeId: null,
-      resumeLabel: null,
+      resumeId,
+      resumeLabel,
     });
     const result = await createCapture(settings.instanceUrl, settings.apiToken, draft);
     createdPath = result.deep_link_path;
@@ -794,21 +920,71 @@ function setupStageControl() {
 }
 
 // ---------------------------------------------------------------------------
-// Partial-field inline inputs → re-run duplicate check + completeness
+// Review & Edit inline inputs → live card update, completeness, duplicate check
 // ---------------------------------------------------------------------------
 
-function setupPartialInputs() {
-  input('partial-location').addEventListener('input', () => {
-    captured.location = input('partial-location').value;
+function setupEditInputs() {
+  byId('edit-toggle-btn')?.addEventListener('click', () => {
+    const section = byId('edit-fields-section');
+    userManuallyToggledDetails = true;
+    setEditDetailsExpanded(Boolean(section?.hidden));
+  });
+
+  const onIdentityInput = (key, inputEl) => {
+    if (!inputEl) return;
+    captured[key] = inputEl.value;
+    if (key === 'company') {
+      byId('job-company').textContent = captured.company || 'Unknown company';
+      byId('job-avatar').textContent = firstLetter(captured.company);
+    } else if (key === 'jobTitle') {
+      byId('job-title').textContent = captured.jobTitle || 'Untitled role';
+    } else if (key === 'jobUrl') {
+      byId('job-source-url').textContent = captured.jobUrl || '';
+    } else if (key === 'source') {
+      byId('job-source-name').textContent = captured.source || 'this page';
+    }
     renderChips();
     renderCompleteness();
-    scheduleDuplicateCheck(() => renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level)));
-  });
-  select('partial-employment').addEventListener('change', () => {
-    captured.employmentType = select('partial-employment').value;
+    scheduleDuplicateCheck(() => {
+      const extractionScreen = classifyExtraction(captured);
+      renderDuplicateCard();
+      renderFooter();
+      updateEditToggleTitle(extractionScreen);
+    });
+  };
+
+  input('edit-company')?.addEventListener('input', () => onIdentityInput('company', input('edit-company')));
+  input('edit-title')?.addEventListener('input', () => onIdentityInput('jobTitle', input('edit-title')));
+  input('edit-location')?.addEventListener('input', () => onIdentityInput('location', input('edit-location')));
+  input('edit-url')?.addEventListener('input', () => onIdentityInput('jobUrl', input('edit-url')));
+  input('edit-source')?.addEventListener('input', () => onIdentityInput('source', input('edit-source')));
+
+  select('edit-arrangement')?.addEventListener('change', () => {
+    captured.workArrangement = select('edit-arrangement').value;
     renderChips();
     renderCompleteness();
   });
+
+  select('edit-employment')?.addEventListener('change', () => {
+    captured.employmentType = select('edit-employment').value;
+    renderChips();
+    renderCompleteness();
+  });
+
+  input('edit-salary')?.addEventListener('input', () => {
+    captured.salaryRange = input('edit-salary').value;
+    renderCompleteness();
+  });
+
+  byId('edit-notes')?.addEventListener('input', () => {
+    captured.notes = /** @type {HTMLTextAreaElement} */ (byId('edit-notes')).value;
+  });
+
+  for (const radio of Array.from(document.querySelectorAll('input[name="sidepanel-resume-mode"]'))) {
+    radio.addEventListener('change', () => {
+      setResumeMode(/** @type {HTMLInputElement} */ (radio).value);
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -819,7 +995,11 @@ function setupCaptureFallbackActions() {
   button('none-retry').addEventListener('click', () => { if (currentActiveTab) void runCaptureFlow(currentActiveTab); });
   button('none-capture-btn').addEventListener('click', () => {
     const url = input('none-paste-url').value.trim();
-    if (url) captured = { ...captured, jobUrl: url, source: captured.source || 'Manual entry' };
+    if (url) {
+      captured = { ...captured, jobUrl: url, source: captured.source || 'Manual entry' };
+      populateEditFields(captured);
+    }
+    userManuallyToggledDetails = false;
     renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level));
   });
   button('offline-retry').addEventListener('click', () => void initialize());
@@ -1121,7 +1301,7 @@ async function initialize() {
   }
 
   renderHeader();
-  await loadWorkflow();
+  await Promise.allSettled([loadWorkflow(), loadResumes()]);
   // Fetch Capture's real state up front regardless of which tab shows first,
   // so it's never stale when the user does switch to it (see the design
   // map's "Interaction rules" note on not showing stale Job A data for Job B).
@@ -1135,7 +1315,7 @@ async function initialize() {
 
 setupTabBar();
 setupStageControl();
-setupPartialInputs();
+setupEditInputs();
 setupCaptureFallbackActions();
 setupDashboardAnalytics();
 setupSettingsScreen();

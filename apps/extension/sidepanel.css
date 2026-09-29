@@ -387,6 +387,8 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
 
 .field label { font-size: 12px; font-weight: 600; color: var(--mu); }
 
+.req { color: var(--er); margin-left: 2px; }
+
 .text-input, .select {
   width: 100%;
   min-height: 36px;
@@ -400,9 +402,78 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
 
 .text-input:focus, .select:focus { border-color: var(--ac); }
 
+.textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
 .readonly-value { font-size: 13px; padding: 4px 0; color: var(--tx); }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---------------------------- Review & Edit card ---------------------------- */
+
+.edit-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--tx);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  min-height: 36px;
+}
+
+.edit-toggle-btn:hover { color: var(--ac); }
+
+.edit-toggle-icon {
+  font-size: 12px;
+  color: var(--mu);
+  transition: transform 0.2s ease;
+}
+
+.edit-toggle-btn[aria-expanded="true"] .edit-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.edit-fields-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd);
+}
+
+.resume-mode-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.resume-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--mu);
+}
+
+.resume-mode-option input[type="radio"] {
+  cursor: pointer;
+  accent-color: var(--ac);
+}
+
+.resume-mode-option:hover {
+  color: var(--tx);
+}
+
 
 /* ---------------------------- Duplicate card ---------------------------- */
 

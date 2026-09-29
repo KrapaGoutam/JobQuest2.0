@@ -334,6 +334,20 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       evidence.active_tab_change_refresh_verified = true;
       await shot(sidePanel, 'm15e-sidepanel-capture-detected-jobB');
 
+      // Step 12A Parity: Review & edit details card
+      await expect(sidePanel.locator('#edit-details-card')).toBeVisible();
+      await expect(sidePanel.locator('#edit-toggle-btn')).toHaveAttribute('aria-expanded', 'false');
+      await expect(sidePanel.locator('#edit-fields-section')).toBeHidden();
+
+      await sidePanel.locator('#edit-toggle-btn').click();
+      await expect(sidePanel.locator('#edit-toggle-btn')).toHaveAttribute('aria-expanded', 'true');
+      await expect(sidePanel.locator('#edit-fields-section')).toBeVisible();
+      await expect(sidePanel.locator('#edit-company')).toHaveValue('Notion');
+      await expect(sidePanel.locator('#edit-title')).toHaveValue('Senior Product Manager');
+      await sidePanel.locator('#edit-notes').fill('Referred by engineering lead');
+      a11y.push(await audit(sidePanel, 'sidepanel-capture-review-expanded'));
+      evidence.review_and_edit_card_verified = true;
+
       // -----------------------------------------------------------------
       // Item 7: real save flow (Job B), "I applied" → real POST /captures,
       // success state + toast + a real deep_link_path.
@@ -362,9 +376,14 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       // then return to Job B — a genuine re-scan (different URL each hop)
       // that must now find the just-saved application as an EXACT_POSTING
       // "strong" duplicate.
+      // Also verifies draft tab-isolation: Job A does NOT inherit Job B's notes.
       // -----------------------------------------------------------------
       await fixtureA.bringToFront();
       await expect(sidePanel.locator('#job-title')).toHaveText('Staff Software Engineer');
+      await expect(sidePanel.locator('#edit-company')).toHaveValue('Stripe');
+      await expect(sidePanel.locator('#edit-notes')).toHaveValue('');
+      evidence.tab_draft_isolation_verified = true;
+
       await fixtureB.bringToFront();
       await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
       await expect(sidePanel.locator('#duplicate-card')).toHaveAttribute('data-level', 'strong');

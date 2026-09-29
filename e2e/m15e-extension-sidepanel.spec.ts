@@ -449,14 +449,59 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       // Step 13A Remediation: N1 — Late debounced duplicate timer safety
       // -----------------------------------------------------------------
       // Type in Job A, then immediately switch to Job B before the 350ms timer fires
+      await fixtureA.bringToFront();
       await sidePanel.locator('#edit-company').fill('Late Timer Safety Corp');
       await fixtureB.bringToFront();
       // Wait longer than 350ms debounce
       await sidePanel.waitForTimeout(450);
-      // Job B must remain untouched and not show Job A's values
+      // Job B must remain untouched: Notion / Senior Product Manager, no duplicate-card from Job A
       await expect(sidePanel.locator('#job-company')).toHaveText('Notion');
       await expect(sidePanel.locator('#job-title')).toHaveText('Senior Product Manager');
+      await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
       evidence.n1_timer_safety_verified = true;
+
+      // -----------------------------------------------------------------
+      // Step 13B-R Remediation: B2-R — Save inside debounce window fails closed / rechecks
+      // -----------------------------------------------------------------
+      await fixtureA.bringToFront();
+      // Restore company and title to match an existing application (Stripe / Staff Software Engineer)
+      await sidePanel.locator('#edit-company').fill('Stripe');
+      await sidePanel.locator('#edit-title').fill('Staff Software Engineer');
+      // Click Save immediately (inside the 350ms debounce window before background check completes)
+      // Must NOT save blindly: evaluateSaveGate must run inline recheck, detect duplicate, and block
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#dup-title')).toContainText('duplicate');
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
+      evidence.b2r_debounce_save_fail_closed_verified = true;
+
+      // -----------------------------------------------------------------
+      // Step 13B-R Remediation: B2-R — Warn on Duplicates = OFF allows direct save
+      // -----------------------------------------------------------------
+      await sidePanel.locator('#settings-btn').click();
+      await expect(sidePanel.locator('#back-header')).toContainText('Settings');
+      const warnCheckbox = sidePanel.locator('#pref-warn-duplicates');
+      if (await warnCheckbox.isChecked()) {
+        await warnCheckbox.uncheck();
+      }
+      await sidePanel.locator('#pref-save-btn').click();
+      await expect(sidePanel.locator('#pref-status')).toContainText('Preferences saved');
+      await sidePanel.locator('#back-btn').click();
+
+      // Back on Capture screen: saving Stripe / Staff Software Engineer proceeds without duplicate block
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#saved-card')).toBeVisible();
+      await expect(sidePanel.locator('#toast')).toContainText('Saved to JobQuest');
+      evidence.b2r_warnings_disabled_save_verified = true;
+
+      // Re-enable "Warn on duplicates" for remaining test coverage
+      await sidePanel.locator('#settings-btn').click();
+      await sidePanel.locator('#pref-warn-duplicates').check();
+      await sidePanel.locator('#pref-save-btn').click();
+      await expect(sidePanel.locator('#pref-status')).toContainText('Preferences saved');
+      await sidePanel.locator('#back-btn').click();
 
       // -----------------------------------------------------------------
       // Item 8: Settings — opened from a non-Capture tab, must return to

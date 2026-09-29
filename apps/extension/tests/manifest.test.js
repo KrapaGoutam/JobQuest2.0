@@ -40,4 +40,9 @@ describe('Manifest V3 package security', () => {
     expect(content).not.toContain('tokens truncated');
     expect(() => new Function(content)).not.toThrow();
   });
+
+  it('packages clean production release without legacy popup assets, but retains them for dev/test', () => {
+    const packageScript = readFileSync(new URL('scripts/package.mjs', root), 'utf8');
+    expect(packageScript).toContain("...(mode === 'dev' ? ['popup.html', 'popup.css', 'popup.js'] : [])");
+  });
 });

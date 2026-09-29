@@ -27,17 +27,19 @@ import {
 import {
   authorizeDuplicateOverride,
   buildCaptureDraft,
-  canSafelySave,
   classifyConnectionScreen,
   classifyExtraction,
   clampPercent,
   computeCaptureCompleteness,
+  computeDuplicateIdentityKey,
   computeGoalRemainder,
   DASHBOARD_PIPELINE_STAGES,
   describeEnvironment,
+  evaluateSaveGate,
   formatStatValue,
   initDuplicateContext,
   isDuplicateOverriddenFor,
+  isSaveContextValid,
   mapPipelineForDisplay,
   nextRovingIndex,
   onDuplicateCheckResult,
@@ -246,7 +248,7 @@ async function runDuplicateCheck(identityOverride) {
   const currentContextSeq = captureRequestSeq;
   const { checkSeq } = onDuplicateCheckStart(duplicateState);
   const result = await checkDuplicate(settings.instanceUrl, settings.apiToken, identity);
-  const outcome = onDuplicateCheckResult(duplicateState, currentContextSeq, checkSeq, identity, result);
+  const outcome = onDuplicateCheckResult(duplicateState, currentContextSeq, checkSeq, identity, result, currentCaptureIdentity());
   if (!outcome.ignored) {
     duplicateInfo = duplicateState.info;
   }
@@ -618,6 +620,12 @@ async function save() {
   primary.disabled = true;
   const originalLabel = primary.textContent;
   primary.textContent = 'Saving…';
+  // Snapshot immutable save context token (B2-R)
+  const saveSeq = captureRequestSeq;
+  const saveTabId = currentActiveTab?.id ?? null;
+  /** @type {() => boolean} */
+  let isCurrent = () => true;
+
   try {
     const company = input('edit-company')?.value?.trim() || captured.company || '';
     const jobTitle = input('edit-title')?.value?.trim() || captured.jobTitle || '';
@@ -655,24 +663,49 @@ async function save() {
     window.clearTimeout(duplicateTimer);
     duplicateTimer = 0;
 
-    // Save-time duplicate defense (B2 & B1):
-    let safetyCheck = canSafelySave(duplicateState, saveIdentity);
-    if (!safetyCheck.canSave) {
-      if (safetyCheck.reason === 'NEEDS_CHECK') {
-        await runDuplicateCheck(saveIdentity);
-        safetyCheck = canSafelySave(duplicateState, saveIdentity);
-      }
+    const saveIdentityKey = computeDuplicateIdentityKey(saveIdentity);
+    const getSaveContext = () => ({ contextSeq: saveSeq, tabId: saveTabId, identityKey: saveIdentityKey });
+    const getCurrentContext = () => ({
+      contextSeq: captureRequestSeq,
+      tabId: currentActiveTab?.id ?? null,
+      identityKey: computeDuplicateIdentityKey(currentCaptureIdentity(location)),
+    });
+    isCurrent = () => isSaveContextValid(getSaveContext(), getCurrentContext());
+
+    const warnOnDuplicates = Boolean(capturePreferences.warnOnDuplicates);
+
+    // Save-time duplicate defense (B2, B2-R, & B1):
+    const gateResult = await evaluateSaveGate({
+      duplicateState,
+      saveIdentity,
+      warnOnDuplicates,
+      runDuplicateCheck: async (id) => {
+        await runDuplicateCheck(id);
+      },
+      isContextCurrent: isCurrent,
+    });
+
+    if (!isCurrent()) {
+      return;
     }
 
-    if (!safetyCheck.canSave && safetyCheck.reason === 'BLOCKED_DUPLICATE') {
-      currentCaptureScreen = 'duplicate';
-      renderCapture('duplicate');
+    if (!gateResult.canProceed) {
+      if (gateResult.reason === 'BLOCKED_DUPLICATE') {
+        currentCaptureScreen = 'duplicate';
+        renderCapture('duplicate');
+        primary.disabled = false;
+        return;
+      }
+      const banner = byId('capture-banner');
+      banner.hidden = false;
+      banner.className = 'banner warning';
+      banner.textContent = 'Could not verify duplicate status. Please retry.';
       primary.disabled = false;
       primary.textContent = originalLabel;
       return;
     }
 
-    const isDuplicateOverridden = Boolean(safetyCheck.duplicateOverride);
+    const isDuplicateOverridden = Boolean(gateResult.duplicateOverride);
 
     // Resume selection
     const resumeMode = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="sidepanel-resume-mode"]:checked'))?.value || 'existing';
@@ -703,6 +736,12 @@ async function save() {
       resumeLabel,
     });
     const result = await createCapture(settings.instanceUrl, settings.apiToken, draft);
+
+    // After write: verify context before mutating UI (B2-R)
+    if (!isCurrent()) {
+      return;
+    }
+
     createdPath = result.deep_link_path;
     byId('saved-meta').textContent = `Stage: ${workflow.stages?.find((s) => s.id === stageId)?.label || stageId} · ${formatTimestamp()}`;
     // Clear duplicate state on save completion to prevent stale override from lingering (B1)
@@ -711,13 +750,16 @@ async function save() {
     renderCapture('saved');
     showToast('Saved to JobQuest');
   } catch (error) {
+    if (!isCurrent()) return;
     const banner = byId('capture-banner');
     banner.hidden = false;
     banner.className = `banner ${isConnectionError(error) ? 'error' : 'warning'}`;
     banner.textContent = error instanceof Error ? error.message : 'Could not save this application.';
   } finally {
-    primary.disabled = !workflowReady;
-    if (primary.textContent === 'Saving…') primary.textContent = originalLabel;
+    if (isCurrent()) {
+      primary.disabled = !workflowReady;
+      if (primary.textContent === 'Saving…') primary.textContent = originalLabel;
+    }
   }
 }
 

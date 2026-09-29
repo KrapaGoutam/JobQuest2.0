@@ -115,12 +115,18 @@ export function onIdentityChange(state, nextIdentity) {
 
 /**
  * Authorizes a duplicate override exclusively for the current identity.
+ * B1/B2 guarantee: only grants the override if the duplicate check was run against this
+ * exact identity and is currently not stale (closing the <=350ms window).
  * @param {DuplicateState} state
  * @param {Record<string, unknown>} identity
  * @returns {DuplicateState}
  */
 export function authorizeDuplicateOverride(state, identity) {
-  state.overrideKey = computeDuplicateIdentityKey(identity);
+  const key = computeDuplicateIdentityKey(identity);
+  if (state.isStale || state.checkedKey !== key) {
+    return state;
+  }
+  state.overrideKey = key;
   return state;
 }
 
@@ -140,11 +146,18 @@ export function isDuplicateOverriddenFor(state, identity) {
  * Determines whether save can proceed safely without risking saving a duplicate.
  * B2 guarantee: verifies that the duplicate check was run against the exact current identity
  * and was not a blocking duplicate, or that an explicit override was authorized for this exact identity.
+ * When warnOnDuplicates is false, duplicate freshness is bypassed and saving is permitted normally.
  * @param {DuplicateState} state
  * @param {Record<string, unknown>} identity
- * @returns {{ canSave: boolean, duplicateOverride?: boolean, reason: 'OVERRIDDEN' | 'VERIFIED_SAFE' | 'NEEDS_CHECK' | 'BLOCKED_DUPLICATE' }}
+ * @param {{ warnOnDuplicates?: boolean }} [options]
+ * @returns {{ canSave: boolean, duplicateOverride?: boolean, reason: 'OVERRIDDEN' | 'VERIFIED_SAFE' | 'WARNINGS_DISABLED' | 'NEEDS_CHECK' | 'BLOCKED_DUPLICATE' }}
  */
-export function canSafelySave(state, identity) {
+export function canSafelySave(state, identity, options = {}) {
+  const warnOnDuplicates = options.warnOnDuplicates ?? true;
+  if (!warnOnDuplicates) {
+    return { canSave: true, duplicateOverride: false, reason: 'WARNINGS_DISABLED' };
+  }
+
   if (isDuplicateOverriddenFor(state, identity)) {
     return { canSave: true, duplicateOverride: true, reason: 'OVERRIDDEN' };
   }
@@ -176,25 +189,103 @@ export function onDuplicateCheckStart(state) {
  * Processes a completed duplicate check response.
  * N1 guarantee: checks both contextSeq (tab switch) and checkSeq (newer check within context)
  * to prevent late responses from overwriting newer state or other tabs.
+ * Also verifies currentIdentity matches the checked identity if provided.
  * @param {DuplicateState} state
  * @param {number} contextSeq
  * @param {number} checkSeq
  * @param {Record<string, unknown>} identity
  * @param {{ match_type?: string, matches?: Array<{ application?: { stage?: string } }> }} result
+ * @param {Record<string, unknown>} [currentIdentity]
  * @returns {{ ignored: boolean, reason?: string, level?: string, match?: object | null }}
  */
-export function onDuplicateCheckResult(state, contextSeq, checkSeq, identity, result) {
+export function onDuplicateCheckResult(state, contextSeq, checkSeq, identity, result, currentIdentity) {
   if (contextSeq !== state.contextSeq) {
     return { ignored: true, reason: 'CONTEXT_SUPERSEDED' };
   }
   if (checkSeq !== state.checkSeq) {
     return { ignored: true, reason: 'CHECK_SUPERSEDED' };
   }
+  if (currentIdentity) {
+    const checkedKey = computeDuplicateIdentityKey(identity);
+    const activeKey = computeDuplicateIdentityKey(currentIdentity);
+    if (checkedKey !== activeKey) {
+      return { ignored: true, reason: 'IDENTITY_SUPERSEDED' };
+    }
+  }
 
   state.checkedKey = computeDuplicateIdentityKey(identity);
   state.info = mapDuplicateLevel(result);
   state.isStale = false;
   return { ignored: false, level: state.info.level, match: state.info.match };
+}
+
+/**
+ * Validates that an active save operation still belongs to the current capture context.
+ * Prevents Job A async completion from mutating Job B or sending unverified writes.
+ * @param {{ contextSeq: number, tabId: number | null, identityKey: string }} [saveContext]
+ * @param {{ contextSeq: number, tabId: number | null, identityKey: string }} [currentContext]
+ * @returns {boolean}
+ */
+export function isSaveContextValid(saveContext, currentContext) {
+  if (!saveContext || !currentContext) return false;
+  if (saveContext.contextSeq !== currentContext.contextSeq) return false;
+  if (saveContext.tabId !== currentContext.tabId) return false;
+  if (saveContext.identityKey !== currentContext.identityKey) return false;
+  return true;
+}
+
+/**
+ * Evaluates the duplicate safety gate at save time, enforcing fail-closed behavior.
+ * When warnings are enabled:
+ * - If check is stale or needs check, runs/awaits the duplicate check for the current identity.
+ * - If the check is superseded, discarded, or produces no valid verdict, save is blocked.
+ * - If duplicate is detected, save is blocked (unless overridden for this exact identity).
+ * When warnings are disabled:
+ * - Save proceeds normally without requiring duplicate freshness.
+ * @param {Object} params
+ * @param {DuplicateState} params.duplicateState
+ * @param {Record<string, unknown>} params.saveIdentity
+ * @param {boolean} [params.warnOnDuplicates=true]
+ * @param {(identity: Record<string, unknown>) => Promise<unknown>} [params.runDuplicateCheck]
+ * @param {() => boolean} [params.isContextCurrent]
+ * @returns {Promise<{ canProceed: boolean, duplicateOverride?: boolean, reason: string, abort?: boolean }>}
+ */
+export async function evaluateSaveGate({
+  duplicateState,
+  saveIdentity,
+  warnOnDuplicates = true,
+  runDuplicateCheck = null,
+  isContextCurrent = () => true,
+}) {
+  if (!warnOnDuplicates) {
+    return { canProceed: true, duplicateOverride: false, reason: 'WARNINGS_DISABLED' };
+  }
+
+  let safetyCheck = canSafelySave(duplicateState, saveIdentity, { warnOnDuplicates: true });
+
+  if (!safetyCheck.canSave && safetyCheck.reason === 'NEEDS_CHECK' && runDuplicateCheck) {
+    await runDuplicateCheck(saveIdentity);
+
+    if (!isContextCurrent()) {
+      return { canProceed: false, reason: 'CONTEXT_SUPERSEDED', abort: true };
+    }
+
+    safetyCheck = canSafelySave(duplicateState, saveIdentity, { warnOnDuplicates: true });
+  }
+
+  if (!safetyCheck.canSave) {
+    if (safetyCheck.reason === 'BLOCKED_DUPLICATE') {
+      return { canProceed: false, reason: 'BLOCKED_DUPLICATE', abort: false };
+    }
+    // Any other state (NEEDS_CHECK because discarded, superseded, error, etc.) -> FAIL CLOSED
+    return { canProceed: false, reason: safetyCheck.reason || 'UNRESOLVED_DUPLICATE', abort: true };
+  }
+
+  return {
+    canProceed: true,
+    duplicateOverride: Boolean(safetyCheck.duplicateOverride),
+    reason: safetyCheck.reason,
+  };
 }
 
 /** The real field superset content.js's extractors populate (see its return

@@ -10,6 +10,7 @@ import {
   parseSalaryRange,
   testConnection,
 } from './api/jobquest.js';
+import { computeDuplicateIdentityKey } from './sidepanel-logic.js';
 
 const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const input = (id) => /** @type {HTMLInputElement} */ (document.getElementById(id));
@@ -41,7 +42,7 @@ let captured = {};
 let workspace = null;
 let createdPath = '';
 let currentMatch = null;
-let bypassDuplicate = false;
+let overrideIdentityKey = null;
 let workflowReady = false;
 let duplicateTimer = 0;
 
@@ -139,14 +140,15 @@ function renderDuplicate(result) {
 }
 
 async function runDuplicateCheck() {
-  if (bypassDuplicate) return;
   const identity = currentCaptureIdentity();
+  const currentKey = computeDuplicateIdentityKey(identity);
+  if (overrideIdentityKey && overrideIdentityKey === currentKey) return;
   if (!identity.jobUrl && !identity.company) { clearDuplicate(); return; }
   renderDuplicate(await checkDuplicate(settings.instanceUrl, settings.apiToken, identity));
 }
 
 function scheduleDuplicateCheck() {
-  bypassDuplicate = false;
+  overrideIdentityKey = null;
   window.clearTimeout(duplicateTimer);
   duplicateTimer = window.setTimeout(() => void runDuplicateCheck(), 350);
 }
@@ -249,6 +251,8 @@ async function initialize() {
   }
   const pending = (await chrome.storage.local.get(['pendingCapture'])).pendingCapture;
   captured = pending || await extractActivePage();
+  overrideIdentityKey = null;
+  clearDuplicate();
   populateForm(captured);
   setState(captured.company && captured.jobTitle ? readyStateCode() : captured.company || captured.jobTitle ? 'X6' : 'X7', 'screen-capture');
   if (!captured.company && !captured.jobTitle) showStatus("No job posting found. Enter the company and role manually, or open JobQuest.", 'warning');
@@ -269,6 +273,9 @@ async function save(event) {
   }
   const resumeMode = resumeManual.checked ? 'manual' : resumeNone.checked ? 'none' : 'existing';
   const selectedResume = resumeSelect.selectedOptions[0];
+  const currentIdentity = currentCaptureIdentity();
+  const currentIdentityKey = computeDuplicateIdentityKey(currentIdentity);
+  const isDuplicateOverridden = Boolean(overrideIdentityKey && overrideIdentityKey === currentIdentityKey);
   const salary = parseSalaryRange(input('input-salary').value, captured.salaryMin, captured.salaryMax);
   const draft = {
     company,
@@ -283,7 +290,7 @@ async function save(event) {
     salary_min: salary.min,
     salary_max: salary.max,
     salary_currency: captured.salaryCurrency || 'USD',
-    duplicate_override: bypassDuplicate,
+    duplicate_override: isDuplicateOverridden,
     notes: input('input-notes').value.trim() || null,
     applied_at: `${input('input-date').value}T12:00:00.000Z`,
     snapshot: {
@@ -301,6 +308,7 @@ async function save(event) {
   try {
     const result = await createCapture(settings.instanceUrl, settings.apiToken, draft);
     createdPath = result.deep_link_path;
+    overrideIdentityKey = null;
     await chrome.storage.local.remove(['pendingCapture']);
     byId('success-summary').textContent = `Saved ${title} at ${company} to ${workspace?.name || 'JobQuest'}.`;
     setState('X8', 'screen-success', 'Capture success');
@@ -319,15 +327,25 @@ for (const item of [resumeExisting, resumeManual, resumeNone]) item.addEventList
 button('options-btn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 button('open-settings-btn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 retryButton.addEventListener('click', () => void initialize());
-duplicateSave.addEventListener('click', () => { bypassDuplicate = true; clearDuplicate(); showStatus('Duplicate warning acknowledged. Saving a separate application is allowed.', 'warning'); });
-duplicateCancel.addEventListener('click', () => { bypassDuplicate = false; clearDuplicate(); });
+duplicateSave.addEventListener('click', () => {
+  overrideIdentityKey = computeDuplicateIdentityKey(currentCaptureIdentity());
+  clearDuplicate();
+  showStatus('Duplicate warning acknowledged. Saving a separate application is allowed.', 'warning');
+});
+duplicateCancel.addEventListener('click', () => {
+  overrideIdentityKey = null;
+  clearDuplicate();
+});
 duplicateOpen.addEventListener('click', () => {
   if (currentMatch?.deep_link_path) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, currentMatch.deep_link_path) });
 });
 button('view-app-btn').addEventListener('click', () => {
   if (createdPath) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, createdPath) });
 });
-button('capture-another-btn').addEventListener('click', () => void initialize());
+button('capture-another-btn').addEventListener('click', () => {
+  overrideIdentityKey = null;
+  void initialize();
+});
 
 void initialize().catch((error) => {
   byId('unconfigured-title').textContent = 'Initialization error';

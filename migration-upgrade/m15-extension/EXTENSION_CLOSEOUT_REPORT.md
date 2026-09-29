@@ -315,6 +315,44 @@ performed or attempted.
 
 ---
 
+## Step 13B-R — Targeted Security Remediation (B2-R & Legacy Popup Package)
+
+- **Remediation Target:** B2-R residual save-time duplicate race, in-flight debounce override grant window, save context isolation across tabs, and legacy popup packaging cleanup.
+- **Application/tested SHA:** `1837debc8e12228a454492373191df8eb25e45de`.
+- **Exact-head CI:** PASS — run `36646380294` on exact SHA `1837debc`, static (35s) and database (6m30s) jobs both green.
+- **Vercel Preview Deployment:**
+  - Deployment ID: `dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L`
+  - URL: `https://jobquest2-ae69dyczb-one-piece-5779.vercel.app`
+  - Target: `preview` (backend: `jobquest-dev` `xpnkasclquplmrcmhsif`, AWS us-west-2, `PREVIEW_BACKEND_IS_PRODUCTION = false`).
+- **Automated Preview QA:**
+  - `e2e/m15e-extension-sidepanel.spec.ts`: PASS (59.9s) against live Preview (real-browser verification of B1 override isolation, B2 identity edit duplicate re-evaluation, N1 late timer safety, B2-R debounce save fail-closed recheck, and B2-R warn on duplicates = off).
+  - `e2e/m11-extension.spec.ts`: PASS (27.6s) against live Preview.
+- **Key Changes Implemented:**
+  1. **Fail-Closed Save Gate (`sidepanel-logic.js` & `sidepanel.js`):**
+     - Centralized in `evaluateSaveGate`: When duplicate checking is required, evaluates safety. If check is stale or in progress, awaits check.
+     - If check result is discarded, superseded, or fails to resolve, save is blocked (`abort: true`) and warning banner is displayed ("Could not verify duplicate status. Please retry."). Unverified writes are strictly prohibited (`createCapture` is never called).
+     - When `warnOnDuplicates: false`, save proceeds immediately without duplicate check freshness requirement.
+  2. **Context-Bound Save Isolation (`isSaveContextValid`):**
+     - `save()` snapshots immutable context token (`saveSeq`, `saveTabId`, `saveIdentityKey`).
+     - Re-verifies context before and after asynchronous API operations.
+     - If user switched tabs or edited fields during save, write completion is discarded, UI is not mutated, and Job B's duplicate state is not reset.
+  3. **Timing Window Closure (`authorizeDuplicateOverride`):**
+     - Override authorization now requires `!state.isStale && state.checkedKey === computeDuplicateIdentityKey(identity)`, preventing override grant during the ≤350 ms in-flight debounce window.
+  4. **Legacy Popup Hardening & Exclusion (`popup.js` & `scripts/package.mjs`):**
+     - Replaced module-level boolean `bypassDuplicate` in `apps/extension/popup.js` with identity-keyed `overrideIdentityKey`, reset on initialization, save completion, and "Capture Another".
+     - Updated `apps/extension/scripts/package.mjs` so production bundle (`jobquest-capture-prod`) completely excludes `popup.html`, `popup.css`, and `popup.js`, while retaining them in `jobquest-capture-dev` for backward-compatible E2E test coverage.
+- **Status of Findings:**
+  - B1: CLOSED
+  - B2-R: CLOSED
+  - N1: CLOSED
+  - Legacy Popup Package: CLOSED
+- **Next Steps:**
+  - Operator manual re-test of B2-R duplicate scenarios on Preview with unpacked extension.
+  - Step 13C Claude Opus blocker-closure review (pending operator invocation).
+  - DO NOT merge development or main; DO NOT deploy production.
+
+---
+
 ## Future Scope Log (Post-M15) — all DEFERRED, NON-BLOCKING for M15-E
 
 Corrected to the agreed feature definitions. Do not implement during M15-E.

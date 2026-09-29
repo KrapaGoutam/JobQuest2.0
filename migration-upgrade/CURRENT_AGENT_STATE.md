@@ -2,8 +2,8 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: Extension Step 13B Focused Blocker-Closure Review (Opus/High) — BLOCKED. B1 CLOSED, N1 CLOSED, B2 OPEN (residual B2-R: the save-time duplicate gate fails open when its recheck result is discarded). Targeted remediation required before Step 15.**
-**Gate Status: Site branch — PASS. Extension branch — implementation + Step 12A + Step 13A complete, local gate PASS, exact-head CI PASS (run 36637796079, tested SHA e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649), Preview automated QA PASS (both suites), operator focused retest PASS (operator-reported), Step 13B Opus review BLOCKED. NOT merged. Development/Main/Production UNCHANGED.**
+**Phase M15-E: Extension Step 13B-R Targeted Security Remediation (B2-R Save-Time Duplicate Race & Legacy Popup Cleanup) — COMPLETE.**
+**Gate Status: Site branch — PASS. Extension branch — Step 13B-R complete. Application/tested SHA: 1837debc8e12228a454492373191df8eb25e45de. Exact CI PASS (run 36646380294, static 35s, database 6m30s). Preview PASS (dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L, https://jobquest2-ae69dyczb-one-piece-5779.vercel.app, automated QA PASS: sidepanel 59.9s, m11 27.6s). B1 CLOSED, B2-R CLOSED, N1 CLOSED, Legacy popup package CLOSED. Ready for operator focused re-test and Step 13C independent security review. NOT merged. Development/Main/Production UNCHANGED.**
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)
@@ -17,9 +17,9 @@ Milestone 15 — Production Launch & Cutover
   `fix -> development -> main -> production` promotion gates all remain
   separately authorized steps, not yet executed.
 
-## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12, 12A, & 13A COMPLETE)
+## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12, 12A, 13A, & 13B-R COMPLETE)
 - **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
-- **Branch HEAD:** `9130ec909667ec704da9cffb2496396be70346fa` (docs-only, pushed; matches origin before the Step 13B docs commit). **Application/tested code SHA:** `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649` (CI run `36637796079` ran on this exact SHA; later commits are docs-only).
+- **Branch HEAD:** Pending docs commit. **Application/tested code SHA:** `1837debc8e12228a454492373191df8eb25e45de` (CI run `36646380294` ran on this exact SHA).
 - **Phase A (audit):** DONE, read-only.
 - **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, token masking, whitespace normalization, WCAG AA button contrast.
 - **Phase C (Claude Design import):** DONE. Imported from Claude Design mockup (`cbb3d92b`).
@@ -45,12 +45,19 @@ Milestone 15 — Production Launch & Cutover
   - Exact-head CI: PASS — run `36637796079`, exact SHA `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649`, static (56s) and database (7m52s) jobs completed successfully.
   - Fresh Vercel Preview: deployment `dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn`, URL `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app`, target: `preview`.
   - Automated Preview QA: `e2e/m15e-extension-sidepanel.spec.ts` PASS (54.0s) and `e2e/m11-extension.spec.ts` PASS (24.9s) against live Preview.
-- **Phase 14 (Operator Manual Extension QA): PASS (operator-reported).** Focused retest of B1/B2/N1 + normal capture on Preview `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app` (SHA `e19e9cce`). It does not exercise the B2-R race below.
-- **Phase 13B (Focused Opus Blocker-Closure Review): BLOCKED.** `release-security-reviewer` (Opus/High) invoked ONCE over `e90ef9af...e19e9cce`. **Do not re-invoke automatically.** No security regression found.
-  - **B1 CLOSED** (identity-bound override, fresh context per capture, revoked after save). **N1 CLOSED** (timer cleared, sequences enforced). **B2 OPEN (residual B2-R).**
-  - **B2-R** (`apps/extension/sidepanel.js:659-675`, verified by the main session): `save()` reruns the duplicate check on `NEEDS_CHECK` but only stops on `BLOCKED_DUPLICATE`; if `onDuplicateCheckResult` discards the recheck (`CONTEXT_SUPERSEDED` on tab change, `CHECK_SUPERSEDED` from the 350 ms timer/`runCaptureFlow`), it proceeds to `createCapture` with `duplicate_override:false` and no verdict. Server enforcement is advisory, so this is a silent duplicate write. Also `:709` resets `duplicateState` unconditionally and `:711` renders 'saved' on a different job's context (save not bound to its originating context). Constraint: `warnOnDuplicates=false` must keep saving.
-  - Non-blocking: override grantable for an unchecked identity within a ≤350 ms window (`sidepanel-logic.js:186-197`); blocked-save label overwritten (`sidepanel.js:670`); test gaps (no save()-wiring tests, N1 E2E assertion vacuous); **legacy `popup.js` (`:44,142,322,330`) still has the module-level `bypassDuplicate` and `popup.html` is still packaged (`scripts/package.mjs:20`) — remove from package or fix before release.**
-  - Full detail: `M15E_EXTENSION_EXECUTION_CHECKLIST.md` (Step 13B) and `EXTENSION_CLOSEOUT_REPORT.md`.
+- **Phase 14 (Operator Manual Extension QA): PASS (operator-reported).** Focused retest of B1/B2/N1 + normal capture on Preview `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app` (SHA `e19e9cce`).
+- **Phase 13B (Focused Opus Blocker-Closure Review): BLOCKED (Historical).** `release-security-reviewer` (Opus/High) invoked ONCE over `e90ef9af...e19e9cce`. Confirmed B1 CLOSED, N1 CLOSED, identified residual B2-R save-time duplicate race and legacy popup packaging risk.
+- **Phase 13B-R (Targeted Security Remediation: B2-R & Legacy Popup Package): COMPLETE — PASS**
+  - Remediated B2-R: Fail-closed save gate via `evaluateSaveGate` in `sidepanel-logic.js` wired into `save()` in `sidepanel.js`. If duplicate check is stale or needs check, runs/awaits recheck; if recheck is discarded/superseded or produces unresolved status, save aborts/blocks and displays banner warning rather than sending an unverified write. If duplicate detected, displays duplicate screen. If `warnOnDuplicates=false`, proceeds directly without requiring duplicate freshness.
+  - Remediated Context Isolation: Bound save operation and UI mutations to immutable snapshot token (`saveSeq`, `saveTabId`, `saveIdentityKey`) verified via `isSaveContextValid`. Job A async completion never mutates Job B's UI, does not reset Job B's duplicate state, and does not render 'saved' across jobs.
+  - Closed Override Timing Window: `authorizeDuplicateOverride` requires `!state.isStale && state.checkedKey === computeDuplicateIdentityKey(identity)`, preventing override grant during in-flight debounce window.
+  - Remediated Legacy Popup Package: Replaced module-level boolean `bypassDuplicate` in `apps/extension/popup.js` with identity-keyed `overrideIdentityKey` that is cleared on initialization, save, and capture-another. Excluded `popup.html`, `popup.css`, and `popup.js` from production packages in `apps/extension/scripts/package.mjs` while retaining them for dev/test (`e2e/m11-extension.spec.ts`).
+  - Local verification: 80/80 extension unit tests PASS (11 new tests), 163/163 web/api unit tests PASS, 0 lint errors, 0 typecheck errors, 0 secret scan findings across 45 extension bundle files and 922 tracked files.
+  - Extension packages built: `apps/extension/dist/jobquest-capture-dev` and `.zip`, `jobquest-capture-prod` and `.zip`.
+  - Exact-head CI: PASS — run `36646380294`, exact SHA `1837debc8e12228a454492373191df8eb25e45de`, static (35s) and database (6m30s) jobs completed successfully.
+  - Fresh Vercel Preview: deployment `dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L`, URL `https://jobquest2-ae69dyczb-one-piece-5779.vercel.app`, target: `preview`.
+  - Automated Preview QA: `e2e/m15e-extension-sidepanel.spec.ts` PASS (59.9s) and `e2e/m11-extension.spec.ts` PASS (27.6s) against live Preview.
+  - Full detail: `M15E_EXTENSION_EXECUTION_CHECKLIST.md` (Step 13B-R) and `EXTENSION_CLOSEOUT_REPORT.md`.
 
 
 ## Cross-cutting / unchanged by either branch

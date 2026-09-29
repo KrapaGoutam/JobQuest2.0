@@ -204,6 +204,30 @@ release) -> targeted tests -> regression -> new SHA -> exact-head CI -> new Prev
 operator retest. Do NOT re-invoke Opus automatically; a separate prompt decides whether
 a further focused review is required.
 
+## Step 13B-R — B2 Residual Remediation
+
+Status:
+COMPLETE (Automated Gate PASS)
+
+Checklist:
+[x] B2-R fail-open save gate fixed
+[x] stale/superseded duplicate check cannot permit save
+[x] tab/context change aborts old save
+[x] success render bound to originating context
+[x] duplicate state reset bound to originating context
+[x] warnings-disabled path still saves normally
+[x] legacy popup no longer ships insecure path
+[x] targeted unit tests (80/80 PASS)
+[x] real-browser E2E (m15e-extension-sidepanel.spec.ts PASS 59.9s, m11-extension.spec.ts PASS 27.6s)
+[x] regression (163/163 unit PASS, typecheck PASS, lint PASS)
+[x] package (dev and prod packages built, popup excluded from prod)
+[x] secret scan (bundle 0, tracked 0, extension 0)
+[x] new exact-SHA CI (run 36646380294, exact SHA 1837debc8e12228a454492373191df8eb25e45de, both jobs PASS)
+[x] fresh Preview (dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L, https://jobquest2-ae69dyczb-one-piece-5779.vercel.app)
+[x] automated Preview QA (both suites PASS)
+[ ] operator focused retest
+[ ] Step 13C Opus closure review pending
+
 ## Phase 14 — Operator Manual Extension QA
 Status: operator reported PASS against tested SHA e90ef9af (Preview
 jobquest2-ns7438ypn). NOTE: the duplicate flows B1/B2 change in remediation, so
@@ -249,24 +273,21 @@ duplicate then save" on the remediated Preview.
 
 ---
 
-CURRENT PHASE: M15-E Step 13B — Focused Blocker-Closure Review: BLOCKED
-CURRENT SUBTASK: Targeted remediation required (B2-R, save-time gate fails open)
+CURRENT PHASE: M15-E Step 13B-R COMPLETE (Ready for Operator Manual Retest & Step 13C Opus Review)
+CURRENT SUBTASK: Handoff to operator for focused manual QA
 BRANCH: fix/m15e-extension-connection-ui
-APPLICATION / TESTED SHA: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649
-DOCS HEAD (before this docs commit): 9130ec909667ec704da9cffb2496396be70346fa (docs-only vs tested SHA)
-REMOTE HEAD: 9130ec909667ec704da9cffb2496396be70346fa (before this docs commit)
-WORKING TREE: docs-only changes pending commit
-LAST GREEN TEST: unit 163/163, extension 69/69, m11-extension + m15e-extension-sidepanel E2E PASS on Preview; CI PASS; operator retest PASS (operator-reported)
-LAST CI: 36637796079 / e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 / PASS (both jobs)
-PREVIEW: https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app (dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn, target: preview, SHA e19e9cce)
-BACKEND: jobquest-dev (ref: xpnkasclquplmrcmhsif, PREVIEW_BACKEND_IS_PRODUCTION = false)
+APPLICATION / TESTED SHA: 1837debc8e12228a454492373191df8eb25e45de
+DOCS HEAD: Pending docs commit
+REMOTE HEAD: 1837debc8e12228a454492373191df8eb25e45de
+WORKING TREE: docs changes pending commit
 B1: CLOSED
-B2: OPEN (residual B2-R: save-time gate saves when the recheck result is discarded)
+B2-R: CLOSED
 N1: CLOSED
-OPERATOR RETEST: PASS (operator-reported; does not exercise the B2-R race)
-STEP 13B OPUS REVIEW: INVOKED ONCE — BLOCKED. DO NOT RE-INVOKE automatically.
-BLOCKERS: B2-R (apps/extension/sidepanel.js:659-675, :709-711) — details in Step 13B section above
-DEVELOPMENT: UNCHANGED (origin/development 99bb9b8f)
-MAIN: UNCHANGED (origin/main 99bb9b8f)
+LEGACY POPUP PACKAGE: CLOSED
+LAST GREEN TEST: unit 163/163, extension 80/80, m11-extension + m15e-extension-sidepanel E2E PASS on Preview; exact CI PASS
+LAST CI: 36646380294 / 1837debc8e12228a454492373191df8eb25e45de / PASS (static 35s, database 6m30s)
+PREVIEW: https://jobquest2-ae69dyczb-one-piece-5779.vercel.app (dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L, target: preview, SHA 1837debc)
+BACKEND: jobquest-dev (ref: xpnkasclquplmrcmhsif, PREVIEW_BACKEND_IS_PRODUCTION = false)
+OPERATOR RETEST: PENDING (Preview https://jobquest2-ae69dyczb-one-piece-5779.vercel.app)
 PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw, AWS us-east-1)
-NEXT EXACT ACTION: Separate remediation prompt: fix B2-R in apps/extension/sidepanel.js (bind save() to its originating captureRequestSeq; fail closed on unresolved NEEDS_CHECK while keeping warnOnDuplicates=false working; reset duplicateState at :709 only if context unchanged), close the <=350 ms override-grant window, remove/fix packaged legacy popup before release, add save-path tests, then regression -> new SHA -> exact-head CI -> new Preview -> operator retest
+NEXT EXACT ACTION: Operator focused manual re-test of B2-R duplicate scenarios on Preview https://jobquest2-ae69dyczb-one-piece-5779.vercel.app, followed by Step 13C Claude Opus blocker closure review. DO NOT merge development/main. DO NOT deploy production.

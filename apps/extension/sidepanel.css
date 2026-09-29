@@ -585,6 +585,84 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
   z-index: 20;
 }
 
+/* ---------------------------- Dashboard / Analytics ---------------------------- */
+
+.metric-grid-2, .metric-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.metric-card {
+  background: var(--sf);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-value { font-size: 20px; font-weight: 700; }
+.metric-label { font-size: 12px; color: var(--mu); }
+
+.goal-card[data-empty="true"] { background: var(--sf2); }
+.goal-card[data-empty="true"] .goal-line { color: var(--mu); }
+
+.goal-head { display: flex; align-items: center; justify-content: space-between; }
+
+.goal-pct { font-size: 16px; font-weight: 700; color: var(--ac); }
+
+.goal-line { font-size: 13px; font-weight: 600; }
+
+.pipeline-rows, .upcoming-rows { display: flex; flex-direction: column; gap: 8px; }
+
+.pipeline-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.pipeline-label {
+  font-size: 12px;
+  color: var(--mu);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-count { font-size: 12px; font-weight: 600; text-align: right; }
+
+.upcoming-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.upcoming-row:last-child { border-bottom: none; }
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--sf2);
+  color: var(--tx);
+}
+
+.badge.danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--erS);
+  border: 1px solid var(--erB);
+  color: var(--er);
+}
+
 /* ---------------------------- Settings / Setup ---------------------------- */
 
 .settings-section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--mu); }

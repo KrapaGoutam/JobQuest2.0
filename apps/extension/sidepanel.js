@@ -1,6 +1,6 @@
 // @ts-check
 // JobQuest Capture — Side Panel (Phase C: persistent shell, Phase D: Capture
-// tab). Dashboard/Analytics are stubs (see design map's explicit scope note).
+// tab, Phase E: real Dashboard/Analytics from GET /ext/v1/stats).
 // ALL business logic here is reused verbatim from popup.js / api/jobquest.js
 // / sidepanel-logic.js — this file only wires that logic to the Side Panel's
 // DOM and to chrome.tabs active-tab tracking, which popup.js never needed.
@@ -12,6 +12,7 @@ import {
   createCapture,
   getCapturePreferences,
   getSettings,
+  getStats,
   getWorkflow,
   isConnectionError,
   mapConnectionError,
@@ -26,9 +27,14 @@ import {
   buildCaptureDraft,
   classifyConnectionScreen,
   classifyExtraction,
+  clampPercent,
   computeCaptureCompleteness,
+  computeGoalRemainder,
+  DASHBOARD_PIPELINE_STAGES,
   describeEnvironment,
+  formatStatValue,
   mapDuplicateLevel,
+  mapPipelineForDisplay,
   nextRovingIndex,
   resolveCaptureScreen,
   saveAsToStageId,
@@ -65,6 +71,15 @@ let duplicateTimer = 0;
 let currentActiveTab = /** @type {{ id?: number, url?: string } | null} */ (null);
 let capturePanelStale = false;
 let createdPath = '';
+
+// Dashboard/Analytics share a single cached GET /ext/v1/stats fetch per
+// Side Panel session — see the design map's "one minimal new endpoint" note.
+// Loaded lazily on first visit to either tab, not on every tab switch.
+/** @type {any} */
+let stats = null;
+let statsLoading = false;
+/** @type {{ state: string, message: string } | null} */
+let statsError = null;
 
 /** Which top-level view is showing: 'capture' | 'dashboard' | 'analytics' | 'settings' | 'setup' */
 let currentView = 'capture';
@@ -145,6 +160,7 @@ function showView(view) {
     capturePanelStale = false;
     if (currentActiveTab) void runCaptureFlow(currentActiveTab, { showScanning: false });
   }
+  if (view === 'dashboard' || view === 'analytics') void ensureStatsLoaded();
   setPanelState('VIEW', view);
 }
 
@@ -519,6 +535,208 @@ function showToast(message) {
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard / Analytics (GET /ext/v1/stats, fetched once and cached — see
+// module state above). Both tabs render from the same cached `stats` object;
+// switching tabs never re-fetches. `overdue_tasks` (not `overdue_follow_ups`)
+// backs Dashboard's single "Task overdue" row: `overdue_follow_ups` would
+// double-count against the "Follow-ups" row right above it, while
+// `overdue_tasks` is the general overdue signal the design's one combined
+// row calls for.
+// ---------------------------------------------------------------------------
+
+async function ensureStatsLoaded() {
+  if (stats || statsLoading) return;
+  statsLoading = true;
+  statsError = null;
+  renderDashboard();
+  renderAnalytics();
+  try {
+    stats = await getStats(settings.instanceUrl, settings.apiToken);
+  } catch (error) {
+    statsError = mapConnectionError(error);
+  } finally {
+    statsLoading = false;
+  }
+  renderDashboard();
+  renderAnalytics();
+}
+
+async function refreshStats() {
+  stats = null;
+  statsError = null;
+  await ensureStatsLoaded();
+}
+
+function renderPipelineRows(containerId, rows) {
+  const container = byId(containerId);
+  container.replaceChildren();
+  for (const row of rows) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'pipeline-row';
+
+    const label = document.createElement('span');
+    label.className = 'pipeline-label';
+    label.textContent = row.label;
+
+    const track = document.createElement('div');
+    track.className = 'progress-track pipeline-track';
+    track.setAttribute('role', 'progressbar');
+    track.setAttribute('aria-valuemin', '0');
+    track.setAttribute('aria-valuemax', '100');
+    track.setAttribute('aria-valuenow', String(row.percent));
+    track.setAttribute('aria-label', `${row.label}: ${row.count} application${row.count === 1 ? '' : 's'}`);
+    const fill = document.createElement('div');
+    fill.className = 'progress-fill';
+    fill.style.width = `${row.percent}%`;
+    track.append(fill);
+
+    const count = document.createElement('span');
+    count.className = 'pipeline-count';
+    count.textContent = String(row.count);
+
+    rowEl.append(label, track, count);
+    container.append(rowEl);
+  }
+}
+
+/** Shared Weekly Goal rendering for Dashboard (with remainder line) and
+ *  Analytics (compact, no remainder line). Renders an honest "no goal set"
+ *  state rather than fabricating numbers when `active_goal` is null. */
+function renderGoalCard(prefix, statsData, { showRemainder }) {
+  const goal = statsData.active_goal;
+  const card = byId(`${prefix}-goal-card`);
+  const pctEl = byId(`${prefix}-goal-pct`);
+  const lineEl = byId(`${prefix}-goal-line`);
+  const bar = byId(`${prefix}-goal-bar`);
+  const fill = byId(`${prefix}-goal-fill`);
+  const remainderEl = showRemainder ? byId(`${prefix}-goal-remainder`) : null;
+
+  if (card) card.dataset.empty = String(!goal);
+
+  if (!goal) {
+    pctEl.textContent = '';
+    lineEl.textContent = 'No weekly goal set';
+    bar.setAttribute('aria-valuenow', '0');
+    fill.style.width = '0%';
+    if (remainderEl) remainderEl.textContent = '';
+    return;
+  }
+
+  const pct = clampPercent(goal.progress_pct);
+  pctEl.textContent = `${pct}%`;
+  lineEl.textContent = `${formatStatValue(statsData.applications_this_week)} / ${formatStatValue(goal.target_applications)} Applications`;
+  bar.setAttribute('aria-valuenow', String(pct));
+  fill.style.width = `${pct}%`;
+
+  if (remainderEl) {
+    const remainder = computeGoalRemainder(goal, statsData.applications_this_week);
+    remainderEl.textContent = remainder === null
+      ? ''
+      : remainder > 0
+        ? `${remainder} more to reach this week's goal`
+        : 'Goal reached!';
+  }
+}
+
+function buildUpcomingRow(label, valueText, { danger = false } = {}) {
+  const row = document.createElement('div');
+  row.className = 'upcoming-row';
+
+  const labelEl = document.createElement('span');
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement('span');
+  valueEl.className = danger ? 'badge danger' : 'badge';
+  if (danger) {
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '⚠ ';
+    valueEl.append(icon);
+  }
+  valueEl.append(document.createTextNode(valueText));
+
+  row.append(labelEl, valueEl);
+  return row;
+}
+
+function renderUpcomingRows(statsData) {
+  const container = byId('dash-upcoming');
+  container.replaceChildren();
+  container.append(buildUpcomingRow('Interviews', formatStatValue(statsData.upcoming_interviews)));
+  container.append(buildUpcomingRow('Follow-ups', formatStatValue(statsData.follow_ups_due)));
+  const overdue = statsData.overdue_tasks;
+  container.append(buildUpcomingRow('Task overdue', formatStatValue(overdue), { danger: Number(overdue) > 0 }));
+}
+
+function renderDashboardBody(statsData) {
+  byId('dash-today').textContent = formatStatValue(statsData.applications_today);
+  byId('dash-yesterday').textContent = formatStatValue(statsData.applications_yesterday);
+  renderGoalCard('dash', statsData, { showRemainder: true });
+  renderPipelineRows('dash-pipeline', mapPipelineForDisplay(statsData.pipeline, DASHBOARD_PIPELINE_STAGES));
+  renderUpcomingRows(statsData);
+}
+
+function renderDashboard() {
+  const loading = statsLoading && !stats;
+  const failed = Boolean(statsError) && !stats;
+  byId('dash-loading').hidden = !loading;
+  byId('dash-error').hidden = !failed;
+  byId('dash-body').hidden = !stats;
+  if (failed) byId('dash-error-message').textContent = statsError.message;
+  if (stats) renderDashboardBody(stats);
+}
+
+function renderActivityGrid(statsData) {
+  const container = byId('analytics-activity');
+  container.replaceChildren();
+  const items = [
+    { label: 'Today', value: statsData.applications_today },
+    { label: 'Yesterday', value: statsData.applications_yesterday },
+    { label: 'This week', value: statsData.applications_this_week },
+    { label: 'Last week', value: statsData.applications_last_week },
+  ];
+  for (const item of items) {
+    const cell = document.createElement('div');
+    cell.className = 'metric-card';
+    const value = document.createElement('p');
+    value.className = 'metric-value';
+    value.textContent = formatStatValue(item.value);
+    const label = document.createElement('p');
+    label.className = 'metric-label';
+    label.textContent = item.label;
+    cell.append(value, label);
+    container.append(cell);
+  }
+}
+
+function renderAnalyticsBody(statsData) {
+  renderActivityGrid(statsData);
+  renderGoalCard('analytics', statsData, { showRemainder: false });
+  // Last 7 Days is intentionally omitted: /ext/v1/stats has no daily
+  // breakdown array, only aggregate counts, and the design map explicitly
+  // forbids rendering fake per-day bars for an unsupported metric.
+  renderPipelineRows('analytics-pipeline', mapPipelineForDisplay(statsData.pipeline, null));
+}
+
+function renderAnalytics() {
+  const loading = statsLoading && !stats;
+  const failed = Boolean(statsError) && !stats;
+  byId('analytics-loading').hidden = !loading;
+  byId('analytics-error').hidden = !failed;
+  byId('analytics-body').hidden = !stats;
+  if (failed) byId('analytics-error-message').textContent = statsError.message;
+  if (stats) renderAnalyticsBody(stats);
+}
+
+function setupDashboardAnalytics() {
+  button('dash-retry-btn').addEventListener('click', () => void refreshStats());
+  button('analytics-retry-btn').addEventListener('click', () => void refreshStats());
+  button('dash-open-full').addEventListener('click', () => {
+    if (settings.instanceUrl) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, '/dashboard') });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Stage listbox + save-as wiring
 // ---------------------------------------------------------------------------
 
@@ -884,6 +1102,7 @@ setupTabBar();
 setupStageControl();
 setupPartialInputs();
 setupCaptureFallbackActions();
+setupDashboardAnalytics();
 setupSettingsScreen();
 setupSetupScreen();
 

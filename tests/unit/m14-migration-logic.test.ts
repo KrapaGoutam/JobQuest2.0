@@ -165,12 +165,15 @@ describe('M14 Migration Logic Unit Tests', () => {
   });
 
   describe('Option B Claim Code Generator (generateClaimCode)', () => {
-    it('generates secure 32-character hex tokens with matching SHA-256 hash', () => {
-      const { token, hint, hash } = generateClaimCode();
+    it('generates a Crockford-encoded code with a matching Argon2id hash that the real claim verifier accepts', async () => {
+      const { token, hint, hash } = await generateClaimCode();
       expect(token).toHaveLength(32);
-      expect(/^[0-9a-f]{32}$/.test(token)).toBe(true);
-      expect(hash).toHaveLength(64);
-      expect(hint).toMatch(/^[0-9a-f]{4}\.\.\.[0-9a-f]{2}$/);
+      expect(/^[0-9A-HJ-KM-NP-TV-Z]{32}$/.test(token)).toBe(true); // Crockford alphabet: no I, L, O, U
+      expect(hint).toBe(token.slice(0, 4));
+      expect(hash).toMatch(/^\$argon2id\$/);
+
+      const { verifyCode, normalizeCode } = await import('../../apps/api/src/lib/recovery');
+      expect(await verifyCode(hash, normalizeCode(token))).toBe(true);
     });
   });
 

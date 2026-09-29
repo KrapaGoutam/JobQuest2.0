@@ -9,10 +9,17 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import pg from 'pg';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve as resolvePath } from 'node:path';
 
 const { Client } = pg;
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const apiRequire = createRequire(resolvePath(__dirname, '../apps/api/package.json'));
+const { hash: argon2Hash } = apiRequire('@node-rs/argon2');
 
 export const DEFAULT_MIGRATED_WORKSPACE_ID = '018f0000-0000-4000-8000-000000000001';
 export const DEFAULT_MIGRATED_WORKSPACE_NAME = 'JobQuest (Migrated)';
@@ -305,13 +312,39 @@ export function mapLegacyResume(r) {
   };
 }
 
+// Crockford Base32 (no I, L, O, U) — must exactly match apps/api/src/lib/recovery.ts's ALPHABET
+// so that a code produced here can be normalized and verified by POST /auth/claim.
+const CLAIM_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const CLAIM_CODE_CHARS = 32; // 32 * 5 bits = 160 bits, matches recovery.ts CHARS
+const CLAIM_HINT_CHARS = 4; // must match HINT_CHARS in apps/api/src/lib/recovery.ts
+const CLAIM_ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1 }; // must match ARGON in recovery.ts
+
+function encodeClaimCode(bytes) {
+  let bits = 0;
+  let value = 0;
+  let out = '';
+  for (const b of bytes) {
+    value = (value << 8) | b;
+    bits += 8;
+    while (bits >= 5) {
+      out += CLAIM_CODE_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += CLAIM_CODE_ALPHABET[(value << (5 - bits)) & 31];
+  return out;
+}
+
 /**
- * Generates an Option B single-use claim code.
+ * Generates an Option B single-use claim code, in the exact wire format that
+ * apps/api/src/routes/auth.ts POST /claim expects: a Crockford Base32 token
+ * (see apps/api/src/lib/recovery.ts, which this mirrors), a 4-char lookup
+ * hint stored in clear, and an Argon2id verifier. NEVER migrate legacy PINs.
  */
-export function generateClaimCode() {
-  const token = randomBytes(16).toString('hex'); // 32 hex chars
-  const hint = token.slice(0, 4) + '...' + token.slice(-2);
-  const hash = createHash('sha256').update(token).digest('hex');
+export async function generateClaimCode() {
+  const token = encodeClaimCode(randomBytes(20)).slice(0, CLAIM_CODE_CHARS); // 160-bit CSPRNG
+  const hint = token.slice(0, CLAIM_HINT_CHARS);
+  const hash = await argon2Hash(token, CLAIM_ARGON);
   return { token, hint, hash };
 }
 
@@ -433,7 +466,7 @@ export async function runMigration({
           );
 
           // Generate Option B claim code (NEVER MIGRATE pin_hash)
-          const claim = generateClaimCode();
+          const claim = await generateClaimCode();
           await client.query(
             `INSERT INTO public.legacy_claim_codes (user_id, code_hash, code_hint, expires_at, created_at)
              VALUES ($1, $2, $3, NOW() + INTERVAL '90 days', NOW())

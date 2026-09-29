@@ -123,7 +123,7 @@ Checklist:
 ## Step 13A — Security Remediation
 
 Status:
-COMPLETE (Automated Gates 1-9 PASS; Operator Retest & Step 13B Pending)
+COMPLETE (Automated Gates PASS; operator retest PASS) — but Step 13B found residual B2-R; see Step 13B
 
 Source:
 Claude Opus / High Step 13 review
@@ -145,8 +145,64 @@ Required gates:
 [x] exact-head CI (run 36637796079, SHA e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 — PASS static & database)
 [x] fresh Preview (dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn, https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app)
 [x] automated Preview duplicate QA (e2e/m15e-extension-sidepanel.spec.ts PASS 54.0s, e2e/m11-extension.spec.ts PASS 24.9s)
-[ ] operator focused manual retest
-[ ] Step 13B focused Opus blocker-closure review
+[x] operator focused manual retest — PASS (operator-reported via Step 13B prompt; does not exercise the B2-R race)
+[x] Step 13B focused Opus blocker-closure review — invoked ONCE, result BLOCKED (see below)
+
+## Step 13B — Focused Blocker-Closure Review
+
+Status:
+BLOCKED
+
+[x] Claude Opus / High focused review (ONCE — do not re-invoke automatically)
+[x] B1 closure verified — CLOSED
+[ ] B2 closure verified — OPEN (residual B2-R)
+[x] N1 disposition verified — CLOSED
+[x] regression impact reviewed — no security regression found
+[x] tests reviewed — Test Adequacy FAIL (gaps below)
+
+Tested SHA: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 / CI 36637796079 PASS
+Range: e90ef9afc15938b8ae1309b8689475de68117d12...e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649
+
+BLOCKER:
+B2-R. Save-time gate fails open on an unresolved duplicate check
+(apps/extension/sidepanel.js:659-675, verified by the main session). save() reruns
+runDuplicateCheck on NEEDS_CHECK but stops only on BLOCKED_DUPLICATE. When
+onDuplicateCheckResult discards the recheck (CONTEXT_SUPERSEDED on a tab change,
+CHECK_SUPERSEDED from the 350 ms edit timer or runCaptureFlow), canSafelySave still
+returns NEEDS_CHECK and save proceeds to createCapture with duplicate_override:false
+and no accepted verdict. Server duplicate enforcement is advisory, so this is a silent
+duplicate write. Repro: edit Company/Title, click Save inside the debounce window,
+switch tabs before the recheck responds. Side effects: :709 resets duplicateState
+unconditionally (clobbers Job B's state/in-flight check) and :711 renders 'saved' on
+Job B's context — save() is not bound to its originating capture context.
+Constraint: "Warn on duplicates" = off must keep saving (runDuplicateCheck returns
+early, :234).
+Fix: record saveSeq = captureRequestSeq at save() start; after recheck abort/re-render
+if captureRequestSeq !== saveSeq or (warnOnDuplicates && !safetyCheck.canSave); reset
+duplicateState at :709 only if context unchanged; add save-path regression test.
+
+NON-BLOCKING:
+- Override can be granted for an identity that was never checked within a <=350 ms
+  window (sidepanel-logic.js:186-197; sidepanel.js:1022-1028, :563). Fix: ignore results
+  whose key != current identity key; grant only if !isStale && checkedKey == key(current).
+- Blocked-save primary label overwritten to "Save to JobQuest" (sidepanel.js:670);
+  fails safe (onclick still opens the existing application).
+- Test gaps: unit tests cover only pure helpers, not save() wiring; nothing covers
+  "edit then Save in debounce window" or an edit/tab switch during the save recheck;
+  N1 E2E assertion (e2e/m15e-extension-sidepanel.spec.ts:449-459) is vacuous (also passes
+  on old code). B1 (:398-422) and B2 (:425-446) E2E genuinely fail on old behavior.
+- Legacy popup: popup.js:44,142,322,330 keeps a module-level bypassDuplicate that
+  "Capture Another" does not reset; popup.html still packaged (scripts/package.mjs:20)
+  though the manifest has no default_popup. Before release remove from package or fix.
+
+INFORMATIONAL: fingerprint (sidepanel-logic.js:40-67) covers the six checkDuplicate
+fields; '::' join collision unreachable in practice (JSON.stringify would remove it);
+CHECK_ERROR -> VERIFIED_SAFE is pre-existing behavior.
+
+NEXT: targeted remediation of B2-R (+ override-grant window; popup packaging before
+release) -> targeted tests -> regression -> new SHA -> exact-head CI -> new Preview ->
+operator retest. Do NOT re-invoke Opus automatically; a separate prompt decides whether
+a further focused review is required.
 
 ## Phase 14 — Operator Manual Extension QA
 Status: operator reported PASS against tested SHA e90ef9af (Preview
@@ -193,21 +249,24 @@ duplicate then save" on the remediated Preview.
 
 ---
 
-CURRENT PHASE: M15-E Step 13A COMPLETE -> Operator Manual Retest & Step 13B
-CURRENT SUBTASK: Operator focused manual retest of duplicate remediation on Preview
+CURRENT PHASE: M15-E Step 13B — Focused Blocker-Closure Review: BLOCKED
+CURRENT SUBTASK: Targeted remediation required (B2-R, save-time gate fails open)
 BRANCH: fix/m15e-extension-connection-ui
 APPLICATION / TESTED SHA: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649
-DOCS HEAD: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 (docs commit pending)
-REMOTE HEAD: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649
-WORKING TREE: checklist & docs updated
-LAST GREEN TEST: unit 163/163, extension 69/69, m11-extension + m15e-extension-sidepanel E2E PASS on Preview; CI PASS
+DOCS HEAD (before this docs commit): 9130ec909667ec704da9cffb2496396be70346fa (docs-only vs tested SHA)
+REMOTE HEAD: 9130ec909667ec704da9cffb2496396be70346fa (before this docs commit)
+WORKING TREE: docs-only changes pending commit
+LAST GREEN TEST: unit 163/163, extension 69/69, m11-extension + m15e-extension-sidepanel E2E PASS on Preview; CI PASS; operator retest PASS (operator-reported)
 LAST CI: 36637796079 / e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 / PASS (both jobs)
 PREVIEW: https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app (dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn, target: preview, SHA e19e9cce)
 BACKEND: jobquest-dev (ref: xpnkasclquplmrcmhsif, PREVIEW_BACKEND_IS_PRODUCTION = false)
-B1: RESOLVED IN APPLICATION CODE & TESTED
-B2: RESOLVED IN APPLICATION CODE & TESTED
-N1: RESOLVED IN APPLICATION CODE & TESTED
-OPERATOR RETEST: PENDING
-STEP 13B OPUS REVIEW: PENDING
+B1: CLOSED
+B2: OPEN (residual B2-R: save-time gate saves when the recheck result is discarded)
+N1: CLOSED
+OPERATOR RETEST: PASS (operator-reported; does not exercise the B2-R race)
+STEP 13B OPUS REVIEW: INVOKED ONCE — BLOCKED. DO NOT RE-INVOKE automatically.
+BLOCKERS: B2-R (apps/extension/sidepanel.js:659-675, :709-711) — details in Step 13B section above
+DEVELOPMENT: UNCHANGED (origin/development 99bb9b8f)
+MAIN: UNCHANGED (origin/main 99bb9b8f)
 PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw, AWS us-east-1)
-NEXT EXACT ACTION: Operator focused manual duplicate retest on Preview using unpacked extension apps/extension/dist/jobquest-capture-dev; followed by Step 13B Claude Opus focused review
+NEXT EXACT ACTION: Separate remediation prompt: fix B2-R in apps/extension/sidepanel.js (bind save() to its originating captureRequestSeq; fail closed on unresolved NEEDS_CHECK while keeping warnOnDuplicates=false working; reset duplicateState at :709 only if context unchanged), close the <=350 ms override-grant window, remove/fix packaged legacy popup before release, add save-path tests, then regression -> new SHA -> exact-head CI -> new Preview -> operator retest

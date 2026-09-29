@@ -291,6 +291,30 @@ performed or attempted.
 
 ---
 
+## Step 13B — Focused Blocker-Closure Review (BLOCKED)
+
+- **Reviewer:** `release-security-reviewer`, Opus / High, invoked ONCE (do not re-invoke automatically).
+- **Review range:** `e90ef9afc15938b8ae1309b8689475de68117d12...e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649` (source: `sidepanel.js`, `sidepanel-logic.js`, `tests/sidepanel-logic.test.js`, `e2e/m15e-extension-sidepanel.spec.ts`).
+- **Application/tested SHA:** `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649`, CI `36637796079` PASS (static + database), verified on the exact SHA. **Current docs HEAD (before this docs commit):** `9130ec909667ec704da9cffb2496396be70346fa` (docs-only vs the tested SHA; the prompt's full SHA was mistyped past the `9130ec90` prefix). CI did not run on any docs-only commit.
+- **Operator focused manual retest:** PASS (operator-reported via the Step 13B prompt) — B1/B2/N1 and normal capture. It does not exercise the race below.
+- **Verdict: BLOCKED.** No security regression (auth, workspace binding, same `POST /captures` path, XSS-safe rendering, secrets all unchanged).
+- **B1 duplicate override leakage: CLOSED.** Override is identity-keyed, state recreated on every `runCaptureFlow` trigger and after a successful save; `duplicate_override` comes only from `canSafelySave`'s OVERRIDDEN outcome; only the explicit secondary click grants an override.
+- **N1 late duplicate timer: CLOSED.** Timer cleared in `runCaptureFlow` and `save`; context and check sequences enforced.
+- **B2 stale duplicate state: OPEN (residual, tracked as B2-R).** The original deterministic path is closed, but the new save-time gate fails open on an unresolved check.
+- **B2-R — save-time gate saves when the recheck result is discarded** (`apps/extension/sidepanel.js:659-675`; verified against source by the main session). `save()` reruns `runDuplicateCheck` on `NEEDS_CHECK` but only stops on `BLOCKED_DUPLICATE`. If `onDuplicateCheckResult` discards the result (`CONTEXT_SUPERSEDED` when the tab changes mid-recheck; `CHECK_SUPERSEDED` when the 350 ms edit timer or `runCaptureFlow` starts another check), `canSafelySave` still returns `NEEDS_CHECK` and the code proceeds to `createCapture` with `duplicate_override:false` and no accepted duplicate verdict. Server duplicate enforcement is advisory only, so this is a silent duplicate write. Repro: edit Company/Title, click Save inside the debounce window, switch tabs before the recheck responds.
+  - Same flaw side effects: `save()` completion runs `duplicateState = initDuplicateContext(captureRequestSeq)` unconditionally (`:709`), resetting Job B's state and dropping Job B's in-flight check if the context already moved; `renderCapture('saved')` (`:711`) then draws on Job B's context. So `save()` is not bound to the capture context it started in.
+  - Constraint on the fix: the fall-through currently also makes saving work when "Warn on duplicates" is off (`runDuplicateCheck` returns early, `:234`); that preference must keep working.
+  - Suggested fix: record `const saveSeq = captureRequestSeq` at the start of `save()`; after the recheck abort (re-render, ask the user to retry) if `captureRequestSeq !== saveSeq` or if `capturePreferences.warnOnDuplicates && !safetyCheck.canSave`; only reset `duplicateState` at `:709` when the context is unchanged; add a save-path regression test driving the gate with a superseded/ignored recheck.
+- **Non-blocking:**
+  - An override can be granted for an identity that was never checked, within a ≤350 ms UI window (`sidepanel-logic.js:186-197` accepts a result for a no-longer-current identity if `checkSeq` matches; `sidepanel.js:1022-1028`, `:563`). Same context, needs an explicit click. Fix: ignore results whose key differs from the current identity key; only allow the override grant when `!state.isStale && state.checkedKey === key(current)`.
+  - After a blocked save, `sidepanel.js:670` overwrites the "View Existing Application" label with "Save to JobQuest" (fails safe; onclick still opens the existing application).
+  - Test gaps: the 10 new unit tests only cover pure state helpers, not the `save()` wiring; nothing tests "edit then Save inside the debounce window" or an edit/tab switch during the save's recheck; the N1 E2E assertion (`e2e/m15e-extension-sidepanel.spec.ts:449-459`) only checks `#job-company`/`#job-title` text and would also pass on the old code. The B1 (`:398-422`) and B2 (`:425-446`) E2E tests genuinely fail on the old behavior.
+  - Legacy popup: `apps/extension/popup.js:44,142,322,330` still uses a module-level `bypassDuplicate` that "Capture Another" does not reset. The popup is no longer the action UI (manifest has no `default_popup`; `background.js:8` opens the side panel) but `popup.html` is still packaged (`scripts/package.mjs:20`). Before release, remove it from the package or apply the same fix.
+- **Informational:** fingerprint (`sidepanel-logic.js:40-67`) covers exactly the six fields `checkDuplicate` sends and lowercases all but `externalJobId`; the `'::'` join can collide in theory but is unreachable in practice (every intermediate edit changes the key and revokes the override); `JSON.stringify` of the tuple would remove the ambiguity. A `CHECK_ERROR` result maps to level `error`, which `canSafelySave` treats as VERIFIED_SAFE (pre-existing behavior). Extension unit tests 69/69 pass.
+- **Next:** targeted remediation of B2-R (plus the ≤350 ms override-grant window and, before release, the packaged legacy popup), then targeted tests → regression → new SHA → exact-head CI → new Preview → operator retest, and a decision on whether a further focused review is required. Step 15 promotion is NOT authorized. Development/Main/Production UNCHANGED.
+
+---
+
 ## Future Scope Log (Post-M15) — all DEFERRED, NON-BLOCKING for M15-E
 
 Corrected to the agreed feature definitions. Do not implement during M15-E.

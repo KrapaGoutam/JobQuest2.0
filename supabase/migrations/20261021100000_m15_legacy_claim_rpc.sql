@@ -43,14 +43,22 @@ begin
    where a.user_id = p_user_id
      and a.revoked_at is null;
 
-  -- 4. Activate the user account and clear failures
+  -- 4. Activate the user account and clear failures. Only a STAGED (unclaimed
+  -- legacy) account may be activated this way — a SUSPENDED account must not
+  -- be able to self-reactivate via a leaked/guessed claim code, and an
+  -- already-ACTIVE account has no business being claimed at all.
   update public.user_accounts u
      set status = 'ACTIVE',
          failed_login_count = 0,
          locked_until = null,
          failed_recovery_count = 0,
          recovery_locked_until = null
-   where u.user_id = p_user_id;
+   where u.user_id = p_user_id
+     and u.status = 'STAGED';
+
+  if not found then
+    raise exception 'ACCOUNT_NOT_CLAIMABLE' using errcode = 'P0001';
+  end if;
 
 end; $$;
 

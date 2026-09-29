@@ -2,20 +2,26 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: TWO active fix branches — site remediation (awaiting operator manual re-test) and extension remediation (Phase A/B done, Phase C blocked on `/design-login`)**
-**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, awaiting operator re-test. Extension branch — Phase A/B local quality gate PASS, exact-head CI running, blocked before Phase C. NOT merged. Production UNCHANGED.**
+**Phase M15-E: TWO active fix branches — site remediation (manual Preview QA PASS, awaiting promotion authorization) and extension remediation (Phase A/B done, still blocked at Phase C on design-system authorization)**
+**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — Phase A/B local quality gate PASS, exact-head CI PASS, blocked before Phase C (see below — not resolved by a prior `/design-login` attempt). NOT merged. Production UNCHANGED.**
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)
 - **Exact-head CI:** PASS (both `static` and `database` jobs, triggered via `workflow_dispatch` since this repo's CI only auto-triggers on `feature/**`/`development`/`main`, not `fix/**`)
 - **Vercel Preview (current):** `https://jobquest2-51ktgo1ku-one-piece-5779.vercel.app`, deployment `dpl_E7CvzzPZgYbEsTVBDZyK4ZHuRLuQ`, exact SHA `8b0376a6a0aeee9f9f75a983f463335927cc34b8` (parent of the docs-only `0a534b45` HEAD — the app code deployed and tested is unchanged by that docs commit), `target: null` (Preview, not production). Backend confirmed preview/development-scoped (env var names/targets only checked, no values read).
-- **Cutover Status:** PAUSED. Awaiting operator manual re-test of this exact-SHA
-  Preview (focused on Calendar + dropdown, since everything else already passed a
-  prior manual QA round), then jack's claim-code reissue, then promotion gates.
+- **Site Manual Preview QA: PASS** — operator has explicitly confirmed the focused
+  re-test (Calendar Future Feature page, dark/light dropdown, everything else
+  already covered by the prior full round) passed on this exact-SHA Preview.
+- **Cutover Status:** Site remediation manual QA complete. Still PAUSED before
+  any merge/production action: jack's claim-code reissue, then
+  `fix -> development -> main -> production` promotion gates all remain
+  separately authorized steps, not yet executed. Extension remediation
+  (separate branch, below) has not reached manual QA yet.
 
 ## Branch: fix/m15e-extension-connection-ui (extension remediation — NEW this session)
 - **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
-- **Branch HEAD:** `20943423` (pushed; matches origin)
+- **Branch HEAD:** `d0e8c34a` (pushed; matches origin). Tested code SHA: `20943423`
+  (CI ran against this; the `d0e8c34a` HEAD on top of it is docs-only).
 - **Phase A (audit):** DONE, read-only.
 - **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, full
   raw token re-displayed on every Settings reopen, and inconsistent
@@ -23,12 +29,21 @@ Milestone 15 — Production Launch & Cutover
   in the dark-theme primary button, found by the same test's real axe-core scan.
   Full detail in `migration-upgrade/m15-extension/EXTENSION_CONNECTION_AUDIT.md`
   and `EXTENSION_CLOSEOUT_REPORT.md`.
-- **Phase C (Claude Design import): BLOCKED.** No `claude_design` MCP connected
-  in this session — exhaustively checked. **Operator must run `/design-login`**
-  to reconnect it before Phase C (design import) and everything downstream
-  (Phase D Side Panel, E Dashboard/Analytics, and their QA/release review) can
-  proceed. This is a hard stop per explicit task instruction: do not infer or
-  reconstruct the design from memory or from the earlier textual description.
+- **Phase C (Claude Design import): STILL BLOCKED, confirmed on a second check.**
+  No `claude_design` MCP tool exists in this session — checked exhaustively both
+  times. On this second check, the closest available tool (`DesignSync`, which
+  handles the user's own writable design-*system* projects, not arbitrary shared
+  `claude.ai/design/p/...` URLs) returned an explicit error: **design-system
+  authorization is missing, and `/design-login` cannot run in this
+  non-interactive (headless/SDK) session** — it must be run from an
+  **interactive** Claude Code session on this machine first; this session would
+  then reuse that authorization on a later resume. A prior `/design-login`
+  attempt (per the task that resumed this branch) did not resolve this.
+  **Operator action: open an interactive Claude Code session on this machine
+  and run `/design-login` there, then resume this task.** Everything downstream
+  (Phase D Side Panel, E Dashboard/Analytics/Settings, their QA, and the final
+  release review) remains blocked. Per explicit instruction, no design work was
+  inferred or reconstructed from memory or the earlier textual description.
 - **Local quality gate (Phase A/B scope):** lint PASS, typecheck PASS, unit
   163/163 PASS, integration 182/182 PASS (unaffected — no `apps/api/**` touched),
   extension unit 30/30 PASS, full E2E 20/20 PASS, build PASS, extension package

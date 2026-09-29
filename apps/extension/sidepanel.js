@@ -72,6 +72,12 @@ let currentActiveTab = /** @type {{ id?: number, url?: string } | null} */ (null
 let capturePanelStale = false;
 let createdPath = '';
 
+// Monotonically increasing sequence guarding runCaptureFlow: incremented at
+// the start of every call so a stale, superseded extraction/duplicate-check
+// (from a tab that's no longer the latest request) can never overwrite a
+// newer call's render — see the Side Panel rapid tab-switch race.
+let captureRequestSeq = 0;
+
 // Dashboard/Analytics share a single cached GET /ext/v1/stats fetch per
 // Side Panel session — see the design map's "one minimal new endpoint" note.
 // Loaded lazily on first visit to either tab, not on every tab switch.
@@ -253,15 +259,19 @@ async function loadWorkflow() {
 /** Runs the full real capture pipeline for a given tab: extraction, duplicate
  * check, then renders the resolved Capture screen. */
 async function runCaptureFlow(tab, { showScanning = true } = {}) {
+  const seq = ++captureRequestSeq;
   if (showScanning && currentCaptureScreen !== 'none' && currentCaptureScreen !== 'offline') {
     byId('scan-indicator').hidden = false;
   }
-  captured = await extractFromTab(tab);
+  const extracted = await extractFromTab(tab);
+  if (seq !== captureRequestSeq) return; // superseded by a newer tab-change request
+  captured = extracted;
   const extractionScreen = classifyExtraction(captured);
   if (extractionScreen === 'none') {
     duplicateInfo = { level: 'none', match: null };
   } else {
     await runDuplicateCheck();
+    if (seq !== captureRequestSeq) return; // superseded again, mid duplicate-check
   }
   byId('scan-indicator').hidden = true;
   renderCapture(resolveCaptureScreen(extractionScreen, duplicateInfo.level));
@@ -826,6 +836,16 @@ function isCaptureScreenVisible() {
 
 async function handleTabChange(tab) {
   if (!tab || !connectionOnline) { currentActiveTab = tab || currentActiveTab; return; }
+  // A tab can become active (chrome.tabs.onActivated) while chrome.tabs.get()
+  // still reports it mid-navigation (status "loading") even though its `url`
+  // has already flipped to the destination — this is a genuine, distinct race
+  // from the overlapping-runCaptureFlow one above: if currentActiveTab were
+  // updated to this not-yet-settled tab now, the eventual, real "complete"
+  // onUpdated event for the SAME url would then look like a no-op tab change
+  // (same url as currentActiveTab) and the rescan it should trigger would be
+  // silently lost forever. Leave currentActiveTab untouched and wait for that
+  // later "complete" event instead.
+  if (tab.status && tab.status !== 'complete') return;
   if (!shouldRescanForTabChange(currentActiveTab, tab)) { currentActiveTab = tab; return; }
   currentActiveTab = tab;
   if (!capturePreferences.autoDetectJobPages) return;
@@ -1057,6 +1077,17 @@ async function refreshActiveTabRef() {
 
 async function initialize() {
   setPanelState('LOADING');
+  // Register chrome.tabs listeners FIRST, before any of the awaits below
+  // (settings/connection/workflow/initial-extraction — all real network
+  // round trips). chrome.tabs.onActivated/onUpdated are fire-and-forget:
+  // Chrome never replays an event to a listener added after it fired. If
+  // registration waited until the end of initialize() (as it used to), a
+  // fast enough tab switch during that startup window fires and is lost
+  // forever, with no later event to ever trigger the correct re-scan.
+  // Registering up front is safe even before settings/connection are ready:
+  // handleTabChange's own `!connectionOnline` guard is a no-op until this
+  // function marks the panel online below.
+  registerTabListeners();
   settings = await getSettings();
   capturePreferences = await getCapturePreferences();
   applyTheme(settings.theme);
@@ -1100,7 +1131,6 @@ async function initialize() {
   // "Open Capture tab when a job is detected" — when off, land on Dashboard
   // instead (Capture's data is still ready in the background per above).
   showView(capturePreferences.openCaptureOnDetect ? 'capture' : 'dashboard');
-  registerTabListeners();
 }
 
 setupTabBar();

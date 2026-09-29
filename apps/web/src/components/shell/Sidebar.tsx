@@ -52,6 +52,7 @@ export function Sidebar({
   ];
 
   const trackNav = [
+    { id: 'calendar', path: '/calendar', label: 'Calendar', icon: Calendar },
     { id: 'interviews', path: '/interviews', label: 'Interviews', icon: Video },
     { id: 'habits', path: '/habits', label: 'Habits', icon: Flame },
     { id: 'journal', path: '/journal', label: 'Journal', icon: BookOpen },

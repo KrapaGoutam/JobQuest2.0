@@ -182,9 +182,7 @@ function AppContent() {
   useEffect(() => { if (session) void loadData(); }, [session, loadData]);
 
   useEffect(() => {
-    if (currentPath === '/calendar') {
-      navigate('/interviews');
-    } else if (currentPath === '/workspace/workflow') {
+    if (currentPath === '/workspace/workflow') {
       navigate('/workspace/settings');
     }
   }, [currentPath, navigate]);
@@ -480,6 +478,17 @@ function AppContent() {
       );
     }
 
+
+    if (currentPath === '/calendar') {
+      return (
+        <PlaceholderView
+          title="Calendar"
+          subtitle="A consolidated calendar view for interviews, tasks, follow-ups and job-search milestones is planned for a future JobQuest release."
+          icon={<Calendar size={24} />}
+          milestoneOwner="Future release"
+        />
+      );
+    }
 
     if (currentPath === '/interviews') {
       return (

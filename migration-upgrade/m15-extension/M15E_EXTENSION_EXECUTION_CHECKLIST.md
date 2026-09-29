@@ -118,70 +118,35 @@ Checklist:
 
 ## Phase 13 — Final Security Review
 [x] Claude Opus / High independent review — invoked ONCE, complete extension delta reviewed
-[ ] PASS — NOT ACHIEVED
+[ ] PASS — NOT ACHIEVED (BLOCKED on B1, B2)
 
-Result:
-BLOCKED (2 blockers, both client-side duplicate protection; server-side
-token/authorization/tenant isolation all PASS)
+## Step 13A — Security Remediation
 
-Review range: origin/fix/m15e-site-functional-remediation...f656d2e8
-(merge-base 0a534b45, 26 files, +5227/-62)
+Status:
+COMPLETE (Automated Gates 1-9 PASS; Operator Retest & Step 13B Pending)
 
-BLOCKERS (verified against source by the main session before recording):
+Source:
+Claude Opus / High Step 13 review
 
-B1. Duplicate override from one job persists into later jobs.
-    apps/extension/sidepanel.js:540 sets `bypassDuplicate = true` ("Save as New
-    Application Anyway"). The only reset is `scheduleDuplicateCheck` (:240),
-    reached only when the user edits an identity field. `runCaptureFlow`
-    (:364-383) never resets it, and `runDuplicateCheck` (:226) early-returns
-    while it is true. After one "Save anyway", later tab switches/re-scans show
-    no duplicate warning, and `save()` sends `duplicate_override: true` (:644).
-    Server duplicate enforcement is advisory only (rpc_extension_capture just
-    stores the flag), so the client check is the only control.
-    Fix: reset `bypassDuplicate = false` and clear `duplicateTimer` at the start
-    of `runCaptureFlow`.
+Blockers:
+[x] B1 duplicate_override leakage across capture contexts — RESOLVED & TESTED
+[x] B2 stale duplicate state after Company/Title/URL edits — RESOLVED & TESTED
 
-B2. Editing Company/Title/URL after the duplicate check skips the
-    "Save anyway" confirmation.
-    The edit callback (:948-953) re-runs the duplicate check and redraws the
-    card/footer but never recomputes `currentCaptureScreen` (only `renderCapture`
-    does), so `renderFooter` keeps the primary "Save to JobQuest" button for a
-    job edited into a strong duplicate. `save()` (:590-662) does not re-check
-    duplicates at save time and does not wait for the 350 ms pending check.
-    Fix: (1) in the edit callback call
-    `renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level))`
-    without overwriting the edit fields; (2) in `save()`, when not bypassing,
-    await/re-run the duplicate check on final company/title/URL and route to the
-    duplicate screen on a match; (3) add E2E tests: "edit to a duplicate identity,
-    then save" and "Save anyway on Job A, then switch to Job B".
+Directly related:
+[x] N1 late duplicate timer context safety, if fixed with same mechanism — RESOLVED & TESTED
 
-TEST ADEQUACY was also marked FAIL by the reviewer solely because no test
-covers the two paths above.
-
-NON-BLOCKING (fix with the remediation where cheap):
-N1. 350 ms edit-triggered duplicate timer is not cleared / not tied to
-    `captureRequestSeq`; a late Job A result can redraw duplicate state on Job B
-    (sidepanel.js:241-244). Resolved by the B1 fix (clear timer in runCaptureFlow).
-N2. Reconnect from Settings/Setup does not clear cached stats/resumes/captured
-    state (sidepanel.js:1100-1113, 1213-1229, 683-698): Dashboard/Analytics may
-    briefly show the previous workspace's counts. Display staleness only; server
-    isolation holds.
-N3. Manually entered Job URL not scheme-checked client-side, and
-    `captureSchema.job_url` (apps/api/src/routes/extension.ts:329) is a plain
-    string. Pre-existing server gap; mitigated by React 19 javascript: blocking
-    and web CSP script-src 'self'. Recommend http/https-only check server-side.
-N4. Setup token input not cleared after successful setup / Disconnect
-    (sidepanel.js:1197-1229). Extension-page DOM only; gone on reload.
-
-All other review areas PASS: token security, token validation, workspace/tenant
-isolation, manifest/permissions, content/XSS safety, URL safety, extension API
-authorization, Dashboard/Analytics isolation, workflow integrity, active-tab
-concurrency, settings/token UI, environment isolation, secret leakage.
-PRODUCTION CHANGES DETECTED: NO.
-
-The reviewer must NOT be re-invoked automatically. A separate remediation prompt
-decides scope, targeted tests, full regression, new application SHA, exact-head
-CI, new Preview, QA, and whether a focused re-review of the fix commit is needed.
+Required gates:
+[x] implementation (apps/extension/sidepanel-logic.js & apps/extension/sidepanel.js)
+[x] targeted unit tests (apps/extension/tests/sidepanel-logic.test.js: 10 new tests, 69/69 PASS)
+[x] targeted E2E (e2e/m15e-extension-sidepanel.spec.ts: B1/B2/N1 assertions PASS)
+[x] full relevant regression (pnpm lint, pnpm typecheck, pnpm test:unit 163/163 PASS)
+[x] extension package (pnpm --filter @jobquest/extension package:dev & package:prod)
+[x] bundle secret scan (pnpm check:extension 48 files, check:secrets 922 tracked files — 0 findings)
+[x] exact-head CI (run 36637796079, SHA e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 — PASS static & database)
+[x] fresh Preview (dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn, https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app)
+[x] automated Preview duplicate QA (e2e/m15e-extension-sidepanel.spec.ts PASS 54.0s, e2e/m11-extension.spec.ts PASS 24.9s)
+[ ] operator focused manual retest
+[ ] Step 13B focused Opus blocker-closure review
 
 ## Phase 14 — Operator Manual Extension QA
 Status: operator reported PASS against tested SHA e90ef9af (Preview
@@ -228,22 +193,21 @@ duplicate then save" on the remediated Preview.
 
 ---
 
-CURRENT PHASE: M15-E Step 13 — Final Security Review: BLOCKED
-CURRENT SUBTASK: Targeted security remediation required (blockers B1, B2 above)
+CURRENT PHASE: M15-E Step 13A COMPLETE -> Operator Manual Retest & Step 13B
+CURRENT SUBTASK: Operator focused manual retest of duplicate remediation on Preview
 BRANCH: fix/m15e-extension-connection-ui
-APPLICATION / TESTED SHA: e90ef9afc15938b8ae1309b8689475de68117d12
-DOCS HEAD (before this docs commit): f656d2e846864b95e139bd7c0895dd27407bf745 (docs-only vs tested SHA)
-REMOTE HEAD: f656d2e846864b95e139bd7c0895dd27407bf745 (before this docs commit)
-WORKING TREE: docs-only changes pending commit
-LAST COMPLETED ACTION: Opus/High release-security-reviewer invoked once — VERDICT BLOCKED
-LAST GREEN TEST: unit 163/163, integration 186/186, extension 59/59, m11-extension + m15e-extension-sidepanel E2E PASS on Preview; operator manual QA PASS (operator-reported)
-LAST CI: 36631704633 / e90ef9afc15938b8ae1309b8689475de68117d12 / PASS (both jobs)
-PREVIEW: https://jobquest2-ns7438ypn-one-piece-5779.vercel.app (dpl_GawFiRmFBswMeSQjev5MdMrjwUDX, target: preview, SHA e90ef9af)
+APPLICATION / TESTED SHA: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649
+DOCS HEAD: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 (docs commit pending)
+REMOTE HEAD: e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649
+WORKING TREE: checklist & docs updated
+LAST GREEN TEST: unit 163/163, extension 69/69, m11-extension + m15e-extension-sidepanel E2E PASS on Preview; CI PASS
+LAST CI: 36637796079 / e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649 / PASS (both jobs)
+PREVIEW: https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app (dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn, target: preview, SHA e19e9cce)
 BACKEND: jobquest-dev (ref: xpnkasclquplmrcmhsif, PREVIEW_BACKEND_IS_PRODUCTION = false)
-OPUS REVIEW INVOKED: YES — DO NOT RE-INVOKE automatically
-OPUS REVIEW RESULT: BLOCKED
-BLOCKERS: B1 (duplicate override persists across jobs), B2 (post-check edit skips "Save anyway" confirmation / no save-time re-check) — details in Phase 13
-DEVELOPMENT: UNCHANGED (origin/development 99bb9b8f; contains neither branch)
-MAIN: UNCHANGED (origin/main 99bb9b8f; contains neither branch)
+B1: RESOLVED IN APPLICATION CODE & TESTED
+B2: RESOLVED IN APPLICATION CODE & TESTED
+N1: RESOLVED IN APPLICATION CODE & TESTED
+OPERATOR RETEST: PENDING
+STEP 13B OPUS REVIEW: PENDING
 PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw, AWS us-east-1)
-NEXT EXACT ACTION: Separate security-remediation prompt: fix B1/B2 (+N1) in apps/extension/sidepanel.js, add the two E2E tests, targeted tests -> full regression -> new SHA -> exact-head CI -> new Preview -> QA; decide whether a focused re-review is required
+NEXT EXACT ACTION: Operator focused manual duplicate retest on Preview using unpacked extension apps/extension/dist/jobquest-capture-dev; followed by Step 13B Claude Opus focused review

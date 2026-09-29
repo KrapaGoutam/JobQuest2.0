@@ -237,8 +237,57 @@ performed or attempted.
 - **B2:** editing Company/Title/URL after the duplicate check (`:948-953`) never recomputes `currentCaptureScreen`, so the primary button stays "Save to JobQuest" for a job edited into a strong duplicate; `save()` (`:590-662`) does not re-check at save time or wait for the 350 ms pending check.
 - **Test adequacy FAIL:** no E2E for "edit into a duplicate then save" or "Save anyway on Job A, then switch to Job B".
 - **Non-blocking:** N1 late duplicate timer vs tab switch (resolved by B1 timer clear); N2 reconnect leaves cached stats/resumes/capture state (display only); N3 manual Job URL / `captureSchema.job_url` scheme unchecked (pre-existing, mitigated by React 19 + CSP); N4 setup token input not cleared after setup/Disconnect.
-- **Verification note:** the main session re-read the cited source lines and confirmed B1's mechanism and B2's edit-callback behavior before recording.
 - **Next:** separate targeted security-remediation prompt (client-only fix in `sidepanel.js` + two E2E tests, targeted → full regression → new SHA → exact-head CI → new Preview → QA; decide on a focused re-review). Step 15 promotion is NOT authorized until then. Development/Main/Production UNCHANGED.
+
+---
+
+## Step 13A — Security Remediation (Targeted Duplicate Lifecycle Hardening) (COMPLETE — PASS)
+
+- **Branch:** `fix/m15e-extension-connection-ui`
+- **Application HEAD:** `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649` (pushed, matches origin)
+- **Commits:**
+  - `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649`: `fix(extension): harden duplicate state lifecycle`
+- **Blockers Remediated:**
+  - **B1 (Duplicate Override State Leakage across Jobs/Tabs):**
+    - Root cause: `bypassDuplicate` in `sidepanel.js` was a persistent module-level boolean set by "Save as New Application Anyway" and never cleared in `runCaptureFlow()`, causing subsequent tab switches to inherit the bypass and silently send `duplicate_override: true` to the backend.
+    - Resolution: Replaced boolean flag with isolated `duplicateState` managed through `initDuplicateContext(seq)` in `apps/extension/sidepanel-logic.js` and `sidepanel.js`.
+    - Every capture flow / tab switch initializes a fresh context with `overrideKey = null`.
+    - Authorization (`authorizeDuplicateOverride`) is fingerprinted strictly to the candidate's normalized identity (`computeDuplicateIdentityKey`).
+    - Override is cleared immediately upon successful save.
+  - **B2 (Stale Duplicate State after Editing Identity Fields):**
+    - Root cause: Post-duplicate edit in `#edit-fields-section` triggered debounced check, but never recomputed `currentCaptureScreen` to `'duplicate'`, leaving the primary button as "Save to JobQuest". Furthermore, `save()` did not verify freshness against the edited identity.
+    - Resolution: `onIdentityChange(state, nextIdentity)` immediately marks duplicate state stale, clears existing overrides, and hides stale duplicate cards.
+    - `save()` performs a two-tier defense: checks `canSafelySave(state, identity)`. If `NEEDS_CHECK`, it awaits an inline recheck. If `BLOCKED_DUPLICATE`, it halts the save, sets `currentCaptureScreen = 'duplicate'`, and redraws the duplicate alert UI.
+  - **N1 (Late Debounce Timer Concurrency):**
+    - Root cause: A pending ~350 ms timer was not cleared on tab navigation and responses lacked sequence correlation.
+    - Resolution: `runCaptureFlow()` clears any active `duplicateTimer`. `onDuplicateCheckResult` discards results matching superseded context sequence or check sequence.
+- **Verification & Test Results:**
+  - **Unit Tests:**
+    - `apps/extension/tests/sidepanel-logic.test.js`: Added 10 targeted unit tests covering B1 (context isolation, identity mismatch, override revocation), B2 (invalidation on edit, save-time blocking, safe save transitions), N1 (sequence rejection), and identity fingerprinting.
+    - Result: 69/69 extension unit tests PASS (`pnpm --filter @jobquest/extension test`).
+    - Full suite: 163/163 web/api unit tests PASS (`pnpm test:unit`).
+  - **TypeScript & Lint:**
+    - `pnpm typecheck`: PASS (0 errors across api, extension, web).
+    - `pnpm lint`: PASS (0 errors, 0 warnings).
+  - **Extension Packaging & Secret Scans:**
+    - Dev and Prod bundles packaged cleanly: `apps/extension/dist/jobquest-capture-dev` and `.zip`.
+    - Secret scan: 48 extension bundle files scanned with 0 findings (`pnpm check:extension`), 922 tracked repository files scanned with 0 findings (`pnpm check:secrets`).
+  - **Exact-Head CI:**
+    - GitHub Actions Run: `36637796079`
+    - Commit SHA: `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649`
+    - Static Job: PASS (56s)
+    - Database Job: PASS (7m52s)
+  - **Vercel Preview Deployment:**
+    - Deployment ID: `dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn`
+    - Preview URL: `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app`
+    - Target: `preview`
+    - Backend: `jobquest-dev` (`xpnkasclquplmrcmhsif`, AWS `us-west-2`), `PREVIEW_BACKEND_IS_PRODUCTION = false`.
+  - **Automated Preview QA:**
+    - `e2e/m15e-extension-sidepanel.spec.ts`: PASS (54.0s) against live Preview (including real-browser assertions for B1 cross-tab override isolation, B2 post-edit duplicate blocking, and N1 rapid tab switch timer cancellation).
+    - `e2e/m11-extension.spec.ts`: PASS (24.9s) against live Preview.
+- **Next Steps:**
+  - Operator manual re-test of duplicate flows on Preview with unpacked extension.
+  - Step 13B focused Opus / High security review for blocker closure verification.
 
 ---
 

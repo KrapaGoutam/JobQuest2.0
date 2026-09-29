@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { Actor, loadEnv, serviceDb, anonDb, makeRecorder, RUN } from './harness';
+import { generateClaimCode } from '../../scripts/migrate-legacy-data.mjs';
 
 const record = makeRecorder('test-results/evidence', 'claim');
 const ready = loadEnv();
@@ -154,17 +155,18 @@ describe.skipIf(!ready)('Milestone 15 Legacy Account Claim Flow Integration', ()
     delete (res.json as any).session; delete (res as any).setCookies; record('claim-08-login-after', res);
   });
   
-  it('CLAIM-03 EXPIRED CODE', async () => {
-    const expiredCode = 'CLAIM-' + randomBytes(8).toString('hex').toUpperCase();
-    const { hashPassword } = await import('../../apps/api/src/lib/passwords');
-    const { normalizeCode, HINT_CHARS } = await import('../../apps/api/src/lib/recovery');
-    const norm = normalizeCode(expiredCode);
-    const hash = await hashPassword(norm);
-    await sb().from('legacy_claim_codes').insert({
-      user_id, code_hash: hash, code_hint: norm.slice(0, HINT_CHARS), expires_at: new Date(Date.now() - 1000).toISOString()
+  it('CLAIM-03 EXPIRED CODE - rejects a genuinely expired, otherwise-valid code', async () => {
+    const legacy = await setupLegacyUser('expired');
+    const { error: updateErr } = await sb().from('legacy_claim_codes')
+      .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+      .eq('id', legacy.codeId);
+    if (updateErr) throw updateErr;
+
+    const res = await new Actor().call('/auth/claim', {
+      username: legacy.username, code: legacy.code, new_password: 'ValidPassword1!'
     });
-    const res = await A.call('/auth/claim', { username, code: expiredCode, new_password: 'ValidPassword1!' });
     expect(res.status).toBe(401);
+    expect(res.json.error.code).toBe('INVALID_CLAIM');
   });
 
   /** Minimal fresh legacy user + unused claim code, mirroring beforeAll's setup. */
@@ -280,6 +282,57 @@ describe.skipIf(!ready)('Milestone 15 Legacy Account Claim Flow Integration', ()
     const { data: afterCode } = await sb().from('legacy_claim_codes')
       .select('claimed_at').eq('id', legacy.codeId).single();
     expect(afterCode?.claimed_at).toBeNull();
+  });
+
+  it("CLAIM-12 REAL GENERATOR - a code from the production migration script's generateClaimCode() is claimable", async () => {
+    const legacy = await setupLegacyUser('realgen');
+
+    // Generate the claim code using the REAL production migration-script generator,
+    // not the test harness's parallel hashPassword(normalizeCode(...)) path.
+    const claim = await generateClaimCode();
+
+    // legacy_claim_codes enforces one row per user_id (uq_claim_code_user), and
+    // setupLegacyUser() already inserted one; overwrite it with the real generator's
+    // output rather than inserting a second (conflicting) row.
+    const { error: codeErr } = await sb().from('legacy_claim_codes').update({
+      code_hash: claim.hash,
+      code_hint: claim.hint,
+      expires_at: new Date(Date.now() + 86400000).toISOString()
+    }).eq('id', legacy.codeId);
+    if (codeErr) throw codeErr;
+
+    const res = await new Actor().call('/auth/claim', {
+      username: legacy.username,
+      code: claim.token,
+      new_password: 'Strong-New-Password-RealGen-1!'
+    });
+    expect(res.status).toBe(200);
+    expect(res.json.session).toBeDefined();
+  });
+
+  it('CLAIM-13 SUSPENDED ACCOUNT - cannot self-reactivate via claim', async () => {
+    const legacy = await setupLegacyUser('suspended');
+
+    const { error: suspendErr } = await sb().from('user_accounts')
+      .update({ status: 'SUSPENDED' })
+      .eq('user_id', legacy.userId);
+    if (suspendErr) throw suspendErr;
+
+    const res = await new Actor().call('/auth/claim', {
+      username: legacy.username, code: legacy.code, new_password: 'Strong-New-Password-Suspended-1!'
+    });
+    expect(res.status).toBe(401);
+    expect(res.json.error.code).toBe('INVALID_CLAIM');
+
+    // The account must still be suspended: the RPC's guard rejected the whole transaction.
+    const { data: acct } = await sb().from('user_accounts')
+      .select('status').eq('user_id', legacy.userId).single();
+    expect(acct?.status).toBe('SUSPENDED');
+
+    // The claim code must still be unclaimed: steps 1-3 of the RPC rolled back cleanly.
+    const { data: codeRow } = await sb().from('legacy_claim_codes')
+      .select('claimed_at').eq('id', legacy.codeId).single();
+    expect(codeRow?.claimed_at).toBeNull();
   });
 
 });

@@ -1310,7 +1310,10 @@ async function initialize() {
   if (tab) await runCaptureFlow(tab, { showScanning: false });
   // "Open Capture tab when a job is detected" — when off, land on Dashboard
   // instead (Capture's data is still ready in the background per above).
-  showView(capturePreferences.openCaptureOnDetect ? 'capture' : 'dashboard');
+  // Only apply default initial landing if user hasn't already navigated to another tab.
+  if (currentView === 'capture') {
+    showView(capturePreferences.openCaptureOnDetect ? 'capture' : 'dashboard');
+  }
 }
 
 setupTabBar();

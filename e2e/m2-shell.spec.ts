@@ -145,4 +145,87 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
       ),
     );
   });
+
+  async function registerSyntheticUser(page: import('@playwright/test').Page, tag: string) {
+    const run = `${tag}_${Math.random().toString(36).slice(2, 8)}`;
+    const username = `m2_${run}`;
+    const password = `Quiet-harbor-${run}-lantern`;
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Create account' }).click();
+    const reg = page.getByRole('form', { name: 'Register' });
+    await reg.getByLabel('Username (required)').fill(username);
+    await reg.getByLabel('Password (required)').fill(password);
+    await reg.getByRole('button', { name: 'Create account' }).click();
+    await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
+    await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
+    await expect(page.getByTestId('new-application-btn')).toBeVisible();
+  }
+
+  test('Calendar shows a Future Feature page; Workflow stays absent and redirects', async ({ page }) => {
+    await registerSyntheticUser(page, 'nav');
+
+    const nav = page.getByRole('navigation', { name: 'Primary navigation' });
+    await expect(nav.getByRole('button', { name: 'Calendar' })).toBeVisible();
+    await expect(nav.getByRole('button', { name: 'Workflow' })).toHaveCount(0);
+
+    await nav.getByRole('button', { name: 'Calendar' }).click();
+    await expect(page).toHaveURL(/#\/calendar$/);
+    await expect(page).not.toHaveURL(/#\/interviews$/);
+    await expect(page.getByRole('heading', { name: 'Calendar', exact: true, level: 1 })).toBeVisible();
+    await expect(page.getByText(/planned for a future JobQuest release/i)).toBeVisible();
+
+    await page.goto('/workspace/workflow');
+    await expect(page).toHaveURL(/#\/workspace\/settings$/);
+  });
+
+  test('Select controls stay theme-synced across light, dark, and back to light', async ({ page }) => {
+    await registerSyntheticUser(page, 'theme');
+    await page.goto('/contacts');
+
+    const select = page.locator('select').first();
+    await expect(select).toBeVisible();
+
+    const readStyles = () =>
+      select.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        const opt = el.querySelector('option');
+        const optCs = opt ? getComputedStyle(opt) : null;
+        return {
+          scheme: cs.colorScheme,
+          selectBg: cs.backgroundColor,
+          selectFg: cs.color,
+          optionBg: optCs?.backgroundColor ?? null,
+          optionFg: optCs?.color ?? null,
+        };
+      });
+
+    const themeToggle = page.getByRole('radiogroup', { name: 'Theme mode' });
+
+    await themeToggle.getByRole('radio', { name: 'Dark mode' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    const dark = await readStyles();
+    expect(dark.scheme).toBe('dark');
+    // The option popup must resolve to the same themed colors as the closed control,
+    // not the browser's generic dark UA styling (the defect this test guards against).
+    expect(dark.optionBg).toBe(dark.selectBg);
+    expect(dark.optionFg).toBe(dark.selectFg);
+
+    await themeToggle.getByRole('radio', { name: 'Light mode' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    const light = await readStyles();
+    expect(light.scheme).toBe('light');
+    expect(light.optionBg).toBe(light.selectBg);
+    expect(light.optionFg).toBe(light.selectFg);
+    expect(light.selectBg).not.toBe(dark.selectBg);
+    expect(light.selectFg).not.toBe(dark.selectFg);
+
+    await themeToggle.getByRole('radio', { name: 'Dark mode' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    const darkAgain = await readStyles();
+    expect(darkAgain.selectBg).toBe(dark.selectBg);
+    expect(darkAgain.selectFg).toBe(dark.selectFg);
+    expect(darkAgain.optionBg).toBe(dark.optionBg);
+    expect(darkAgain.optionFg).toBe(dark.optionFg);
+  });
 });

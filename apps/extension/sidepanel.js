@@ -1,0 +1,892 @@
+// @ts-check
+// JobQuest Capture — Side Panel (Phase C: persistent shell, Phase D: Capture
+// tab). Dashboard/Analytics are stubs (see design map's explicit scope note).
+// ALL business logic here is reused verbatim from popup.js / api/jobquest.js
+// / sidepanel-logic.js — this file only wires that logic to the Side Panel's
+// DOM and to chrome.tabs active-tab tracking, which popup.js never needed.
+
+import {
+  buildSecureJobQuestUrl,
+  checkDuplicate,
+  clearSettings,
+  createCapture,
+  getCapturePreferences,
+  getSettings,
+  getWorkflow,
+  isConnectionError,
+  mapConnectionError,
+  maskToken,
+  parseSalaryRange,
+  saveCapturePreferences,
+  saveSettings,
+  saveTheme,
+  testConnection,
+} from './api/jobquest.js';
+import {
+  buildCaptureDraft,
+  classifyConnectionScreen,
+  classifyExtraction,
+  computeCaptureCompleteness,
+  describeEnvironment,
+  mapDuplicateLevel,
+  nextRovingIndex,
+  resolveCaptureScreen,
+  saveAsToStageId,
+  shouldRescanForTabChange,
+  stagePipCount,
+} from './sidepanel-logic.js';
+
+const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
+const input = (id) => /** @type {HTMLInputElement} */ (document.getElementById(id));
+const select = (id) => /** @type {HTMLSelectElement} */ (document.getElementById(id));
+const button = (id) => /** @type {HTMLButtonElement} */ (document.getElementById(id));
+
+const panelState = byId('panel-state');
+
+// ---------------------------------------------------------------------------
+// Module state
+// ---------------------------------------------------------------------------
+
+let settings = { instanceUrl: '', apiToken: '', theme: 'system' };
+let capturePreferences = { defaultStage: '', warnOnDuplicates: true, autoDetectJobPages: true, openCaptureOnDetect: true };
+let workspace = null;
+let workflow = { stages: [], default_action: '' };
+let workflowReady = false;
+let connectionOnline = false;
+let lastConnectionError = /** @type {{ state: string, message: string } | null} */ (null);
+
+/** @type {Record<string, any>} */
+let captured = {};
+/** @type {{ level: 'error' | 'strong' | 'none' | 'possible' | 'saved' | 'probable', match: object | null }} */
+let duplicateInfo = { level: 'none', match: null };
+let bypassDuplicate = false;
+let duplicateTimer = 0;
+
+let currentActiveTab = /** @type {{ id?: number, url?: string } | null} */ (null);
+let capturePanelStale = false;
+let createdPath = '';
+
+/** Which top-level view is showing: 'capture' | 'dashboard' | 'analytics' | 'settings' | 'setup' */
+let currentView = 'capture';
+let viewBeforeSettings = 'capture';
+let currentCaptureScreen = 'none';
+let selectedStageId = '';
+
+// ---------------------------------------------------------------------------
+// Small shared helpers
+// ---------------------------------------------------------------------------
+
+function setPanelState(code, message = '') {
+  panelState.textContent = `${code}${message ? `: ${message}` : ''}`;
+}
+
+function applyTheme(theme) {
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  else delete document.documentElement.dataset.theme;
+}
+
+function firstLetter(text) {
+  const trimmed = String(text || '').trim();
+  return trimmed ? trimmed[0].toUpperCase() : '?';
+}
+
+function formatTimestamp(date = new Date()) {
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// ---------------------------------------------------------------------------
+// Header (connection pill, workspace, avatar)
+// ---------------------------------------------------------------------------
+
+function renderHeader() {
+  const pill = byId('conn-pill');
+  const label = byId('conn-label');
+  if (connectionOnline) {
+    pill.dataset.status = 'online';
+    label.textContent = 'Connected';
+  } else if (lastConnectionError) {
+    pill.dataset.status = 'offline';
+    label.textContent = 'Disconnected';
+  } else {
+    pill.dataset.status = 'checking';
+    label.textContent = 'Checking…';
+  }
+  byId('ws-name-text').textContent = workspace?.name || (settings.instanceUrl ? 'JobQuest' : 'Not connected');
+  byId('avatar-circle').textContent = firstLetter(workspace?.name || workspace?.username || 'J');
+}
+
+// ---------------------------------------------------------------------------
+// View / tab switching
+// ---------------------------------------------------------------------------
+
+const VIEW_IDS = { capture: 'view-capture', dashboard: 'view-dashboard', analytics: 'view-analytics', settings: 'view-settings', setup: 'view-setup' };
+const TAB_ORDER = ['capture', 'dashboard', 'analytics'];
+
+function showView(view) {
+  currentView = view;
+  for (const [key, id] of Object.entries(VIEW_IDS)) byId(id).hidden = key !== view;
+
+  const isChromeFree = view === 'settings' || view === 'setup';
+  byId('panel-header').hidden = isChromeFree;
+  byId('back-header').hidden = !isChromeFree;
+  byId('tabbar').hidden = isChromeFree;
+  byId('capture-footer').hidden = view !== 'capture' || !['detected', 'possible', 'partial', 'duplicate', 'saved'].includes(currentCaptureScreen);
+
+  if (TAB_ORDER.includes(view)) {
+    for (const tabName of TAB_ORDER) {
+      const tab = byId(`tab-${tabName}`);
+      const selected = tabName === view;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    }
+  }
+
+  if (view === 'capture' && capturePanelStale) {
+    capturePanelStale = false;
+    if (currentActiveTab) void runCaptureFlow(currentActiveTab, { showScanning: false });
+  }
+  setPanelState('VIEW', view);
+}
+
+function setupTabBar() {
+  for (const tabName of TAB_ORDER) {
+    byId(`tab-${tabName}`).addEventListener('click', () => showView(tabName));
+  }
+  byId('tabbar').addEventListener('keydown', (event) => {
+    const key = /** @type {KeyboardEvent} */ (event).key;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+    event.preventDefault();
+    const currentIndex = TAB_ORDER.indexOf(currentView === 'capture' || currentView === 'dashboard' || currentView === 'analytics' ? currentView : 'capture');
+    const nextIndex = nextRovingIndex(currentIndex, TAB_ORDER.length, /** @type {any} */ (key));
+    const nextTab = TAB_ORDER[nextIndex];
+    byId(`tab-${nextTab}`).focus();
+    showView(nextTab);
+  });
+
+  byId('settings-btn').addEventListener('click', () => {
+    if (currentView !== 'settings' && currentView !== 'setup') viewBeforeSettings = currentView;
+    void openSettings();
+  });
+  byId('back-btn').addEventListener('click', () => showView(viewBeforeSettings));
+}
+
+// ---------------------------------------------------------------------------
+// Capture tab — extraction
+// ---------------------------------------------------------------------------
+
+/** Mirrors popup.js's extractActivePage(), but takes an explicit tab (the
+ * Side Panel tracks the active tab itself rather than querying at save time). */
+async function extractFromTab(tab) {
+  if (!tab?.id) return { jobUrl: tab?.url || '' };
+  try {
+    const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    return result[0]?.result || { jobUrl: tab.url || '' };
+  } catch {
+    return { jobUrl: tab.url || '' };
+  }
+}
+
+function currentCaptureIdentity(locationOverride) {
+  return {
+    company: captured.company || '',
+    jobTitle: captured.jobTitle || '',
+    location: locationOverride ?? captured.location ?? '',
+    jobUrl: captured.jobUrl || '',
+    source: captured.source || '',
+    externalJobId: String(captured.externalJobId || ''),
+  };
+}
+
+async function runDuplicateCheck() {
+  if (bypassDuplicate || !capturePreferences.warnOnDuplicates) {
+    duplicateInfo = { level: 'none', match: null };
+    return;
+  }
+  const identity = currentCaptureIdentity();
+  if (!identity.jobUrl && !identity.company) {
+    duplicateInfo = { level: 'none', match: null };
+    return;
+  }
+  const result = await checkDuplicate(settings.instanceUrl, settings.apiToken, identity);
+  duplicateInfo = mapDuplicateLevel(result);
+}
+
+function scheduleDuplicateCheck(onDone) {
+  bypassDuplicate = false;
+  window.clearTimeout(duplicateTimer);
+  duplicateTimer = window.setTimeout(() => {
+    void runDuplicateCheck().then(() => onDone?.());
+  }, 350);
+}
+
+async function loadWorkflow() {
+  select('pref-default-stage').replaceChildren(new Option("Use JobQuest's default", ''));
+  try {
+    workflow = await getWorkflow(settings.instanceUrl, settings.apiToken);
+    workflowReady = (workflow.stages || []).length > 0;
+    for (const stage of workflow.stages || []) {
+      select('pref-default-stage').append(new Option(stage.label, stage.id));
+    }
+    select('pref-default-stage').value = capturePreferences.defaultStage || '';
+  } catch {
+    workflow = { stages: [], default_action: '' };
+    workflowReady = false;
+  }
+}
+
+/** Runs the full real capture pipeline for a given tab: extraction, duplicate
+ * check, then renders the resolved Capture screen. */
+async function runCaptureFlow(tab, { showScanning = true } = {}) {
+  if (showScanning && currentCaptureScreen !== 'none' && currentCaptureScreen !== 'offline') {
+    byId('scan-indicator').hidden = false;
+  }
+  captured = await extractFromTab(tab);
+  const extractionScreen = classifyExtraction(captured);
+  if (extractionScreen === 'none') {
+    duplicateInfo = { level: 'none', match: null };
+  } else {
+    await runDuplicateCheck();
+  }
+  byId('scan-indicator').hidden = true;
+  renderCapture(resolveCaptureScreen(extractionScreen, duplicateInfo.level));
+}
+
+// ---------------------------------------------------------------------------
+// Capture tab — rendering
+// ---------------------------------------------------------------------------
+
+const CHIP_FIELDS = [
+  { key: 'location', label: (v) => v },
+  { key: 'employmentType', label: (v) => v },
+  { key: 'workArrangement', label: (v) => v },
+];
+
+function renderChips() {
+  const row = byId('job-chips');
+  row.replaceChildren();
+  for (const { key } of CHIP_FIELDS) {
+    const value = captured[key];
+    const chip = document.createElement('span');
+    chip.className = value ? 'chip' : 'chip missing';
+    chip.textContent = value || `Missing ${key === 'workArrangement' ? 'arrangement' : key === 'employmentType' ? 'type' : key}`;
+    row.append(chip);
+  }
+}
+
+function renderCompleteness() {
+  const { percent, present, missing } = computeCaptureCompleteness(captured);
+  byId('completeness-fill').style.width = `${percent}%`;
+  const bar = byId('completeness-bar');
+  bar.setAttribute('aria-valuenow', String(percent));
+  byId('completeness-card').dataset.warning = String(currentCaptureScreen === 'partial');
+  byId('completeness-title').textContent = currentCaptureScreen === 'partial' ? `Some information needs review · ${percent}%` : `Captured data · ${percent}%`;
+  const list = byId('completeness-list');
+  list.replaceChildren();
+  for (const field of present) {
+    const li = document.createElement('li');
+    li.className = 'present';
+    li.textContent = field;
+    list.append(li);
+  }
+  byId('completeness-missing').textContent = missing.length ? `Not found: ${missing.join(', ')}` : '';
+}
+
+function renderPartialFields() {
+  const needsLocation = !captured.location;
+  const needsEmployment = !captured.employmentType;
+  byId('partial-card').hidden = currentCaptureScreen !== 'partial';
+  byId('partial-location-field').hidden = !needsLocation;
+  byId('partial-employment-field').hidden = !needsEmployment;
+  input('partial-location').value = captured.location || '';
+  select('partial-employment').value = captured.employmentType || '';
+}
+
+function matchDescription(match) {
+  const app = match?.application || {};
+  return [app.company_name, app.role_title, app.stage, app.applied_at ? new Date(app.applied_at).toLocaleDateString() : ''].filter(Boolean).join(' · ');
+}
+
+const DUPLICATE_COPY = {
+  strong: { title: 'Strong duplicate: you already track this posting', why: 'Why matched: same job URL and requisition ID.', pill: 'STRONG' },
+  probable: { title: 'Probable duplicate: same company and role', why: 'Why matched: same company and role.', pill: 'PROBABLE' },
+  saved: { title: 'Already in your Saved list', why: 'Why matched: same job URL, already saved.', pill: 'SAVED' },
+  error: { title: "Couldn't check for duplicates", why: "This isn't the same as no duplicate. Retry, or save anyway.", pill: 'ERROR' },
+};
+
+function renderDuplicateCard() {
+  const card = byId('duplicate-card');
+  const level = duplicateInfo.level;
+  const show = ['strong', 'probable', 'saved', 'error'].includes(level);
+  card.hidden = !show;
+  if (!show) return;
+  card.dataset.level = level;
+  const copy = DUPLICATE_COPY[level];
+  byId('dup-title').textContent = copy.title;
+  byId('dup-why').textContent = copy.why;
+  byId('dup-level-pill').textContent = copy.pill;
+  byId('dup-saved-hint').hidden = level !== 'saved';
+  const matchCard = byId('dup-match-card');
+  matchCard.hidden = level === 'error';
+  if (level !== 'error') {
+    byId('dup-match-title').textContent = duplicateInfo.match?.application?.role_title || duplicateInfo.match?.application?.company_name || '';
+    byId('dup-match-meta').textContent = matchDescription(duplicateInfo.match);
+  }
+}
+
+function renderPossibleCard() {
+  const show = currentCaptureScreen === 'possible';
+  byId('possible-card').hidden = !show;
+  if (show) byId('possible-text').textContent = `Why: other roles at ${captured.company || 'this company'}.`;
+}
+
+function renderStageControl() {
+  const stages = workflow.stages || [];
+  const label = byId('stage-btn-label');
+  if (!workflowReady) {
+    label.textContent = 'Stages unavailable';
+    return;
+  }
+  if (!selectedStageId) selectedStageId = capturePreferences.defaultStage || workflow.default_action || stages[0]?.id || '';
+  const stage = stages.find((item) => item.id === selectedStageId);
+  label.textContent = stage?.label || 'Select stage';
+  const pipsEl = byId('stage-pips');
+  pipsEl.replaceChildren();
+  const filled = stagePipCount(selectedStageId, workflow);
+  for (let i = 0; i < 8; i += 1) {
+    const pip = document.createElement('span');
+    pip.className = i < filled ? 'pip filled' : 'pip';
+    pipsEl.append(pip);
+  }
+}
+
+function populateStageListbox() {
+  const listbox = byId('stage-listbox');
+  listbox.replaceChildren();
+  for (const stage of workflow.stages || []) {
+    const option = document.createElement('li');
+    option.setAttribute('role', 'option');
+    option.tabIndex = -1;
+    option.textContent = stage.label;
+    option.dataset.stageId = stage.id;
+    option.setAttribute('aria-selected', String(stage.id === selectedStageId));
+    listbox.append(option);
+  }
+}
+
+function closeStageListbox() {
+  byId('stage-listbox').hidden = true;
+  byId('stage-btn').setAttribute('aria-expanded', 'false');
+}
+
+function openStageListbox() {
+  populateStageListbox();
+  byId('stage-listbox').hidden = false;
+  byId('stage-btn').setAttribute('aria-expanded', 'true');
+  const options = /** @type {HTMLElement[]} */ (Array.from(byId('stage-listbox').querySelectorAll('[role="option"]')));
+  const selectedOption = options.find((el) => el.dataset.stageId === selectedStageId);
+  (selectedOption || options[0])?.focus();
+}
+
+function renderFooter() {
+  const primary = button('footer-primary');
+  const secondary = button('footer-secondary');
+  secondary.hidden = true;
+  secondary.classList.remove('outline');
+
+  if (currentCaptureScreen === 'saved') {
+    primary.textContent = 'View Application';
+    primary.disabled = false;
+    primary.onclick = () => {
+      if (createdPath) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, createdPath) });
+    };
+    return;
+  }
+
+  if (currentCaptureScreen === 'duplicate') {
+    const level = duplicateInfo.level;
+    if (level === 'saved') {
+      primary.textContent = 'Open in JobQuest';
+      primary.disabled = false;
+      primary.onclick = () => openDuplicateMatch();
+      return;
+    }
+    primary.textContent = 'View Existing Application';
+    primary.disabled = false;
+    primary.onclick = () => openDuplicateMatch();
+    secondary.hidden = false;
+    secondary.classList.add('outline');
+    secondary.textContent = 'Save as New Application Anyway';
+    secondary.onclick = () => { bypassDuplicate = true; void save(); };
+    return;
+  }
+
+  // detected / possible / partial
+  primary.textContent = 'Save to JobQuest';
+  primary.disabled = !workflowReady;
+  primary.onclick = () => void save();
+}
+
+function openDuplicateMatch() {
+  const path = duplicateInfo.match?.deep_link_path;
+  if (path) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, path) });
+}
+
+function renderCapture(screen) {
+  currentCaptureScreen = screen;
+  byId('capture-offline').hidden = screen !== 'offline';
+  byId('capture-none').hidden = screen !== 'none';
+  byId('capture-main').hidden = screen === 'offline' || screen === 'none';
+
+  if (screen === 'none') {
+    byId('none-page-url').textContent = currentActiveTab?.url || '';
+  }
+
+  if (screen !== 'offline' && screen !== 'none') {
+    byId('job-avatar').textContent = firstLetter(captured.company);
+    byId('job-title').textContent = captured.jobTitle || 'Untitled role';
+    byId('job-company').textContent = captured.company || 'Unknown company';
+    renderChips();
+    byId('job-source-name').textContent = captured.source || 'this page';
+    byId('job-source-url').textContent = captured.jobUrl || '';
+    renderCompleteness();
+    renderPartialFields();
+    renderPossibleCard();
+    renderDuplicateCard();
+    byId('saved-card').hidden = screen !== 'saved';
+    byId('saveas-card').hidden = screen === 'duplicate' && duplicateInfo.level === 'saved';
+    renderStageControl();
+  }
+
+  byId('capture-footer').hidden = !['detected', 'possible', 'partial', 'duplicate', 'saved'].includes(screen);
+  if (!byId('capture-footer').hidden) renderFooter();
+  setPanelState('CAPTURE', screen);
+}
+
+// ---------------------------------------------------------------------------
+// Save
+// ---------------------------------------------------------------------------
+
+async function save() {
+  if (!workflowReady) return;
+  const primary = button('footer-primary');
+  primary.disabled = true;
+  const originalLabel = primary.textContent;
+  primary.textContent = 'Saving…';
+  try {
+    const salary = parseSalaryRange(captured.salaryRange, captured.salaryMin, captured.salaryMax);
+    const saveAs = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="save-as"]:checked'))?.value;
+    const stageId = selectedStageId || saveAsToStageId(saveAs === 'applied' ? 'applied' : 'later', workflow);
+    const draft = buildCaptureDraft({
+      captured,
+      company: captured.company || '',
+      jobTitle: captured.jobTitle || '',
+      stageId,
+      jobUrl: captured.jobUrl || input('none-paste-url')?.value?.trim(),
+      source: captured.source || '',
+      location: input('partial-location')?.value?.trim() || captured.location || '',
+      workArrangement: captured.workArrangement || '',
+      employmentType: select('partial-employment')?.value || captured.employmentType || '',
+      salary,
+      notes: '',
+      appliedAtDate: new Date().toISOString().slice(0, 10),
+      duplicateOverride: bypassDuplicate,
+      resumeId: null,
+      resumeLabel: null,
+    });
+    const result = await createCapture(settings.instanceUrl, settings.apiToken, draft);
+    createdPath = result.deep_link_path;
+    byId('saved-meta').textContent = `Stage: ${workflow.stages?.find((s) => s.id === stageId)?.label || stageId} · ${formatTimestamp()}`;
+    renderCapture('saved');
+    showToast('Saved to JobQuest');
+  } catch (error) {
+    const banner = byId('capture-banner');
+    banner.hidden = false;
+    banner.className = `banner ${isConnectionError(error) ? 'error' : 'warning'}`;
+    banner.textContent = error instanceof Error ? error.message : 'Could not save this application.';
+  } finally {
+    primary.disabled = !workflowReady;
+    if (primary.textContent === 'Saving…') primary.textContent = originalLabel;
+  }
+}
+
+let toastTimer = 0;
+function showToast(message) {
+  const toast = byId('toast');
+  toast.textContent = `✓ ${message}`;
+  toast.hidden = false;
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => { toast.hidden = true; }, 5500);
+}
+
+// ---------------------------------------------------------------------------
+// Stage listbox + save-as wiring
+// ---------------------------------------------------------------------------
+
+function setupStageControl() {
+  const btn = byId('stage-btn');
+  const listbox = byId('stage-listbox');
+  btn.addEventListener('click', () => {
+    if (listbox.hidden) openStageListbox(); else closeStageListbox();
+  });
+  listbox.addEventListener('keydown', (event) => {
+    const key = /** @type {KeyboardEvent} */ (event).key;
+    if (key === 'Escape') { closeStageListbox(); btn.focus(); return; }
+    const options = /** @type {HTMLElement[]} */ (Array.from(listbox.querySelectorAll('[role="option"]')));
+    const currentIndex = options.findIndex((el) => el === document.activeElement);
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key)) {
+      event.preventDefault();
+      const nextIndex = nextRovingIndex(Math.max(currentIndex, 0), options.length, /** @type {any} */ (key));
+      options[nextIndex]?.focus();
+    } else if (key === 'Enter' || key === ' ') {
+      event.preventDefault();
+      /** @type {HTMLElement} */ (document.activeElement)?.click();
+    }
+  });
+  listbox.addEventListener('click', (event) => {
+    const option = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (event.target).closest('[role="option"]'));
+    if (!option) return;
+    selectedStageId = option.dataset.stageId || '';
+    for (const radio of Array.from(document.querySelectorAll('input[name="save-as"]'))) /** @type {HTMLInputElement} */ (radio).checked = false;
+    renderStageControl();
+    closeStageListbox();
+    btn.focus();
+    renderFooter();
+  });
+  document.addEventListener('click', (event) => {
+    if (!listbox.hidden && !listbox.contains(/** @type {Node} */ (event.target)) && event.target !== btn) closeStageListbox();
+  });
+
+  for (const id of ['save-as-later', 'save-as-applied']) {
+    input(id).addEventListener('change', () => {
+      const saveAs = input('save-as-applied').checked ? 'applied' : 'later';
+      selectedStageId = saveAsToStageId(saveAs, workflow);
+      renderStageControl();
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Partial-field inline inputs → re-run duplicate check + completeness
+// ---------------------------------------------------------------------------
+
+function setupPartialInputs() {
+  input('partial-location').addEventListener('input', () => {
+    captured.location = input('partial-location').value;
+    renderChips();
+    renderCompleteness();
+    scheduleDuplicateCheck(() => renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level)));
+  });
+  select('partial-employment').addEventListener('change', () => {
+    captured.employmentType = select('partial-employment').value;
+    renderChips();
+    renderCompleteness();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// None / offline state actions
+// ---------------------------------------------------------------------------
+
+function setupCaptureFallbackActions() {
+  button('none-retry').addEventListener('click', () => { if (currentActiveTab) void runCaptureFlow(currentActiveTab); });
+  button('none-capture-btn').addEventListener('click', () => {
+    const url = input('none-paste-url').value.trim();
+    if (url) captured = { ...captured, jobUrl: url, source: captured.source || 'Manual entry' };
+    renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level));
+  });
+  button('offline-retry').addEventListener('click', () => void initialize());
+  button('offline-open-settings').addEventListener('click', () => { viewBeforeSettings = 'capture'; void openSettings(); });
+}
+
+// ---------------------------------------------------------------------------
+// Active-tab tracking (the core new Side Panel behavior)
+// ---------------------------------------------------------------------------
+
+function isCaptureScreenVisible() {
+  return currentView === 'capture';
+}
+
+async function handleTabChange(tab) {
+  if (!tab || !connectionOnline) { currentActiveTab = tab || currentActiveTab; return; }
+  if (!shouldRescanForTabChange(currentActiveTab, tab)) { currentActiveTab = tab; return; }
+  currentActiveTab = tab;
+  if (!capturePreferences.autoDetectJobPages) return;
+  if (isCaptureScreenVisible()) {
+    await runCaptureFlow(tab);
+  } else {
+    capturePanelStale = true;
+  }
+}
+
+function registerTabListeners() {
+  chrome.tabs.onActivated.addListener(({ tabId }) => {
+    chrome.tabs.get(tabId).then((tab) => void handleTabChange(tab)).catch(() => {});
+  });
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (!tab.active) return;
+    if (changeInfo.status !== 'complete' && !changeInfo.url) return;
+    void handleTabChange(tab);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Settings screen
+// ---------------------------------------------------------------------------
+
+function settingsStatus(message, kind = '') {
+  const box = byId('settings-status');
+  box.textContent = message;
+  box.className = `banner ${kind}`.trim();
+  box.hidden = !message;
+}
+
+function settingsEffectiveToken() {
+  const typed = input('settings-token').value.trim();
+  return typed || settings.apiToken || '';
+}
+
+function renderSettingsConnection() {
+  input('settings-instance-url').value = settings.instanceUrl;
+  input('settings-token').value = '';
+  input('settings-token').placeholder = settings.apiToken ? `${maskToken(settings.apiToken)} — paste a new token to replace it` : 'Paste your jqx_dev_ or jqx_live_ token';
+  byId('settings-token-hint').textContent = settings.apiToken ? 'A token is stored on this browser.' : 'No token stored yet.';
+  byId('settings-environment').textContent = describeEnvironment(settings.instanceUrl);
+  const dot = byId('settings-conn-dot');
+  dot.style.background = connectionOnline ? 'var(--ok)' : 'var(--er)';
+  byId('settings-conn-text').textContent = connectionOnline ? 'Connected to JobQuest' : (lastConnectionError?.message || 'Not connected');
+  byId('settings-account-text').textContent = workspace ? `Signed in as @${workspace.username || workspace.name || 'you'}` : 'Not connected.';
+  byId('settings-version').textContent = chrome.runtime.getManifest().version;
+  byId('settings-api-dot').style.background = connectionOnline ? 'var(--ok)' : 'var(--er)';
+  byId('settings-api-status').textContent = connectionOnline ? 'API reachable' : (lastConnectionError?.message || 'Unknown');
+}
+
+function renderCapturePreferencesUI() {
+  input('pref-warn-duplicates').checked = capturePreferences.warnOnDuplicates;
+  input('pref-auto-detect').checked = capturePreferences.autoDetectJobPages;
+  input('pref-open-capture').checked = capturePreferences.openCaptureOnDetect;
+  select('pref-default-stage').value = capturePreferences.defaultStage || '';
+}
+
+async function openSettings() {
+  renderSettingsConnection();
+  renderCapturePreferencesUI();
+  select('settings-theme').value = settings.theme;
+  showView('settings');
+}
+
+function setupSettingsScreen() {
+  button('settings-save-btn').addEventListener('click', async () => {
+    settingsStatus('Saving…');
+    try {
+      const saved = await saveSettings({ instanceUrl: input('settings-instance-url').value, apiToken: settingsEffectiveToken(), theme: settings.theme });
+      settings = saved;
+      settingsStatus('Saved. Testing connection…');
+      const me = await testConnection(saved.instanceUrl, saved.apiToken);
+      workspace = me.workspace;
+      connectionOnline = true;
+      lastConnectionError = null;
+      settingsStatus('Saved. Connected — JobQuest accepted this token.', 'success');
+      renderSettingsConnection();
+      renderHeader();
+      await loadWorkflow();
+    } catch (error) {
+      const mapped = mapConnectionError(error);
+      settingsStatus(mapped.state === 'INVALID_INPUT' ? mapped.message : `Saved, but the connection test failed: ${mapped.message}`, 'error');
+      lastConnectionError = mapped;
+      connectionOnline = false;
+      renderHeader();
+    }
+  });
+
+  button('settings-test-btn').addEventListener('click', async () => {
+    settingsStatus('Testing connection…');
+    try {
+      const token = settingsEffectiveToken();
+      if (!token) throw new Error('Enter a token to test, or save one first.');
+      await testConnection(input('settings-instance-url').value, token);
+      settingsStatus('Connection successful.', 'success');
+    } catch (error) {
+      settingsStatus(mapConnectionError(error).message, 'error');
+    }
+  });
+
+  button('settings-open-jobquest').addEventListener('click', () => {
+    if (settings.instanceUrl) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, '/') });
+  });
+
+  select('settings-theme').addEventListener('change', () => {
+    void saveTheme(select('settings-theme').value).then((theme) => { settings.theme = theme; applyTheme(theme); });
+  });
+
+  for (const id of ['pref-warn-duplicates', 'pref-auto-detect', 'pref-open-capture']) {
+    byId(id).addEventListener('change', () => void persistCapturePreferences());
+  }
+  select('pref-default-stage').addEventListener('change', () => void persistCapturePreferences());
+
+  button('settings-diagnostics-btn').addEventListener('click', async () => {
+    byId('settings-diagnostics-result').textContent = 'Running diagnostics…';
+    try {
+      await testConnection(settings.instanceUrl, settings.apiToken);
+      connectionOnline = true;
+      lastConnectionError = null;
+      byId('settings-diagnostics-result').textContent = 'Diagnostics passed — JobQuest is reachable.';
+    } catch (error) {
+      connectionOnline = false;
+      lastConnectionError = mapConnectionError(error);
+      byId('settings-diagnostics-result').textContent = `Diagnostics failed: ${lastConnectionError.message}`;
+    }
+    renderSettingsConnection();
+    renderHeader();
+  });
+
+  button('settings-disconnect-btn').addEventListener('click', async () => {
+    if (!window.confirm('Disconnect this browser from JobQuest? You will need to reconnect with a token to capture again.')) return;
+    await clearSettings();
+    settings = { instanceUrl: '', apiToken: '', theme: settings.theme };
+    workspace = null;
+    connectionOnline = false;
+    lastConnectionError = null;
+    renderHeader();
+    showView('setup');
+    renderSetup();
+  });
+}
+
+async function persistCapturePreferences() {
+  capturePreferences = await saveCapturePreferences({
+    defaultStage: select('pref-default-stage').value,
+    warnOnDuplicates: input('pref-warn-duplicates').checked,
+    autoDetectJobPages: input('pref-auto-detect').checked,
+    openCaptureOnDetect: input('pref-open-capture').checked,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Setup (first-run) screen
+// ---------------------------------------------------------------------------
+
+function setupStatus(message, kind = '') {
+  const box = byId('setup-status');
+  box.textContent = message;
+  box.className = `banner ${kind}`.trim();
+  box.hidden = !message;
+}
+
+function renderSetup() {
+  input('setup-instance-url').value = settings.instanceUrl;
+  select('setup-environment').value = describeEnvironment(settings.instanceUrl) === 'Production' ? 'production' : 'preview';
+  button('setup-save-btn').disabled = true;
+  setupStatus('');
+}
+
+function setupSetupScreen() {
+  const evaluate = () => {
+    const hasUrl = input('setup-instance-url').value.trim().length > 0;
+    const hasToken = input('setup-token').value.trim().length > 0;
+    button('setup-save-btn').disabled = !(hasUrl && hasToken);
+  };
+  input('setup-instance-url').addEventListener('input', evaluate);
+  input('setup-token').addEventListener('input', evaluate);
+
+  button('setup-save-btn').addEventListener('click', async () => {
+    setupStatus('Connecting…', 'info');
+    try {
+      const saved = await saveSettings({ instanceUrl: input('setup-instance-url').value, apiToken: input('setup-token').value, theme: settings.theme });
+      settings = saved;
+      const me = await testConnection(saved.instanceUrl, saved.apiToken);
+      workspace = me.workspace;
+      connectionOnline = true;
+      lastConnectionError = null;
+      setupStatus('Connected.', 'success');
+      await loadWorkflow();
+      renderHeader();
+      showView('capture');
+      const tab = await refreshActiveTabRef();
+      currentActiveTab = tab;
+      if (tab) await runCaptureFlow(tab, { showScanning: false });
+    } catch (error) {
+      const mapped = mapConnectionError(error);
+      setupStatus(mapped.message, mapped.state === 'INVALID_INPUT' ? 'error' : 'warning');
+    }
+  });
+
+  button('setup-test-btn').addEventListener('click', async () => {
+    setupStatus('Testing connection…', 'info');
+    try {
+      const token = input('setup-token').value.trim();
+      if (!token) throw new Error('Enter a token to test.');
+      await testConnection(input('setup-instance-url').value, token);
+      setupStatus('Connection successful.', 'success');
+    } catch (error) {
+      setupStatus(mapConnectionError(error).message, 'error');
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Bootstrap
+// ---------------------------------------------------------------------------
+
+async function refreshActiveTabRef() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
+async function initialize() {
+  setPanelState('LOADING');
+  settings = await getSettings();
+  capturePreferences = await getCapturePreferences();
+  applyTheme(settings.theme);
+
+  const configured = Boolean(settings.instanceUrl && settings.apiToken);
+  if (!configured) {
+    renderHeader();
+    renderSetup();
+    showView('setup');
+    return;
+  }
+
+  try {
+    const me = await testConnection(settings.instanceUrl, settings.apiToken);
+    workspace = me.workspace;
+    connectionOnline = true;
+    lastConnectionError = null;
+  } catch (error) {
+    connectionOnline = false;
+    lastConnectionError = mapConnectionError(error);
+    renderHeader();
+    const screen = classifyConnectionScreen({ configured, connectionError: lastConnectionError });
+    if (screen === 'setup') {
+      renderSetup();
+      showView('setup');
+    } else {
+      showView('capture');
+      renderCapture('offline');
+    }
+    return;
+  }
+
+  renderHeader();
+  await loadWorkflow();
+  // Fetch Capture's real state up front regardless of which tab shows first,
+  // so it's never stale when the user does switch to it (see the design
+  // map's "Interaction rules" note on not showing stale Job A data for Job B).
+  const tab = await refreshActiveTabRef();
+  currentActiveTab = tab;
+  if (tab) await runCaptureFlow(tab, { showScanning: false });
+  // "Open Capture tab when a job is detected" — when off, land on Dashboard
+  // instead (Capture's data is still ready in the background per above).
+  showView(capturePreferences.openCaptureOnDetect ? 'capture' : 'dashboard');
+  registerTabListeners();
+}
+
+setupTabBar();
+setupStageControl();
+setupPartialInputs();
+setupCaptureFallbackActions();
+setupSettingsScreen();
+setupSetupScreen();
+
+void initialize().catch((error) => {
+  setPanelState('ERROR', error instanceof Error ? error.message : 'Initialization error');
+});

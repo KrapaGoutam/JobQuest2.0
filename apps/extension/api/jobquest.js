@@ -94,6 +94,44 @@ export async function clearSettings() {
   await chrome.storage.local.remove(['instanceUrl', 'apiToken', 'pendingCapture']);
 }
 
+/** @typedef {{ defaultStage: string, warnOnDuplicates: boolean, autoDetectJobPages: boolean, openCaptureOnDetect: boolean }} CapturePreferences */
+
+/** @type {CapturePreferences} */
+const CAPTURE_PREFERENCES_DEFAULTS = {
+  defaultStage: '',
+  warnOnDuplicates: true,
+  autoDetectJobPages: true,
+  openCaptureOnDetect: true,
+};
+
+/** Side Panel-only preferences (Settings → Capture Preferences). Stored
+ *  separately from connection settings so Disconnect (clearSettings) does
+ *  not wipe a user's chosen defaults.
+ *  @returns {Promise<CapturePreferences>} */
+export async function getCapturePreferences() {
+  const stored = await chrome.storage.local.get(['capturePreferences']);
+  const saved = /** @type {Record<string, unknown>} */ (stored.capturePreferences && typeof stored.capturePreferences === 'object' ? stored.capturePreferences : {});
+  return {
+    defaultStage: typeof saved.defaultStage === 'string' ? saved.defaultStage : CAPTURE_PREFERENCES_DEFAULTS.defaultStage,
+    warnOnDuplicates: typeof saved.warnOnDuplicates === 'boolean' ? saved.warnOnDuplicates : CAPTURE_PREFERENCES_DEFAULTS.warnOnDuplicates,
+    autoDetectJobPages: typeof saved.autoDetectJobPages === 'boolean' ? saved.autoDetectJobPages : CAPTURE_PREFERENCES_DEFAULTS.autoDetectJobPages,
+    openCaptureOnDetect: typeof saved.openCaptureOnDetect === 'boolean' ? saved.openCaptureOnDetect : CAPTURE_PREFERENCES_DEFAULTS.openCaptureOnDetect,
+  };
+}
+
+/** @param {Partial<CapturePreferences>} prefs
+ *  @returns {Promise<CapturePreferences>} */
+export async function saveCapturePreferences(prefs) {
+  const next = {
+    defaultStage: typeof prefs.defaultStage === 'string' ? prefs.defaultStage : '',
+    warnOnDuplicates: typeof prefs.warnOnDuplicates === 'boolean' ? prefs.warnOnDuplicates : true,
+    autoDetectJobPages: typeof prefs.autoDetectJobPages === 'boolean' ? prefs.autoDetectJobPages : false,
+    openCaptureOnDetect: typeof prefs.openCaptureOnDetect === 'boolean' ? prefs.openCaptureOnDetect : false,
+  };
+  await chrome.storage.local.set({ capturePreferences: next });
+  return next;
+}
+
 export class JobQuestApiError extends Error {
   constructor(message, status, code = 'REQUEST_FAILED') {
     super(message);
@@ -150,6 +188,7 @@ async function request(instanceUrl, apiToken, path, init = {}) {
 
 export const testConnection = (instanceUrl, apiToken) => request(instanceUrl, apiToken, '/me');
 export const getWorkflow = (instanceUrl, apiToken) => request(instanceUrl, apiToken, '/workflow');
+export const getStats = (instanceUrl, apiToken) => request(instanceUrl, apiToken, '/stats');
 export async function getActiveResumes(instanceUrl, apiToken) {
   const payload = await request(instanceUrl, apiToken, '/documents?kind=resume');
   return payload.documents || [];

@@ -609,6 +609,7 @@ function AppContent() {
           onDismissCodes={() => setCodes(null)}
           onRefreshSession={refresh}
           onLogout={onLogout}
+          initialTab={currentPath === '/settings/extension' ? 'extension' : 'account'}
         />
       );
     }

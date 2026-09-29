@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Card, CardHeader, CardTitle, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -24,6 +24,7 @@ export interface SettingsViewProps {
   onDismissCodes: () => void;
   onRefreshSession: () => Promise<unknown>;
   onLogout: (scope: 'local' | 'global') => Promise<void>;
+  initialTab?: 'account' | 'extension' | 'diagnostics';
 }
 
 export function SettingsView({
@@ -43,8 +44,11 @@ export function SettingsView({
   onDismissCodes,
   onRefreshSession,
   onLogout,
+  initialTab,
 }: SettingsViewProps) {
-  const [tab, setTab] = useState<'account' | 'extension' | 'diagnostics'>('account');
+  const [tab, setTab] = useState<'account' | 'extension' | 'diagnostics'>(initialTab ?? 'account');
+
+  useEffect(() => setTab(initialTab ?? 'account'), [initialTab]);
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>

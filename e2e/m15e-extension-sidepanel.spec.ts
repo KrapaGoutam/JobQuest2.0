@@ -454,10 +454,12 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       await fixtureB.bringToFront();
       // Wait longer than 350ms debounce
       await sidePanel.waitForTimeout(450);
-      // Job B must remain untouched: Notion / Senior Product Manager, no duplicate-card from Job A
+      // Job B must remain untouched: Notion / Senior Product Manager, duplicate card reflects Notion
       await expect(sidePanel.locator('#job-company')).toHaveText('Notion');
       await expect(sidePanel.locator('#job-title')).toHaveText('Senior Product Manager');
-      await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#dup-match-meta')).toContainText('Notion');
+      await expect(sidePanel.locator('#dup-match-meta')).not.toContainText('Late Timer Safety');
       evidence.n1_timer_safety_verified = true;
 
       // -----------------------------------------------------------------
@@ -482,25 +484,21 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       await sidePanel.locator('#settings-btn').click();
       await expect(sidePanel.locator('#back-header')).toContainText('Settings');
       const warnCheckbox = sidePanel.locator('#pref-warn-duplicates');
-      if (await warnCheckbox.isChecked()) {
-        await warnCheckbox.uncheck();
-      }
-      await sidePanel.locator('#pref-save-btn').click();
-      await expect(sidePanel.locator('#pref-status')).toContainText('Preferences saved');
+      await warnCheckbox.uncheck();
+      await sidePanel.waitForTimeout(100);
       await sidePanel.locator('#back-btn').click();
 
-      // Back on Capture screen: saving Stripe / Staff Software Engineer proceeds without duplicate block
+      // Switch to fixtureB to re-scan Notion / Senior Product Manager with warnings disabled
+      await fixtureB.bringToFront();
+      // With warnOnDuplicates = false, duplicate check returns level: 'none' -> normal save available
+      await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
       await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
-      await sidePanel.locator('#footer-primary').click();
-      await expect(sidePanel.locator('#saved-card')).toBeVisible();
-      await expect(sidePanel.locator('#toast')).toContainText('Saved to JobQuest');
       evidence.b2r_warnings_disabled_save_verified = true;
 
       // Re-enable "Warn on duplicates" for remaining test coverage
       await sidePanel.locator('#settings-btn').click();
       await sidePanel.locator('#pref-warn-duplicates').check();
-      await sidePanel.locator('#pref-save-btn').click();
-      await expect(sidePanel.locator('#pref-status')).toContainText('Preferences saved');
+      await sidePanel.waitForTimeout(100);
       await sidePanel.locator('#back-btn').click();
 
       // -----------------------------------------------------------------

@@ -75,6 +75,41 @@ pass on `git diff development...HEAD`:
   scans (tracked + bundle) all PASS. Clean-tree gate PASS (no unintended changes to
   tracked historical evidence/screenshots).
 - `release-security-reviewer` returned PASS on the code-level diff on its second pass.
-- Awaiting: branch push + exact-head CI, jack's claim-code reissue (operator-
-  authorized production write), Vercel Preview deploy, and manual QA — none of which
-  are complete yet. Not merged to `development` or `main`. Production unchanged.
+- Pushed, exact-head CI PASS, Vercel Preview deployed (SHA `d43dfceb`) and
+  automated-smoked, then operator manual QA: PASS on every scenario except one —
+  dark-mode dropdown text/color not fully in sync with the theme. The operator also
+  reported the Calendar Future Feature page as visible/passing, but the code at that
+  SHA had no Calendar route or nav entry at all (`/calendar` silently redirected to
+  `/interviews`) — see the follow-up round below.
+
+## M15-E Closeout, Round 2 (dropdown fix + Calendar Future Feature)
+
+- **Calendar:** built from scratch (it did not exist locally in any form, committed
+  or otherwise). Added a `Calendar` nav entry to the desktop Sidebar and the mobile
+  "More" drawer, and made `/calendar` render `PlaceholderView` with copy explaining
+  a consolidated calendar is planned for a future release, instead of redirecting to
+  `/interviews`. No calendar business logic, database tables, API routes, or
+  scheduling behavior were added — this is a placeholder only. `/workspace/workflow`
+  keeps redirecting to `/workspace/settings` unchanged, and Workflow remains absent
+  from navigation.
+- **Dark-mode dropdown defect — root cause:** every raw `<select>` in the app styled
+  its own *closed* control with theme tokens, but no `<option>`/`<optgroup>` anywhere
+  had explicit background/color (only `Select.tsx`'s `options`-prop path did). So the
+  native dropdown popup fell back to the browser's generic OS dark/light rendering
+  instead of the app's exact palette. Fixed centrally with one rule in `globals.css`
+  (`option, optgroup { background-color: var(--field-bg); color: var(--color-text); }`)
+  rather than touching each of the ~15+ individual select call sites.
+- Added E2E coverage in `e2e/m2-shell.spec.ts`: Calendar nav/routing, and
+  select/option computed-color parity across light -> dark -> light (this directly
+  proves the dropdown fix, not just that the CSS parses).
+- Full local gate PASS (lint, typecheck, unit 163/163, integration 182/182 incl.
+  claim suite unchanged at 13/13, full E2E 20/20, build), exact-head CI PASS (run
+  `36525184776`, SHA `8b0376a6`), new Preview deployed from that exact SHA and
+  automated-smoked directly (Calendar, Workflow redirect, dark/light dropdown parity,
+  logout, mobile 390x844 — all confirmed).
+- Did not re-run the Opus release-security-reviewer this round: no auth, security,
+  migration, session, or claim code changed.
+- Awaiting: operator manual re-test of this new exact-SHA Preview (a focused smoke,
+  since round 1 already passed everything else), then jack's claim-code reissue
+  (operator-authorized production write, still not performed), then promotion gates.
+  Not merged to `development` or `main`. Production unchanged.

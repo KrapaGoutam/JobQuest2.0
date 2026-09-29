@@ -241,7 +241,8 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
       await popup.goto(`${extensionOrigin}/popup.html`);
       await expect(popup.locator('body')).toHaveAttribute('data-state', 'X5');
       await expect(popup.locator('html')).toHaveAttribute('data-theme', 'dark');
-      await expect(popup.locator('#input-stage option')).not.toHaveCount(0);
+      await expect(popup.locator('#input-stage')).not.toContainText('Loading canonical stages');
+      await expect(popup.locator('#input-stage option:not([value=""])')).not.toHaveCount(0);
       await expect(popup.locator('#input-company')).toHaveValue(expectedCompany);
       await expect(popup.locator('#input-title')).toHaveValue('Staff Software Engineer');
       evidence.popup_ready_ms = Date.now() - readyStarted;

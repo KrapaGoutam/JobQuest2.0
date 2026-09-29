@@ -2,21 +2,58 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: Site Remediation Closeout — second Preview round, awaiting operator manual re-test**
-**Gate Status: Local quality gate PASS, exact-head CI PASS, new exact-SHA Preview deployed and automated-smoked. Manual Preview QA: CONDITIONAL PASS -> pending final dropdown/Calendar re-test. NOT merged. Production UNCHANGED.**
+**Phase M15-E: TWO active fix branches — site remediation (awaiting operator manual re-test) and extension remediation (Phase A/B done, Phase C blocked on `/design-login`)**
+**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, awaiting operator re-test. Extension branch — Phase A/B local quality gate PASS, exact-head CI running, blocked before Phase C. NOT merged. Production UNCHANGED.**
 
-## Phase Status Summary
-- **Milestone:** M15
-- **Phase:** M15-E
-- **Current Branch:** `fix/m15e-site-functional-remediation`
-- **Branch HEAD:** `8b0376a6` (pushed; matches `origin/fix/m15e-site-functional-remediation`)
+## Branch: fix/m15e-site-functional-remediation (site remediation)
+- **Branch HEAD:** `0a534b45` (pushed; matches origin)
 - **Exact-head CI:** PASS (both `static` and `database` jobs, triggered via `workflow_dispatch` since this repo's CI only auto-triggers on `feature/**`/`development`/`main`, not `fix/**`)
-- **Vercel Preview (current):** `https://jobquest2-51ktgo1ku-one-piece-5779.vercel.app`, deployment `dpl_E7CvzzPZgYbEsTVBDZyK4ZHuRLuQ`, exact SHA `8b0376a6a0aeee9f9f75a983f463335927cc34b8`, `target: null` (Preview, not production). Backend confirmed preview/development-scoped (env var names/targets only checked, no values read).
+- **Vercel Preview (current):** `https://jobquest2-51ktgo1ku-one-piece-5779.vercel.app`, deployment `dpl_E7CvzzPZgYbEsTVBDZyK4ZHuRLuQ`, exact SHA `8b0376a6a0aeee9f9f75a983f463335927cc34b8` (parent of the docs-only `0a534b45` HEAD — the app code deployed and tested is unchanged by that docs commit), `target: null` (Preview, not production). Backend confirmed preview/development-scoped (env var names/targets only checked, no values read).
+- **Cutover Status:** PAUSED. Awaiting operator manual re-test of this exact-SHA
+  Preview (focused on Calendar + dropdown, since everything else already passed a
+  prior manual QA round), then jack's claim-code reissue, then promotion gates.
+
+## Branch: fix/m15e-extension-connection-ui (extension remediation — NEW this session)
+- **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
+- **Branch HEAD:** `20943423` (pushed; matches origin)
+- **Phase A (audit):** DONE, read-only.
+- **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, full
+  raw token re-displayed on every Settings reopen, and inconsistent
+  Save-vs-Test whitespace handling. Also fixed a real WCAG AA contrast failure
+  in the dark-theme primary button, found by the same test's real axe-core scan.
+  Full detail in `migration-upgrade/m15-extension/EXTENSION_CONNECTION_AUDIT.md`
+  and `EXTENSION_CLOSEOUT_REPORT.md`.
+- **Phase C (Claude Design import): BLOCKED.** No `claude_design` MCP connected
+  in this session — exhaustively checked. **Operator must run `/design-login`**
+  to reconnect it before Phase C (design import) and everything downstream
+  (Phase D Side Panel, E Dashboard/Analytics, and their QA/release review) can
+  proceed. This is a hard stop per explicit task instruction: do not infer or
+  reconstruct the design from memory or from the earlier textual description.
+- **Local quality gate (Phase A/B scope):** lint PASS, typecheck PASS, unit
+  163/163 PASS, integration 182/182 PASS (unaffected — no `apps/api/**` touched),
+  extension unit 30/30 PASS, full E2E 20/20 PASS, build PASS, extension package
+  built (`apps/extension/dist/jobquest-capture-dev/`), secret scans PASS
+  (tracked 912/0, web bundle 3/0, extension bundle 40/0).
+- **Exact-head CI:** PASS — run `36561875844`, SHA `20943423`, triggered via
+  `workflow_dispatch`, both `static` and `database` jobs `completed/success`.
+- **Release security review:** NOT invoked. Per instruction, invoked only after
+  the full implementation (through Phase E) passes Preview/dev QA — blocked on
+  Phase C, so implementation is not yet complete.
+- Note: during this branch's full-E2E run, `e2e/m2-shell.spec.ts`'s theme-sync
+  test failed reproducibly. Diagnosed (via `test-debugger`, independently
+  confirmed with a direct read-only query) as the **local** `register-ip`
+  rate-limit bucket having accumulated 21 hits against the 3/hour limit, from
+  many hours of repeated manual E2E runs earlier today — not a code defect, not
+  `apps/web`-related. Cleared by deleting that one bucket row in the local-only
+  Supabase Docker Postgres (no Preview/production data involved). Confirmed
+  passing afterward.
+
+## Cross-cutting / unchanged by either branch
 - **Main HEAD Commit:** Pending PR Merge
 - **Vercel Production Deployment:** unchanged this session.
 - **Production Supabase DB:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`)
-  - Target Migrations: 18/18 applied cleanly through M14. This branch adds a 19th
-    (`20261021100000_m15_legacy_claim_rpc.sql`), NOT YET applied to production.
+  - Target Migrations: 18/18 applied cleanly through M14. The site branch adds a
+    19th (`20261021100000_m15_legacy_claim_rpc.sql`), NOT YET applied to production.
   - Data Parity: 222 apps, 89 snapshots, 533 events, 49 tags (0 deltas)
 - **Legacy Source:** READ-ONLY STANDBY (Neon `SHOW transaction_read_only = on`)
 - **JobQuest 1.0 Retirement:** STRICTLY NOT AUTHORIZED (Preserved for 14-day stabilization)
@@ -25,15 +62,13 @@ Milestone 15 — Production Launch & Cutover
   format and cannot be verified by `/auth/claim` as it now exists. Reissuing it is a
   production write requiring explicit operator authorization; NOT performed this
   session. Do not attempt the claim with the currently-vaulted code.
-- **Extension Package:** `apps/extension/dist/jobquest-capture-prod.zip` (SHA: `17858d2a...`, 27/27 unit tests pass, sideload ready). Phase 2 Extension remediation pending (DEFERRED, extension code untouched this session).
 - **Register rate limit on Preview/dev:** `REGISTER_IP_MAX_PER_HOUR` is configured
   for `production` scope only in Vercel; no `preview`/`development`-scoped value
   exists, so Preview currently uses the code default (3/hour). Not changed this
   session (requires separate authorization); worth raising before heavy manual QA
-  that registers several accounts back-to-back.
-- **Cutover Status:** PAUSED. Awaiting operator manual re-test of this exact-SHA
-  Preview (focused on Calendar + dropdown, since everything else already passed a
-  prior manual QA round), then jack's claim-code reissue, then promotion gates.
+  that registers several accounts back-to-back. (Distinct from the local dev-only
+  rate-limit bucket cleared above, which only affected this machine's local
+  Supabase Docker instance.)
 
 ## Feature Freeze Notice
 FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: launch blockers, security defects, migration defects, production configuration defects, critical P0/P1 regressions, critical accessibility defects, and critical performance defects materially threatening launch.

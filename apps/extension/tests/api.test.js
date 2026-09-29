@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildSecureJobQuestUrl, checkDuplicate, createCapture, getActiveResumes,
   getSettings, getWorkflow, isConnectionError, JobQuestApiError,
+  mapConnectionError, maskToken, normalizeToken,
   normalizeInstanceUrl, parseSalaryRange, saveSettings, saveTheme, testConnection,
 } from '../api/jobquest.js';
 
@@ -83,5 +84,26 @@ describe('JobQuest extension API client', () => {
   it('distinguishes revoked/expired connection errors', () => {
     expect(isConnectionError(new JobQuestApiError('expired', 401))).toBe(true);
     expect(isConnectionError(new JobQuestApiError('forbidden', 403))).toBe(false);
+  });
+
+  it('masks a stored token to its prefix and last 4 characters only', () => {
+    expect(maskToken(rawToken)).toBe(`jqx_dev_••••${'A'.repeat(4)}`);
+    expect(maskToken('not-a-real-token')).toBe('');
+    expect(maskToken('')).toBe('');
+    expect(maskToken(rawToken)).not.toContain(rawToken.slice(9, 40)); // the secret middle never appears
+  });
+
+  it('trims pasted tokens the same way Save does', () => {
+    expect(normalizeToken(`  ${rawToken}  `)).toBe(rawToken);
+    expect(normalizeToken('')).toBe('');
+  });
+
+  it('maps connection errors to distinct, honest states', () => {
+    expect(mapConnectionError(new Error('Enter a valid JobQuest URL and extension token'))).toMatchObject({ state: 'INVALID_INPUT' });
+    expect(mapConnectionError(new JobQuestApiError('Connection expired or revoked. Reconnect to JobQuest.', 401))).toMatchObject({ state: 'EXPIRED_OR_REVOKED' });
+    expect(mapConnectionError(new JobQuestApiError('forbidden', 403))).toMatchObject({ state: 'PERMISSION_ERROR' });
+    expect(mapConnectionError(new JobQuestApiError('busy', 503))).toMatchObject({ state: 'SERVER_UNAVAILABLE' });
+    expect(mapConnectionError(new TypeError('Failed to fetch'))).toMatchObject({ state: 'SERVER_UNAVAILABLE', message: expect.stringMatching(/reach JobQuest/i) });
+    expect(mapConnectionError(new JobQuestApiError('odd', 418))).toMatchObject({ state: 'ERROR' });
   });
 });

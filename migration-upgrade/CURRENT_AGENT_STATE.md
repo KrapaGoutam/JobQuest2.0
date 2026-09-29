@@ -2,8 +2,8 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: Extension remediation Step 12 Preview/Dev Automated QA COMPLETE — PASS. Awaiting Step 13 Final Security Review (Claude Opus).**
-**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — full implementation complete, local quality gate PASS, test synchronization fix applied, exact-head CI PASS (run 36621437672, SHA cb9418fe), Preview deployed (dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a), m11-extension and m15e-extension-sidepanel E2E PASS against Preview. NOT merged. Production UNCHANGED.**
+**Phase M15-E: Extension remediation Step 12A Manual Capture Fallback / Parity Fix COMPLETE — PASS. Awaiting Operator Manual Extension QA & Step 13 Final Security Review (Claude Opus).**
+**Gate Status: Site branch — local quality gate PASS, exact-head CI PASS, Preview deployed and automated-smoked, operator manual re-test PASS. Extension branch — full implementation + Step 12A manual capture fallback complete, local quality gate PASS, exact-head CI PASS (run 36631704633, SHA e90ef9af), Preview deployed (dpl_GawFiRmFBswMeSQjev5MdMrjwUDX), m11-extension and m15e-extension-sidepanel E2E PASS against Preview. NOT merged. Production UNCHANGED.**
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)
@@ -17,9 +17,9 @@ Milestone 15 — Production Launch & Cutover
   `fix -> development -> main -> production` promotion gates all remain
   separately authorized steps, not yet executed.
 
-## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12 COMPLETE)
+## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12 & Step 12A COMPLETE)
 - **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
-- **Branch HEAD:** `cb9418fe` (pushed; matches origin). Code SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
+- **Branch HEAD:** `e90ef9af` (pushed; matches origin). Code SHA: `e90ef9af66d4001d9f485db5ee73bce495be8959`
 - **Phase A (audit):** DONE, read-only.
 - **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, token masking, whitespace normalization, WCAG AA button contrast.
 - **Phase C (Claude Design import):** DONE. Imported from Claude Design mockup (`cbb3d92b`).
@@ -29,13 +29,20 @@ Milestone 15 — Production Launch & Cutover
   - `REGISTER_IP_MAX_PER_HOUR=20` configured on Vercel for `preview` and `development` scopes ONLY. Production remains unchanged.
   - Preview backend verified: `xpnkasclquplmrcmhsif` (`jobquest-dev`), AWS `us-west-2`. `PREVIEW_BACKEND_IS_PRODUCTION = false`.
 - **Phase 12 (Automated Preview/Dev Extension QA): COMPLETE — PASS**
-  - Deployed exact SHA `cb9418fe` to Vercel Preview: deployment `dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`, URL `https://jobquest2-jtp7jvwkl-one-piece-5779.vercel.app`, target: `null` (Preview, not production).
-  - Test synchronization fix: `e2e/m11-extension.spec.ts` line 244 updated to wait for canonical stages to finish populating before asserting count (avoiding race with static placeholder option `<option value="">Loading canonical stages…</option>`), and `playwright.config.ts` configured with `expect: { timeout: 15_000 }` for network latency tolerance against remote Preview.
-  - `e2e/m11-extension.spec.ts` against live Preview: PASS (51.9s)
-  - `e2e/m15e-extension-sidepanel.spec.ts` against live Preview: PASS (27.1s)
+  - Deployed SHA `cb9418fe` to Vercel Preview (`dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`).
+  - Test synchronization fix: `e2e/m11-extension.spec.ts` line 244 updated to await canonical stages and `playwright.config.ts` timeout set to 15s.
   - Verified: Connection save/test, persistent Side Panel, Capture extraction/save, duplicate detection (strong/probable/possible), dynamic workflow stages, Mini Dashboard stats, compact Analytics stats, Settings masked token & return navigation, Light/Dark/System themes, responsive widths (360/430/480 zero overflow), active-tab changes, browser restart persistence.
-- **Exact-head CI:** PASS — run `36621437672`, SHA `cb9418fe72df9fe59c1b7e64117869aa64b857703`, both `static` (51s) and `database` (7m18s) jobs `completed/success`.
-- **Phase 13 (Release Security Review):** PENDING Claude Opus independent review. Step 12 STOP gate observed.
+- **Phase 12A (Manual Capture Fallback / Parity Fix): COMPLETE — PASS**
+  - Restored full manual review and editing capabilities in the persistent Side Panel (`apps/extension/sidepanel.html`, `sidepanel.js`, `sidepanel.css`, `sidepanel-logic.js`).
+  - Added `#edit-details-card` with an expandable toggle button (`#edit-toggle-btn`) and full editing form (`#edit-fields-section`) covering Company, Job Title, Location, Work Arrangement, Employment Type, Salary Range, Date Applied, Job URL, Source/Board, Tailored Resume (existing, manual, none mode selector), and Notes.
+  - Interactive live updates: editing company, title, or job URL updates top `.job-card`, avatar, chips, completeness progress bar, and re-triggers debounced `scheduleDuplicateCheck()`.
+  - Maintained strict tab draft isolation: switching tabs re-extracts and resets inputs, preventing draft leakage across tabs.
+  - Guarded asynchronous `initialize()` against overwriting the active view if the user navigated to Dashboard/Analytics (`e90ef9af`).
+  - Local verification: unit tests (163/163 web/api, 59/59 extension), lint & typecheck PASS, package dev & bundle secret scan (48 files, 0 findings).
+  - Exact-head CI: PASS — run `36631704633`, SHA `e90ef9af66d4001d9f485db5ee73bce495be8959`, `static` (53s) and `database` (7m18s) jobs `completed/success`.
+  - Fresh Vercel Preview: deployment `dpl_GawFiRmFBswMeSQjev5MdMrjwUDX`, URL `https://jobquest2-ns7438ypn-one-piece-5779.vercel.app`, target: `null` (Preview).
+  - Automated Preview QA: `e2e/m15e-extension-sidepanel.spec.ts` PASS (32.5s) and `e2e/m11-extension.spec.ts` PASS (27.7s) against live Preview.
+- **Phase 13 (Release Security Review):** PENDING Claude Opus independent review. Awaiting operator manual re-test.
 
 
 ## Cross-cutting / unchanged by either branch
@@ -118,19 +125,25 @@ exactly (`rgb(255,255,255)`/`rgb(23,32,51)`), logout returns to Sign In, and 390
 has zero page-level horizontal overflow (`scrollWidth === 390`).
 
 ## Next Exact Step
-**AWAITING OPERATOR MANUAL RE-TEST** of the Preview above. Since round 1 already
-passed the full scenario list, this re-test can be a focused smoke:
-1. Sign In / Dashboard / Applications / Settings load
-2. Calendar appears in navigation and opens the Future Feature page (not a redirect)
-3. `/workspace/workflow` still redirects to `/workspace/settings`
-4. Dark-mode dropdown readability
-5. Light-mode dropdown readability
-6. Theme light -> dark -> light
-7. Logout / login
-8. Mobile 390x844
+**AWAITING OPERATOR MANUAL EXTENSION RE-TEST** of the unpacked extension against the fresh Preview:
+- **Preview Deployment:** `https://jobquest2-ns7438ypn-one-piece-5779.vercel.app` (`dpl_GawFiRmFBswMeSQjev5MdMrjwUDX`)
+- **Unpacked Extension Path:** `apps/extension/dist/jobquest-capture-dev`
+- **Verification Scenarios:**
+  1. Load unpacked extension in `chrome://extensions` with Developer Mode enabled.
+  2. Open Side Panel and verify connection to the Preview URL with valid extension token.
+  3. Navigate to a job listing (e.g. LinkedIn / Indeed / Test job fixture).
+  4. Confirm automatic extraction populates the job card and draft fields.
+  5. Expand the "Review & Edit details" card (`#edit-toggle-btn`).
+  6. Verify all editable fields are present: Company, Title, Location, Work Arrangement, Employment Type, Salary Range, Date Applied, Job URL, Source/Board, Tailored Resume, Notes.
+  7. Edit Company / Title and verify:
+     - The top `.job-card` title/company and avatar update dynamically in real time.
+     - Completeness progress bar recalculates.
+     - Debounced duplicate detection re-checks against the edited company and title.
+  8. Change Tailored Resume mode (Existing resume dropdown, Manual filename/label, or None).
+  9. Add custom Notes and click "Save to JobQuest".
+  10. Verify capture succeeds, status shows "Saved", and application appears on the Preview Dashboard with the edited values and notes.
+  11. Switch browser tabs to a different job / non-job tab and verify active-tab draft isolation (Job A inputs do not leak into Job B).
 
-Only after the operator reports PASS does a separate, later prompt authorize:
-`fix/m15e-site-functional-remediation -> development -> main -> production`
-(including jack's claim-code reissue and the M15 migration), and separately
-`fix/m15e-extension-connection`, then M15-F stabilization. None of that is
-authorized yet.
+Only after the operator confirms PASS on this manual extension test does the workflow proceed to:
+- **Step 13:** Final Security Review by Claude Opus (read-only independent review).
+- **Promotion & Cutover:** Merges to `development` and `main`, production deployment, and production verification remain strictly paused until separately authorized.

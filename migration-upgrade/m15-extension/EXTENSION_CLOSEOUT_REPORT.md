@@ -166,5 +166,73 @@ performed or attempted.
   - SHA: `cb9418fe72df9fe59c1b7e64117869aa64b857703`
   - Result: **PASS** — `static` (51s) and `database` (7m18s) jobs both completed successfully.
 - **Next Step:**
-  - Step 12 is complete. Step 13 (Independent Security & Release Review by Claude Opus) is pending.
+  - Proceeded to Step 12A for manual capture fallback / parity remediation.
+
+---
+
+## Step 12A — Manual Capture Fallback / Parity Fix (COMPLETE — PASS)
+
+- **Branch:** `fix/m15e-extension-connection-ui`
+- **HEAD:** `e90ef9af66d4001d9f485db5ee73bce495be8959` (pushed, matches origin)
+- **Commits:**
+  - `0563d033f7f868d952f110d719a38afe11667197`: `fix(extension): restore manual review and edit capture fallback in sidepanel (Step 12A)`
+  - `e90ef9af66d4001d9f485db5ee73bce495be8959`: `fix(extension): guard initial view switch against overwriting active user tab`
+- **Problem Resolved:**
+  - The previous extension allowed the operator to manually edit job fields before saving.
+  - The initial Side Panel release relied purely on automatic extraction, leaving operators unable to manually correct or complete job information when extraction was incomplete, erroneous, or empty.
+- **Solution Delivered:**
+  - Added `#edit-details-card` with an accessible expandable toggle `#edit-toggle-btn` ("Review & Edit details") in `apps/extension/sidepanel.html`.
+  - Comprehensive form `#edit-fields-section` providing inputs for:
+    - Company (required)
+    - Job Title (required)
+    - Location
+    - Work Arrangement (Remote, Hybrid, Onsite, Unspecified)
+    - Employment Type (Full-time, Part-time, Contract, Internship, Temporary, Other)
+    - Salary Range
+    - Date Applied (defaults to current date, editable)
+    - Job URL
+    - Source / Board
+    - Tailored Resume selector with three modes:
+      - Existing: dropdown populated dynamically from `GET /api/ext/v1/documents?kind=resume`
+      - Manual: text input for resume filename/label
+      - None: capture without tailored resume
+    - Notes (multiline textarea)
+  - Interactive live updates:
+    - Changing Company or Title live-updates the top `.job-card` title, company, and company avatar.
+    - Completeness bar recalculates dynamically as fields are filled.
+    - Debounced duplicate detection re-checks against newly entered Company & Title.
+  - Active Tab Draft Isolation:
+    - Switching tabs re-extracts the newly active tab and resets the edit inputs.
+    - Prevents manual draft edits from leaking between tabs.
+  - Asynchronous View Switch Race Guard:
+    - Guarded `initialize()` line 1313 (`if (currentView === 'capture')`) to prevent background initialization from kicking the user out of Dashboard or Analytics if they navigated away while resumes were loading.
+- **Vercel Preview Deployment:**
+  - Deployment ID: `dpl_GawFiRmFBswMeSQjev5MdMrjwUDX`
+  - URL: `https://jobquest2-ns7438ypn-one-piece-5779.vercel.app`
+  - Target: `null` (Preview, not production)
+  - Git SHA: `e90ef9af66d4001d9f485db5ee73bce495be8959`
+  - Backend: `jobquest-dev` (`xpnkasclquplmrcmhsif`, AWS `us-west-2`). `PREVIEW_BACKEND_IS_PRODUCTION = false`.
+- **Quality Gates:**
+  - Unit Tests: Web/API 163/163 PASS, Extension 59/59 PASS (`apps/extension/tests/sidepanel-logic.test.js` added 1 new unit test for manual override snapshot assembling).
+  - TypeScript: `pnpm typecheck` PASS (0 errors).
+  - Lint: `pnpm lint` PASS (0 warnings).
+  - Secret Scan: 48 extension bundle files scanned, 0 findings.
+  - Exact-head CI: GitHub Actions run `36631704633` (PASS, `static` 53s, `database` 7m18s).
+  - Automated Preview QA:
+    - `e2e/m15e-extension-sidepanel.spec.ts`: PASS (32.5s)
+    - `e2e/m11-extension.spec.ts`: PASS (27.7s)
+- **Next Exact Steps:**
+  - Awaiting Operator manual verification of unpacked extension (`apps/extension/dist/jobquest-capture-dev`) against Preview.
+  - Step 13 (Independent Security & Release Review by Claude Opus) will follow operator manual PASS.
+
+---
+
+## Future Enhancements Log (Post-M15)
+
+The following non-blocking feature requests were identified during M15 extension development and are deferred to post-launch milestones per Feature Freeze rules:
+
+- **[F01] Custom Theme Palettes:** Expand theme selection beyond Light / Dark / System to include custom branding palettes and high-contrast accessibility modes.
+- **[F02] Auto-Detect Toggle:** Add user preference toggle in Settings to control whether the Side Panel automatically opens upon detecting a supported job board listing.
+- **[F03] Direct Resume Uploads:** Allow operators to upload new PDF/DOCX resumes directly from the extension Side Panel (currently supports selecting existing uploaded resumes or specifying a manual label/filename).
+
 

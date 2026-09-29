@@ -836,13 +836,17 @@ async function handleTabChange(tab) {
   }
 }
 
+let tabListenersRegistered = false;
+
 function registerTabListeners() {
+  if (tabListenersRegistered) return;
+  tabListenersRegistered = true;
   chrome.tabs.onActivated.addListener(({ tabId }) => {
     chrome.tabs.get(tabId).then((tab) => void handleTabChange(tab)).catch(() => {});
   });
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (!tab.active) return;
-    if (changeInfo.status !== 'complete' && !changeInfo.url) return;
+    if (changeInfo.status !== 'complete') return;
     void handleTabChange(tab);
   });
 }
@@ -1022,6 +1026,7 @@ function setupSetupScreen() {
       const tab = await refreshActiveTabRef();
       currentActiveTab = tab;
       if (tab) await runCaptureFlow(tab, { showScanning: false });
+      registerTabListeners();
     } catch (error) {
       const mapped = mapConnectionError(error);
       setupStatus(mapped.message, mapped.state === 'INVALID_INPUT' ? 'error' : 'warning');

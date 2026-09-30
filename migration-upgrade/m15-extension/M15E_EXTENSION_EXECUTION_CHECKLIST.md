@@ -356,3 +356,12 @@ NEXT EXACT ACTION: Step 15 Controlled Release Promotion (separate prompt). DO NO
 - [x] Ancestry verified (tested SHA fa437ad6 in candidate; site tip 0a534b45 in candidate; development == main == 99bb9b8f, no unique commits)
 - [x] development merge 1ed8fdd1 / pushed / CI 36659089688 PASS
 - [x] main merge bfa82eb5 / pushed / CI 36659797562 PASS
+
+## Step 15.5 - Read-Only Production Preflight
+
+- origin/main = bfa82eb5 (CI 36659797562 PASS). Vercel project jobquest2 -> GitHub KrapaGoutam/JobQuest2.0, production branch main, auto-deploy enabled.
+- **PRODUCTION_DEPLOYMENT_STATE: AUTO_DEPLOYED.** dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK, target=production, READY, SHA bfa82eb5, aliased to https://jobquest2.vercel.app. GET / = 200.
+- Prod DB: not directly inspectable (Supabase MCP denied, no CLI); no evidence of change. Migration 19 (m15_legacy_claim_rpc) recorded as not applied while live code includes the claim RPC path - risk for Step 16A.
+- Env names present in Production (values not read); REGISTER_IP_MAX_PER_HOUR override for Preview/Dev is scoped separately from Production.
+- Claim code not reissued; extension token/package unchanged; JobQuest1 unchanged. No production writes.
+- NEXT: Step 16A - Production Reconciliation / Completion.

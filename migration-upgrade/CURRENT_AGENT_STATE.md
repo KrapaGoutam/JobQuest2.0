@@ -1,3 +1,27 @@
+## >>> STEP 15.5 COMPLETE (Read-Only Production Preflight) <<<
+
+CURRENT PHASE: M15-E / Step 15.5 Production Preflight
+MAIN SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main verified)
+MAIN CI: 36659797562 PASS (SHA matches; static + database jobs success)
+PRODUCTION DEPLOYMENT STATE: AUTO_DEPLOYED
+CURRENT PROD DEPLOYMENT ID: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK (target=production, READY, created 2026-09-30 02:25:44Z / 21:25 CDT, build 44s)
+CURRENT PROD SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (Vercel project targets.production meta + GitHub deployment 6750033115 env=Production, state success)
+CURRENT PROD URL: https://jobquest2.vercel.app (aliases: jobquest2.vercel.app, jobquest2-one-piece-5779.vercel.app, jobquest2-git-main-...; deployment URL jobquest2-7v1ru0miy-one-piece-5779.vercel.app)
+VERCEL: project jobquest2, GitHub KrapaGoutam/JobQuest2.0, production branch main, gitProviderOptions.createDeployments=enabled (auto-deploy ON). Prior prod deployments (1d, 1d, 5d old) untouched. Preview deployments for 1ed8fdd1 (development) and 5d189a84 (this branch) are target=preview.
+AVAILABILITY: GET / = 200 (SPA shell, JobQuest 2.0), hashed asset 200. No app writes.
+PRODUCTION DB: UNKNOWN (not directly inspected). Supabase MCP returned permission denied for jobquest-prod (list_migrations/get_project); supabase CLI not installed. No evidence of change: Vercel git deploy does not run migrations and none were authorized.
+  !! COMPAT RISK: the now-live app build includes the M15 legacy claim RPC code; migration 20261021100000_m15_legacy_claim_rpc.sql (19th) is recorded as NOT applied to prod. Claim flow on prod is presumed non-functional until Step 16 reconciles. (Not fixed here.)
+PROD ENV METADATA (names only, values not read): present in Production: REGISTER_IP_MAX_PER_HOUR, NODE_OPTIONS, EXTENSION_TOKEN_PEPPER, APP_ORIGINS, JQ_JWT_ISSUER, JQ_JWT_PRIVATE_JWK, SUPABASE_SECRET_KEY, VITE_SUPABASE_PUBLISHABLE_KEY, SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL, SUPABASE_URL. Values not verifiable (secrets hidden).
+REGISTER_IP_MAX_PER_HOUR: Production entry is a separate Secret scoped to Production only; the Preview/Development entry (Config, 9h ago) is scoped Development+Preview only. Production override not shared. Prod value not read.
+PROD CLAIM CODE: NOT REISSUED (per handoff; DB not read)
+PROD EXTENSION TOKEN: UNCHANGED (per handoff; no action taken)
+PROD EXTENSION PACKAGE: UNCHANGED (not published)
+JOBQUEST1: UNCHANGED (standby, not retired)
+PRODUCTION WRITES PERFORMED BY THIS STEP: NONE
+CORRECTION: Step 15 note "PRODUCTION: UNCHANGED" above is superseded - pushing main auto-created Production deployment dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK at 02:26Z.
+BLOCKERS: prod DB state unverified (needs operator/authorized read access); migration 19 not applied vs. live code.
+NEXT EXACT ACTION: Step 16A - Production Reconciliation / Completion (do not redeploy blindly; verify prod migration state first, then complete remaining ops: migration 19, claim-code reissue, smoke).
+
 ## >>> STEP 15 COMPLETE (Controlled Release Promotion) <<<
 
 Step 13C: PASS | Final Security Review: PASS | Step 15: PASS

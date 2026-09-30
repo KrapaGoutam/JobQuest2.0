@@ -5,6 +5,19 @@
   box-sizing: border-box;
 }
 
+/* Global form-control theming: every <select>'s native option/optgroup popup
+   must resolve to the active theme's tokens, not the browser's generic
+   OS dark/light rendering. Individual components may still style a select's
+   own CLOSED control (background/border), but option/optgroup always follow
+   these tokens so the opened dropdown never looks out of sync with the app. */
+select {
+  color-scheme: inherit;
+}
+option, optgroup {
+  background-color: var(--field-bg);
+  color: var(--color-text);
+}
+
 /* M10 import/export */
 .m10-page { display: grid; gap: 16px; max-width: 1440px; margin: 0 auto; }
 .m10-panel { display: grid; gap: 16px; }

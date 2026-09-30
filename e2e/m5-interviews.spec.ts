@@ -10,8 +10,8 @@ import { randomBytes } from 'node:crypto';
  * The browser runs in Europe/Berlin while the profile uses America/Chicago and
  * then Asia/Kolkata: every time on screen must follow the PROFILE zone.
  */
-const shotsDir = resolve('migration-upgrade/m5/screenshots');
-const evidenceDir = resolve('migration-upgrade/m5/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -68,12 +68,14 @@ test.describe('Milestone 5 — Interviews & Debriefs E2E', () => {
     // ---------------------------------------------------------------- register (Option B)
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m5_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Interview-Pulse-${run}-Key!`);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
     // The workspace switcher reflects the real membership (personal workspace creator = MANAGER).
     await expect(page.getByRole('button', { name: /Switch workspace/ })).toContainText('MANAGER');

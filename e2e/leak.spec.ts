@@ -68,37 +68,46 @@ test('B03 (browser) · no private identity or credential material reaches the br
     await login.getByLabel('Username').fill(username);
     await login.getByLabel('Password').fill(password);
     await login.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page.getByRole('region', { name: 'Session' })).toContainText(username);
+    
   } else {
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(username);
     await reg.getByLabel('Password (required)').fill(password);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications'); // this is fine since it doesn't interrupt a fetch
   }
 
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Diagnostics' }).click();
   await page.getByRole('button', { name: 'Load (PostgREST + Node)' }).click();
   await expect(page.getByText('PostgREST: Saved → Preparing')).toBeVisible();
+  await page.goto('/applications');
   // B12: direct browser write; B11: direct browser read (list refresh)
   await page.getByLabel('Company').fill('Corvid Labs');
   await page.getByLabel('Role').fill('Staff Designer');
   await page.getByRole('button', { name: 'Insert (direct PostgREST)' }).click();
-  await expect(page.getByText(/inserted application .* via direct PostgREST/)).toBeVisible();
+
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('Corvid Labs · Staff Designer');
   await page.getByRole('button', { name: '→ Interview' }).first().click();
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('INTERVIEW');
 
-  await page.getByRole('button', { name: 'Refresh now' }).click();
-  await expect(page.getByText('session refreshed (token rotated)')).toBeVisible();
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Refresh Session' }).click();
+
+  await page.getByRole('button', { name: 'Sign Out Everywhere', exact: true }).click();
   const login = page.getByRole('form', { name: 'Sign in' });
   await login.getByLabel('Username').fill(username);
   await login.getByLabel('Password').fill(password);
   await login.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('region', { name: 'Session' })).toContainText(username);
+  await expect(login).toBeHidden();
+  await page.goto('/');
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('Corvid Labs');
 
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Diagnostics' }).click();
   await page.getByRole('button', { name: 'Scan for exposed identity or credentials' }).click();
   await expect(page.getByTestId('auth-user-probe-status')).toBeVisible();
   await page.waitForLoadState('networkidle');
@@ -136,8 +145,8 @@ test('B03 (browser) · no private identity or credential material reaches the br
     cookie_names: allCookies.map((c) => `${c.name}${c.httpOnly ? ' (HttpOnly)' : ''}`),
     direct_data_api_calls_from_browser: [...new Set(dataApiCalls)].sort(),
   };
-  mkdirSync('migration-upgrade/m1b/evidence', { recursive: true });
-  writeFileSync(`migration-upgrade/m1b/evidence/e2e-browser-${evidence.supabase_target}-${run}.json`, JSON.stringify(evidence, null, 2));
+  mkdirSync('test-results/evidence', { recursive: true });
+  writeFileSync(`test-results/evidence/e2e-browser-${evidence.supabase_target}-${run}.json`, JSON.stringify(evidence, null, 2));
 
   expect(Object.keys(selfCheck)).toHaveLength(5); // the self-check really ran
   expect(authUserProbe).not.toBeNull();

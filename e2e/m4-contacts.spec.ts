@@ -20,8 +20,8 @@ import { randomBytes } from 'node:crypto';
  * - Visual regression screenshot captures
  */
 
-const shotsDir = resolve('migration-upgrade/m4/screenshots');
-const evidenceDir = resolve('migration-upgrade/m4/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -84,12 +84,14 @@ test.describe('Milestone 4 — Contacts & Networking E2E', () => {
     // 1. Register account
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m4_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Contacts-Pulse-${run}-Key!`);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
 
     // 2. Navigate to /contacts
     await page.click('a[href="#/contacts"], button:has-text("Contacts")');

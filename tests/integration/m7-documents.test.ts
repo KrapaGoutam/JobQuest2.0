@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { randomBytes } from 'node:crypto';
 import { Actor, loadEnv, serviceDb, anonDb, makeRecorder } from './harness';
 
-const record = makeRecorder('migration-upgrade/m7/evidence', 'integration');
+const record = makeRecorder('test-results/evidence', 'integration');
 const ready = loadEnv();
 
 describe.skipIf(!ready)('Milestone 7 — Documents & Resumes', () => {

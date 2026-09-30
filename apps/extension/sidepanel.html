@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobQuest</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <span id="panel-state" class="sr-only" role="status" aria-live="polite"></span>
+
+  <!-- Primary header (hidden while Settings/Setup is showing) -->
+  <header class="header" id="panel-header">
+    <div class="brand">
+      <span class="jq-tile" aria-hidden="true">JQ</span>
+      <span class="wordmark">JobQuest</span>
+      <span class="workspace" id="workspace-name">
+        <span class="ws-dot" id="ws-dot" aria-hidden="true"></span>
+        <span id="ws-name-text">—</span>
+      </span>
+    </div>
+    <div class="header-actions">
+      <span class="conn-pill" id="conn-pill" role="status" aria-live="polite">
+        <span class="conn-dot" id="conn-dot" aria-hidden="true"></span>
+        <span id="conn-label">Checking…</span>
+      </span>
+      <button type="button" class="icon-btn" id="settings-btn" title="Settings" aria-label="Open Settings">&#9881;</button>
+      <span class="avatar" id="avatar-circle" aria-hidden="true">?</span>
+    </div>
+  </header>
+
+  <!-- Back header, shown instead of the primary header on Settings/Setup -->
+  <header class="back-header" id="back-header" hidden>
+    <button type="button" class="back-btn" id="back-btn">
+      <span aria-hidden="true">&larr;</span> Settings
+    </button>
+  </header>
+
+  <!-- Tab bar (hidden on Settings/Setup) -->
+  <nav class="tabbar" id="tabbar" role="tablist" aria-label="Panel sections">
+    <button type="button" class="tab" id="tab-capture" role="tab" aria-selected="true" aria-controls="view-capture" tabindex="0">Capture</button>
+    <button type="button" class="tab" id="tab-dashboard" role="tab" aria-selected="false" aria-controls="view-dashboard" tabindex="-1">Dashboard</button>
+    <button type="button" class="tab" id="tab-analytics" role="tab" aria-selected="false" aria-controls="view-analytics" tabindex="-1">Analytics</button>
+  </nav>
+
+  <main class="content" id="content">
+    <!-- ============================= CAPTURE ============================= -->
+    <section id="view-capture" class="view" role="tabpanel" aria-labelledby="tab-capture">
+
+      <div id="capture-offline" class="state-card center" hidden>
+        <h2>JobQuest connection required</h2>
+        <p class="muted">Nothing is saved while disconnected, and duplicate checks can't run. Reconnect to keep capturing.</p>
+        <div class="stack">
+          <button type="button" class="btn primary full" id="offline-open-settings">Open Settings</button>
+          <button type="button" class="btn secondary full" id="offline-retry">Retry</button>
+        </div>
+      </div>
+
+      <div id="capture-none" class="state-card center" hidden>
+        <h2>No job posting detected</h2>
+        <p class="muted small" id="none-page-url"></p>
+        <button type="button" class="btn secondary full" id="none-retry">Try Again</button>
+        <div class="field">
+          <label for="none-paste-url">Paste job URL (optional)</label>
+          <input type="url" id="none-paste-url" class="text-input" placeholder="https://…" autocomplete="off">
+        </div>
+        <button type="button" class="btn primary full" id="none-capture-btn">Capture</button>
+      </div>
+
+      <div id="capture-main" hidden>
+        <div id="scan-indicator" class="scan-row" hidden role="status" aria-live="polite">
+          <span aria-hidden="true">&#9680;</span> Scanning page…
+        </div>
+
+        <div id="possible-card" class="info-card" hidden>
+          <p id="possible-text"></p>
+        </div>
+
+        <p class="eyebrow" id="detected-eyebrow">&#9679; JOB DETECTED</p>
+        <p class="muted small" id="detected-subtitle">Tracking this tab</p>
+
+        <div class="job-card">
+          <div class="avatar-initials" id="job-avatar" aria-hidden="true">?</div>
+          <div class="job-card-body">
+            <h1 id="job-title"></h1>
+            <p id="job-company" class="muted"></p>
+            <div class="chip-row" id="job-chips"></div>
+            <p class="source-row muted small"><span id="job-source-name"></span> &middot; <span id="job-source-url"></span></p>
+          </div>
+        </div>
+
+        <div class="card" id="completeness-card">
+          <p class="card-title" id="completeness-title">Captured data</p>
+          <div class="progress-track" role="progressbar" id="completeness-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Captured data completeness">
+            <div class="progress-fill" id="completeness-fill"></div>
+          </div>
+          <ul class="checklist" id="completeness-list"></ul>
+          <p class="muted small" id="completeness-missing"></p>
+        </div>
+
+        <!-- Review & Edit Details Card (Phase 12A Parity) -->
+        <div class="card" id="edit-details-card">
+          <button type="button" class="edit-toggle-btn" id="edit-toggle-btn" aria-expanded="false" aria-controls="edit-fields-section">
+            <span class="edit-toggle-title" id="edit-toggle-title">Review &amp; edit details</span>
+            <span class="edit-toggle-icon" id="edit-toggle-icon" aria-hidden="true">&#9662;</span>
+          </button>
+
+          <div id="edit-fields-section" class="edit-fields-section" hidden>
+            <div class="field">
+              <label for="edit-company">Company <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="edit-company" class="text-input" required maxlength="100" placeholder="e.g. Acme Corp" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="edit-title">Job Title <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="edit-title" class="text-input" required maxlength="100" placeholder="e.g. Software Engineer" autocomplete="off">
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label for="edit-location">Location</label>
+                <input type="text" id="edit-location" class="text-input" maxlength="100" placeholder="e.g. Austin, TX" autocomplete="off">
+              </div>
+
+              <div class="field">
+                <label for="edit-arrangement">Work Arrangement</label>
+                <select id="edit-arrangement" class="select">
+                  <option value="">Select…</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Onsite">Onsite</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label for="edit-employment">Employment Type</label>
+                <select id="edit-employment" class="select">
+                  <option value="">Select…</option>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                  <option value="Temporary">Temporary</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="edit-salary">Salary Range</label>
+                <input type="text" id="edit-salary" class="text-input" placeholder="e.g. $120k - $150k" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="edit-date">Date Applied</label>
+              <input type="date" id="edit-date" class="text-input">
+            </div>
+
+            <div class="field">
+              <label for="edit-url">Job URL</label>
+              <input type="url" id="edit-url" class="text-input" placeholder="https://…" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="edit-source">Source / Board</label>
+              <input type="text" id="edit-source" class="text-input" placeholder="e.g. LinkedIn, Indeed, Greenhouse" autocomplete="off">
+            </div>
+
+            <!-- Tailored Resume -->
+            <div class="field">
+              <label>Tailored Resume</label>
+              <div class="resume-mode-selector">
+                <label class="resume-mode-option">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-existing" value="existing" checked>
+                  <span>Select existing</span>
+                </label>
+                <label class="resume-mode-option">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-manual" value="manual">
+                  <span>Enter manually</span>
+                </label>
+                <label class="resume-mode-option">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-none" value="none">
+                  <span>None</span>
+                </label>
+              </div>
+
+              <div id="sidepanel-group-resume-existing">
+                <select id="edit-resume" class="select" aria-label="Select existing resume">
+                  <option value="">None selected</option>
+                </select>
+              </div>
+
+              <div id="sidepanel-group-resume-manual" hidden>
+                <input type="text" id="edit-resume-manual" class="text-input" placeholder="e.g. QA Automation v96" maxlength="100" aria-label="Enter resume version manually" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="edit-notes">Notes</label>
+              <textarea id="edit-notes" class="text-input textarea" rows="2" placeholder="Optional notes…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card duplicate-card" id="duplicate-card" hidden>
+          <div class="dup-head">
+            <span id="dup-icon" aria-hidden="true">&#9888;</span>
+            <span id="dup-title" class="card-title"></span>
+            <span class="pill" id="dup-level-pill"></span>
+          </div>
+          <p class="muted small" id="dup-why"></p>
+          <div class="mini-card" id="dup-match-card">
+            <p id="dup-match-title"></p>
+            <p class="muted small" id="dup-match-meta"></p>
+          </div>
+          <p class="muted small" id="dup-saved-hint" hidden>Use Move Stage in the web app to update this application instead of saving a new one.</p>
+        </div>
+
+        <div class="card" id="saved-card" hidden>
+          <p class="card-title">&#10003; Saved to JobQuest</p>
+          <p class="muted small" id="saved-meta"></p>
+        </div>
+
+        <div class="card" id="saveas-card">
+          <p class="card-title">Save as</p>
+          <div class="saveas-toggle">
+            <label class="option-card">
+              <input type="radio" name="save-as" id="save-as-later" value="later">
+              <span>Save for later</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="save-as" id="save-as-applied" value="applied">
+              <span>I applied</span>
+            </label>
+          </div>
+          <button type="button" class="stage-btn" id="stage-btn" aria-haspopup="listbox" aria-expanded="false">
+            <span id="stage-btn-label">Loading stages…</span>
+            <span class="pips" id="stage-pips" aria-hidden="true"></span>
+          </button>
+          <ul class="listbox" id="stage-listbox" role="listbox" aria-label="Stage" hidden></ul>
+        </div>
+
+        <div id="capture-banner" class="banner" hidden role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============================= DASHBOARD ============================= -->
+    <section id="view-dashboard" class="view" role="tabpanel" aria-labelledby="tab-dashboard" hidden>
+      <div id="dash-loading" class="state-card center" role="status" aria-live="polite">
+        <p class="muted">Loading…</p>
+      </div>
+      <div id="dash-error" class="state-card center" hidden>
+        <p class="muted" id="dash-error-message"></p>
+        <button type="button" class="btn secondary" id="dash-retry-btn">Retry</button>
+      </div>
+      <div id="dash-body" hidden>
+        <div class="metric-grid-2">
+          <div class="metric-card">
+            <p class="metric-value" id="dash-today"></p>
+            <p class="metric-label">Applications</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-value" id="dash-yesterday"></p>
+            <p class="metric-label">Yesterday</p>
+          </div>
+        </div>
+
+        <div class="card goal-card" id="dash-goal-card">
+          <div class="goal-head">
+            <span class="eyebrow">WEEKLY GOAL</span>
+            <span class="goal-pct" id="dash-goal-pct"></span>
+          </div>
+          <p class="goal-line" id="dash-goal-line"></p>
+          <div class="progress-track" role="progressbar" id="dash-goal-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Weekly goal progress">
+            <div class="progress-fill" id="dash-goal-fill"></div>
+          </div>
+          <p class="muted small" id="dash-goal-remainder"></p>
+        </div>
+
+        <div class="card">
+          <p class="card-title">Pipeline</p>
+          <div id="dash-pipeline" class="pipeline-rows"></div>
+        </div>
+
+        <div class="card">
+          <p class="card-title">Upcoming</p>
+          <div id="dash-upcoming" class="upcoming-rows"></div>
+        </div>
+
+        <button type="button" class="btn secondary full" id="dash-open-full">Open Full Dashboard &#8599;</button>
+      </div>
+    </section>
+
+    <!-- ============================= ANALYTICS ============================= -->
+    <section id="view-analytics" class="view" role="tabpanel" aria-labelledby="tab-analytics" hidden>
+      <div id="analytics-loading" class="state-card center" role="status" aria-live="polite">
+        <p class="muted">Loading…</p>
+      </div>
+      <div id="analytics-error" class="state-card center" hidden>
+        <p class="muted" id="analytics-error-message"></p>
+        <button type="button" class="btn secondary" id="analytics-retry-btn">Retry</button>
+      </div>
+      <div id="analytics-body" hidden>
+        <div class="card">
+          <p class="card-title">Application Activity</p>
+          <div id="analytics-activity" class="metric-grid-4"></div>
+        </div>
+
+        <div class="card goal-card" id="analytics-goal-card">
+          <div class="goal-head">
+            <span class="eyebrow">WEEKLY GOAL</span>
+            <span class="goal-pct" id="analytics-goal-pct"></span>
+          </div>
+          <p class="goal-line" id="analytics-goal-line"></p>
+          <div class="progress-track" role="progressbar" id="analytics-goal-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Weekly goal progress">
+            <div class="progress-fill" id="analytics-goal-fill"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="card-title">Pipeline Snapshot</p>
+          <div id="analytics-pipeline" class="pipeline-rows"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= SETTINGS ============================= -->
+    <section id="view-settings" class="view" hidden>
+      <section class="settings-section">
+        <h2>Connection</h2>
+        <p class="conn-status-row">
+          <span class="conn-dot" id="settings-conn-dot" aria-hidden="true"></span>
+          <span id="settings-conn-text">Not connected</span>
+        </p>
+        <div class="field">
+          <label>Environment</label>
+          <p class="readonly-value" id="settings-environment">—</p>
+        </div>
+        <div class="field">
+          <label for="settings-instance-url">JobQuest URL</label>
+          <input type="url" id="settings-instance-url" class="text-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="settings-token">Access Token</label>
+          <input type="password" id="settings-token" class="text-input" autocomplete="off" spellcheck="false">
+          <p class="muted small" id="settings-token-hint"></p>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="settings-save-btn">Save Connection</button>
+          <button type="button" class="btn secondary" id="settings-test-btn">Test Connection</button>
+        </div>
+        <div id="settings-status" class="banner" hidden role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Account</h2>
+        <p class="muted" id="settings-account-text">Not connected.</p>
+        <button type="button" class="btn secondary" id="settings-open-jobquest">Open JobQuest &#8599;</button>
+      </section>
+
+      <section class="settings-section">
+        <h2>Capture Preferences</h2>
+        <div class="field">
+          <label for="pref-default-stage">Default Stage</label>
+          <select id="pref-default-stage" class="select">
+            <option value="">Use JobQuest's default</option>
+          </select>
+        </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="pref-warn-duplicates">
+          <span>Warn on duplicates</span>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="pref-auto-detect">
+          <span>Auto-detect job pages</span>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="pref-open-capture">
+          <span>Open Capture tab when a job is detected</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h2>Appearance</h2>
+        <div class="field">
+          <label for="settings-theme">Theme</label>
+          <select id="settings-theme" class="select">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Advanced / Diagnostics</h2>
+        <p class="muted small">Version <span id="settings-version"></span></p>
+        <p class="conn-status-row">
+          <span class="conn-dot" id="settings-api-dot" aria-hidden="true"></span>
+          <span id="settings-api-status">Unknown</span>
+        </p>
+        <button type="button" class="btn secondary" id="settings-diagnostics-btn">Run Diagnostics</button>
+        <p class="muted small" id="settings-diagnostics-result" role="status" aria-live="polite"></p>
+        <button type="button" class="btn danger" id="settings-disconnect-btn">Disconnect</button>
+      </section>
+    </section>
+
+    <!-- ============================= SETUP (first-run) ============================= -->
+    <section id="view-setup" class="view" hidden>
+      <div class="setup-card">
+        <span class="jq-tile large" aria-hidden="true">JQ</span>
+        <h1>Connect JobQuest</h1>
+        <div class="field">
+          <label for="setup-environment">Environment</label>
+          <select id="setup-environment" class="select">
+            <option value="production">Production</option>
+            <option value="preview">Preview / Development</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="setup-instance-url">JobQuest URL</label>
+          <input type="url" id="setup-instance-url" class="text-input" placeholder="http://localhost:5173" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="setup-token">Access Token</label>
+          <input type="password" id="setup-token" class="text-input" placeholder="Paste your jqx_dev_ or jqx_live_ token" autocomplete="off" spellcheck="false">
+        </div>
+        <div id="setup-status" class="banner" hidden role="status" aria-live="polite"></div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="setup-save-btn" disabled>Save Connection</button>
+          <button type="button" class="btn secondary" id="setup-test-btn">Test Connection</button>
+        </div>
+        <p class="muted small">Save Connection stores the token on this browser. Test Connection checks it without changing anything.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sticky Capture footer (Capture-family screens only) -->
+  <footer class="sticky-footer" id="capture-footer" hidden>
+    <button type="button" class="btn primary full" id="footer-primary"></button>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

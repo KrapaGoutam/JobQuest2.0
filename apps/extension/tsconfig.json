@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["chrome"]
   },
-  "include": ["api/**/*.js", "background.js", "options.js", "popup.js", "extractors/**/*.js"]
+  "include": ["api/**/*.js", "background.js", "options.js", "popup.js", "sidepanel.js", "sidepanel-logic.js", "extractors/**/*.js"]
 }

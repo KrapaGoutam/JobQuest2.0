@@ -27,6 +27,7 @@ export const limits = {
   registerIp: limiter('register-ip', () => env().REGISTER_IP_MAX_PER_HOUR, 60 * 60),
   recoveryIp: limiter('recovery-ip', () => env().RECOVERY_IP_MAX_PER_HOUR, 60 * 60),
   passwordUser: limiter('password-user', () => env().PASSWORD_CHANGE_MAX_PER_HOUR, 60 * 60),
+  claimIp: limiter('claim-ip', () => env().RECOVERY_IP_MAX_PER_HOUR, 60 * 60),
 };
 
 type Status = 200 | 201 | 401 | 403 | 409 | 422 | 429 | 500;
@@ -310,6 +311,66 @@ auth.post('/recover', async (c) => {
   const session = await startSession(c, account.user_id);
   return c.json({ user: await publicUser(account.user_id), session, remaining_codes: Number(remaining), other_sessions: 'revoked' });
 });
+
+// ---------------------------------------------------------------------------------
+// POST /claim {username, code, new_password}: single-use legacy claim code
+// ---------------------------------------------------------------------------------
+auth.post('/claim', async (c) => {
+  const started = Date.now();
+  const ip = await limits.claimIp.hit(clientIp(c));
+  if (!ip.allowed) return throttled(c, ip);
+  const b = await body(c, z.object({ username: z.string(), code: z.string().max(64), new_password: z.string() }));
+  const name = b ? normalizeUsername(b.username) : null;
+  const generic = async () => {
+    await floor(started, env().AUTH_FAILURE_FLOOR_MS);
+    return fail(c, 401, 'INVALID_CLAIM', 'Username or claim code is incorrect.');
+  };
+  if (!b || !name) return generic();
+  
+  // Validate the new password BEFORE touching a code
+  const problem = checkPassword(b.new_password, name.username);
+  if (problem) return fail(c, 422, problem, 'Choose a stronger password.');
+
+  const acct = await admin().from('user_accounts')
+    .select('user_id, locked_until').eq('username_clean', name.clean).maybeSingle();
+  const account = acct.data as { user_id: string; locked_until: string | null } | null;
+  if (!account) { await burnVerify(b.code); return generic(); }
+  
+  // We use standard login locks for claim to prevent brute force
+  if (account.locked_until && account.locked_until > nowIso()) {
+    await floor(started, env().AUTH_FAILURE_FLOOR_MS);
+    return fail(c, 429, 'CLAIM_LOCKED', 'Too many attempts. Try again later.');
+  }
+
+  const code = normalizeCode(b.code);
+  const { data: candidates } = await admin().from('legacy_claim_codes')
+    .select('id, code_hash').eq('user_id', account.user_id).eq('code_hint', code.slice(0, HINT_CHARS)).is('claimed_at', null);
+  
+  let matched: string | null = null;
+  for (const row of (candidates ?? []) as { id: string; code_hash: string }[]) {
+    if (await verifyCode(row.code_hash, code)) { matched = row.id; break; }
+  }
+  
+  if (!matched) {
+    if (!candidates?.length) await burnVerify(b.code);
+    await admin().rpc('rpc_record_auth_failure', {
+      p_user_id: account.user_id, p_kind: 'login', p_max: env().LOGIN_MAX_FAILURES, p_lock_minutes: env().LOGIN_LOCK_MINUTES,
+    });
+    return generic();
+  }
+
+  const ipText = clientIp(c);
+  const { error } = await admin().rpc('rpc_claim_legacy_account', {
+    p_user_id: account.user_id, p_code_id: matched, p_new_hash: await hashPassword(b.new_password),
+    p_ip: isIP(ipText) ? ipText : null,
+  });
+  
+  if (error) return generic();
+  
+  const session = await startSession(c, account.user_id);
+  return c.json({ user: await publicUser(account.user_id), session, ok: true });
+});
+
 
 // ---------------------------------------------------------------------------------
 // POST /recovery-codes {password}: regenerate; the old set is invalidated atomically

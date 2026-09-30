@@ -10,8 +10,8 @@ import { createClient } from '@supabase/supabase-js';
  * One registered user per run (the deployed register limit is 3/hour/IP).
  * Browser zone Europe/Berlin; profile zone America/Chicago — dates follow the profile.
  */
-const shotsDir = resolve('migration-upgrade/m6/screenshots');
-const evidenceDir = resolve('migration-upgrade/m6/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -60,7 +60,7 @@ async function expectClosed(dialog: Locator) {
     throw new Error(`Dialog stayed open: ${(await dialog.innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600)}`);
   }
 }
-const nav = (page: Page, name: string) => page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name, exact: true }).click();
+const nav = (page: Page, name: string) => page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name }).click();
 
 test.use({ timezoneId: 'Europe/Berlin' });
 
@@ -78,12 +78,14 @@ test.describe('Milestone 6 — Tasks, Habits & Unified Queue E2E', () => {
     // ------------------------------------------------------------ register + profile zone
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m6_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Queue-Pulse-${run}-Key!`);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Notifications' })).toBeVisible(); // no fake unread count
 

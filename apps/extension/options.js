@@ -1,5 +1,5 @@
 // @ts-check
-import { getSettings, saveSettings, saveTheme, testConnection } from './api/jobquest.js';
+import { getSettings, saveSettings, saveTheme, testConnection, maskToken, mapConnectionError } from './api/jobquest.js';
 
 const form = document.getElementById('options-form');
 const instanceInput = /** @type {HTMLInputElement} */ (document.getElementById('instance-url'));
@@ -9,18 +9,25 @@ const saveButton = /** @type {HTMLButtonElement} */ (document.getElementById('sa
 const testButton = /** @type {HTMLButtonElement} */ (document.getElementById('test-btn'));
 const statusBox = /** @type {HTMLElement} */ (document.getElementById('status-box'));
 
+/** @type {{ instanceUrl: string, apiToken: string, theme: string } | null} */
+let storedSettings = null;
+
 function status(message, kind = '') {
   statusBox.textContent = message;
   statusBox.className = `status-box ${kind}`.trim();
 }
 
-async function values() {
-  return { instanceUrl: instanceInput.value, apiToken: tokenInput.value, theme: themeInput.value };
-}
-
 function applyTheme(theme) {
   if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
   else delete document.documentElement.dataset.theme;
+}
+
+/** The token to act on: whatever was freshly typed, or the already-stored
+ *  token if the field was left blank (so re-testing/re-saving the URL or
+ *  theme doesn't force re-pasting an unchanged token). */
+function effectiveToken() {
+  const typed = tokenInput.value.trim();
+  return typed || storedSettings?.apiToken || '';
 }
 
 async function presetInstanceUrl() {
@@ -34,13 +41,29 @@ async function presetInstanceUrl() {
   }
 }
 
+/** Never populate the token field with the real secret. Show a masked
+ *  placeholder for an already-configured token, and only require a fresh
+ *  paste for first-time setup. */
+function showStoredTokenState() {
+  tokenInput.value = '';
+  if (storedSettings?.apiToken) {
+    tokenInput.required = false;
+    tokenInput.placeholder = `${maskToken(storedSettings.apiToken)} — paste a new token to replace it`;
+  } else {
+    tokenInput.required = true;
+    tokenInput.placeholder = 'Paste your jqx_dev_ or jqx_live_ token';
+  }
+}
+
 async function load() {
-  const settings = await getSettings();
-  instanceInput.value = settings.instanceUrl || await presetInstanceUrl();
-  tokenInput.value = settings.apiToken;
-  themeInput.value = settings.theme;
-  applyTheme(settings.theme);
-  if (settings.instanceUrl && settings.apiToken) status('Connection settings are stored locally in this browser.', 'success');
+  storedSettings = await getSettings();
+  instanceInput.value = storedSettings.instanceUrl || await presetInstanceUrl();
+  themeInput.value = storedSettings.theme;
+  applyTheme(storedSettings.theme);
+  showStoredTokenState();
+  if (storedSettings.instanceUrl && storedSettings.apiToken) {
+    status('Connection settings are stored locally in this browser.', 'success');
+  }
 }
 
 form?.addEventListener('submit', async (event) => {
@@ -48,11 +71,19 @@ form?.addEventListener('submit', async (event) => {
   saveButton.disabled = true;
   status('Saving…');
   try {
-    const settings = await saveSettings(await values());
-    await testConnection(settings.instanceUrl, settings.apiToken);
-    status('Connected. JobQuest accepted this token.', 'success');
+    const saved = await saveSettings({ instanceUrl: instanceInput.value, apiToken: effectiveToken(), theme: themeInput.value });
+    storedSettings = saved;
+    showStoredTokenState();
+    status('Saved. Testing connection…');
+    await testConnection(saved.instanceUrl, saved.apiToken);
+    status('Saved. Connected — JobQuest accepted this token.', 'success');
   } catch (error) {
-    status(error instanceof Error ? error.message : 'Could not save settings.', 'error');
+    const mapped = mapConnectionError(error);
+    if (mapped.state === 'INVALID_INPUT') {
+      status(mapped.message, 'error');
+    } else {
+      status(`Saved, but the connection test failed: ${mapped.message}`, 'error');
+    }
   } finally {
     saveButton.disabled = false;
   }
@@ -62,11 +93,12 @@ testButton.addEventListener('click', async () => {
   testButton.disabled = true;
   status('Testing connection…');
   try {
-    const settings = await values();
-    await testConnection(settings.instanceUrl, settings.apiToken);
+    const token = effectiveToken();
+    if (!token) throw new Error('Enter a token to test, or save one first.');
+    await testConnection(instanceInput.value, token);
     status('Connection successful.', 'success');
   } catch (error) {
-    status(error instanceof Error ? error.message : 'Connection failed.', 'error');
+    status(mapConnectionError(error).message, 'error');
   } finally {
     testButton.disabled = false;
   }

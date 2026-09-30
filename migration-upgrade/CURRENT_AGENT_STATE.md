@@ -1,44 +1,209 @@
+## >>> STEP 15 ACTIVE (Controlled Release Promotion) <<<
+
+CURRENT PHASE: M15-E / Step 15
+CURRENT SUBTASK: Pre-promotion ancestry verified; merging candidate -> development
+RELEASE CANDIDATE: fix/m15e-extension-connection-ui (aggregate; contains site remediation tip 0a534b45)
+TESTED APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e (docs-only commits after it)
+DEVELOPMENT HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a (== main; candidate is 52 commits ahead, development has no unique commits)
+MAIN HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a
+FINAL SECURITY REVIEW: PASS
+BLOCKERS: None (branch protection: none on development/main)
+PRODUCTION: UNCHANGED
+NEXT EXACT ACTION: git merge --no-ff candidate into development, sanity gate, push, exact development CI
+
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
-## Current Milestone
-Milestone 15 — Production Launch & Cutover  
-**Phase M15-E: Release Integration, Main Merge, Production Deployment, Smoke Validation & Cutover (AWAITING USER CUTOVER SIGNOFF)**  
-**Gate Status: Exact-SHA CI Passed across Feature, Dev & Main -> Vercel Production Deployed -> 10/10 Smoke Gates Passed -> Paused for User Browser Verification**
+## >>> ACTIVE HANDOFF (M15-E duplicate-protection final remediation) <<<
+STATUS: COMPLETE - STEP 13C FINAL INDEPENDENT REVIEW PASS (Opus/High, invoked once)
+CURRENT PHASE: M15-E duplicate-protection final remediation - implementation, exact-SHA CI, fresh Preview, automated Preview QA all PASS
+CURRENT SUBTASK: none (stop gate reached)
+BRANCH: fix/m15e-extension-connection-ui
+BASE APPLICATION SHA: 1837debc8e12228a454492373191df8eb25e45de
+NEW APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e
+CURRENT DOCS HEAD: docs-only commit(s) after fa437ad6 (see `git log`; NOT covered by CI)
+LOCAL HEAD / REMOTE HEAD: equal after docs push (application code identical to fa437ad6)
+WORKING TREE: clean after docs commit
+MODIFIED FILES (app commit): apps/extension/{sidepanel.js,sidepanel-logic.js,sidepanel.html,popup.js,popup.html,tests/sidepanel-logic.test.js,tests/manifest.test.js}, e2e/m15e-extension-sidepanel.spec.ts
+LAST GREEN TEST: local + Preview E2E (m11, m15e incl. package test), unit 163, extension 97, integration 186
+LAST FAILED TEST: none (only the intentional old-code discrimination run)
+LAST CI RUN: 36655655863 / fa437ad6f22b8c485dca62834e45a6c68756c83e / PASS (static + database)
+PREVIEW URL: https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (dpl_BvNeBysZxeK6gN1nbowt1PL2gAc2) ; PREVIEW BACKEND: jobquest-dev (PREVIEW_BACKEND_IS_PRODUCTION=false)
+DUPLICATE OVERRIDE UI: REMOVED
+DUPLICATE_OVERRIDE TRUE PATH: REMOVED (payload field always false; deprecated compat)
+FAIL-CLOSED SAVE: PASS
+CROSS-TAB ISOLATION: PASS
+PACKAGE LEGACY POPUP: SAFE
+BLOCKERS: none. Residual for reviewer: server does not enforce duplicates on POST /captures (client gate only) - contract change, not done.
+PRODUCTION STATE: UNCHANGED (Development / Main also UNCHANGED)
+OPUS INVOKED: YES / RESULT: PASS (no blockers)
+FINAL M15-E EXTENSION SECURITY REVIEW: PASS; B1 class ELIMINATED; B2-R CLOSED; N1 CLOSED; legacy popup CLOSED
+OPERATOR MANUAL RETEST: SKIPPED BY OPERATOR; AUTOMATED EVIDENCE: SUFFICIENT FOR RELEASE
+NON-BLOCKING: (1) client identity key lowercases URL query values, backend keeps them case-sensitive; gate accepts any current verdict with matching key (theoretical only) - optional hardening: accept only verdict from own checkSeq. (2) server does not enforce duplicates on POST /captures (client-only gate; pre-existing design).
+NEXT EXACT ACTION: Step 15 Controlled Release Promotion (separate prompt). Do NOT merge/deploy in this session.
 
-## Phase Status Summary
-- **Milestone:** M15
-- **Phase:** M15-E
-- **Current Branch:** `main`
-- **Main HEAD Commit:** `5040385ab89d3d3ef46543ce9c228229b0a75224`
-- **Git Tree SHA:** `a5ddd0f8ddc7f246eeeb6a60a61d76e42a2ed58f`
-- **Development Branch:** `8b47870b22416f0e4dbdfdb6db30dbec55106191` (Merged & CI Verified)
-- **Feature Branch:** `feature/m15-production-launch-cutover` (`bfb98844` / `a7daedfb`)
-- **CI Verifications (100% Green):**
-  - Feature CI: `36463062553` (SUCCESS)
-  - Development CI: `36463848353` (SUCCESS)
-  - Main CI: `36464794970` (SUCCESS)
-- **Vercel Production Deployment:**
-  - Deployment ID: `dpl_6YZNVBYpXKJ5TfF7iBL3Z1g8y51Q`
-  - Canonical Origin: `https://jobquest2.vercel.app`
-  - Status: `READY`
-  - Edge Latency: ~68ms (`/api/health`)
-  - Bundle Secret Audit: 0 findings (PASS)
+## Current Milestone
+Milestone 15 — Production Launch & Cutover
+**Phase M15-E: duplicate-protection final remediation COMPLETE. Final independent Step 13C review: PASS.**
+**Gate Status: Site branch — PASS. Extension branch — prior Step 13C (on 1837debc) BLOCKED; remediated by removing the duplicate override entirely + fail-closed save. Application/tested SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e. Exact CI PASS (run 36655655863). Preview https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (backend jobquest-dev). Automated Preview QA PASS. B1/N1/B2-R/legacy popup: CLOSED (independently confirmed, Step 13C PASS). Operator retest: SKIPPED BY OPERATOR. Development/Main/Production UNCHANGED.**
+**Step 13C BLOCKERS (historical, addressed at fa437ad6):** CHECK_ERROR resolved to VERIFIED_SAFE; non-discriminating save/race E2E.
+**NEXT EXACT ACTION:** Step 15 Controlled Release Promotion (not started).
+
+## Branch: fix/m15e-site-functional-remediation (site remediation)
+- **Branch HEAD:** `0a534b45` (pushed; matches origin)
+- **Exact-head CI:** PASS (both `static` and `database` jobs, triggered via `workflow_dispatch` since this repo's CI only auto-triggers on `feature/**`/`development`/`main`, not `fix/**`)
+- **Vercel Preview (current):** `https://jobquest2-51ktgo1ku-one-piece-5779.vercel.app`, deployment `dpl_E7CvzzPZgYbEsTVBDZyK4ZHuRLuQ`, exact SHA `8b0376a6a0aeee9f9f75a983f463335927cc34b8` (parent of the docs-only `0a534b45` HEAD — the app code deployed and tested is unchanged by that docs commit), `target: null` (Preview, not production). Backend confirmed preview/development-scoped (env var names/targets only checked, no values read).
+- **Site Manual Preview QA: PASS** — operator has explicitly confirmed the focused
+  re-test (Calendar Future Feature page, dark/light dropdown, everything else
+  already covered by the prior full round) passed on this exact-SHA Preview.
+- **Cutover Status:** Site remediation manual QA complete. Still PAUSED before
+  any merge/production action: jack's claim-code reissue, then
+  `fix -> development -> main -> production` promotion gates all remain
+  separately authorized steps, not yet executed.
+
+## Branch: fix/m15e-extension-connection-ui (extension remediation — Step 12, 12A, 13A, & 13B-R COMPLETE)
+- **Base:** `fix/m15e-site-functional-remediation` @ `0a534b45` (confirmed via `git merge-base`)
+- **Branch HEAD:** Pending docs commit. **Application/tested code SHA:** `1837debc8e12228a454492373191df8eb25e45de` (CI run `36646380294` ran on this exact SHA).
+- **Phase A (audit):** DONE, read-only.
+- **Phase B (connection repair):** DONE. Fixed Save/Test message conflation, token masking, whitespace normalization, WCAG AA button contrast.
+- **Phase C (Claude Design import):** DONE. Imported from Claude Design mockup (`cbb3d92b`).
+- **Phase D (Side Panel & Capture):** DONE. Persistent MV3 Side Panel (`sidepanel.html`/`sidepanel.js`), active-tab tracking, dynamic workflow stages, duplicate detection levels (`11d22429`).
+- **Phase E (Dashboard, Analytics, Settings):** DONE. Compact Mini Dashboard, Analytics, GET `/ext/v1/stats`, Settings return navigation, theme sync (`8c8bfc73`, `f4f8eecc`, `572b531f`, `71d99557`).
+- **Phase 11 (Preview Environment):**
+  - `REGISTER_IP_MAX_PER_HOUR=20` configured on Vercel for `preview` and `development` scopes ONLY. Production remains unchanged.
+  - Preview backend verified: `xpnkasclquplmrcmhsif` (`jobquest-dev`), AWS `us-west-2`. `PREVIEW_BACKEND_IS_PRODUCTION = false`.
+- **Phase 12 (Automated Preview/Dev Extension QA): COMPLETE — PASS**
+  - Deployed SHA `cb9418fe052d65cf4a55ac7a4d6fbea197fd4423` to Vercel Preview (`dpl_FokMNZnRPj6JwKqTWVdhXXvrLa4a`); exact-head CI run `36621437672` confirmed on that SHA.
+  - Verified: Connection save/test, persistent Side Panel, Capture extraction/save, duplicate detection, dynamic workflow stages, Mini Dashboard, Analytics, Settings masked token, Themes, responsive widths, active-tab changes, restart persistence.
+- **Phase 12A (Manual Capture Fallback / Parity Fix): COMPLETE — PASS**
+  - Restored manual review and editing capabilities (`#edit-details-card`, `#edit-toggle-btn`, `#edit-fields-section`).
+  - Interactive live updates, active tab draft isolation, async view switch race guard.
+  - Local gate PASS, exact-head CI run `36631704633` PASS, Preview `dpl_GawFiRmFBswMeSQjev5MdMrjwUDX` automated QA PASS.
+- **Phase 13 (Release Security Review): BLOCKED (Historical).** `release-security-reviewer` (Opus/High) found two client-side duplicate protection blockers (B1: duplicate override leakage across capture contexts; B2: stale duplicate state after Company/Title/URL edits) and non-blocking N1 (late debounce timer). Server auth and tenant isolation PASS.
+- **Phase 13A (Duplicate-State Security Remediation): COMPLETE — PASS**
+  - Remediated B1: Replaced module-level `bypassDuplicate` with context-isolated `duplicateState` via `initDuplicateContext(seq)` and identity-bound override authorization (`authorizeDuplicateOverride` keyed to `computeDuplicateIdentityKey`). Override cleared on successful save.
+  - Remediated B2: `onIdentityChange(state, nextIdentity)` invalidates duplicate state, revokes overrides, and hides stale duplicate cards. `save()` validates against `canSafelySave(state, identity)`: blocks save and displays duplicate screen if duplicate detected (`BLOCKED_DUPLICATE`), or performs inline recheck if stale (`NEEDS_CHECK`).
+  - Remediated N1: `runCaptureFlow()` clears active `duplicateTimer`. `onDuplicateCheckResult` discards results matching superseded context sequence or check sequence.
+  - Local verification: 69/69 extension unit tests PASS (10 new tests), 163/163 web/api unit tests PASS, 0 lint/typecheck errors, 0 secret scan findings across 48 extension bundle files and 922 tracked files.
+  - Extension packages built: `apps/extension/dist/jobquest-capture-dev` and `.zip`.
+  - Exact-head CI: PASS — run `36637796079`, exact SHA `e19e9ccea4f8276ccdb9736ac5f7fa206a9c3649`, static (56s) and database (7m52s) jobs completed successfully.
+  - Fresh Vercel Preview: deployment `dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn`, URL `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app`, target: `preview`.
+  - Automated Preview QA: `e2e/m15e-extension-sidepanel.spec.ts` PASS (54.0s) and `e2e/m11-extension.spec.ts` PASS (24.9s) against live Preview.
+- **Phase 14 (Operator Manual Extension QA): PASS (operator-reported).** Focused retest of B1/B2/N1 + normal capture on Preview `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app` (SHA `e19e9cce`).
+- **Phase 13B (Focused Opus Blocker-Closure Review): BLOCKED (Historical).** `release-security-reviewer` (Opus/High) invoked ONCE over `e90ef9af...e19e9cce`. Confirmed B1 CLOSED, N1 CLOSED, identified residual B2-R save-time duplicate race and legacy popup packaging risk.
+- **Phase 13B-R (Targeted Security Remediation: B2-R & Legacy Popup Package): COMPLETE — PASS**
+  - Remediated B2-R: Fail-closed save gate via `evaluateSaveGate` in `sidepanel-logic.js` wired into `save()` in `sidepanel.js`. If duplicate check is stale or needs check, runs/awaits recheck; if recheck is discarded/superseded or produces unresolved status, save aborts/blocks and displays banner warning rather than sending an unverified write. If duplicate detected, displays duplicate screen. If `warnOnDuplicates=false`, proceeds directly without requiring duplicate freshness.
+  - Remediated Context Isolation: Bound save operation and UI mutations to immutable snapshot token (`saveSeq`, `saveTabId`, `saveIdentityKey`) verified via `isSaveContextValid`. Job A async completion never mutates Job B's UI, does not reset Job B's duplicate state, and does not render 'saved' across jobs.
+  - Closed Override Timing Window: `authorizeDuplicateOverride` requires `!state.isStale && state.checkedKey === computeDuplicateIdentityKey(identity)`, preventing override grant during in-flight debounce window.
+  - Remediated Legacy Popup Package: Replaced module-level boolean `bypassDuplicate` in `apps/extension/popup.js` with identity-keyed `overrideIdentityKey` that is cleared on initialization, save, and capture-another. Excluded `popup.html`, `popup.css`, and `popup.js` from production packages in `apps/extension/scripts/package.mjs` while retaining them for dev/test (`e2e/m11-extension.spec.ts`).
+  - Local verification: 80/80 extension unit tests PASS (11 new tests), 163/163 web/api unit tests PASS, 0 lint errors, 0 typecheck errors, 0 secret scan findings across 45 extension bundle files and 922 tracked files.
+  - Extension packages built: `apps/extension/dist/jobquest-capture-dev` and `.zip`, `jobquest-capture-prod` and `.zip`.
+  - Exact-head CI: PASS — run `36646380294`, exact SHA `1837debc8e12228a454492373191df8eb25e45de`, static (35s) and database (6m30s) jobs completed successfully.
+  - Fresh Vercel Preview: deployment `dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L`, URL `https://jobquest2-ae69dyczb-one-piece-5779.vercel.app`, target: `preview`.
+  - Automated Preview QA: `e2e/m15e-extension-sidepanel.spec.ts` PASS (59.9s) and `e2e/m11-extension.spec.ts` PASS (27.6s) against live Preview.
+  - Full detail: `M15E_EXTENSION_EXECUTION_CHECKLIST.md` (Step 13B-R) and `EXTENSION_CLOSEOUT_REPORT.md`.
+
+
+## Cross-cutting / unchanged by either branch
+- **Main HEAD Commit:** Pending PR Merge
+- **Vercel Production Deployment:** unchanged this session.
 - **Production Supabase DB:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`)
-  - Target Migrations: 18/18 applied cleanly through M14
+  - Target Migrations: 18/18 applied cleanly through M14. The site branch adds a
+    19th (`20261021100000_m15_legacy_claim_rpc.sql`), NOT YET applied to production.
   - Data Parity: 222 apps, 89 snapshots, 533 events, 49 tags (0 deltas)
-  - Target Recovery Point: `jobquest_prod_post_migration_20260928_122000.dump` (SHA: `75aa9002...`)
 - **Legacy Source:** READ-ONLY STANDBY (Neon `SHOW transaction_read_only = on`)
 - **JobQuest 1.0 Retirement:** STRICTLY NOT AUTHORIZED (Preserved for 14-day stabilization)
-- **Claim Code (`jack`):** Unconsumed, safely vaulted outside Git
-- **Smoke Suite:** 10/10 Gates Passed (Health, Login, Refresh, RLS, Workflow RPCs, Parity, Empty Domains, Global Search, Extension API, Logout)
-- **Extension Package:** `apps/extension/dist/jobquest-capture-prod.zip` (SHA: `17858d2a...`, 27/27 unit tests pass, sideload ready)
-- **Cutover Status:** PAUSED FOR USER MANUAL BROWSER VERIFICATION (CK-18 PENDING)
+- **Claim Code (`jack`): STILL STALE — MUST BE REISSUED BEFORE CUTOVER.** Unchanged
+  from the prior entry: the vaulted code was generated by the OLD `generateClaimCode()`
+  format and cannot be verified by `/auth/claim` as it now exists. Reissuing it is a
+  production write requiring explicit operator authorization; NOT performed this
+  session. Do not attempt the claim with the currently-vaulted code.
+- **Register rate limit on Preview/dev:** `REGISTER_IP_MAX_PER_HOUR=20` is now set
+  for the Vercel `preview` and `development` scopes ONLY (Phase 11, operator-authorized;
+  supersedes the earlier "3/hour default" note). Production value unchanged. This
+  session's Step 13 could not independently re-read Vercel env (MCP disconnected);
+  it relies on the Phase 11 record. (Distinct from the local dev-only rate-limit
+  bucket cleared earlier, which only affected this machine's local Docker Supabase.)
 
 ## Feature Freeze Notice
 FEATURE FREEZE IS IN EFFECT. No ordinary new features are permitted. Allowed changes are strictly: launch blockers, security defects, migration defects, production configuration defects, critical P0/P1 regressions, critical accessibility defects, and critical performance defects materially threatening launch.
 
+## Manual QA History
+**Round 1 (prior Preview, SHA `d43dfceb`):** Sign In, Create Account, Forgot Password,
+Claim UI, registration, recovery codes, Dashboard, Applications CRUD/stage/archive,
+Search, Contacts, Interviews, Tasks, Habits, Resumes, Settings tabs, password change,
+recovery-code regeneration, logout+refresh, mobile 390x844, `/workspace/workflow`
+redirect, manager Workspace Settings, Members, invite, role changes, tenant isolation
+— all PASS. Calendar Future Feature was reported visible/passing by the operator, but
+the committed code at that SHA had no Calendar nav entry at all (`/calendar` silently
+redirected to `/interviews`) — this mismatch was the trigger for this round's work.
+Only defect found: dark-mode dropdown text/color not fully in sync with the theme.
+
+**Round 2 (this session, SHA `8b0376a6`):** Implemented the Calendar Future Feature
+placeholder (previously did not exist in code) and centralized the option/optgroup
+theming fix for the dropdown defect. Full local gate + exact-head CI + a fresh
+Preview + automated smoke all PASS (see below). Manual re-test now needed, but it
+only needs to be a focused pass — see "Next Exact Step".
+
+## This Session's Work (continuation)
+Starting point: HEAD `d43dfceb`, clean, matching origin exactly (verified — no
+uncommitted or unpushed Calendar work existed anywhere; the Calendar feature had
+to be built from scratch, not recovered). Commits added, in order:
+- `3e0780b6` feat(ui): restore Calendar as a visible Future Feature placeholder —
+  nav entries in Sidebar + MobileNav, `/calendar` renders `PlaceholderView` instead
+  of redirecting to `/interviews`. No calendar business logic, DB, or API added.
+  `/workspace/workflow` -> `/workspace/settings` redirect and Workflow's absence
+  from navigation are both unchanged.
+- `2a4bb1bc` fix(theme): centralized `option`/`optgroup` theming in `globals.css`.
+  Root cause: every raw `<select>` styled its own closed control with theme tokens,
+  but no `<option>`/`<optgroup>` anywhere had explicit background/color, so the
+  native popup fell back to generic browser dark/light rendering instead of the
+  app's exact palette. One small rule fixes every select in the app.
+- `8b0376a6` test(ui): added two new E2E cases to `m2-shell.spec.ts` — Calendar
+  nav/routing (visible, opens Future Feature copy, never redirects; Workflow stays
+  absent; workspace/workflow redirect unchanged) and select/option color parity
+  across light -> dark -> light (proves the fix, not just that it builds).
+
+Full local gate: lint PASS, typecheck PASS, unit 163/163 PASS, integration 182/182
+PASS (claim suite unchanged at 13/13), full E2E 20/20 PASS (18 prior + 2 new),
+build PASS, clean-tree gate PASS. Did not re-run the Opus release-security-reviewer
+per explicit instruction, since no auth/security/migration/session/claim code
+changed in this round.
+
+Exact-head CI (SHA `8b0376a6`, run `36525184776`, triggered via `workflow_dispatch`):
+both `static` and `database` jobs PASS.
+
+New Preview deployed from that exact SHA and automated-smoked directly (Playwright,
+real browser, synthetic account `m15e_final_qa_1` on the preview/dev backend, no
+production data touched): Sign In default confirmed, Calendar visible in nav and
+`/calendar` renders the Future Feature page without redirecting, `/workspace/workflow`
+still redirects to `/workspace/settings`, dark-mode select/option colors now match
+exactly (`rgb(18,24,39)`/`rgb(237,241,247)`), light-mode select/option colors match
+exactly (`rgb(255,255,255)`/`rgb(23,32,51)`), logout returns to Sign In, and 390x844
+has zero page-level horizontal overflow (`scrollWidth === 390`).
+
 ## Next Exact Step
-**AWAITING OPERATOR INPUT:**
-1. Operator manually inspects `https://jobquest2.vercel.app` using `smoke-tester` credentials.
-2. If verified green: Operator enters **`GO`** -> Tag `v2.0.0-prod` and transition to Phase M15-F (Post-Launch Stabilization).
-3. If defect found: Operator enters **`NO-GO`** -> Execute immediate rollback per `ROLLBACK_RUNBOOK.md`.
+**TARGETED REMEDIATION REQUIRED (Step 13B BLOCKED on B2-R).** A separate remediation prompt should: fix B2-R in `apps/extension/sidepanel.js` (record `saveSeq = captureRequestSeq` at `save()` start; after the recheck abort and re-render if the context changed or if `warnOnDuplicates && !canSave`; reset `duplicateState` at `:709` only when the context is unchanged; keep `warnOnDuplicates=false` saving); close the ≤350 ms override-grant window; remove `popup.html`/`popup.js` from the package or apply the same fix; add save-path tests (superseded/ignored recheck, edit-then-save inside the debounce window, tab switch during recheck) and make the N1 E2E assertion non-vacuous; then targeted → regression → new SHA → exact-head CI → new Preview → operator retest; decide whether a further focused review is required. No merge to development/main and no production action until then.
+
+*(Historical — the Step 13A operator retest below was executed and reported PASS against `e19e9cce`.)*
+Focused manual retest of the unpacked extension against the Step 13A Preview deployment:
+
+- **Preview Deployment:** `https://jobquest2-ccdu7i7a3-one-piece-5779.vercel.app` (`dpl_HLLKNFCYgLJ6sGa2C93RURNR2Bhn`)
+- **Unpacked Extension Path:** `apps/extension/dist/jobquest-capture-dev`
+- **Focused Duplicate Verification Scenarios:**
+  1. **B1 Override Isolation Test:**
+     - Open Job A (an existing duplicate job). Click "Save as New Application Anyway".
+     - Switch to Job B (another existing duplicate job in another tab).
+     - Verify: Job B displays the duplicate warning screen and does NOT inherit Job A's override. Primary button does NOT say "Save to JobQuest".
+  2. **B2 Post-Check Edit Re-evaluation Test:**
+     - Open a fresh job listing that is NOT a duplicate (e.g. Acme Corp / New Role).
+     - Expand "Review & Edit details" (`#edit-toggle-btn`).
+     - Edit Company and Title to match an already-saved application in your workspace.
+     - Verify: The duplicate warning screen is immediately triggered and duplicate status card appears. The primary button is blocked from saving as normal.
+     - Attempting to save without explicit override is blocked.
+  3. **N1 Tab Switch Race Test:**
+     - In Job A, type in the Company field and immediately switch to Job B tab before the 350 ms debounce fires.
+     - Verify: Job A's late duplicate result does not overwrite Job B's capture state.
+
+After operator confirms PASS on this focused duplicate retest:
+- **Step 13B:** Focused Claude Opus / High independent security review on the exact remediation delta to confirm closure of B1 and B2.
+- **Promotion & Cutover:** Merges to `development` and `main`, production deployment, and production verification remain strictly paused until separately authorized.

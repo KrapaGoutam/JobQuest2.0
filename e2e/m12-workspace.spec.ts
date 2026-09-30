@@ -4,8 +4,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-const shotsDir = resolve('migration-upgrade/m12/screenshots');
-const evidenceDir = resolve('migration-upgrade/m12/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -57,6 +57,7 @@ test.describe('Milestone 12 · Workspace Management & Manager Functions E2E', ()
     await settle(page);
 
     // 1. Register User A (Manager of personal workspace)
+    await page.getByRole('button', { name: 'Create account' }).click();
     const registerA = page.getByRole('form', { name: 'Register' });
     await registerA.getByLabel('Username (required)').fill(userA_name);
     await registerA.getByLabel('Password (required)').fill(userA_pass);
@@ -154,6 +155,7 @@ test.describe('Milestone 12 · Workspace Management & Manager Functions E2E', ()
     await pageB.goto('/');
     await settle(pageB);
 
+    await pageB.getByRole('button', { name: 'Create account' }).click();
     const registerB = pageB.getByRole('form', { name: 'Register' });
     await registerB.getByLabel('Username (required)').fill(userB_name);
     await registerB.getByLabel('Password (required)').fill(userB_pass);

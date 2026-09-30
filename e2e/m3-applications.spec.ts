@@ -9,8 +9,8 @@ import { randomBytes } from 'node:crypto';
  * API and Supabase (local stack by default; set M1_BASE_URL for a Vercel preview).
  * One registered user per run (the deployed register limit is 3/hour/IP).
  */
-const shotsDir = resolve('migration-upgrade/m3/screenshots');
-const evidenceDir = resolve('migration-upgrade/m3/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -64,12 +64,14 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('jobquest_preview_rail_open'));
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(`m3_e2e_${run}`);
     await reg.getByLabel('Password (required)').fill(`Quantum-Pulse-${run}-Key!`);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
     // ---------------------------------------------------------------- E2E-04 create (+ snapshot)

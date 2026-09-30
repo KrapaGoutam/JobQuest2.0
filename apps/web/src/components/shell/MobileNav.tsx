@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import {
   CalendarDays,
+  Calendar,
   Briefcase,
   CheckSquare,
   Users,
@@ -188,6 +189,7 @@ export function MobileNav({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {[
+                { path: '/calendar', label: 'Calendar', icon: Calendar },
                 { path: '/interviews', label: 'Interviews', icon: Video },
                 { path: '/habits', label: 'Habits', icon: Flame },
                 { path: '/journal', label: 'Journal', icon: BookOpen },

@@ -353,6 +353,199 @@ const captureSchema = z.object({
   }
 });
 
+// -----------------------------------------------------------------------------
+// GET /ext/v1/stats
+//
+// NOTE ON IMPLEMENTATION: the obvious approach would be `admin().rpc('rpc_get_
+// analytics_overview', ...)`, which is what the web app's Dashboard/Analytics
+// screens call. That RPC is `security definer` but still requires a real
+// Postgres auth session: it does `v_caller := (select auth.uid())` and raises
+// NOT_AUTHENTICATED when that is null (verified empirically against the local
+// stack: calling it through `admin()` — the service-role client with no JWT —
+// always returns error code 28000 NOT_AUTHENTICATED, regardless of the
+// workspace/user IDs passed). Extension bearer tokens are validated by our own
+// `extensionActor()` (an HMAC lookup), not a Supabase Auth session, so there is
+// no `auth.uid()` for that RPC to see — unlike the other extension-callable
+// RPCs (`rpc_extension_capture`, `rpc_create_extension_token`, ...), which were
+// deliberately written to take an explicit `p_actor_id` instead of relying on
+// `auth.uid()`. Changing `rpc_get_analytics_overview` to accept an explicit
+// actor id would be a migration change, outside this route-only change.
+//
+// So this endpoint instead reads the same tables directly via `admin()`,
+// scoped explicitly by `auth.actor.workspaceId`/`auth.actor.userId` (the exact
+// pattern every other route in this file already uses), replicating only the
+// pieces of that RPC's logic this endpoint needs: the profile-timezone-aware
+// "today" / "this week" boundaries, the 8-stage pipeline, and the single
+// WEEKLY active goal. This keeps the same trusted, server-resolved timezone
+// behavior (never a client-supplied one) without needing a live user session.
+// -----------------------------------------------------------------------------
+
+const PIPELINE_STAGES = [
+  'SAVED', 'PREPARING', 'APPLIED', 'ASSESSMENT', 'RECRUITER_SCREEN', 'INTERVIEW', 'FINAL_INTERVIEW', 'OFFER',
+] as const;
+
+/**
+ * Minimal, DST-safe zoned-day helpers. These mirror apps/web/src/lib/time.ts's
+ * wallClock/zoneOffsetMs/dayKey and apps/web/src/types/tasks.ts's taskDay/dueState
+ * exactly (same algorithm, same rules) so "today" / "this week" / "overdue" here
+ * use the identical profile-timezone semantics as the web app's own queue and
+ * analytics — never a client-supplied timezone, and never a new date rule.
+ */
+function zonedWallClock(epochMs: number, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(epochMs));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const hour = get('hour');
+  return { year: get('year'), month: get('month'), day: get('day'), hour: hour === 24 ? 0 : hour, minute: get('minute'), second: get('second') };
+}
+function zoneOffsetMs(epochMs: number, timeZone: string): number {
+  const w = zonedWallClock(epochMs, timeZone);
+  const asUtc = Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second);
+  return asUtc - Math.floor(epochMs / 1000) * 1000;
+}
+function zonedDayKey(epochMs: number, timeZone: string): string {
+  const w = zonedWallClock(epochMs, timeZone);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${w.year}-${pad(w.month)}-${pad(w.day)}`;
+}
+function addDaysToKey(key: string, days: number): string {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
+}
+/** UTC instant of local midnight for `dayKey` in `timeZone` (first valid instant if ambiguous). */
+function zonedMidnightUtcIso(dayKey: string, timeZone: string): string {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  const naive = Date.UTC(y!, m! - 1, d!, 0, 0, 0);
+  const candidates = [naive - 86_400_000, naive, naive + 86_400_000]
+    .map((n) => n - zoneOffsetMs(n, timeZone))
+    .filter((t, i, all) => all.indexOf(t) === i)
+    .filter((t) => zonedDayKey(t, timeZone) === dayKey)
+    .sort((a, b) => a - b);
+  return new Date(candidates[0] ?? naive).toISOString();
+}
+/** Same rule as public.rpc_get_analytics_overview's v_current_week / rpc_upsert_goal_for_user. */
+function weekStartKey(todayKey: string, weekStart: number): string {
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const dow = new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay(); // 0=Sun..6=Sat, matches extract(dow from date)
+  const isodow = dow === 0 ? 7 : dow; // matches extract(isodow from date)
+  const offset = weekStart === 0 ? dow : isodow - 1;
+  return addDaysToKey(todayKey, -offset);
+}
+interface StatsTask { task_type: string; due_date: string | null; due_at: string | null }
+/** Mirrors apps/web/src/types/tasks.ts taskDay() exactly. */
+function taskDueDay(task: Pick<StatsTask, 'due_date' | 'due_at'>, timeZone: string): string | null {
+  if (task.due_date) return task.due_date;
+  if (task.due_at) return zonedDayKey(Date.parse(task.due_at), timeZone);
+  return null;
+}
+/** Mirrors apps/web/src/types/tasks.ts dueState() exactly. */
+function taskDueState(task: Pick<StatsTask, 'due_date' | 'due_at'>, timeZone: string, todayKey: string, nowMs: number): 'overdue' | 'today' | 'upcoming' | 'nodate' {
+  const day = taskDueDay(task, timeZone);
+  if (!day) return 'nodate';
+  if (task.due_at && Date.parse(task.due_at) < nowMs) return 'overdue';
+  if (day < todayKey) return 'overdue';
+  if (day === todayKey) return 'today';
+  return 'upcoming';
+}
+
+extensionV1.get('/stats', async (c) => {
+  const auth = await authorize(c, 'profile:read');
+  if (auth.response) return auth.response;
+
+  const profile = await admin().from('profiles').select('timezone, week_start').eq('user_id', auth.actor.userId).single();
+  if (profile.error || !profile.data) return fail(c, 500, 'STATS_LOAD_FAILED', 'Could not load extension stats.');
+  const timeZone: string = profile.data.timezone || 'UTC';
+  const weekStart: number = profile.data.week_start ?? 1;
+
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const todayKey = zonedDayKey(now.getTime(), timeZone);
+  const todayStartIso = zonedMidnightUtcIso(todayKey, timeZone);
+  const currentWeekKey = weekStartKey(todayKey, weekStart);
+  const weekStartIso = zonedMidnightUtcIso(currentWeekKey, timeZone);
+  const yesterdayKey = addDaysToKey(todayKey, -1);
+  const yesterdayStartIso = zonedMidnightUtcIso(yesterdayKey, timeZone);
+  const lastWeekKey = addDaysToKey(currentWeekKey, -7);
+  const lastWeekStartIso = zonedMidnightUtcIso(lastWeekKey, timeZone);
+
+  const [pipelineRows, todayCount, weekCount, yesterdayCount, lastWeekCount, goalRow, interviewCount, taskRows] = await Promise.all([
+    admin().from('applications').select('stage')
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .eq('status', 'OPEN').is('archived_at', null),
+    admin().from('applications').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .gte('applied_at', todayStartIso).lte('applied_at', nowIso),
+    admin().from('applications').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .gte('applied_at', weekStartIso).lte('applied_at', nowIso),
+    admin().from('applications').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .gte('applied_at', yesterdayStartIso).lt('applied_at', todayStartIso),
+    admin().from('applications').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .gte('applied_at', lastWeekStartIso).lt('applied_at', weekStartIso),
+    admin().from('goals').select('period_type, target_applications, target_outreach, effective_date')
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .eq('period_type', 'WEEKLY').lte('effective_date', currentWeekKey)
+      .order('effective_date', { ascending: false }).order('created_at', { ascending: false })
+      .limit(1).maybeSingle(),
+    admin().from('interviews').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .is('outcome', null).gte('scheduled_at', nowIso),
+    admin().from('tasks').select('task_type, due_date, due_at')
+      .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
+      .eq('status', 'PENDING'),
+  ]);
+  if (pipelineRows.error || todayCount.error || weekCount.error || yesterdayCount.error || lastWeekCount.error || goalRow.error || interviewCount.error || taskRows.error) {
+    return fail(c, 500, 'STATS_LOAD_FAILED', 'Could not load extension stats.');
+  }
+
+  const pipelineCounts = new Map<string, number>();
+  for (const row of pipelineRows.data ?? []) pipelineCounts.set(row.stage, (pipelineCounts.get(row.stage) ?? 0) + 1);
+  const pipeline = PIPELINE_STAGES.map((stage) => ({ stage, count: pipelineCounts.get(stage) ?? 0 }));
+
+  const applicationsToday = todayCount.count ?? 0;
+  const applicationsThisWeek = weekCount.count ?? 0;
+  const applicationsYesterday = yesterdayCount.count ?? 0;
+  const applicationsLastWeek = lastWeekCount.count ?? 0;
+
+  const goal = goalRow.data as { period_type: string; target_applications: number; target_outreach: number; effective_date: string } | null;
+  const activeGoal = goal ? {
+    period_type: goal.period_type,
+    target_applications: goal.target_applications,
+    target_outreach: goal.target_outreach,
+    progress_pct: goal.target_applications > 0 ? Math.round((applicationsThisWeek / goal.target_applications) * 100) : null,
+  } : null;
+
+  let followUpsDue = 0;
+  let overdueFollowUps = 0;
+  let overdueTasks = 0;
+  for (const task of (taskRows.data ?? []) as StatsTask[]) {
+    const state = taskDueState(task, timeZone, todayKey, now.getTime());
+    if (state === 'overdue') {
+      overdueTasks += 1;
+      if (task.task_type === 'FOLLOW_UP') overdueFollowUps += 1;
+    } else if (state === 'today' && task.task_type === 'FOLLOW_UP') {
+      followUpsDue += 1;
+    }
+  }
+
+  return c.json({
+    applications_today: applicationsToday,
+    applications_this_week: applicationsThisWeek,
+    applications_yesterday: applicationsYesterday,
+    applications_last_week: applicationsLastWeek,
+    active_goal: activeGoal,
+    pipeline,
+    upcoming_interviews: interviewCount.count ?? 0,
+    follow_ups_due: followUpsDue,
+    overdue_follow_ups: overdueFollowUps,
+    overdue_tasks: overdueTasks,
+  });
+});
+
 extensionV1.post('/captures', async (c) => {
   const auth = await authorize(c, 'applications:create');
   if (auth.response) return auth.response;

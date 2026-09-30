@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { Actor, loadEnv, makeRecorder, serviceDb } from './harness';
 
 const ready = loadEnv();
-const record = makeRecorder('migration-upgrade/m11/evidence', 'integration');
+const record = makeRecorder('test-results/evidence', 'integration');
 
 describe.skipIf(!ready)('Milestone 11 — browser extension API and token isolation', () => {
   const run = randomBytes(3).toString('hex');

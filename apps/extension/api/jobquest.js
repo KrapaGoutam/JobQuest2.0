@@ -17,6 +17,22 @@ export function normalizeInstanceUrl(value) {
   return url.origin;
 }
 
+/** Trim a pasted token the same way saveSettings does, so Save and the
+ *  standalone Test button behave identically for the same input. */
+export function normalizeToken(token) {
+  return String(token || '').trim();
+}
+
+/** A safe-to-display representation of an already-stored token: its
+ *  jqx_dev_/jqx_live_ prefix (not sensitive — a public format marker) plus
+ *  its last 4 characters. Never returns enough to reconstruct the secret. */
+export function maskToken(token) {
+  const t = normalizeToken(token);
+  const match = /^(jqx_(?:dev|live)_)([A-Za-z0-9]{43})$/.exec(t);
+  if (!match) return '';
+  return `${match[1]}••••${match[2].slice(-4)}`;
+}
+
 export function buildSecureJobQuestUrl(instanceUrl, pathAndQuery = '/') {
   const base = normalizeInstanceUrl(instanceUrl);
   if (!base) throw new Error('JobQuest is not configured');
@@ -78,6 +94,44 @@ export async function clearSettings() {
   await chrome.storage.local.remove(['instanceUrl', 'apiToken', 'pendingCapture']);
 }
 
+/** @typedef {{ defaultStage: string, warnOnDuplicates: boolean, autoDetectJobPages: boolean, openCaptureOnDetect: boolean }} CapturePreferences */
+
+/** @type {CapturePreferences} */
+const CAPTURE_PREFERENCES_DEFAULTS = {
+  defaultStage: '',
+  warnOnDuplicates: true,
+  autoDetectJobPages: true,
+  openCaptureOnDetect: true,
+};
+
+/** Side Panel-only preferences (Settings → Capture Preferences). Stored
+ *  separately from connection settings so Disconnect (clearSettings) does
+ *  not wipe a user's chosen defaults.
+ *  @returns {Promise<CapturePreferences>} */
+export async function getCapturePreferences() {
+  const stored = await chrome.storage.local.get(['capturePreferences']);
+  const saved = /** @type {Record<string, unknown>} */ (stored.capturePreferences && typeof stored.capturePreferences === 'object' ? stored.capturePreferences : {});
+  return {
+    defaultStage: typeof saved.defaultStage === 'string' ? saved.defaultStage : CAPTURE_PREFERENCES_DEFAULTS.defaultStage,
+    warnOnDuplicates: typeof saved.warnOnDuplicates === 'boolean' ? saved.warnOnDuplicates : CAPTURE_PREFERENCES_DEFAULTS.warnOnDuplicates,
+    autoDetectJobPages: typeof saved.autoDetectJobPages === 'boolean' ? saved.autoDetectJobPages : CAPTURE_PREFERENCES_DEFAULTS.autoDetectJobPages,
+    openCaptureOnDetect: typeof saved.openCaptureOnDetect === 'boolean' ? saved.openCaptureOnDetect : CAPTURE_PREFERENCES_DEFAULTS.openCaptureOnDetect,
+  };
+}
+
+/** @param {Partial<CapturePreferences>} prefs
+ *  @returns {Promise<CapturePreferences>} */
+export async function saveCapturePreferences(prefs) {
+  const next = {
+    defaultStage: typeof prefs.defaultStage === 'string' ? prefs.defaultStage : '',
+    warnOnDuplicates: typeof prefs.warnOnDuplicates === 'boolean' ? prefs.warnOnDuplicates : true,
+    autoDetectJobPages: typeof prefs.autoDetectJobPages === 'boolean' ? prefs.autoDetectJobPages : false,
+    openCaptureOnDetect: typeof prefs.openCaptureOnDetect === 'boolean' ? prefs.openCaptureOnDetect : false,
+  };
+  await chrome.storage.local.set({ capturePreferences: next });
+  return next;
+}
+
 export class JobQuestApiError extends Error {
   constructor(message, status, code = 'REQUEST_FAILED') {
     super(message);
@@ -85,6 +139,29 @@ export class JobQuestApiError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+/**
+ * Maps a thrown error from saveSettings()/testConnection() to a stable
+ * connection state plus a user-facing message, so the UI can distinguish
+ * "the input itself was invalid" (nothing was saved) from every other
+ * failure (which only happens AFTER a save already succeeded).
+ * @returns {{ state: 'INVALID_INPUT' | 'EXPIRED_OR_REVOKED' | 'PERMISSION_ERROR' | 'SERVER_UNAVAILABLE' | 'ERROR', message: string }}
+ */
+export function mapConnectionError(error) {
+  if (error instanceof Error && error.message === 'Enter a valid JobQuest URL and extension token') {
+    return { state: 'INVALID_INPUT', message: error.message };
+  }
+  if (error instanceof JobQuestApiError) {
+    if (error.status === 401) return { state: 'EXPIRED_OR_REVOKED', message: error.message || 'Connection expired or revoked. Reconnect to JobQuest.' };
+    if (error.status === 403) return { state: 'PERMISSION_ERROR', message: error.message || 'This token does not have permission for that action.' };
+    if (error.status === 503) return { state: 'SERVER_UNAVAILABLE', message: error.message || 'JobQuest is temporarily unavailable. Try again shortly.' };
+    return { state: 'ERROR', message: error.message || 'JobQuest request failed.' };
+  }
+  if (error instanceof TypeError) {
+    return { state: 'SERVER_UNAVAILABLE', message: "Can't reach JobQuest at that URL. Check the URL and your connection." };
+  }
+  return { state: 'ERROR', message: error instanceof Error ? error.message : 'Something went wrong.' };
 }
 
 async function request(instanceUrl, apiToken, path, init = {}) {
@@ -111,6 +188,7 @@ async function request(instanceUrl, apiToken, path, init = {}) {
 
 export const testConnection = (instanceUrl, apiToken) => request(instanceUrl, apiToken, '/me');
 export const getWorkflow = (instanceUrl, apiToken) => request(instanceUrl, apiToken, '/workflow');
+export const getStats = (instanceUrl, apiToken) => request(instanceUrl, apiToken, '/stats');
 export async function getActiveResumes(instanceUrl, apiToken) {
   const payload = await request(instanceUrl, apiToken, '/documents?kind=resume');
   return payload.documents || [];

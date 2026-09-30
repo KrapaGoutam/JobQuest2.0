@@ -4,15 +4,15 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-const shotsDir = resolve('migration-upgrade/m7/screenshots');
-const evidenceDir = resolve('migration-upgrade/m7/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `${shotsDir}/${name}.png`, fullPage: false });
 const settle = (page: Page) => page.waitForTimeout(400);
 const nav = (page: Page, name: string) =>
-  page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name, exact: true }).click();
+  page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name }).click();
 
 async function audit(page: Page, context: string) {
   const r = await new AxeBuilder({ page })
@@ -45,12 +45,14 @@ test.describe('Milestone 7 · Documents & Resumes E2E', () => {
     await page.goto('/');
 
     // 1. Register new user
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(username);
     await reg.getByLabel('Password (required)').fill(password);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
     // 2. Navigate to Resumes view via Primary navigation

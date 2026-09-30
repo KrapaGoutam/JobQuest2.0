@@ -3,7 +3,7 @@
  * Covers AC-DB-01..07: RLS isolation, atomic RPCs + event history, the lifecycle boundary
  * (RPC-only state changes), append-only events, immutable snapshots, duplicate detection,
  * search/aging/pagination queries and "no automatic mutation".
- * Every test writes sanitized evidence to migration-upgrade/m3/evidence/.
+ * Every test writes sanitized evidence to test-results/evidence/.
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { randomBytes } from 'node:crypto';
@@ -11,7 +11,7 @@ import { Actor, loadEnv, serviceDb, anonDb, makeRecorder } from './harness';
 import pg from 'pg';
 import { agingRange, buildSearchFilter } from '../../apps/web/src/types/applications';
 
-const record = makeRecorder('migration-upgrade/m3/evidence', 'integration');
+const record = makeRecorder('test-results/evidence', 'integration');
 const ready = loadEnv();
 
 describe.skipIf(!ready)('Milestone 3 — Applications Workflow & Data Grid Integration Suite', () => {

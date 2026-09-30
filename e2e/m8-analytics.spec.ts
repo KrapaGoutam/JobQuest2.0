@@ -4,15 +4,15 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-const shotsDir = resolve('migration-upgrade/m8/screenshots');
-const evidenceDir = resolve('migration-upgrade/m8/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `${shotsDir}/${name}.png`, fullPage: false });
 const settle = (page: Page) => page.waitForTimeout(500);
 const nav = (page: Page, name: string) =>
-  page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name, exact: true }).click();
+  page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name }).click();
 const dismissToasts = async (page: Page) => {
   const closeButtons = page.getByRole('button', { name: 'Close notification' });
   while (await closeButtons.count()) await closeButtons.first().click();
@@ -53,12 +53,14 @@ test.describe('Milestone 8 · Search Analytics, Reports & Goals E2E', () => {
     await page.goto('/');
 
     // 1. Register new user
+    await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
     await reg.getByLabel('Username (required)').fill(username);
     await reg.getByLabel('Password (required)').fill(password);
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
+    await page.goto('/applications');
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
     // 2. Create sample applications to populate pipeline and analytics

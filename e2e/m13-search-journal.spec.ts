@@ -5,8 +5,8 @@ import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 
-const shotsDir = resolve('migration-upgrade/m13/screenshots');
-const evidenceDir = resolve('migration-upgrade/m13/evidence');
+const shotsDir = resolve('test-results/screenshots');
+const evidenceDir = resolve('test-results/evidence');
 mkdirSync(shotsDir, { recursive: true });
 mkdirSync(evidenceDir, { recursive: true });
 
@@ -72,6 +72,7 @@ test.describe('Milestone 13 · Global Search, Hardening & Journal Parity E2E', (
     await settle(page);
 
     // 1. Register User
+    await page.getByRole('button', { name: 'Create account' }).click();
     const registerForm = page.getByRole('form', { name: 'Register' });
     await registerForm.getByLabel('Username (required)').fill(username);
     await registerForm.getByLabel('Password (required)').fill(password);

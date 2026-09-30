@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -48,10 +49,10 @@ export function Sidebar({
     { id: 'applications', path: '/applications', label: 'Applications', icon: Briefcase, count: applicationsCount },
     { id: 'tasks', path: '/tasks', label: 'Tasks & Follow-ups', icon: CheckSquare },
     { id: 'contacts', path: '/contacts', label: 'Contacts', icon: Users },
-    { id: 'calendar', path: '/calendar', label: 'Calendar', icon: Calendar },
   ];
 
   const trackNav = [
+    { id: 'calendar', path: '/calendar', label: 'Calendar', icon: Calendar },
     { id: 'interviews', path: '/interviews', label: 'Interviews', icon: Video },
     { id: 'habits', path: '/habits', label: 'Habits', icon: Flame },
     { id: 'journal', path: '/journal', label: 'Journal', icon: BookOpen },
@@ -69,7 +70,6 @@ export function Sidebar({
 
   const managerWorkspaceNav = [
     { id: 'ws-members', path: '/workspace/members', label: 'Members', icon: UserPlus },
-    { id: 'ws-workflow', path: '/workspace/workflow', label: 'Workflow', icon: GitBranch },
     { id: 'ws-audit', path: '/workspace/audit', label: 'Audit History', icon: ShieldCheck },
   ];
 

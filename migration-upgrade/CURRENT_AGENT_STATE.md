@@ -1,3 +1,15 @@
+## >>> PL-1A SECURITY HOLD — OPERATOR AUTHORIZATION REQUIRED (2026-09-30) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: BLOCKED — OPERATOR SECURITY AUTHORIZATION REQUIRED.
+
+BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd`.
+
+PRODUCTION: UNCHANGED | MAIN: UNCHANGED | DEVELOPMENT: UNCHANGED | AUTH SYSTEMS: READ-ONLY VERIFICATION ONLY.
+
+LAST COMPLETED: located one current tracked plaintext copy without displaying its value; confirmed historical copies; proved the associated account absent from `jobquest-prod` and `jobquest-dev`; the authorized connector could not access the superseded old Supabase project associated with the credential, so validity is `UNKNOWN`. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
+
+NEXT EXACT ACTION: obtain explicit operator authorization and authorized access to invalidate the account/credential in the superseded environment if it exists. Do not redact the current actionable evidence, mutate authentication, rewrite history, or begin PL-1C before that gate is resolved.
+
 ## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
 
 PHASE: PL-0 | STATUS: FORMALLY CLOSED.

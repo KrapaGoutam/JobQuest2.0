@@ -1,3 +1,17 @@
+## >>> PL-0B-2 — PERMANENT POST-LAUNCH GOVERNANCE / ROADMAP IMPLEMENTATION (2026-09-30) <<<
+
+PHASE: PL-0B-2 | STATUS: IN PROGRESS — governance documentation branch created; no development merge authorized.
+
+M15-E: FORMALLY CLOSED | PL-0A: CLOSED | PL-0B-1: CLOSED | PL-0B-R1: CLOSED | PL-0B-R2: CLOSED.
+
+CERTIFIED DEVELOPMENT SHA: `fcadb2ff77f0850450242a1caf9c2143a08ceef4` | CI: `36768885326` | RESULT: PASS.
+
+CURRENT BRANCH: `feature/pl-0-governance` | BASE: `fcadb2ff77f0850450242a1caf9c2143a08ceef4` | MAIN: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+WORK: canonical post-launch roadmap, permanent backlog, execution checklist, handoff template, implementation report, and historical-register pointer. No product code, migrations, workflow changes, development/main merge, deployment, Production change, jobquest-prod change, or jobquest-dev change.
+
+NEXT: review docs, run canonical secret scan, commit/push only this branch, and certify its exact docs-only CI. After operator-approved integration and exact development CI, PL-1 is next. Do not claim PL-0 fully closed before that integration gate.
+
 ## >>> PL-0B-R1 — CI / E2E / GITHUB GOVERNANCE REMEDIATION (2026-09-30) <<<
 
 PHASE: PL-0B-R1 | STATUS: LOCAL REMEDIATION COMPLETE; AWAITING EXACT BRANCH CI

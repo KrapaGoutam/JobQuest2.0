@@ -344,7 +344,7 @@ LAST CI: 36655655863 / fa437ad6f22b8c485dca62834e45a6c68756c83e / PASS
 PREVIEW: https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (dpl_BvNeBysZxeK6gN1nbowt1PL2gAc2, target preview)
 BACKEND: jobquest-dev (PREVIEW_BACKEND_IS_PRODUCTION = false)
 OPERATOR RETEST: SKIPPED BY OPERATOR
-PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw)
+PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw) [DISPUTED 2026-09-29 - operator states this project was never created; see m15/STEP16A0_PRODUCTION_BACKEND_REALITY_CHECK.md]
 STEP 13C FINAL INDEPENDENT SECURITY REVIEW: PASS (Opus/High, once); no blockers
 FINAL M15-E EXTENSION SECURITY REVIEW: PASS
 AUTOMATED EVIDENCE: SUFFICIENT FOR RELEASE (operator retest SKIPPED BY OPERATOR)
@@ -354,5 +354,14 @@ NEXT EXACT ACTION: Step 15 Controlled Release Promotion (separate prompt). DO NO
 ## Step 15 - Controlled Release Promotion
 
 - [x] Ancestry verified (tested SHA fa437ad6 in candidate; site tip 0a534b45 in candidate; development == main == 99bb9b8f, no unique commits)
-- [ ] development merge / push / exact CI
-- [ ] main merge / push / exact CI
+- [x] development merge 1ed8fdd1 / pushed / CI 36659089688 PASS
+- [x] main merge bfa82eb5 / pushed / CI 36659797562 PASS
+
+## Step 15.5 - Read-Only Production Preflight
+
+- origin/main = bfa82eb5 (CI 36659797562 PASS). Vercel project jobquest2 -> GitHub KrapaGoutam/JobQuest2.0, production branch main, auto-deploy enabled.
+- **PRODUCTION_DEPLOYMENT_STATE: AUTO_DEPLOYED.** dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK, target=production, READY, SHA bfa82eb5, aliased to https://jobquest2.vercel.app. GET / = 200.
+- Prod DB: not directly inspectable (Supabase MCP denied, no CLI); no evidence of change. Migration 19 (m15_legacy_claim_rpc) recorded as not applied while live code includes the claim RPC path - risk for Step 16A.
+- Env names present in Production (values not read); REGISTER_IP_MAX_PER_HOUR override for Preview/Dev is scoped separately from Production.
+- Claim code not reissued; extension token/package unchanged; JobQuest1 unchanged. No production writes.
+- NEXT: Step 16A - Production Reconciliation / Completion.

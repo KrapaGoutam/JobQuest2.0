@@ -1,17 +1,220 @@
-## >>> STEP 15 ACTIVE (Controlled Release Promotion) <<<
+## >>> M15-E FORMALLY CLOSED (2026-09-30): FINAL DECISION = GO | CK-18 = OPERATOR APPROVED | NEXT = M15-F PRODUCTION STABILIZATION (not started) <<<
 
-CURRENT PHASE: M15-E / Step 15
-CURRENT SUBTASK: Pre-promotion ancestry verified; merging candidate -> development
-RELEASE CANDIDATE: fix/m15e-extension-connection-ui (aggregate; contains site remediation tip 0a534b45)
-TESTED APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e (docs-only commits after it)
-DEVELOPMENT HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a (== main; candidate is 52 commits ahead, development has no unique commits)
-MAIN HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a
-FINAL SECURITY REVIEW: PASS
-BLOCKERS: None (branch protection: none on development/main)
-PRODUCTION: UNCHANGED
-NEXT EXACT ACTION: git merge --no-ff candidate into development, sanity gate, push, exact development CI
+M15-E FINAL DECISION: GO | CK-18: OPERATOR APPROVED (operator accepted the GO and authorized formal closeout) | M15-E: FORMALLY CLOSED | NEXT: M15-F — PRODUCTION STABILIZATION (requires its own explicit operator authorization).
+CLOSEOUT ACTIONS: docs-only commit on fix/m15e-extension-connection-ui, pushed to that branch only. development/main NOT merged; Production NOT redeployed; Production variables NOT modified; JobQuest1 NOT retired; old Supabase NOT deleted/paused.
 
-# JOBQUEST2.0 - CURRENT AGENT STATE
+## >>> M15-E FINAL GO / NO-GO (2026-09-30): DECISION = GO (read-only gate) <<<
+
+PRODUCTION: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ @ https://jobquest2.vercel.app | MAIN bfa82eb5 | PROD DB jobquest-prod kqsxdothjxtcktyirpux | P0: 0 | P1: 0 | BLOCKERS: 0
+RE-VERIFIED READ-ONLY: DB 223 apps / 90 snapshots / 349 events / 122 docs / 1 token; all apps Conan + fbd661ef-…; 0 orphans; 0 tables without RLS; 24 h Supabase edge_logs 423 requests, zero 4xx/5xx (gateway logs now queryable); live bundle kqsx-only, no secrets; prod package clean; extension tests 97/97.
+EVIDENCE LIMITATIONS (both NON-BLOCKING per Step 13C "automated evidence sufficient for release"): L1 duplicate Side Panel visual observation not seen by agent; L2 edit-invalidation not exercised in Production. Others: no fresh stranger/anon prod RLS probe; JWT kid not decoded; health TTFB 0.25–0.47 s.
+HYGIENE: H1 plaintext `smoke-tester` password from the superseded kwmnl… target is committed in main docs (M15E_GO_NO_GO_REPORT.md:56, NEXT_AGENT_HANDOFF.md:61); account absent from jobquest-prod; scrub/rotate post-launch. H2 GO_NO_GO_CHECKLIST CK-06/10/14 figures are stale (superseded by 16A-2/3).
+FULL DECISION + BACKLOG: migration-upgrade/m15/M15E_FINAL_GO_NO_GO_DECISION.md
+UNCHANGED: Production, Preview/Dev, old Supabase, jobquest-dev, JobQuest1/Neon, main/development. NO merge/push/deploy/token/data write performed. Rollback dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK AVAILABLE.
+NEXT: M15-F — PRODUCTION STABILIZATION (needs explicit operator authorization). JobQuest1 retirement NOT authorized.
+
+## >>> STEP 16B — PASS WITH ONE EVIDENCE CAVEAT (2026-09-30 ~13:25Z): PRODUCTION EXTENSION ACTIVATED; STOPPED BEFORE M15-E FINAL GO/NO-GO <<<
+
+PRODUCTION: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ @ https://jobquest2.vercel.app | REDEPLOY/ENV CHANGE DURING 16B: NO | EXTENSION_TOKEN_ENV: NOT_REQUIRED (prefix jqx_dev_, cosmetic) | 2nd TOKEN CREATED: NO | M15-F: NOT STARTED
+TOKEN: 1 token "OP-Prod" (id 195a68fe-…), created 13:07:05Z by operator in-app, VALUE NOT RECORDED. Workspace fbd661ef-… (Conan's) PASS | user e5df8d69-… PASS | scopes exactly workflow:read, documents:read, applications:duplicate_check, applications:create, profile:read PASS (no edit/delete) | expires 2026-12-29 | last_used_at 13:16:05Z (updated) PASS | revoked_at null (ACTIVE) PASS. Kept, not revoked.
+CAPTURE: PASS (operator). One new application 05c0bf52-… "CVP (Customer Value Partners)" / "[Remote] QA Tester", stage SAVED, source jobright.ai, created 13:13:33Z, user+workspace = Conan/fbd661ef-… (0 rows with a different owner/workspace), duplicate_override_flag=false (0 true across all 223). Kept as the smoke application (real posting; operator may archive/delete later — not cleaned up).
+DB (read-only): applications 222 -> 223 (+1) | job_snapshots 89 -> 90 (+1, snapshot a13aabcf-…) | application_events 347 -> 349 (+2: CREATED + CAPTURED) | application_documents 122 (unchanged; capture did not create one) | extension_tokens 0 -> 1 | auth_sessions 2 (unchanged).
+DUPLICATE PROTECTION: PASS on server/package evidence; UI verdict NOT independently witnessed. Evidence: exactly one row for that URL and for company+title (same_url=1, same_company_role=1); production log shows capture POST /api/ext/v1/captures 201 once (13:13:32Z) and NO second capture; 3 post-capture POST /api/ext/v1/duplicates/check 200 (13:13:37, 13:13:43, 13:16:05Z) = the operator re-checking the same posting; extension unit tests 97/97 PASS (fail-closed save gate, identity-keyed state); package has no "Save as New Application Anyway" and duplicate_override hard-coded false; DB flag false. The API itself does NOT enforce duplicates on POST /captures (client-only gate, documented residual), so "second Save BLOCKED" can only be seen in the operator's side panel. An agent cannot drive it: no token was (or may be) given to the agent.
+EDIT INVALIDATION: NOT DIRECTLY EXERCISED ON PRODUCTION (needs the operator's side panel). Covered by automated evidence: extension tests 97/97 (onIdentityChange invalidation, stale-verdict NEEDS_CHECK, checkedKey/identity-key match) + Preview E2E (m15e-extension-sidepanel) from Steps 13A-13C. Optional operator check: open the same posting, edit Company/Title in "Review & Edit details" -> a fresh duplicate check must fire (a new POST /api/ext/v1/duplicates/check appears in logs) and Save stays blocked/re-verified.
+RUNTIME LOGS (vercel logs, 12h window, 20 entries 12:51–13:19Z): all info, ZERO 4xx/5xx; no 401/403, no extension-token errors, no duplicate API failures, no 500s, host jobquest2.vercel.app only (correct backend). Sequence: token create 201 -> /me x4, /workflow, /documents 200 -> duplicates/check x5 200 -> captures 201. Vercel MCP runtime logs API returns 403; used the CLI. Supabase logs not queried (edge_logs unavailable via connector). Security advisors unchanged from 16A-2 (INFO/WARN set only).
+NOTE ON POSTING: smoke used a real jobright.ai posting chosen by the operator instead of the planned local scratch page (smoke16b/job.html); no scratch page was used.
+PREVIEW/DEV: UNCHANGED | OLD SUPABASE (kwmnl…) / jobquest-dev: UNTOUCHED | ROLLBACK: AVAILABLE (dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK; DB rollback = the smoke rows/token are additive only).
+GIT: docs-only commit(s) on fix/m15e-extension-connection-ui; main/development untouched.
+NEXT: M15-E FINAL GO / NO-GO (needs explicit operator authorization). Open items for that decision: (1) operator to confirm the UI-level duplicate-blocked and edit-invalidation observations (or accept the automated evidence); (2) decide whether to keep or archive the smoke application; (3) post-launch hardening candidates unchanged (server-side duplicate enforcement, EXTENSION_TOKEN_ENV=live, M14 authenticated-privilege finding).
+
+## >>> STEP 16B CHECKPOINT 1 (2026-09-30): PACKAGE BUILT + TOKEN-ENV DECISION = A (NOT_REQUIRED); AWAITING OPERATOR TOKEN/INSTALL <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME at the operator token checkpoint. STEP 16A-3: PASS. STEP 16B: IN PROGRESS.
+HANDOFF DOCS: branch fix/m15e-extension-connection-ui pushed (05c1a942..bc123a84, secret scan clean); main/development untouched.
+SOURCE: app code on the branch is byte-identical to main bfa82eb5 (git diff bfa82eb5..HEAD over apps/packages/supabase/e2e = empty); tested lineage fa437ad6.
+TOKEN ENV DECISION: A — NOT_REQUIRED. Source: EXTENSION_TOKEN_ENV (apps/api/src/env.ts:41, enum dev|live, default dev) only chooses the `jqx_<env>_` prefix in mintExtensionSecret (extensionTokens.ts:58). TOKEN_PATTERN /^jqx_(dev|live)_.../ and DB chk_extension_token_prefix ^jqx_(dev|live)_ accept both; auth = HMAC-SHA256(EXTENSION_TOKEN_PEPPER, whole token) lookup, so no routing/validation/security difference. Unset => dev prefix, cosmetic. No Vercel change, no redeploy. Cosmetic hardening (set live + redeploy) documented separately; NOT done. EXTENSION_ORIGINS unset => no origin restriction (extension uses host_permissions <all_urls>; CORS not needed). EXTENSION_TOKEN_PEPPER already set in Production (names only). No other Production env var required.
+TOKEN CONTRACT (source): created in-app Settings -> Browser Extension (/settings/extension) "Connect a browser" -> POST /api/extension/tokens (CSRF, web session). Bound to ONE workspace (active workspace; rpc_create_extension_token checks membership). Fixed least-privilege scopes: workflow:read, documents:read, applications:duplicate_check, applications:create, profile:read (no edit/delete). Expiry choice 30/90/365 days (default 90; DB check <= 365d). Revoke: UI "Revoke" -> rpc_revoke_extension_token (immediate; extensionActor also fails on expiry, suspended user, removed membership). Replace = rotate. Raw token returned once, only the HMAC hash stored.
+PACKAGE: `node apps/extension/scripts/package.mjs prod` (package:prod) built from HEAD bc123a84 (app code == main). Output apps/extension/dist/jobquest-capture-prod (+ .zip, git-ignored). zip SHA-256 3c9c7f7836aae5ed67a907e7848bec6dc7cbee11859759d737ce3fbeecb92b7e (61674 bytes). instance-preset.json = {environment: prod, instanceUrl: https://jobquest2.vercel.app}. PACKAGE SCAN: no popup.* files/manifest refs, no source maps, no token/secret/JWK/DB URL/preview or dev-project refs, no "Bookmarked", no "Save as New Application Anyway"; duplicate_override hard-coded false (sidepanel-logic.js:415). Only localhost strings are placeholder/help text and a Preview-label heuristic.
+DB BASELINE (kqsx…, read-only): applications 222 | job_snapshots 89 | application_events 347 | application_documents 122 | extension_tokens 0 | 4 extension RPCs present.
+PRODUCTION REDEPLOY DURING 16B: NO | ROLLBACK: AVAILABLE (dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK) | PREVIEW/DEV, OLD SUPABASE: UNCHANGED.
+NEXT EXACT ACTION: operator creates the token in the Production UI, loads unpacked apps/extension/dist/jobquest-capture-prod, pastes token in extension Settings, tests connection, returns TOKEN CREATED / EXTENSION INSTALLED / CONNECTION TEST. Agent then verifies read-only (token row workspace/scopes/last_used_at) and drives capture smoke against a local unique posting (scratchpad smoke16b/job.html, company "JQSmoke16B Co", title "JQ Smoke Test Engineer 16B").
+
+## >>> STEP 16A-3 — PASS (2026-09-30 ~07:25Z): PRODUCTION CUTOVER COMPLETE; STOPPED BEFORE STEP 16B <<<
+
+PRODUCTION: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ (READY, production, main @ bfa82eb557c5e748ba5d7c91fe122fb8294d2313) on https://jobquest2.vercel.app | PROD SUPABASE: jobquest-prod kqsxdothjxtcktyirpux | ES256 kid 6434f760-580a-4945-aaa5-c161f568120a
+SIX PROD VARS: 6/6 updated by operator | PREVIEW/DEV: UNCHANGED | OLD SUPABASE + jobquest-dev: UNTOUCHED | EXTENSION: NOT ACTIVATED
+FRONTEND TARGET: PASS | SERVER TARGET: PASS — the server wrote Conan's login sessions into kqsx… auth_sessions (2 rows for user e5df8d69-…, created 07:14Z and 07:16:53Z = the two POST /api/auth/login calls at 02:14/02:16 CDT; one revoked by the logout at 02:16:31 CDT, one active).
+CONAN LOGIN: PASS (operator manual; login, logout, login again) | WORKSPACE fbd661ef-…: PASS, MANAGER | APPLICATIONS visible in UI: 222 PASS; detail/search/filter/stage labels PASS; no dev/E2E workspaces.
+JWT: PASS — app-minted ES256 token accepted by the new project (Conan's UI reads 222 applications through user-JWT + RLS; an unaccepted signature would return 401/0 rows). Exact kid used is inferred from the only key config that can work, not from a token dump.
+RLS: PASS — Conan sees own workspace data through the app; stranger 0 rows / anon 42501 / Conan denied user_credentials proven in the 16A-2 rolled-back probe (no new mutating probe run). Supabase gateway logs not queryable via the connector (edge_logs table unavailable), so no direct 401/PGRST301 log check.
+DB COUNTS (read-only, post-smoke): applications 222 | snapshots 89 | events 347 | documents 122 | 1 user | 1 workspace | 2 sessions.
+RUNTIME ERRORS: NONE CRITICAL — Vercel logs for the deployment: only info entries (health, refresh, login, logout); Vercel runtime-errors API 403 (not permitted).
+ROLLBACK: AVAILABLE (dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK immediate previous production deployment, rollbackCandidate=true; not used).
+GIT: docs-only commits on fix/m15e-extension-connection-ui, local/unpushed; main/development untouched.
+NEXT: STEP 16B — PRODUCTION EXTENSION ACTIVATION (needs separate operator authorization). Do not redeploy or change Production env vars meanwhile (keep rollback intact).
+
+## >>> STEP 16A-3 CHECKPOINTS D-G (2026-09-30 ~07:00Z): NEW DEPLOYMENT READY; FRONTEND TARGET PASS; AWAITING OPERATOR CONAN LOGIN <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 at the Conan login/JWT/RLS/application smoke (operator signs in manually). No further redeploy, env change or push to main is permitted.
+NEW DEPLOYMENT ID: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ | URL: https://jobquest2-i3ps9a3y7-one-piece-5779.vercel.app | target production | READY | source "redeploy" of gitSource github main sha bfa82eb557c5e748ba5d7c91fe122fb8294d2313 | created 2026-09-30T06:45:07Z (01:45 CDT). Exactly ONE new production deployment (the only production entry newer than dpl_HFVT…).
+DEPLOYMENT METADATA: PASS. PRODUCTION ALIAS: PASS (jobquest2.vercel.app, jobquest2-one-piece-5779, jobquest2-git-main-… all on the new deployment).
+FRONTEND TARGET: PASS — live bundle assets/index-DbUcxJVN.js embeds ONLY kqsxdothjxtcktyirpux.supabase.co + the expected sb_publishable key; kwmnljvyvqvbvimypnmw ABSENT; xpnkasclquplmrcmhsif ABSENT; no literal sb_secret_ key, no JWT-shaped strings. (An earlier scan that showed both hosts was contaminated by stale local temp files and a malformed URL; the clean re-scan above is authoritative.)
+BASIC HEALTH: PASS — GET / 200, JS/CSS assets 200, /api/health 200 {"status":"ok"} (/health is the SPA shell path; API is /api/health). Runtime logs for the new deployment: 3 info entries (health + 2 POST /api/auth/refresh from the operator browser), no errors. Vercel MCP runtime-errors 403 (not permitted).
+SERVER TARGET: NOT YET PROVEN — no unauthenticated DB-backed route exists; proof = successful Conan login (server must read Conan's row in kqsx… with the new secret key and sign with the new JWK) + JWT accepted by RLS.
+ES256/JWT/RLS/CONAN LOGIN/APPLICATIONS/SESSION: NOT YET RUN.
+PREVIEW/DEV: UNCHANGED (11 non-production env rows, latest updatedAt 2026-09-29T17:43Z = pre-existing REGISTER_IP_MAX_PER_HOUR). Only the six Production variables were updated after 06:00Z.
+ROLLBACK: AVAILABLE — dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK READY, isRollbackCandidate=true, immediate previous production deployment. Command: vercel rollback dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK --scope one-piece-5779 (Hobby: previous deployment only). After a rollback auto-assign is off; undo with `vercel promote`.
+PRODUCTION EXTENSION: NOT ACTIVATED | OLD SUPABASE / jobquest-dev: UNTOUCHED
+LOCAL DOC COMMIT 89fb09fb (checkpoint C+) is local/unpushed; this checkpoint is committed on top; nothing pushed to main/development.
+NEXT EXACT ACTION: operator opens https://jobquest2.vercel.app, signs in as Conan manually, reports result; agent then verifies session/JWT/RLS via Supabase logs + read-only SQL, application smoke (222/89/347/122), logout/login.
+
+## >>> STEP 16A-3 CHECKPOINT C+ (2026-09-30 ~06:45Z): SIX PROD VARS UPDATED BY OPERATOR; REDEPLOY SOURCE VERIFIED; AWAITING OPERATOR REDEPLOY <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 (waiting for the operator's single Production redeploy). Supersedes the "env cutover NOT STARTED" line below.
+SIX ENV VARS: UPDATED by operator (Dashboard) — Vercel API metadata (values filtered) shows Production updatedAt: SUPABASE_URL 06:27:23Z, VITE_SUPABASE_URL 06:27:50Z, SUPABASE_PUBLISHABLE_KEY 06:28:26Z, VITE_SUPABASE_PUBLISHABLE_KEY 06:28:49Z, SUPABASE_SECRET_KEY 06:30:19Z, JQ_JWT_PRIVATE_JWK 06:32:43Z. The four now-`sensitive` values cannot be read back (by design) => their correctness is proven only by the post-redeploy smoke. Value-verified via clean `vercel env run`: VITE_SUPABASE_URL host = kqsxdothjxtcktyirpux.supabase.co; VITE_SUPABASE_PUBLISHABLE_KEY = the expected new sb_publishable key. No other Production variable changed; all other rows untouched.
+PREVIEW/DEV: UNCHANGED (rows last updated 2026-09-24/27; separate Preview,Development entries).
+REDEPLOY SOURCE: VERIFIED — dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK: target production, READY, source git, github main, sha bfa82eb557c5e748ba5d7c91fe122fb8294d2313, created 2026-09-30T02:25:44Z, serves jobquest2.vercel.app (+ jobquest2-one-piece-5779, jobquest2-git-main-…), isRollbackCandidate=true, newest production deployment. origin/main re-verified = bfa82eb5.
+ROLLBACK: AVAILABLE (dpl_HFVT… stays the immediate predecessor only if exactly ONE new production deployment is created; no push to main).
+NEW DEPLOYMENT: NOT YET CREATED | FRONTEND/SERVER TARGET: not yet verified | CONAN LOGIN / JWT / RLS / APPLICATIONS: not yet run | PRODUCTION EXTENSION: NOT ACTIVATED
+NEXT EXACT ACTION: operator redeploys dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK to Production ONCE (Dashboard; build cache OFF) and returns "NEW DEPLOYMENT ID: <id> / STATUS: READY"; then agent verifies target/SHA/alias, bundle (kqsx…), server target, health, and runs the Conan smoke with the operator signing in manually.
+
+## >>> STEP 16A-3 (Vercel Production Cutover) — INTERRUPTED BEFORE ENV MUTATION; SAFE TO RESUME <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 (2026-09-30). No Vercel variable changed, no redeploy started.
+LAST COMPLETED CHECKPOINTS: A (rollback verified) + B (env snapshot) + pre-cutover DB/JWKS/owner verification.
+PRODUCTION DEPLOYMENT: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK (old, unchanged; jobquest2.vercel.app alias; bundle embeds kwmnljvyvqvbvimypnmw + sb_publishable_ key form)
+PRODUCTION SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main re-verified; origin/development 1ed8fdd1)
+PROD SUPABASE REF (target): kqsxdothjxtcktyirpux — ACTIVE_HEALTHY; 19 migrations; 222 apps / 89 snapshots / 347 events / 122 docs; JWKS lists kid 6434f760-580a-4945-aaa5-c161f568120a (ES256/EC/P-256, no private member)
+OWNER: user_accounts.user_id = e5df8d69-9a8a-4fe1-a81d-af996c67bac6 (Conan, ACTIVE) = workspace_members.user_id (MANAGER, ws fbd661ef-…) = owner of all 222 applications. NOTE: user_accounts.id (db552c5c-…) is the row PK, NOT the user id; an earlier session misread it as a conflict. Docs were correct.
+ROLLBACK (Checkpoint A): PROVEN from Vercel docs (instant-rollback): rollback restores the previous build; "Vercel won't update environment variables if you change them in project settings"; env vars remain in original state. Old Secret values therefore need not be readable. HOBBY PLAN CONSTRAINT: only the IMMEDIATELY PREVIOUS production deployment is rollback-eligible => the cutover must create exactly ONE new production deployment (dpl_HFVT… must stay its predecessor). Never push to main during the window. After rollback, auto-assign of production domains is OFF (undo via `vercel promote <id>`).
+   Rollback command: `vercel rollback dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK --scope one-piece-5779` (or Dashboard Instant Rollback). Also revert the six Production vars (old secret values only if operator has vault copies) so a later redeploy is not silently on the new project.
+ENV SNAPSHOT (Checkpoint B, via `vercel env ls`, names/types only; project prj_0A32SVkbOH2fBI2XLFv7kSkv086d, team team_lsStfTKp3LGQEWGYRM0BJ4Pb / one-piece-5779):
+   Production-only entries (separate rows from Preview/Development): JQ_JWT_PRIVATE_JWK Secret; SUPABASE_URL Secret; SUPABASE_SECRET_KEY Secret; SUPABASE_PUBLISHABLE_KEY Secret; VITE_SUPABASE_URL Config; VITE_SUPABASE_PUBLISHABLE_KEY Config; also (NOT part of cutover, untouched) REGISTER_IP_MAX_PER_HOUR Secret, EXTENSION_TOKEN_PEPPER Secret, NODE_OPTIONS/APP_ORIGINS/JQ_JWT_ISSUER Config.
+   Preview/Development-only rows (unchanged; jobquest-dev): the same six names as separate Preview,Development entries.
+   Old readable non-secret facts: frontend host kwmnljvyvqvbvimypnmw.supabase.co (from live bundle index-CGS7DZPG.js).
+ENV CUTOVER: NOT STARTED. Attempt to run `vercel env update <name> production` from the agent shell for the 4 non-secret vars (SUPABASE_URL, VITE_SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_PUBLISHABLE_KEY) was DENIED by the session permission classifier ("Production Deploy"); not retried by another route.
+REDEPLOY: NOT STARTED | FRONTEND TARGET: old (kwmnl…) | SERVER TARGET: unverified/old | AUTH SMOKE / APPLICATION SMOKE: NOT RUN | PRODUCTION EXTENSION: NOT ACTIVATED
+NEXT EXACT ACTION: operator either (a) grants the agent permission for Production env updates + `vercel deploy`/redeploy of the exact main SHA, or (b) performs them: set six Production-only vars (URL/publishable values = new project; SUPABASE_SECRET_KEY and JQ_JWT_PRIVATE_JWK entered by operator only) -> exactly one production redeploy of bfa82eb5 -> agent resumes at frontend/server target verification and smoke.
+
+## >>> STEP 16A-2 (Build New Production DB + Application-Domain Import) — COMPLETE; ES256 READY_NEW_KEY; STEP 16A-3 READY (not started) <<<
+
+STATUS: STEP 16A-2 COMPLETE (2026-09-30). The clean production database is built, imported, verified and reconciled. Vercel cutover (Step 16A-3) has NOT started and is BLOCKED on one operator Dashboard action (ES256 key, below). Full report: migration-upgrade/m15/STEP16A2_NEW_PRODUCTION_DATABASE_REPORT.md
+NEW PROD PROJECT: jobquest-prod | REF: kqsxdothjxtcktyirpux | REGION: us-east-1 | ORG: OnePiece2.0 (fisaxwdkkdpbamvwkvnm)
+OWNER: Conan (operator-created via bootstrap-prod-owner.ts; password/recovery codes never seen by the agent) | OWNER USER ID: e5df8d69-9a8a-4fe1-a81d-af996c67bac6 | WORKSPACE ID: fbd661ef-36ef-4c19-aae1-e4a477ac79a5 (PERSONAL, Conan = ACTIVE MANAGER)
+SCHEMA: 19/19 migrations | RLS: 0 public tables without RLS, 0 unvalidated public constraints | SECURITY ADVISORS: same set as jobquest-dev (INFO/WARN only; M14 authenticated-privilege finding remains a post-launch hardening candidate)
+IMPORT STATUS: COMPLETE. SOURCE 222 | IMPORTED 222 | SNAPSHOTS 89 | EVENTS 347 (CREATED 222, CAPTURED 89, STAGE_CHANGED 2, OUTCOME_CHANGED 34) | LABEL DOCUMENTS 122 | ID MAPPINGS 222 | COMPANIES 0
+   (347, not the old 533: the M15-D tool double-counted a synthetic event per application — intentional corrected transformation.)
+PROBABLE DUPLICATES: 8 rows / 4 groups retained, none dropped (legacy ids [19,78] [31,80] [118,210] [212,213]); EXACT DUPLICATES 0 | QUARANTINED 0
+RECONCILIATION: applications fp 451ed7f53a242bed1bbc0817afe62f51 MATCH | snapshots fp 527ce31d916b2e1fe9e823d2df71f464 MATCH | documents fp 6f2b0c900ab61cd14885b54d6dd9d8dd MATCH. All verify.sql rows PASS (see report §9 for the two findings and their resolution).
+OWNERSHIP/ISOLATION: 222/222 applications user_id=Conan in the single workspace; RLS probe (rolled back): stranger 0 rows, anon denied (42501), Conan with an active session sees 222/89/347/122 and is denied user_credentials/auth_recovery_codes.
+LEGACY AUTH DATA MIGRATED: 0 (users 1 = Conan only; 0 legacy_user_id, 0 claim codes, 0 extension tokens, 0 refresh tokens, 0 rate limits, 0 leftover sessions).
+OLD PROJECT kwmnl…: UNTOUCHED | DEV PROJECT xpnk…: UNTOUCHED | VERCEL: UNCHANGED, CUTOVER NOT STARTED | PRODUCTION APP: STILL ON OLD CONFIG
+ES256 KEY CONFIG: ES256 Classification: READY_NEW_KEY. Verified 2026-09-30 on the public JWKS of kqsx…: kid 6434f760-580a-4945-aaa5-c161f568120a (kty EC, crv P-256, alg ES256, use sig, no private member) is registered alongside Supabase default kid bcdd6db8-… (previously used, not revoked). This is a NEW key, not the historical 48e903e8-… key.
+CURRENT COMMIT: see git log on fix/m15e-extension-connection-ui (docs + tools only; no app code changed)
+JQ_JWT_PRIVATE_JWK Vercel Change Required: YES — Step 16A-3 MUST replace Vercel Production JQ_JWT_PRIVATE_JWK with the exact private JWK matching kid 6434f760-… (held by the operator; never pasted to the agent), in addition to the five Supabase variables (SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY). Production scope only; Preview/Development untouched. Rollback must therefore restore the OLD JQ_JWT_PRIVATE_JWK too (vault snapshot before change).
+STEP 16A-3: READY but NOT STARTED — needs a fresh explicit operator authorization. NEXT EXACT ACTION: operator authorizes 16A-3 -> vault snapshot of the six old Production values -> replace the six Production-only variables -> redeploy exact main SHA -> smoke as Conan.
+IF INTERRUPTED: STEP 16A-2 IS DONE; do not re-run batches. If anything is in doubt run test-results/step16a2/sql/verify.sql (regenerate with the importer; ignore the platform-owned realtime.messages constraint in the unvalidated_constraints row).
+
+## >>> STEP 16A-0 (Production Backend Reality Check) — COMPLETE (read-only); AWAITING OPERATOR <<<
+
+STATUS: COMPLETE — SAFE TO RESUME. Full report: migration-upgrade/m15/STEP16A0_PRODUCTION_BACKEND_REALITY_CHECK.md
+CURRENT PHASE: M15-E / Step 16A-0
+CURRENT SUBTASK: Production backend reality check
+PRODUCTION APP SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main verified; origin/development 1ed8fdd1)
+PRODUCTION DEPLOYMENT: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK (target=production, READY, git main bfa82eb5; GET / = 200)
+ASSUMED jobquest-prod: DISPUTED — operator states it was NEVER CREATED (2026-09-29). NOT settled: contradicted by evidence below; treat kwmnljvyvqvbvimypnmw as UNVERIFIED, do not access/migrate it, do not auto-create a project.
+ACTUAL FRONTEND SUPABASE: https://kwmnljvyvqvbvimypnmw.supabase.co (ref kwmnljvyvqvbvimypnmw) — embedded in the live prod bundle assets/index-CGS7DZPG.js and in the 2026-09-28 vercel env pull. NOT jobquest-dev.
+ACTUAL SERVER SUPABASE: UNKNOWN (SUPABASE_URL is a Vercel Sensitive var; Vercel MCP project/env endpoints 404; not decrypted)
+FRONTEND/SERVER MATCH: UNKNOWN
+ACTUAL LIVE DB: UNKNOWN (frontend -> kwmnljvyvqvbvimypnmw; existence unverifiable: Supabase connector sees only jobquest-dev)
+PREVIEW DB: jobquest-dev xpnkasclquplmrcmhsif (per Phase 11 record; not re-verified)
+PRODUCTION/DEV DB SHARED: UNKNOWN for server; frontend NO
+CLAIM MIGRATION 20261021100000: NOT APPLIED on jobquest-dev (verified, 18 migrations through M14); UNKNOWN on the prod target (2026-09-28 dump suggests not applied)
+CLAIM RPC: MISSING on jobquest-dev (verified); UNKNOWN on prod target (absent from 2026-09-28 dump)
+LIVE DATA LOCATION: NOT jobquest-dev (migrated workspace 018f0000-…0001, jack, claim codes, migration_batches = 0 there; dev holds 393 ws / 292 users / 319 apps of test data). Last known good copy: _secure-backups/jobquest-prod/20260928_122000/*.dump (SHA-256 75aa9002…2551 verified) + _secure-backups/jobquest1/20260928_120500/legacy_neon_export_*.json
+DEDICATED PROD PROJECT REQUIRED: UNKNOWN — YES if kwmnljvyvqvbvimypnmw does not exist (operator's assertion); NO if it exists under another Supabase login
+CASE: D (leaning B). Case A refuted for frontend.
+ENV SEPARATION RISK: MEDIUM (HIGH if project absent or if server SUPABASE_URL = jobquest-dev)
+PRODUCTION WRITES PERFORMED: NONE
+NEXT EXACT ACTION (operator, read-only): confirm in the Supabase dashboard(s) whether project kwmnljvyvqvbvimypnmw exists and under which login; report the host in vaulted SUPABASE_PROD_DB_URL and whether Vercel Production SUPABASE_URL matches VITE_SUPABASE_URL. Then: exists -> grant connector access/run Q1-Q8 and do 16A-2 as prepared; absent -> Step 16A-2 (CREATE REAL PRODUCTION SUPABASE PROJECT AND PREPARE CONTROLLED DATA CUTOVER) per report sections 8-11.
+NOTE: deviation from instruction — the "never created" statement is recorded as DISPUTED/UNRECONCILED rather than SUPERSEDED because this session found a real checksum-matching dump and a prod frontend pointing at that ref.
+
+## >>> STEP 16A-1 (Production Reconciliation) — BLOCKED ON PROD DB ACCESS; PLAN PREPARED <<<
+(Annotation 2026-09-29: every "jobquest-prod / kwmnljvyvqvbvimypnmw" statement below and in the M15 reports is DISPUTED by the operator — see Step 16A-0 above. History preserved.)
+
+STATUS: PARTIAL — repo/Vercel reconciliation done; production DB could NOT be inspected. SAFE TO RESUME.
+CURRENT PHASE: M15-E / Step 16A-1
+CURRENT SUBTASK: Production reconciliation blocked on authorized read access / awaiting operator
+MAIN SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main verified; origin/development 1ed8fdd1)
+PRODUCTION DEPLOYMENT: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK — re-verified via Vercel MCP: target=production, READY, source=git, meta SHA bfa82eb5, aliases incl. jobquest2.vercel.app. GET / = 200. Unchanged since Step 15.5.
+PRODUCTION SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313
+PRODUCTION DB ACCESS: BLOCKED — Supabase MCP get_project/list_migrations/execute_sql on kwmnljvyvqvbvimypnmw return "permission denied"; list_projects shows ONLY jobquest-dev (xpnkasclquplmrcmhsif) in org OnePiece2.0 (jobquest-prod is not visible to this connector's account); supabase CLI/psql not installed; no SUPABASE*/DATABASE*/PG* env vars in the shell. Prod DB URL lives in the operator vault (SUPABASE_PROD_DB_URL) and was not requested/used. Vercel runtime logs/errors also 403 via MCP (log check NOT DONE).
+CLAIM MIGRATION 20261021100000: UNKNOWN (handoff records NOT applied; unverified)
+APP <-> DB CLAIM COMPATIBILITY: UNKNOWN (code contract analyzed below; prod function unread)
+MIGRATED USER STATE: UNKNOWN (not read). Expected jack / 46ddc7bf-... / STAGED / ws 018f0000-...0001 / MANAGER. NOTE: workspace_members has NO status column in schema (role only) — "MANAGER/ACTIVE" in prior notes = role MANAGER; there is no membership state field.
+DB ACTION REQUIRED: UNKNOWN (working assumption B: APPLY_MIGRATION_20261021100000_ONLY — unverified)
+CLAIM CODE REISSUE: REQUIRED (old code is stale-format; independent of DB inspection) — PENDING AUTHORIZATION
+PRODUCTION EXTENSION: NOT REQUIRED IN 16A-2 (belongs to a later 16B after core claim smoke)
+PRODUCTION WRITES PERFORMED: NONE
+BLOCKERS: prod DB read access. Options: (a) add jobquest-prod to the Supabase MCP connector account; (b) operator runs migration-upgrade/m15/STEP16A1_READONLY_PROD_QUERIES.sql (SELECT-only, Q1-Q8) in Supabase SQL editor and pastes results; (c) operator exports a read-only pooler URL into the session env (never pasted in chat).
+NEXT EXACT READ-ONLY ACTION: obtain Q1-Q8 output (or MCP access), then classify DB_ACTION and finalize 16A-2 plan.
+
+### Claim contract (repo, verified by reading code)
+- Route: POST /auth/claim (apps/api/src/routes/auth.ts:318). Body {username, code, new_password}. Order: IP rate limit -> password policy -> account lookup by username_clean -> locked_until check -> select legacy_claim_codes by (user_id, code_hint = first 4 chars, claimed_at is null) -> verifyCode (Argon2id) -> rpc_record_auth_failure on miss -> rpc_claim_legacy_account -> startSession.
+- RPC: public.rpc_claim_legacy_account(p_user_id uuid, p_code_id uuid, p_new_hash text, p_ip inet) returns void; SECURITY DEFINER, search_path=''; service_role only (revoked from public/anon/authenticated). Atomic in one plpgsql body: (1) consume code (claimed_at null, unexpired, user match) else CLAIM_CODE_INVALID_OR_USED; (2) upsert user_credentials; (3) revoke sessions (RECOVERY); (4) STAGED->ACTIVE only, else ACCOUNT_NOT_CLAIMABLE (suspended cannot self-reactivate; exception rolls back the whole call incl. code consumption).
+- FAILURE MODE if RPC missing on prod: rpc error -> route returns generic 401 INVALID_CLAIM (no crash, no consumed code, no data change). So the live app is safe but the claim path cannot succeed. Not a data-risk; a functionality gap.
+- Code format: Crockford Base32, 32 chars (160 bit), 4-char clear hint, Argon2id (m=19456,t=2,p=1). Generator scripts/migrate-legacy-data.mjs generateClaimCode() (corrected). legacy_claim_codes has UNIQUE(user_id) => reissue must UPDATE the single row, not INSERT. No rpc_reissue_claim_code exists in migrations (only mentioned in POST_LAUNCH_STABILIZATION_PLAN) and no reissue script exists.
+
+### Migration 20261021100000 safety review (repo-only): RISK LOW
+CREATE OR REPLACE FUNCTION + REVOKE/GRANT only. No table DDL, no locks beyond brief catalog lock, no data mutation/backfill, no RLS change. Depends on tables user_credentials, auth_sessions, user_accounts, legacy_claim_codes (all earlier migrations). Cannot alter existing rows. Compatible with live app (function name/args match auth.ts). Single-file execution is one transaction => partial application not expected. Rollback: if function did not pre-exist, DROP FUNCTION public.rpc_claim_legacy_account(uuid,uuid,text,inet); if a prior definition exists, restore it from Q2 body captured BEFORE applying. Vercel rollback irrelevant (app unaffected by function presence); DB rollback independent. Caveat: apply via `supabase db push` would also apply anything else unapplied — instead apply ONLY this file and record version 20261021100000 in supabase_migrations.schema_migrations exactly as the CLI would (or use db push only after Q1 confirms it is the sole pending migration).
+
+### Step 16A-2 proposed write ops (ALL need operator approval) — order
+1. (Pre-check, read) Q1-Q8 confirm only 20261021100000 pending + user STAGED + no claimed code row.
+2. WRITE: apply migration 20261021100000 only (function create/replace + grants) + migration-history row.
+3. Verify (read): Q2/Q3 — signature, STAGED guard, service_role-only.
+4. WRITE: reissue claim code for jack — one transaction: UPDATE legacy_claim_codes SET code_hash, code_hint, claimed_at=NULL, expires_at=now()+interval '90 days' WHERE user_id=46ddc7bf-... AND claimed_at IS NULL; guarded by account status=STAGED; plaintext printed once to operator terminal only (never file/log/chat/handoff). Needs a small one-off operator script (does not exist yet: repo change on the release branch + local tests, or inline Node using generateClaimCode) — needs decision.
+5. Verify (read): Q6 hash_len/prefix ($argon2id$), claimed_at null, expires_at future, Q5 status STAGED. No plaintext.
+6. Read-only app smoke, then AUTHORIZED MUTATING smoke by operator: claim jack with new code + new password -> ACTIVE, session, workspace MANAGER, app read (222 apps), replay of same code fails 401 (single-use), logout/login. Claiming consumes the code and activates the real account — operator decides whether to claim in 16A-2 or leave code for the real user. Suspended-user protection is proven by CLAIM-13 integration test; do NOT test on prod accounts.
+7. Extension (NOT in 16A-2): token is minted by the claimed user in-app (/settings/extension). Prod EXTENSION_TOKEN_ENV unset => tokens are jqx_dev_ prefixed (known, documented; setting =live is a separate Vercel env change). Prod package via `node apps/extension/scripts/package.mjs prod` (instanceUrl https://jobquest2.vercel.app, popup files excluded); unpacked distribution only, no store publish. Do as 16B after core smoke.
+8. Final M15-E GO decision.
+
+### Docs
+migration-upgrade/m15/STEP16A1_READONLY_PROD_QUERIES.sql added (SELECT-only). Local commit ca21ed22 (Step 15.5 docs) was UNPUSHED; pushed with this docs commit on fix/m15e-extension-connection-ui (no code change, main untouched).
+
+## >>> STEP 15.5 COMPLETE (Read-Only Production Preflight) <<<
+
+CURRENT PHASE: M15-E / Step 15.5 Production Preflight
+MAIN SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main verified)
+MAIN CI: 36659797562 PASS (SHA matches; static + database jobs success)
+PRODUCTION DEPLOYMENT STATE: AUTO_DEPLOYED
+CURRENT PROD DEPLOYMENT ID: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK (target=production, READY, created 2026-09-30 02:25:44Z / 21:25 CDT, build 44s)
+CURRENT PROD SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (Vercel project targets.production meta + GitHub deployment 6750033115 env=Production, state success)
+CURRENT PROD URL: https://jobquest2.vercel.app (aliases: jobquest2.vercel.app, jobquest2-one-piece-5779.vercel.app, jobquest2-git-main-...; deployment URL jobquest2-7v1ru0miy-one-piece-5779.vercel.app)
+VERCEL: project jobquest2, GitHub KrapaGoutam/JobQuest2.0, production branch main, gitProviderOptions.createDeployments=enabled (auto-deploy ON). Prior prod deployments (1d, 1d, 5d old) untouched. Preview deployments for 1ed8fdd1 (development) and 5d189a84 (this branch) are target=preview.
+AVAILABILITY: GET / = 200 (SPA shell, JobQuest 2.0), hashed asset 200. No app writes.
+PRODUCTION DB: UNKNOWN (not directly inspected). Supabase MCP returned permission denied for jobquest-prod (list_migrations/get_project); supabase CLI not installed. No evidence of change: Vercel git deploy does not run migrations and none were authorized.
+  !! COMPAT RISK: the now-live app build includes the M15 legacy claim RPC code; migration 20261021100000_m15_legacy_claim_rpc.sql (19th) is recorded as NOT applied to prod. Claim flow on prod is presumed non-functional until Step 16 reconciles. (Not fixed here.)
+PROD ENV METADATA (names only, values not read): present in Production: REGISTER_IP_MAX_PER_HOUR, NODE_OPTIONS, EXTENSION_TOKEN_PEPPER, APP_ORIGINS, JQ_JWT_ISSUER, JQ_JWT_PRIVATE_JWK, SUPABASE_SECRET_KEY, VITE_SUPABASE_PUBLISHABLE_KEY, SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL, SUPABASE_URL. Values not verifiable (secrets hidden).
+REGISTER_IP_MAX_PER_HOUR: Production entry is a separate Secret scoped to Production only; the Preview/Development entry (Config, 9h ago) is scoped Development+Preview only. Production override not shared. Prod value not read.
+PROD CLAIM CODE: NOT REISSUED (per handoff; DB not read)
+PROD EXTENSION TOKEN: UNCHANGED (per handoff; no action taken)
+PROD EXTENSION PACKAGE: UNCHANGED (not published)
+JOBQUEST1: UNCHANGED (standby, not retired)
+PRODUCTION WRITES PERFORMED BY THIS STEP: NONE
+CORRECTION: Step 15 note "PRODUCTION: UNCHANGED" above is superseded - pushing main auto-created Production deployment dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK at 02:26Z.
+BLOCKERS: prod DB state unverified (needs operator/authorized read access); migration 19 not applied vs. live code.
+NEXT EXACT ACTION: Step 16A - Production Reconciliation / Completion (do not redeploy blindly; verify prod migration state first, then complete remaining ops: migration 19, claim-code reissue, smoke).
+
+## >>> STEP 15 COMPLETE (Controlled Release Promotion) <<<
+
+Step 13C: PASS | Final Security Review: PASS | Step 15: PASS
+RELEASE CANDIDATE: fix/m15e-extension-connection-ui
+TESTED APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e
+Development Promotion: PASS - merge SHA 1ed8fdd1fccdbdd8febeb3e071d0f316161df542 - CI run 36659089688 PASS (static + database)
+Main Promotion: PASS - merge SHA bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (tree identical to development) - CI run 36659797562 PASS (static + database)
+PRODUCTION: UNCHANGED (no deploy, DB, token, claim-code action taken by Step 15)
+NOTE: results recorded on the release branch to avoid a post-CI commit on main.
+NEXT: Step 16 Production Change Window (requires explicit operator authorization)
 
 ## >>> ACTIVE HANDOFF (M15-E duplicate-protection final remediation) <<<
 STATUS: COMPLETE - STEP 13C FINAL INDEPENDENT REVIEW PASS (Opus/High, invoked once)
@@ -106,7 +309,7 @@ Milestone 15 — Production Launch & Cutover
 ## Cross-cutting / unchanged by either branch
 - **Main HEAD Commit:** Pending PR Merge
 - **Vercel Production Deployment:** unchanged this session.
-- **Production Supabase DB:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`)
+- **Production Supabase DB:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`) — **[DISPUTED 2026-09-29: operator states never created; UNRECONCILED, see Step 16A-0]**
   - Target Migrations: 18/18 applied cleanly through M14. The site branch adds a
     19th (`20261021100000_m15_legacy_claim_rpc.sql`), NOT YET applied to production.
   - Data Parity: 222 apps, 89 snapshots, 533 events, 49 tags (0 deltas)

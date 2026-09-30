@@ -1,7 +1,7 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
 ## >>> ACTIVE HANDOFF (M15-E duplicate-protection final remediation) <<<
-STATUS: COMPLETE - AWAITING FINAL INDEPENDENT STEP 13C REVIEW
+STATUS: COMPLETE - STEP 13C FINAL INDEPENDENT REVIEW PASS (Opus/High, invoked once)
 CURRENT PHASE: M15-E duplicate-protection final remediation - implementation, exact-SHA CI, fresh Preview, automated Preview QA all PASS
 CURRENT SUBTASK: none (stop gate reached)
 BRANCH: fix/m15e-extension-connection-ui
@@ -22,14 +22,18 @@ CROSS-TAB ISOLATION: PASS
 PACKAGE LEGACY POPUP: SAFE
 BLOCKERS: none. Residual for reviewer: server does not enforce duplicates on POST /captures (client gate only) - contract change, not done.
 PRODUCTION STATE: UNCHANGED (Development / Main also UNCHANGED)
-NEXT EXACT ACTION: open a fresh Claude Code session (Sonnet 5.5 / Medium) for Step 13C and invoke release-security-reviewer (Opus/High) exactly once. Do NOT merge development/main, deploy production, or start M15-F/Step 15 before that.
+OPUS INVOKED: YES / RESULT: PASS (no blockers)
+FINAL M15-E EXTENSION SECURITY REVIEW: PASS; B1 class ELIMINATED; B2-R CLOSED; N1 CLOSED; legacy popup CLOSED
+OPERATOR MANUAL RETEST: SKIPPED BY OPERATOR; AUTOMATED EVIDENCE: SUFFICIENT FOR RELEASE
+NON-BLOCKING: (1) client identity key lowercases URL query values, backend keeps them case-sensitive; gate accepts any current verdict with matching key (theoretical only) - optional hardening: accept only verdict from own checkSeq. (2) server does not enforce duplicates on POST /captures (client-only gate; pre-existing design).
+NEXT EXACT ACTION: Step 15 Controlled Release Promotion (separate prompt). Do NOT merge/deploy in this session.
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: duplicate-protection final remediation COMPLETE (automated evidence). Final independent Step 13C review PENDING.**
-**Gate Status: Site branch — PASS. Extension branch — prior Step 13C (on 1837debc) BLOCKED; remediated by removing the duplicate override entirely + fail-closed save. Application/tested SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e. Exact CI PASS (run 36655655863). Preview https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (backend jobquest-dev). Automated Preview QA PASS. B1/N1/B2-R/legacy popup: CLOSED (pending independent confirmation). Operator retest: SKIPPED BY OPERATOR. Development/Main/Production UNCHANGED.**
+**Phase M15-E: duplicate-protection final remediation COMPLETE. Final independent Step 13C review: PASS.**
+**Gate Status: Site branch — PASS. Extension branch — prior Step 13C (on 1837debc) BLOCKED; remediated by removing the duplicate override entirely + fail-closed save. Application/tested SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e. Exact CI PASS (run 36655655863). Preview https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (backend jobquest-dev). Automated Preview QA PASS. B1/N1/B2-R/legacy popup: CLOSED (independently confirmed, Step 13C PASS). Operator retest: SKIPPED BY OPERATOR. Development/Main/Production UNCHANGED.**
 **Step 13C BLOCKERS (historical, addressed at fa437ad6):** CHECK_ERROR resolved to VERIFIED_SAFE; non-discriminating save/race E2E.
-**NEXT EXACT ACTION:** Fresh session -> Step 13C independent review (release-security-reviewer, Opus/High, once). Step 15 NOT started.
+**NEXT EXACT ACTION:** Step 15 Controlled Release Promotion (not started).
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)

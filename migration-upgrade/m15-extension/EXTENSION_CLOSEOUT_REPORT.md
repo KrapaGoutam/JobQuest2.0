@@ -385,7 +385,16 @@ performed or attempted.
 - Exact-SHA CI: run `36655655863` on `fa437ad6f22b8c485dca62834e45a6c68756c83e` - static PASS, database PASS -> overall PASS (workflow_dispatch; `fix/**` does not auto-trigger).
 - Fresh Preview: `https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app` (`dpl_BvNeBysZxeK6gN1nbowt1PL2gAc2`, target preview, GitHub deployment for `fa437ad6f22b8c485dca62834e45a6c68756c83e`), backend `jobquest-dev` (Preview-scoped env unchanged; `PREVIEW_BACKEND_IS_PRODUCTION=false`).
 - Automated Preview QA: `m11-extension` (30.4s), `m15e-extension-sidepanel` (1.4m), production-package test - 3/3 PASS. Scenarios: A existing duplicate (no override control, View Existing works, no POST /captures, exactly 1 app), D normal save (save-time check observed), B edit-into-duplicate + immediate Save with held check ("Saving..." then blocked, no write), C Save -> switch tab mid-check (no write, Job B UI untouched, backend confirms never written), check outage (503) fails closed then retry saves, warnings OFF blocks duplicate and saves clean, E prod package.
-- Operator manual retest: SKIPPED BY OPERATOR. Final independent Step 13C: PENDING. Development/Main/Production: UNCHANGED.
+- Operator manual retest: SKIPPED BY OPERATOR. Final independent Step 13C: PASS (see below). Development/Main/Production: UNCHANGED.
+
+### Step 13C - Final Independent Duplicate-Protection Security Review: PASS
+Reviewer: Claude Opus / High (release-security-reviewer, invoked once). Tested SHA `fa437ad6f22b8c485dca62834e45a6c68756c83e`; CI run `36655655863` PASS; docs commits after it touch only `migration-upgrade/*`.
+- Duplicate override UI: REMOVED. Supported `duplicate_override=true` path: REMOVED (payload always false). Known duplicate save: BLOCKED.
+- Fail-closed save, edit invalidation, save-during-debounce, superseded/discarded check, cross-tab isolation, normal non-duplicate save, duplicate identity consistency, warn-on-duplicates semantics, legacy popup production package, real save wiring coverage, race E2E adequacy: all PASS. Security regression: NONE. Blockers: none.
+- B1 class ELIMINATED; B2-R CLOSED; N1 CLOSED. Operator manual retest: SKIPPED BY OPERATOR (not counted as PASS). Automated evidence: SUFFICIENT FOR RELEASE.
+- Non-blocking: (1) client identity key lowercases URL query values while backend `normalizeJobUrl` is case-sensitive there; gate accepts any current verdict with matching key (theoretical; optional hardening: accept only own-checkSeq verdict). (2) Server does not enforce duplicates on `POST /captures`; client is the sole enforcement point (pre-existing design).
+- Informational: dev-only `popup.js` save() lacks a post-await context guard (excluded from prod package); debounce `onDone` during tab switch may briefly redraw footer, but any save still runs a fresh check.
+- Next: Step 15 Controlled Release Promotion.
 
 ---
 

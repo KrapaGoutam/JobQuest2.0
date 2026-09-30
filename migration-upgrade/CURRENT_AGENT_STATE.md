@@ -1,3 +1,16 @@
+## >>> STEP 15 ACTIVE (Controlled Release Promotion) <<<
+
+CURRENT PHASE: M15-E / Step 15
+CURRENT SUBTASK: Pre-promotion ancestry verified; merging candidate -> development
+RELEASE CANDIDATE: fix/m15e-extension-connection-ui (aggregate; contains site remediation tip 0a534b45)
+TESTED APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e (docs-only commits after it)
+DEVELOPMENT HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a (== main; candidate is 52 commits ahead, development has no unique commits)
+MAIN HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a
+FINAL SECURITY REVIEW: PASS
+BLOCKERS: None (branch protection: none on development/main)
+PRODUCTION: UNCHANGED
+NEXT EXACT ACTION: git merge --no-ff candidate into development, sanity gate, push, exact development CI
+
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
 ## >>> ACTIVE HANDOFF (M15-E duplicate-protection final remediation) <<<

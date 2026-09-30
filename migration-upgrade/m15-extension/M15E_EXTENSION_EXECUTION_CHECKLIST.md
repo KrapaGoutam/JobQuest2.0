@@ -349,3 +349,10 @@ STEP 13C FINAL INDEPENDENT SECURITY REVIEW: PASS (Opus/High, once); no blockers
 FINAL M15-E EXTENSION SECURITY REVIEW: PASS
 AUTOMATED EVIDENCE: SUFFICIENT FOR RELEASE (operator retest SKIPPED BY OPERATOR)
 NEXT EXACT ACTION: Step 15 Controlled Release Promotion (separate prompt). DO NOT merge/deploy in the review session.
+
+
+## Step 15 - Controlled Release Promotion
+
+- [x] Ancestry verified (tested SHA fa437ad6 in candidate; site tip 0a534b45 in candidate; development == main == 99bb9b8f, no unique commits)
+- [ ] development merge / push / exact CI
+- [ ] main merge / push / exact CI

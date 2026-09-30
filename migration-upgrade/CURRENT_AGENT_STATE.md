@@ -1,3 +1,44 @@
+## >>> STEP 16A-1 (Production Reconciliation) — BLOCKED ON PROD DB ACCESS; PLAN PREPARED <<<
+
+STATUS: PARTIAL — repo/Vercel reconciliation done; production DB could NOT be inspected. SAFE TO RESUME.
+CURRENT PHASE: M15-E / Step 16A-1
+CURRENT SUBTASK: Production reconciliation blocked on authorized read access / awaiting operator
+MAIN SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main verified; origin/development 1ed8fdd1)
+PRODUCTION DEPLOYMENT: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK — re-verified via Vercel MCP: target=production, READY, source=git, meta SHA bfa82eb5, aliases incl. jobquest2.vercel.app. GET / = 200. Unchanged since Step 15.5.
+PRODUCTION SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313
+PRODUCTION DB ACCESS: BLOCKED — Supabase MCP get_project/list_migrations/execute_sql on kwmnljvyvqvbvimypnmw return "permission denied"; list_projects shows ONLY jobquest-dev (xpnkasclquplmrcmhsif) in org OnePiece2.0 (jobquest-prod is not visible to this connector's account); supabase CLI/psql not installed; no SUPABASE*/DATABASE*/PG* env vars in the shell. Prod DB URL lives in the operator vault (SUPABASE_PROD_DB_URL) and was not requested/used. Vercel runtime logs/errors also 403 via MCP (log check NOT DONE).
+CLAIM MIGRATION 20261021100000: UNKNOWN (handoff records NOT applied; unverified)
+APP <-> DB CLAIM COMPATIBILITY: UNKNOWN (code contract analyzed below; prod function unread)
+MIGRATED USER STATE: UNKNOWN (not read). Expected jack / 46ddc7bf-... / STAGED / ws 018f0000-...0001 / MANAGER. NOTE: workspace_members has NO status column in schema (role only) — "MANAGER/ACTIVE" in prior notes = role MANAGER; there is no membership state field.
+DB ACTION REQUIRED: UNKNOWN (working assumption B: APPLY_MIGRATION_20261021100000_ONLY — unverified)
+CLAIM CODE REISSUE: REQUIRED (old code is stale-format; independent of DB inspection) — PENDING AUTHORIZATION
+PRODUCTION EXTENSION: NOT REQUIRED IN 16A-2 (belongs to a later 16B after core claim smoke)
+PRODUCTION WRITES PERFORMED: NONE
+BLOCKERS: prod DB read access. Options: (a) add jobquest-prod to the Supabase MCP connector account; (b) operator runs migration-upgrade/m15/STEP16A1_READONLY_PROD_QUERIES.sql (SELECT-only, Q1-Q8) in Supabase SQL editor and pastes results; (c) operator exports a read-only pooler URL into the session env (never pasted in chat).
+NEXT EXACT READ-ONLY ACTION: obtain Q1-Q8 output (or MCP access), then classify DB_ACTION and finalize 16A-2 plan.
+
+### Claim contract (repo, verified by reading code)
+- Route: POST /auth/claim (apps/api/src/routes/auth.ts:318). Body {username, code, new_password}. Order: IP rate limit -> password policy -> account lookup by username_clean -> locked_until check -> select legacy_claim_codes by (user_id, code_hint = first 4 chars, claimed_at is null) -> verifyCode (Argon2id) -> rpc_record_auth_failure on miss -> rpc_claim_legacy_account -> startSession.
+- RPC: public.rpc_claim_legacy_account(p_user_id uuid, p_code_id uuid, p_new_hash text, p_ip inet) returns void; SECURITY DEFINER, search_path=''; service_role only (revoked from public/anon/authenticated). Atomic in one plpgsql body: (1) consume code (claimed_at null, unexpired, user match) else CLAIM_CODE_INVALID_OR_USED; (2) upsert user_credentials; (3) revoke sessions (RECOVERY); (4) STAGED->ACTIVE only, else ACCOUNT_NOT_CLAIMABLE (suspended cannot self-reactivate; exception rolls back the whole call incl. code consumption).
+- FAILURE MODE if RPC missing on prod: rpc error -> route returns generic 401 INVALID_CLAIM (no crash, no consumed code, no data change). So the live app is safe but the claim path cannot succeed. Not a data-risk; a functionality gap.
+- Code format: Crockford Base32, 32 chars (160 bit), 4-char clear hint, Argon2id (m=19456,t=2,p=1). Generator scripts/migrate-legacy-data.mjs generateClaimCode() (corrected). legacy_claim_codes has UNIQUE(user_id) => reissue must UPDATE the single row, not INSERT. No rpc_reissue_claim_code exists in migrations (only mentioned in POST_LAUNCH_STABILIZATION_PLAN) and no reissue script exists.
+
+### Migration 20261021100000 safety review (repo-only): RISK LOW
+CREATE OR REPLACE FUNCTION + REVOKE/GRANT only. No table DDL, no locks beyond brief catalog lock, no data mutation/backfill, no RLS change. Depends on tables user_credentials, auth_sessions, user_accounts, legacy_claim_codes (all earlier migrations). Cannot alter existing rows. Compatible with live app (function name/args match auth.ts). Single-file execution is one transaction => partial application not expected. Rollback: if function did not pre-exist, DROP FUNCTION public.rpc_claim_legacy_account(uuid,uuid,text,inet); if a prior definition exists, restore it from Q2 body captured BEFORE applying. Vercel rollback irrelevant (app unaffected by function presence); DB rollback independent. Caveat: apply via `supabase db push` would also apply anything else unapplied — instead apply ONLY this file and record version 20261021100000 in supabase_migrations.schema_migrations exactly as the CLI would (or use db push only after Q1 confirms it is the sole pending migration).
+
+### Step 16A-2 proposed write ops (ALL need operator approval) — order
+1. (Pre-check, read) Q1-Q8 confirm only 20261021100000 pending + user STAGED + no claimed code row.
+2. WRITE: apply migration 20261021100000 only (function create/replace + grants) + migration-history row.
+3. Verify (read): Q2/Q3 — signature, STAGED guard, service_role-only.
+4. WRITE: reissue claim code for jack — one transaction: UPDATE legacy_claim_codes SET code_hash, code_hint, claimed_at=NULL, expires_at=now()+interval '90 days' WHERE user_id=46ddc7bf-... AND claimed_at IS NULL; guarded by account status=STAGED; plaintext printed once to operator terminal only (never file/log/chat/handoff). Needs a small one-off operator script (does not exist yet: repo change on the release branch + local tests, or inline Node using generateClaimCode) — needs decision.
+5. Verify (read): Q6 hash_len/prefix ($argon2id$), claimed_at null, expires_at future, Q5 status STAGED. No plaintext.
+6. Read-only app smoke, then AUTHORIZED MUTATING smoke by operator: claim jack with new code + new password -> ACTIVE, session, workspace MANAGER, app read (222 apps), replay of same code fails 401 (single-use), logout/login. Claiming consumes the code and activates the real account — operator decides whether to claim in 16A-2 or leave code for the real user. Suspended-user protection is proven by CLAIM-13 integration test; do NOT test on prod accounts.
+7. Extension (NOT in 16A-2): token is minted by the claimed user in-app (/settings/extension). Prod EXTENSION_TOKEN_ENV unset => tokens are jqx_dev_ prefixed (known, documented; setting =live is a separate Vercel env change). Prod package via `node apps/extension/scripts/package.mjs prod` (instanceUrl https://jobquest2.vercel.app, popup files excluded); unpacked distribution only, no store publish. Do as 16B after core smoke.
+8. Final M15-E GO decision.
+
+### Docs
+migration-upgrade/m15/STEP16A1_READONLY_PROD_QUERIES.sql added (SELECT-only). Local commit ca21ed22 (Step 15.5 docs) was UNPUSHED; pushed with this docs commit on fix/m15e-extension-connection-ui (no code change, main untouched).
+
 ## >>> STEP 15.5 COMPLETE (Read-Only Production Preflight) <<<
 
 CURRENT PHASE: M15-E / Step 15.5 Production Preflight

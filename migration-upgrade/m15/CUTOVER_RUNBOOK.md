@@ -1,3 +1,8 @@
+> **ANNOTATION 2026-09-30 (Step 16A-2):** The production database target is now the NEW `jobquest-prod` project `kqsxdothjxtcktyirpux` (us-east-1, OnePiece2.0). Every earlier reference below to `kwmnljvyvqvbvimypnmw` is historical (legacy/old, read-only rollback reference). Only application-domain data is imported into a fresh owner/workspace; no legacy users, credentials or claim codes migrate. See `STEP16A2_NEW_PRODUCTION_DATABASE_REPORT.md` §10 for the Step 16A-3 cutover sequence, the signing-key prerequisite and rollback.
+>
+> **STATUS 2026-09-30:** Step 16A-2 is COMPLETE — the new database holds 222 applications / 89 snapshots / 347 events / 122 label documents for owner `Conan` (workspace `fbd661ef-36ef-4c19-aae1-e4a477ac79a5`), fingerprints reconciled, zero legacy auth data. Step 16A-3 (Vercel Production cutover) is **NOT started and BLOCKED** until the operator registers the app ES256 signing key in `kqsxdothjxtcktyirpux` (JWT Signing Keys; hosted Supabase imports the **private** JWK as a standby key — the earlier "public key imported" wording is inaccurate; procedure in report §10). Cutover order remains: ES256 registered + JWKS verified -> vault snapshot of the five old Production values -> replace the five Production-only variables -> redeploy exact main SHA -> smoke as Conan. Rollback keeps the new database and restores the five old variables.
+
+
 # Milestone 15 — Production Cutover Runbook: Traffic Switch
 
 **Status**: **PROPOSED — PRE-FLIGHT VERIFIED**  

@@ -1,3 +1,21 @@
+## >>> STEP 16A-2 (Build New Production DB + Application-Domain Import) — COMPLETE; STEP 16A-3 BLOCKED ON ES256 OPERATOR ACTION <<<
+
+STATUS: STEP 16A-2 COMPLETE (2026-09-30). The clean production database is built, imported, verified and reconciled. Vercel cutover (Step 16A-3) has NOT started and is BLOCKED on one operator Dashboard action (ES256 key, below). Full report: migration-upgrade/m15/STEP16A2_NEW_PRODUCTION_DATABASE_REPORT.md
+NEW PROD PROJECT: jobquest-prod | REF: kqsxdothjxtcktyirpux | REGION: us-east-1 | ORG: OnePiece2.0 (fisaxwdkkdpbamvwkvnm)
+OWNER: Conan (operator-created via bootstrap-prod-owner.ts; password/recovery codes never seen by the agent) | OWNER USER ID: e5df8d69-9a8a-4fe1-a81d-af996c67bac6 | WORKSPACE ID: fbd661ef-36ef-4c19-aae1-e4a477ac79a5 (PERSONAL, Conan = ACTIVE MANAGER)
+SCHEMA: 19/19 migrations | RLS: 0 public tables without RLS, 0 unvalidated public constraints | SECURITY ADVISORS: same set as jobquest-dev (INFO/WARN only; M14 authenticated-privilege finding remains a post-launch hardening candidate)
+IMPORT STATUS: COMPLETE. SOURCE 222 | IMPORTED 222 | SNAPSHOTS 89 | EVENTS 347 (CREATED 222, CAPTURED 89, STAGE_CHANGED 2, OUTCOME_CHANGED 34) | LABEL DOCUMENTS 122 | ID MAPPINGS 222 | COMPANIES 0
+   (347, not the old 533: the M15-D tool double-counted a synthetic event per application — intentional corrected transformation.)
+PROBABLE DUPLICATES: 8 rows / 4 groups retained, none dropped (legacy ids [19,78] [31,80] [118,210] [212,213]); EXACT DUPLICATES 0 | QUARANTINED 0
+RECONCILIATION: applications fp 451ed7f53a242bed1bbc0817afe62f51 MATCH | snapshots fp 527ce31d916b2e1fe9e823d2df71f464 MATCH | documents fp 6f2b0c900ab61cd14885b54d6dd9d8dd MATCH. All verify.sql rows PASS (see report §9 for the two findings and their resolution).
+OWNERSHIP/ISOLATION: 222/222 applications user_id=Conan in the single workspace; RLS probe (rolled back): stranger 0 rows, anon denied (42501), Conan with an active session sees 222/89/347/122 and is denied user_credentials/auth_recovery_codes.
+LEGACY AUTH DATA MIGRATED: 0 (users 1 = Conan only; 0 legacy_user_id, 0 claim codes, 0 extension tokens, 0 refresh tokens, 0 rate limits, 0 leftover sessions).
+OLD PROJECT kwmnl…: UNTOUCHED | DEV PROJECT xpnk…: UNTOUCHED | VERCEL: UNCHANGED, CUTOVER NOT STARTED | PRODUCTION APP: STILL ON OLD CONFIG
+ES256 KEY CONFIG: OPERATOR ACTION REQUIRED. Live JWKS of kqsx… (public endpoint) lists only Supabase's default key (kid bcdd6db8-…). The JobQuest key is not registered. Hosted Supabase imports a PRIVATE key as a standby signing key (public half is then advertised); see report §10. Step 16A-3 must not start until the JobQuest kid appears in https://kqsxdothjxtcktyirpux.supabase.co/auth/v1/.well-known/jwks.json (agent can verify it from the public endpoint).
+CURRENT COMMIT: see git log on fix/m15e-extension-connection-ui (docs + tools only; no app code changed)
+NEXT EXACT ACTION: OPERATOR performs the ES256 Dashboard steps in report §10 (never paste key material into chat), then tells the agent "ES256 registered"; agent verifies the JWKS and only then starts Step 16A-3 with a fresh explicit authorization (five Production-only Vercel vars -> redeploy exact main SHA -> smoke as Conan).
+IF INTERRUPTED: STEP 16A-2 IS DONE; do not re-run batches. If anything is in doubt run test-results/step16a2/sql/verify.sql (regenerate with the importer; ignore the platform-owned realtime.messages constraint in the unvalidated_constraints row).
+
 ## >>> STEP 16A-0 (Production Backend Reality Check) — COMPLETE (read-only); AWAITING OPERATOR <<<
 
 STATUS: COMPLETE — SAFE TO RESUME. Full report: migration-upgrade/m15/STEP16A0_PRODUCTION_BACKEND_REALITY_CHECK.md

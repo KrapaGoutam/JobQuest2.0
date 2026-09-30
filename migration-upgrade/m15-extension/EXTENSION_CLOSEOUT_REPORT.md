@@ -366,6 +366,29 @@ performed or attempted.
 
 ---
 
+## Step 13D — Final Duplicate-Protection Remediation (COMPLETE — automated evidence PASS)
+
+### Final policy (this remediation)
+- **Known duplicates are never saved from the Side Panel.** `Save as New Application Anyway` (`#footer-secondary`), `overrideKey`, `authorizeDuplicateOverride`, `isDuplicateOverriddenFor` are REMOVED. `buildCaptureDraft` always emits `duplicate_override: false` (deprecated compatibility field; the API/RPC contract is unchanged, no migration).
+- **Fail-closed save gate** (`evaluateSaveGate`): every `save()` runs a fresh `POST /duplicates/check` for the exact final identity (forced, independent of debounce and of the "Warn on duplicates" preference). Only a CURRENT clean verdict (`NONE`/`COMPANY_ONLY`) writes. `EXACT_POSTING`/`SAME_ROLE` -> duplicate screen (View Existing). `CHECK_ERROR`, thrown check, stale/discarded/superseded check, identity-superseded, context-changed -> abort, "Could not verify duplicate status. Nothing was saved. Please retry." Closes Step 13C blocker 1 (`CHECK_ERROR` previously resolved to `VERIFIED_SAFE`).
+- **Context binding** unchanged and re-verified: `saveSeq` + `saveTabId` + `saveIdentityKey` via `isSaveContextValid` after every await; added a same-context in-flight guard so a second `save()` cannot run concurrently.
+- **Warn on duplicates (business-rule conflict, resolved to the safer reading):** the preference now ONLY controls the proactive capture-time check/warning. It no longer permits a duplicate write; with it OFF, Save still verifies and blocks known duplicates, and ordinary non-duplicate saves still work (E2E-proven). Behavior change vs 13B-R (where OFF skipped verification).
+- **Authoritative duplicate contract (inspected, not changed):** server `POST /ext/v1/duplicates/check` (`apps/api/src/routes/extension.ts:278-323`): strong = normalized job URL OR (external_job_id AND same source key); `SAME_ROLE` = normalized company AND job title; `COMPANY_ONLY` informational. `location` is sent but NOT used server-side. Client identity key (company, title, url, external id, source, location) is a strict superset, so any authoritative-field edit invalidates the verdict (extra re-checks on location edits are conservative, not a gap).
+- **Residual (documented, not changed - needs backend/API design):** `POST /ext/v1/captures` / `rpc_extension_capture` does NOT enforce duplicates server-side (it only stores `duplicate_override_flag`); the extension client gate is the sole control for extension writes, and a token holder can still call the API directly with `duplicate_override` true or false. Server-side enforcement would be a contract change (out of scope; STOP-and-report item for the reviewer/owner).
+- **Legacy popup:** production package excludes `popup.html/css/js` (verified in dir + zip, unit + E2E); dev package keeps it for `e2e/m11-extension.spec.ts` only, with Save Anyway removed and a fail-closed save-time check added.
+
+### Evidence
+- Application/tested SHA: `fa437ad6f22b8c485dca62834e45a6c68756c83e` (parent of docs-only commits; base was `1837debc`).
+- Extension unit 97/97 (was 80); root unit 163/163; integration 186/186 (18 files, incl. DB/RLS); lint 0; typecheck 0 (root, api, extension, web); build PASS; `check:bundle` 3 files/0, `check:extension` 45 files/0, `check:secrets` 922 files/0.
+- Local E2E (local Supabase): `m11-extension` PASS, `m15e-extension-sidepanel` PASS (incl. Scenario E package test).
+- Discrimination check: the new Side Panel spec was run against the PRE-remediation sidepanel sources and FAILED at the first discriminating assertion ("Save runs its own duplicate verification"), so it does not pass on the old implementation.
+- Exact-SHA CI: run `36655655863` on `fa437ad6f22b8c485dca62834e45a6c68756c83e` - static PASS, database PASS -> overall PASS (workflow_dispatch; `fix/**` does not auto-trigger).
+- Fresh Preview: `https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app` (`dpl_BvNeBysZxeK6gN1nbowt1PL2gAc2`, target preview, GitHub deployment for `fa437ad6f22b8c485dca62834e45a6c68756c83e`), backend `jobquest-dev` (Preview-scoped env unchanged; `PREVIEW_BACKEND_IS_PRODUCTION=false`).
+- Automated Preview QA: `m11-extension` (30.4s), `m15e-extension-sidepanel` (1.4m), production-package test - 3/3 PASS. Scenarios: A existing duplicate (no override control, View Existing works, no POST /captures, exactly 1 app), D normal save (save-time check observed), B edit-into-duplicate + immediate Save with held check ("Saving..." then blocked, no write), C Save -> switch tab mid-check (no write, Job B UI untouched, backend confirms never written), check outage (503) fails closed then retry saves, warnings OFF blocks duplicate and saves clean, E prod package.
+- Operator manual retest: SKIPPED BY OPERATOR. Final independent Step 13C: PENDING. Development/Main/Production: UNCHANGED.
+
+---
+
 ## Future Scope Log (Post-M15) — all DEFERRED, NON-BLOCKING for M15-E
 
 Corrected to the agreed feature definitions. Do not implement during M15-E.

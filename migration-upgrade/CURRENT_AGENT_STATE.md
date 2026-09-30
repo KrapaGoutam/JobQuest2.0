@@ -1,11 +1,35 @@
 # JOBQUEST2.0 - CURRENT AGENT STATE
 
+## >>> ACTIVE HANDOFF (M15-E duplicate-protection final remediation) <<<
+STATUS: COMPLETE - AWAITING FINAL INDEPENDENT STEP 13C REVIEW
+CURRENT PHASE: M15-E duplicate-protection final remediation - implementation, exact-SHA CI, fresh Preview, automated Preview QA all PASS
+CURRENT SUBTASK: none (stop gate reached)
+BRANCH: fix/m15e-extension-connection-ui
+BASE APPLICATION SHA: 1837debc8e12228a454492373191df8eb25e45de
+NEW APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e
+CURRENT DOCS HEAD: docs-only commit(s) after fa437ad6 (see `git log`; NOT covered by CI)
+LOCAL HEAD / REMOTE HEAD: equal after docs push (application code identical to fa437ad6)
+WORKING TREE: clean after docs commit
+MODIFIED FILES (app commit): apps/extension/{sidepanel.js,sidepanel-logic.js,sidepanel.html,popup.js,popup.html,tests/sidepanel-logic.test.js,tests/manifest.test.js}, e2e/m15e-extension-sidepanel.spec.ts
+LAST GREEN TEST: local + Preview E2E (m11, m15e incl. package test), unit 163, extension 97, integration 186
+LAST FAILED TEST: none (only the intentional old-code discrimination run)
+LAST CI RUN: 36655655863 / fa437ad6f22b8c485dca62834e45a6c68756c83e / PASS (static + database)
+PREVIEW URL: https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (dpl_BvNeBysZxeK6gN1nbowt1PL2gAc2) ; PREVIEW BACKEND: jobquest-dev (PREVIEW_BACKEND_IS_PRODUCTION=false)
+DUPLICATE OVERRIDE UI: REMOVED
+DUPLICATE_OVERRIDE TRUE PATH: REMOVED (payload field always false; deprecated compat)
+FAIL-CLOSED SAVE: PASS
+CROSS-TAB ISOLATION: PASS
+PACKAGE LEGACY POPUP: SAFE
+BLOCKERS: none. Residual for reviewer: server does not enforce duplicates on POST /captures (client gate only) - contract change, not done.
+PRODUCTION STATE: UNCHANGED (Development / Main also UNCHANGED)
+NEXT EXACT ACTION: open a fresh Claude Code session (Sonnet 5.5 / Medium) for Step 13C and invoke release-security-reviewer (Opus/High) exactly once. Do NOT merge development/main, deploy production, or start M15-F/Step 15 before that.
+
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: Extension Step 13C Final Closure Review — BLOCKED. Targeted remediation required.**
-**Gate Status: Site branch — PASS. Extension branch — Step 13B-R PASS, Step 13C BLOCKED (Opus/High, invoked once; do not re-invoke for full review). Application/tested SHA: 1837debc8e12228a454492373191df8eb25e45de. Exact CI PASS (run 36646380294). Preview https://jobquest2-ae69dyczb-one-piece-5779.vercel.app (backend jobquest-dev). B1 CLOSED, N1 CLOSED, Legacy popup production package CLOSED (verified), B2-R OPEN. Operator focused retest: SKIPPED BY OPERATOR. Automated evidence sufficient: NO. Development/Main/Production UNCHANGED.**
-**Step 13C BLOCKERS:** (1) save-time duplicate check failure (`CHECK_ERROR`) resolves to `VERIFIED_SAFE` and writes silently (`sidepanel-logic.js:170-175, 253-288`; `api/jobquest.js:210-216`) — must fail closed. (2) No discriminating real-`save()`/race E2E: sidepanel spec `:468-479` passes on old code; need E2E (or operator manual retest) for tab/identity change mid-recheck (no POST /captures), warnings-OFF actual save, check-error at save. Details: `M15E_EXTENSION_EXECUTION_CHECKLIST.md` Step 13C.
-**NEXT EXACT ACTION:** Targeted remediation on `fix/m15e-extension-connection-ui` (fix CHECK_ERROR fail-closed + unit test; add real-browser E2E/manual retest), exact-head CI, Preview QA, then focused re-check limited to the blockers. Step 15 NOT started.
+**Phase M15-E: duplicate-protection final remediation COMPLETE (automated evidence). Final independent Step 13C review PENDING.**
+**Gate Status: Site branch — PASS. Extension branch — prior Step 13C (on 1837debc) BLOCKED; remediated by removing the duplicate override entirely + fail-closed save. Application/tested SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e. Exact CI PASS (run 36655655863). Preview https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (backend jobquest-dev). Automated Preview QA PASS. B1/N1/B2-R/legacy popup: CLOSED (pending independent confirmation). Operator retest: SKIPPED BY OPERATOR. Development/Main/Production UNCHANGED.**
+**Step 13C BLOCKERS (historical, addressed at fa437ad6):** CHECK_ERROR resolved to VERIFIED_SAFE; non-discriminating save/race E2E.
+**NEXT EXACT ACTION:** Fresh session -> Step 13C independent review (release-security-reviewer, Opus/High, once). Step 15 NOT started.
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)

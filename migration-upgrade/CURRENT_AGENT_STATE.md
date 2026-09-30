@@ -1,3 +1,17 @@
+## >>> STEP 16A-3 — PASS (2026-09-30 ~07:25Z): PRODUCTION CUTOVER COMPLETE; STOPPED BEFORE STEP 16B <<<
+
+PRODUCTION: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ (READY, production, main @ bfa82eb557c5e748ba5d7c91fe122fb8294d2313) on https://jobquest2.vercel.app | PROD SUPABASE: jobquest-prod kqsxdothjxtcktyirpux | ES256 kid 6434f760-580a-4945-aaa5-c161f568120a
+SIX PROD VARS: 6/6 updated by operator | PREVIEW/DEV: UNCHANGED | OLD SUPABASE + jobquest-dev: UNTOUCHED | EXTENSION: NOT ACTIVATED
+FRONTEND TARGET: PASS | SERVER TARGET: PASS — the server wrote Conan's login sessions into kqsx… auth_sessions (2 rows for user e5df8d69-…, created 07:14Z and 07:16:53Z = the two POST /api/auth/login calls at 02:14/02:16 CDT; one revoked by the logout at 02:16:31 CDT, one active).
+CONAN LOGIN: PASS (operator manual; login, logout, login again) | WORKSPACE fbd661ef-…: PASS, MANAGER | APPLICATIONS visible in UI: 222 PASS; detail/search/filter/stage labels PASS; no dev/E2E workspaces.
+JWT: PASS — app-minted ES256 token accepted by the new project (Conan's UI reads 222 applications through user-JWT + RLS; an unaccepted signature would return 401/0 rows). Exact kid used is inferred from the only key config that can work, not from a token dump.
+RLS: PASS — Conan sees own workspace data through the app; stranger 0 rows / anon 42501 / Conan denied user_credentials proven in the 16A-2 rolled-back probe (no new mutating probe run). Supabase gateway logs not queryable via the connector (edge_logs table unavailable), so no direct 401/PGRST301 log check.
+DB COUNTS (read-only, post-smoke): applications 222 | snapshots 89 | events 347 | documents 122 | 1 user | 1 workspace | 2 sessions.
+RUNTIME ERRORS: NONE CRITICAL — Vercel logs for the deployment: only info entries (health, refresh, login, logout); Vercel runtime-errors API 403 (not permitted).
+ROLLBACK: AVAILABLE (dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK immediate previous production deployment, rollbackCandidate=true; not used).
+GIT: docs-only commits on fix/m15e-extension-connection-ui, local/unpushed; main/development untouched.
+NEXT: STEP 16B — PRODUCTION EXTENSION ACTIVATION (needs separate operator authorization). Do not redeploy or change Production env vars meanwhile (keep rollback intact).
+
 ## >>> STEP 16A-3 CHECKPOINTS D-G (2026-09-30 ~07:00Z): NEW DEPLOYMENT READY; FRONTEND TARGET PASS; AWAITING OPERATOR CONAN LOGIN <<<
 
 STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 at the Conan login/JWT/RLS/application smoke (operator signs in manually). No further redeploy, env change or push to main is permitted.

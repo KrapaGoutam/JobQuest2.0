@@ -1,3 +1,5 @@
+> **STEP 16A-3 PASS (2026-09-30):** Vercel Production now runs dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ (main @ bfa82eb5) against jobquest-prod `kqsxdothjxtcktyirpux` with ES256 kid 6434f760-…; six Production-only variables updated by the operator, exactly one production redeploy, frontend + server target verified, Conan login/222 applications/logout-login smoke PASS, rollback target dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK still available. Extension activation (16B) not started. Details: CURRENT_AGENT_STATE.md.
+
 # M15-E · Step 16A-2 — New Production Database & Application-Domain Import
 
 **Status:** Step 16A-2 **COMPLETE** (§9). ES256 Classification: **READY_NEW_KEY** (§10). Step 16A-3 (Vercel cutover): **READY, NOT started** — requires fresh explicit authorization.

@@ -1,4 +1,4 @@
-## >>> STEP 16A-2 (Build New Production DB + Application-Domain Import) — COMPLETE; STEP 16A-3 BLOCKED ON ES256 OPERATOR ACTION <<<
+## >>> STEP 16A-2 (Build New Production DB + Application-Domain Import) — COMPLETE; ES256 READY_NEW_KEY; STEP 16A-3 READY (not started) <<<
 
 STATUS: STEP 16A-2 COMPLETE (2026-09-30). The clean production database is built, imported, verified and reconciled. Vercel cutover (Step 16A-3) has NOT started and is BLOCKED on one operator Dashboard action (ES256 key, below). Full report: migration-upgrade/m15/STEP16A2_NEW_PRODUCTION_DATABASE_REPORT.md
 NEW PROD PROJECT: jobquest-prod | REF: kqsxdothjxtcktyirpux | REGION: us-east-1 | ORG: OnePiece2.0 (fisaxwdkkdpbamvwkvnm)
@@ -11,9 +11,10 @@ RECONCILIATION: applications fp 451ed7f53a242bed1bbc0817afe62f51 MATCH | snapsho
 OWNERSHIP/ISOLATION: 222/222 applications user_id=Conan in the single workspace; RLS probe (rolled back): stranger 0 rows, anon denied (42501), Conan with an active session sees 222/89/347/122 and is denied user_credentials/auth_recovery_codes.
 LEGACY AUTH DATA MIGRATED: 0 (users 1 = Conan only; 0 legacy_user_id, 0 claim codes, 0 extension tokens, 0 refresh tokens, 0 rate limits, 0 leftover sessions).
 OLD PROJECT kwmnl…: UNTOUCHED | DEV PROJECT xpnk…: UNTOUCHED | VERCEL: UNCHANGED, CUTOVER NOT STARTED | PRODUCTION APP: STILL ON OLD CONFIG
-ES256 KEY CONFIG: OPERATOR ACTION REQUIRED. Live JWKS of kqsx… (public endpoint) lists only Supabase's default key (kid bcdd6db8-…). The JobQuest key is not registered. Hosted Supabase imports a PRIVATE key as a standby signing key (public half is then advertised); see report §10. Step 16A-3 must not start until the JobQuest kid appears in https://kqsxdothjxtcktyirpux.supabase.co/auth/v1/.well-known/jwks.json (agent can verify it from the public endpoint).
+ES256 KEY CONFIG: ES256 Classification: READY_NEW_KEY. Verified 2026-09-30 on the public JWKS of kqsx…: kid 6434f760-580a-4945-aaa5-c161f568120a (kty EC, crv P-256, alg ES256, use sig, no private member) is registered alongside Supabase default kid bcdd6db8-… (previously used, not revoked). This is a NEW key, not the historical 48e903e8-… key.
 CURRENT COMMIT: see git log on fix/m15e-extension-connection-ui (docs + tools only; no app code changed)
-NEXT EXACT ACTION: OPERATOR performs the ES256 Dashboard steps in report §10 (never paste key material into chat), then tells the agent "ES256 registered"; agent verifies the JWKS and only then starts Step 16A-3 with a fresh explicit authorization (five Production-only Vercel vars -> redeploy exact main SHA -> smoke as Conan).
+JQ_JWT_PRIVATE_JWK Vercel Change Required: YES — Step 16A-3 MUST replace Vercel Production JQ_JWT_PRIVATE_JWK with the exact private JWK matching kid 6434f760-… (held by the operator; never pasted to the agent), in addition to the five Supabase variables (SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY). Production scope only; Preview/Development untouched. Rollback must therefore restore the OLD JQ_JWT_PRIVATE_JWK too (vault snapshot before change).
+STEP 16A-3: READY but NOT STARTED — needs a fresh explicit operator authorization. NEXT EXACT ACTION: operator authorizes 16A-3 -> vault snapshot of the six old Production values -> replace the six Production-only variables -> redeploy exact main SHA -> smoke as Conan.
 IF INTERRUPTED: STEP 16A-2 IS DONE; do not re-run batches. If anything is in doubt run test-results/step16a2/sql/verify.sql (regenerate with the importer; ignore the platform-owned realtime.messages constraint in the unvalidated_constraints row).
 
 ## >>> STEP 16A-0 (Production Backend Reality Check) — COMPLETE (read-only); AWAITING OPERATOR <<<

@@ -1,6 +1,6 @@
 # M15-E · Step 16A-2 — New Production Database & Application-Domain Import
 
-**Status:** Step 16A-2 **COMPLETE** — clean production database built, 222 applications imported and reconciled (§9). **Step 16A-3 (Vercel cutover) NOT started and BLOCKED on one operator action: register the ES256 signing key in the new project (§10).**
+**Status:** Step 16A-2 **COMPLETE** (§9). ES256 Classification: **READY_NEW_KEY** (§10). Step 16A-3 (Vercel cutover): **READY, NOT started** — requires fresh explicit authorization.
 **Date:** 2026-09-29/30 · **Branch:** `fix/m15e-extension-connection-ui` (docs/tooling only) · **main SHA:** `bfa82eb557c5e748ba5d7c91fe122fb8294d2313` (unchanged)
 **Vercel Production variables:** NOT CHANGED · **Production redeploy:** NOT PERFORMED · **Production extension:** NOT ACTIVATED
 
@@ -191,6 +191,8 @@ Then `finalize.sql` (migration_batches `7d3c1e52-4b8a-4f6e-9a21-16a2c0de0001` �
 **Exactly five Production-scope Vercel variables must move to the new project** (names only; values never displayed or stored in docs):
 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
 Preview/Development stay on `jobquest-dev`. Never point Production at dev or Preview at prod. `VITE_*` values are baked at build time → a redeploy is mandatory.
+
+**UPDATE 2026-09-30 — ES256 VERIFIED: READY_NEW_KEY.** Public JWKS now lists kid `6434f760-580a-4945-aaa5-c161f568120a` (EC / P-256 / ES256 / sig, no private member) next to the default `bcdd6db8-…` (not revoked). It is a NEW key, not the historical `48e903e8-…`. **JQ_JWT_PRIVATE_JWK Vercel Change Required: YES** — Step 16A-3 must set Production `JQ_JWT_PRIVATE_JWK` to the exact matching private JWK (operator-held; never shared with the agent) together with the five Supabase variables, and rollback must restore the old value too. The historical prerequisite text below is kept for record.
 
 **Prerequisite for cutover — ES256 signing key (status: OPERATOR ACTION REQUIRED; Step 16A-3 BLOCKED until done).**
 

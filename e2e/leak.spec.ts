@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
@@ -16,6 +16,13 @@ const FORBIDDEN = [
   { name: 'private_jwk', re: /"d"\s*:\s*"[A-Za-z0-9_-]{20,}"/ },
   { name: 'secret_api_key', re: /sb_secret_[A-Za-z0-9_-]{16,}/ },
 ];
+
+async function navigateInApp(page: Page, path: string) {
+  await page.evaluate((nextPath) => {
+    window.location.hash = `#${nextPath}`;
+  }, path);
+  await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(`#${path}`);
+}
 
 test('B03 (browser) · no private identity or credential material reaches the browser; B11/B12 direct Data API', async ({ page, context }) => {
   const reusedRun = process.env.M1B_REUSE_RUN?.trim();
@@ -68,7 +75,7 @@ test('B03 (browser) · no private identity or credential material reaches the br
     await login.getByLabel('Username').fill(username);
     await login.getByLabel('Password').fill(password);
     await login.getByRole('button', { name: 'Sign in' }).click();
-    
+    await expect(login).toBeHidden();
   } else {
     await page.getByRole('button', { name: 'Create account' }).click();
     const reg = page.getByRole('form', { name: 'Register' });
@@ -77,14 +84,13 @@ test('B03 (browser) · no private identity or credential material reaches the br
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
-    await page.goto('/applications'); // this is fine since it doesn't interrupt a fetch
   }
 
-  await page.goto('/settings');
+  await navigateInApp(page, '/settings');
   await page.getByRole('button', { name: 'Diagnostics' }).click();
   await page.getByRole('button', { name: 'Load (PostgREST + Node)' }).click();
   await expect(page.getByText('PostgREST: Saved → Preparing')).toBeVisible();
-  await page.goto('/applications');
+  await navigateInApp(page, '/applications');
   // B12: direct browser write; B11: direct browser read (list refresh)
   await page.getByLabel('Company').fill('Corvid Labs');
   await page.getByLabel('Role').fill('Staff Designer');
@@ -94,7 +100,7 @@ test('B03 (browser) · no private identity or credential material reaches the br
   await page.getByRole('button', { name: '→ Interview' }).first().click();
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('INTERVIEW');
 
-  await page.goto('/settings');
+  await navigateInApp(page, '/settings');
   await page.getByRole('button', { name: 'Refresh Session' }).click();
 
   await page.getByRole('button', { name: 'Sign Out Everywhere', exact: true }).click();
@@ -103,10 +109,10 @@ test('B03 (browser) · no private identity or credential material reaches the br
   await login.getByLabel('Password').fill(password);
   await login.getByRole('button', { name: 'Sign in' }).click();
   await expect(login).toBeHidden();
-  await page.goto('/');
+  await navigateInApp(page, '/applications');
   await expect(page.getByRole('region', { name: 'Applications' })).toContainText('Corvid Labs');
 
-  await page.goto('/settings');
+  await navigateInApp(page, '/settings');
   await page.getByRole('button', { name: 'Diagnostics' }).click();
   await page.getByRole('button', { name: 'Scan for exposed identity or credentials' }).click();
   await expect(page.getByTestId('auth-user-probe-status')).toBeVisible();

@@ -158,7 +158,8 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
-    await page.goto('/applications');
+    await page.evaluate(() => { window.location.hash = '#/applications'; });
+    await expect(page).toHaveURL(/#\/applications$/);
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
   }
 
@@ -181,7 +182,8 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
 
   test('Select controls stay theme-synced across light, dark, and back to light', async ({ page }) => {
     await registerSyntheticUser(page, 'theme');
-    await page.goto('/contacts');
+    await page.evaluate(() => { window.location.hash = '#/contacts'; });
+    await expect(page).toHaveURL(/#\/contacts$/);
 
     const select = page.locator('select').first();
     await expect(select).toBeVisible();

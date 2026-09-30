@@ -80,6 +80,19 @@ fix/*
 
 Never skip a gate.
 
+Development is integration only. Main and Production remain frozen until the
+separately authorized M15-F gate; do not merge development to main before it.
+Use feature/* or fix/* for implementation and stage only exact paths.
+
+Do not push docs/checkpoint commits to development while an exact application
+SHA is being certified. Keep the temporary handoff in the response and distinguish
+the application/CI-tested SHA from any later docs HEAD.
+
+Only the primary agent observes a GitHub Actions phase. Query the exact run ID,
+watch no faster than every 60 seconds, and stop on HTTP 403/429. Check local quota
+once, honor Retry-After/reset, then back off 1/2/5/10 minutes; never switch
+credentials to evade throttling.
+
 ## Production
 
 Production is READ ONLY unless the current user prompt explicitly

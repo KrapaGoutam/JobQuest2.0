@@ -1,3 +1,23 @@
+## >>> PL-0B-R1 — CI / E2E / GITHUB GOVERNANCE REMEDIATION (2026-09-30) <<<
+
+PHASE: PL-0B-R1 | STATUS: LOCAL REMEDIATION COMPLETE; AWAITING EXACT BRANCH CI
+
+BRANCH: `fix/pl0-ci-e2e-governance` | BASE: `dee10faaecb1d8e69a6259c2f19a111ef2130a55`
+
+ORIGINAL CANCELLED RUN: `36752994633` | SUBSEQUENT FAILED RUN: `36753339403`
+
+E2E FAILURE: `e2e/leak.spec.ts` timed out waiting for the Diagnostics button. The sanitized CI failure snapshot proved that the browser was on Sign in, not Settings. ROOT CAUSE: the test performed consecutive hard page navigations immediately after creating/adopting an authenticated session. On slower CI timing, a hard navigation could abort refresh-token rotation; the next reload then used the invalidated prior cookie and returned to Sign in. Diagnostics itself remained present and supported. A second existing M2 helper used the same unsafe authenticated hard-navigation pattern.
+
+REMEDIATION: SYNC_READINESS / TEST_ONLY. Authenticated test transitions now use the application's supported hash-router navigation and reused-account login waits for the Sign in form to unmount. B03/B11/B12 exposure, direct Data API read/write, session, cookie, network, DOM, storage, and credential assertions remain unchanged.
+
+CI CHANGES: `fix/**` push coverage; feature/fix stale-run cancellation retained; development/main cancellation disabled so later runs queue; native deny-by-default docs-only classifier; lightweight tracked-secret and committed-key checks for confirmed Markdown-only changes; full CI for code/config/mixed/unknown/manual cases; exact-SHA, single-observer, and API rate-limit/backoff policy documented.
+
+LOCAL VERIFICATION: lint PASS; typecheck PASS; unit 163/163 PASS; integration 186/186 PASS; extension 97/97 PASS plus typecheck/package/bundle scan; focused leak E2E PASS twice after the primary fix and PASS again after the shared helper fix; full E2E 22/22 PASS; build PASS; browser-bundle and 928-tracked-file secret scans PASS; workflow YAML parse and 11-case classifier self-test PASS.
+
+PRODUCTION: UNTOUCHED | JOBQUEST-PROD: UNTOUCHED | JOBQUEST-DEV: UNTOUCHED | PREVIEW: NOT REQUIRED (workflow/tests/docs only)
+
+NEXT: commit and push only `fix/pl0-ci-e2e-governance`, then certify its exact HEAD with the single local `gh` observer. Operator review is required before any development merge.
+
 ## >>> PL-0B-1 — INTERRUPTED: SAFE TO RESUME CI GATE (2026-09-30) <<<
 
 PHASE: PL-0B-1 | STATUS: INTERRUPTED — SAFE TO RESUME PL-0B-1

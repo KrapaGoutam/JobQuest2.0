@@ -1,3 +1,18 @@
+## >>> STEP 16A-3 CHECKPOINTS D-G (2026-09-30 ~07:00Z): NEW DEPLOYMENT READY; FRONTEND TARGET PASS; AWAITING OPERATOR CONAN LOGIN <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 at the Conan login/JWT/RLS/application smoke (operator signs in manually). No further redeploy, env change or push to main is permitted.
+NEW DEPLOYMENT ID: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ | URL: https://jobquest2-i3ps9a3y7-one-piece-5779.vercel.app | target production | READY | source "redeploy" of gitSource github main sha bfa82eb557c5e748ba5d7c91fe122fb8294d2313 | created 2026-09-30T06:45:07Z (01:45 CDT). Exactly ONE new production deployment (the only production entry newer than dpl_HFVT…).
+DEPLOYMENT METADATA: PASS. PRODUCTION ALIAS: PASS (jobquest2.vercel.app, jobquest2-one-piece-5779, jobquest2-git-main-… all on the new deployment).
+FRONTEND TARGET: PASS — live bundle assets/index-DbUcxJVN.js embeds ONLY kqsxdothjxtcktyirpux.supabase.co + the expected sb_publishable key; kwmnljvyvqvbvimypnmw ABSENT; xpnkasclquplmrcmhsif ABSENT; no literal sb_secret_ key, no JWT-shaped strings. (An earlier scan that showed both hosts was contaminated by stale local temp files and a malformed URL; the clean re-scan above is authoritative.)
+BASIC HEALTH: PASS — GET / 200, JS/CSS assets 200, /api/health 200 {"status":"ok"} (/health is the SPA shell path; API is /api/health). Runtime logs for the new deployment: 3 info entries (health + 2 POST /api/auth/refresh from the operator browser), no errors. Vercel MCP runtime-errors 403 (not permitted).
+SERVER TARGET: NOT YET PROVEN — no unauthenticated DB-backed route exists; proof = successful Conan login (server must read Conan's row in kqsx… with the new secret key and sign with the new JWK) + JWT accepted by RLS.
+ES256/JWT/RLS/CONAN LOGIN/APPLICATIONS/SESSION: NOT YET RUN.
+PREVIEW/DEV: UNCHANGED (11 non-production env rows, latest updatedAt 2026-09-29T17:43Z = pre-existing REGISTER_IP_MAX_PER_HOUR). Only the six Production variables were updated after 06:00Z.
+ROLLBACK: AVAILABLE — dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK READY, isRollbackCandidate=true, immediate previous production deployment. Command: vercel rollback dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK --scope one-piece-5779 (Hobby: previous deployment only). After a rollback auto-assign is off; undo with `vercel promote`.
+PRODUCTION EXTENSION: NOT ACTIVATED | OLD SUPABASE / jobquest-dev: UNTOUCHED
+LOCAL DOC COMMIT 89fb09fb (checkpoint C+) is local/unpushed; this checkpoint is committed on top; nothing pushed to main/development.
+NEXT EXACT ACTION: operator opens https://jobquest2.vercel.app, signs in as Conan manually, reports result; agent then verifies session/JWT/RLS via Supabase logs + read-only SQL, application smoke (222/89/347/122), logout/login.
+
 ## >>> STEP 16A-3 CHECKPOINT C+ (2026-09-30 ~06:45Z): SIX PROD VARS UPDATED BY OPERATOR; REDEPLOY SOURCE VERIFIED; AWAITING OPERATOR REDEPLOY <<<
 
 STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 (waiting for the operator's single Production redeploy). Supersedes the "env cutover NOT STARTED" line below.

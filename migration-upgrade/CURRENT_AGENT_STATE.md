@@ -1,3 +1,31 @@
+## >>> STEP 16A-3 CHECKPOINT C+ (2026-09-30 ~06:45Z): SIX PROD VARS UPDATED BY OPERATOR; REDEPLOY SOURCE VERIFIED; AWAITING OPERATOR REDEPLOY <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 (waiting for the operator's single Production redeploy). Supersedes the "env cutover NOT STARTED" line below.
+SIX ENV VARS: UPDATED by operator (Dashboard) — Vercel API metadata (values filtered) shows Production updatedAt: SUPABASE_URL 06:27:23Z, VITE_SUPABASE_URL 06:27:50Z, SUPABASE_PUBLISHABLE_KEY 06:28:26Z, VITE_SUPABASE_PUBLISHABLE_KEY 06:28:49Z, SUPABASE_SECRET_KEY 06:30:19Z, JQ_JWT_PRIVATE_JWK 06:32:43Z. The four now-`sensitive` values cannot be read back (by design) => their correctness is proven only by the post-redeploy smoke. Value-verified via clean `vercel env run`: VITE_SUPABASE_URL host = kqsxdothjxtcktyirpux.supabase.co; VITE_SUPABASE_PUBLISHABLE_KEY = the expected new sb_publishable key. No other Production variable changed; all other rows untouched.
+PREVIEW/DEV: UNCHANGED (rows last updated 2026-09-24/27; separate Preview,Development entries).
+REDEPLOY SOURCE: VERIFIED — dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK: target production, READY, source git, github main, sha bfa82eb557c5e748ba5d7c91fe122fb8294d2313, created 2026-09-30T02:25:44Z, serves jobquest2.vercel.app (+ jobquest2-one-piece-5779, jobquest2-git-main-…), isRollbackCandidate=true, newest production deployment. origin/main re-verified = bfa82eb5.
+ROLLBACK: AVAILABLE (dpl_HFVT… stays the immediate predecessor only if exactly ONE new production deployment is created; no push to main).
+NEW DEPLOYMENT: NOT YET CREATED | FRONTEND/SERVER TARGET: not yet verified | CONAN LOGIN / JWT / RLS / APPLICATIONS: not yet run | PRODUCTION EXTENSION: NOT ACTIVATED
+NEXT EXACT ACTION: operator redeploys dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK to Production ONCE (Dashboard; build cache OFF) and returns "NEW DEPLOYMENT ID: <id> / STATUS: READY"; then agent verifies target/SHA/alias, bundle (kqsx…), server target, health, and runs the Conan smoke with the operator signing in manually.
+
+## >>> STEP 16A-3 (Vercel Production Cutover) — INTERRUPTED BEFORE ENV MUTATION; SAFE TO RESUME <<<
+
+STATUS: INTERRUPTED — SAFE TO RESUME STEP 16A-3 (2026-09-30). No Vercel variable changed, no redeploy started.
+LAST COMPLETED CHECKPOINTS: A (rollback verified) + B (env snapshot) + pre-cutover DB/JWKS/owner verification.
+PRODUCTION DEPLOYMENT: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK (old, unchanged; jobquest2.vercel.app alias; bundle embeds kwmnljvyvqvbvimypnmw + sb_publishable_ key form)
+PRODUCTION SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main re-verified; origin/development 1ed8fdd1)
+PROD SUPABASE REF (target): kqsxdothjxtcktyirpux — ACTIVE_HEALTHY; 19 migrations; 222 apps / 89 snapshots / 347 events / 122 docs; JWKS lists kid 6434f760-580a-4945-aaa5-c161f568120a (ES256/EC/P-256, no private member)
+OWNER: user_accounts.user_id = e5df8d69-9a8a-4fe1-a81d-af996c67bac6 (Conan, ACTIVE) = workspace_members.user_id (MANAGER, ws fbd661ef-…) = owner of all 222 applications. NOTE: user_accounts.id (db552c5c-…) is the row PK, NOT the user id; an earlier session misread it as a conflict. Docs were correct.
+ROLLBACK (Checkpoint A): PROVEN from Vercel docs (instant-rollback): rollback restores the previous build; "Vercel won't update environment variables if you change them in project settings"; env vars remain in original state. Old Secret values therefore need not be readable. HOBBY PLAN CONSTRAINT: only the IMMEDIATELY PREVIOUS production deployment is rollback-eligible => the cutover must create exactly ONE new production deployment (dpl_HFVT… must stay its predecessor). Never push to main during the window. After rollback, auto-assign of production domains is OFF (undo via `vercel promote <id>`).
+   Rollback command: `vercel rollback dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK --scope one-piece-5779` (or Dashboard Instant Rollback). Also revert the six Production vars (old secret values only if operator has vault copies) so a later redeploy is not silently on the new project.
+ENV SNAPSHOT (Checkpoint B, via `vercel env ls`, names/types only; project prj_0A32SVkbOH2fBI2XLFv7kSkv086d, team team_lsStfTKp3LGQEWGYRM0BJ4Pb / one-piece-5779):
+   Production-only entries (separate rows from Preview/Development): JQ_JWT_PRIVATE_JWK Secret; SUPABASE_URL Secret; SUPABASE_SECRET_KEY Secret; SUPABASE_PUBLISHABLE_KEY Secret; VITE_SUPABASE_URL Config; VITE_SUPABASE_PUBLISHABLE_KEY Config; also (NOT part of cutover, untouched) REGISTER_IP_MAX_PER_HOUR Secret, EXTENSION_TOKEN_PEPPER Secret, NODE_OPTIONS/APP_ORIGINS/JQ_JWT_ISSUER Config.
+   Preview/Development-only rows (unchanged; jobquest-dev): the same six names as separate Preview,Development entries.
+   Old readable non-secret facts: frontend host kwmnljvyvqvbvimypnmw.supabase.co (from live bundle index-CGS7DZPG.js).
+ENV CUTOVER: NOT STARTED. Attempt to run `vercel env update <name> production` from the agent shell for the 4 non-secret vars (SUPABASE_URL, VITE_SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_PUBLISHABLE_KEY) was DENIED by the session permission classifier ("Production Deploy"); not retried by another route.
+REDEPLOY: NOT STARTED | FRONTEND TARGET: old (kwmnl…) | SERVER TARGET: unverified/old | AUTH SMOKE / APPLICATION SMOKE: NOT RUN | PRODUCTION EXTENSION: NOT ACTIVATED
+NEXT EXACT ACTION: operator either (a) grants the agent permission for Production env updates + `vercel deploy`/redeploy of the exact main SHA, or (b) performs them: set six Production-only vars (URL/publishable values = new project; SUPABASE_SECRET_KEY and JQ_JWT_PRIVATE_JWK entered by operator only) -> exactly one production redeploy of bfa82eb5 -> agent resumes at frontend/server target verification and smoke.
+
 ## >>> STEP 16A-2 (Build New Production DB + Application-Domain Import) — COMPLETE; ES256 READY_NEW_KEY; STEP 16A-3 READY (not started) <<<
 
 STATUS: STEP 16A-2 COMPLETE (2026-09-30). The clean production database is built, imported, verified and reconciled. Vercel cutover (Step 16A-3) has NOT started and is BLOCKED on one operator Dashboard action (ES256 key, below). Full report: migration-upgrade/m15/STEP16A2_NEW_PRODUCTION_DATABASE_REPORT.md

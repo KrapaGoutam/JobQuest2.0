@@ -1,3 +1,18 @@
+## >>> M15-E FORMALLY CLOSED (2026-09-30): FINAL DECISION = GO | CK-18 = OPERATOR APPROVED | NEXT = M15-F PRODUCTION STABILIZATION (not started) <<<
+
+M15-E FINAL DECISION: GO | CK-18: OPERATOR APPROVED (operator accepted the GO and authorized formal closeout) | M15-E: FORMALLY CLOSED | NEXT: M15-F — PRODUCTION STABILIZATION (requires its own explicit operator authorization).
+CLOSEOUT ACTIONS: docs-only commit on fix/m15e-extension-connection-ui, pushed to that branch only. development/main NOT merged; Production NOT redeployed; Production variables NOT modified; JobQuest1 NOT retired; old Supabase NOT deleted/paused.
+
+## >>> M15-E FINAL GO / NO-GO (2026-09-30): DECISION = GO (read-only gate) <<<
+
+PRODUCTION: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ @ https://jobquest2.vercel.app | MAIN bfa82eb5 | PROD DB jobquest-prod kqsxdothjxtcktyirpux | P0: 0 | P1: 0 | BLOCKERS: 0
+RE-VERIFIED READ-ONLY: DB 223 apps / 90 snapshots / 349 events / 122 docs / 1 token; all apps Conan + fbd661ef-…; 0 orphans; 0 tables without RLS; 24 h Supabase edge_logs 423 requests, zero 4xx/5xx (gateway logs now queryable); live bundle kqsx-only, no secrets; prod package clean; extension tests 97/97.
+EVIDENCE LIMITATIONS (both NON-BLOCKING per Step 13C "automated evidence sufficient for release"): L1 duplicate Side Panel visual observation not seen by agent; L2 edit-invalidation not exercised in Production. Others: no fresh stranger/anon prod RLS probe; JWT kid not decoded; health TTFB 0.25–0.47 s.
+HYGIENE: H1 plaintext `smoke-tester` password from the superseded kwmnl… target is committed in main docs (M15E_GO_NO_GO_REPORT.md:56, NEXT_AGENT_HANDOFF.md:61); account absent from jobquest-prod; scrub/rotate post-launch. H2 GO_NO_GO_CHECKLIST CK-06/10/14 figures are stale (superseded by 16A-2/3).
+FULL DECISION + BACKLOG: migration-upgrade/m15/M15E_FINAL_GO_NO_GO_DECISION.md
+UNCHANGED: Production, Preview/Dev, old Supabase, jobquest-dev, JobQuest1/Neon, main/development. NO merge/push/deploy/token/data write performed. Rollback dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK AVAILABLE.
+NEXT: M15-F — PRODUCTION STABILIZATION (needs explicit operator authorization). JobQuest1 retirement NOT authorized.
+
 ## >>> STEP 16B — PASS WITH ONE EVIDENCE CAVEAT (2026-09-30 ~13:25Z): PRODUCTION EXTENSION ACTIVATED; STOPPED BEFORE M15-E FINAL GO/NO-GO <<<
 
 PRODUCTION: dpl_42Kq9nKyxAc1iicaMwE24NQhs3xQ @ https://jobquest2.vercel.app | REDEPLOY/ENV CHANGE DURING 16B: NO | EXTENSION_TOKEN_ENV: NOT_REQUIRED (prefix jqx_dev_, cosmetic) | 2nd TOKEN CREATED: NO | M15-F: NOT STARTED

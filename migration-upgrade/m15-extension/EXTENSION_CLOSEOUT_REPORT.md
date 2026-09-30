@@ -413,3 +413,8 @@ Corrected to the agreed feature definitions. Do not implement during M15-E.
 - **[B03] Direct resume upload from the Side Panel:** currently supports selecting an existing uploaded resume or a manual label/filename.
 
 
+
+
+## Step 15 Promotion Result
+
+Development 1ed8fdd1 (CI 36659089688 PASS); main bfa82eb5 (CI 36659797562 PASS). Tested application SHA fa437ad6. Production unchanged. Next: Step 16 (needs operator authorization).

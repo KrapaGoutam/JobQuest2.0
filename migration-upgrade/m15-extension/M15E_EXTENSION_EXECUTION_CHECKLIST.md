@@ -354,5 +354,5 @@ NEXT EXACT ACTION: Step 15 Controlled Release Promotion (separate prompt). DO NO
 ## Step 15 - Controlled Release Promotion
 
 - [x] Ancestry verified (tested SHA fa437ad6 in candidate; site tip 0a534b45 in candidate; development == main == 99bb9b8f, no unique commits)
-- [ ] development merge / push / exact CI
-- [ ] main merge / push / exact CI
+- [x] development merge 1ed8fdd1 / pushed / CI 36659089688 PASS
+- [x] main merge bfa82eb5 / pushed / CI 36659797562 PASS

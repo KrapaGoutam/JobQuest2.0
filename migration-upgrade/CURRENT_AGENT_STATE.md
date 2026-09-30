@@ -1,17 +1,13 @@
-## >>> STEP 15 ACTIVE (Controlled Release Promotion) <<<
+## >>> STEP 15 COMPLETE (Controlled Release Promotion) <<<
 
-CURRENT PHASE: M15-E / Step 15
-CURRENT SUBTASK: Pre-promotion ancestry verified; merging candidate -> development
-RELEASE CANDIDATE: fix/m15e-extension-connection-ui (aggregate; contains site remediation tip 0a534b45)
-TESTED APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e (docs-only commits after it)
-DEVELOPMENT HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a (== main; candidate is 52 commits ahead, development has no unique commits)
-MAIN HEAD: 99bb9b8fff5cef2f5b0a2a03e1d717110ddf447a
-FINAL SECURITY REVIEW: PASS
-BLOCKERS: None (branch protection: none on development/main)
-PRODUCTION: UNCHANGED
-NEXT EXACT ACTION: git merge --no-ff candidate into development, sanity gate, push, exact development CI
-
-# JOBQUEST2.0 - CURRENT AGENT STATE
+Step 13C: PASS | Final Security Review: PASS | Step 15: PASS
+RELEASE CANDIDATE: fix/m15e-extension-connection-ui
+TESTED APPLICATION SHA: fa437ad6f22b8c485dca62834e45a6c68756c83e
+Development Promotion: PASS - merge SHA 1ed8fdd1fccdbdd8febeb3e071d0f316161df542 - CI run 36659089688 PASS (static + database)
+Main Promotion: PASS - merge SHA bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (tree identical to development) - CI run 36659797562 PASS (static + database)
+PRODUCTION: UNCHANGED (no deploy, DB, token, claim-code action taken by Step 15)
+NOTE: results recorded on the release branch to avoid a post-CI commit on main.
+NEXT: Step 16 Production Change Window (requires explicit operator authorization)
 
 ## >>> ACTIVE HANDOFF (M15-E duplicate-protection final remediation) <<<
 STATUS: COMPLETE - STEP 13C FINAL INDEPENDENT REVIEW PASS (Opus/High, invoked once)

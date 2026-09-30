@@ -344,7 +344,7 @@ LAST CI: 36655655863 / fa437ad6f22b8c485dca62834e45a6c68756c83e / PASS
 PREVIEW: https://jobquest2-ev0q9h1us-one-piece-5779.vercel.app (dpl_BvNeBysZxeK6gN1nbowt1PL2gAc2, target preview)
 BACKEND: jobquest-dev (PREVIEW_BACKEND_IS_PRODUCTION = false)
 OPERATOR RETEST: SKIPPED BY OPERATOR
-PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw)
+PRODUCTION: UNCHANGED (jobquest-prod, kwmnljvyvqvbvimypnmw) [DISPUTED 2026-09-29 - operator states this project was never created; see m15/STEP16A0_PRODUCTION_BACKEND_REALITY_CHECK.md]
 STEP 13C FINAL INDEPENDENT SECURITY REVIEW: PASS (Opus/High, once); no blockers
 FINAL M15-E EXTENSION SECURITY REVIEW: PASS
 AUTOMATED EVIDENCE: SUFFICIENT FOR RELEASE (operator retest SKIPPED BY OPERATOR)

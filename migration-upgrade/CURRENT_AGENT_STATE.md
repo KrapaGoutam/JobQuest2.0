@@ -1,4 +1,29 @@
+## >>> STEP 16A-0 (Production Backend Reality Check) — COMPLETE (read-only); AWAITING OPERATOR <<<
+
+STATUS: COMPLETE — SAFE TO RESUME. Full report: migration-upgrade/m15/STEP16A0_PRODUCTION_BACKEND_REALITY_CHECK.md
+CURRENT PHASE: M15-E / Step 16A-0
+CURRENT SUBTASK: Production backend reality check
+PRODUCTION APP SHA: bfa82eb557c5e748ba5d7c91fe122fb8294d2313 (origin/main verified; origin/development 1ed8fdd1)
+PRODUCTION DEPLOYMENT: dpl_HFVTYfYQnpvD6iEKyRaTwSjJecqK (target=production, READY, git main bfa82eb5; GET / = 200)
+ASSUMED jobquest-prod: DISPUTED — operator states it was NEVER CREATED (2026-09-29). NOT settled: contradicted by evidence below; treat kwmnljvyvqvbvimypnmw as UNVERIFIED, do not access/migrate it, do not auto-create a project.
+ACTUAL FRONTEND SUPABASE: https://kwmnljvyvqvbvimypnmw.supabase.co (ref kwmnljvyvqvbvimypnmw) — embedded in the live prod bundle assets/index-CGS7DZPG.js and in the 2026-09-28 vercel env pull. NOT jobquest-dev.
+ACTUAL SERVER SUPABASE: UNKNOWN (SUPABASE_URL is a Vercel Sensitive var; Vercel MCP project/env endpoints 404; not decrypted)
+FRONTEND/SERVER MATCH: UNKNOWN
+ACTUAL LIVE DB: UNKNOWN (frontend -> kwmnljvyvqvbvimypnmw; existence unverifiable: Supabase connector sees only jobquest-dev)
+PREVIEW DB: jobquest-dev xpnkasclquplmrcmhsif (per Phase 11 record; not re-verified)
+PRODUCTION/DEV DB SHARED: UNKNOWN for server; frontend NO
+CLAIM MIGRATION 20261021100000: NOT APPLIED on jobquest-dev (verified, 18 migrations through M14); UNKNOWN on the prod target (2026-09-28 dump suggests not applied)
+CLAIM RPC: MISSING on jobquest-dev (verified); UNKNOWN on prod target (absent from 2026-09-28 dump)
+LIVE DATA LOCATION: NOT jobquest-dev (migrated workspace 018f0000-…0001, jack, claim codes, migration_batches = 0 there; dev holds 393 ws / 292 users / 319 apps of test data). Last known good copy: _secure-backups/jobquest-prod/20260928_122000/*.dump (SHA-256 75aa9002…2551 verified) + _secure-backups/jobquest1/20260928_120500/legacy_neon_export_*.json
+DEDICATED PROD PROJECT REQUIRED: UNKNOWN — YES if kwmnljvyvqvbvimypnmw does not exist (operator's assertion); NO if it exists under another Supabase login
+CASE: D (leaning B). Case A refuted for frontend.
+ENV SEPARATION RISK: MEDIUM (HIGH if project absent or if server SUPABASE_URL = jobquest-dev)
+PRODUCTION WRITES PERFORMED: NONE
+NEXT EXACT ACTION (operator, read-only): confirm in the Supabase dashboard(s) whether project kwmnljvyvqvbvimypnmw exists and under which login; report the host in vaulted SUPABASE_PROD_DB_URL and whether Vercel Production SUPABASE_URL matches VITE_SUPABASE_URL. Then: exists -> grant connector access/run Q1-Q8 and do 16A-2 as prepared; absent -> Step 16A-2 (CREATE REAL PRODUCTION SUPABASE PROJECT AND PREPARE CONTROLLED DATA CUTOVER) per report sections 8-11.
+NOTE: deviation from instruction — the "never created" statement is recorded as DISPUTED/UNRECONCILED rather than SUPERSEDED because this session found a real checksum-matching dump and a prod frontend pointing at that ref.
+
 ## >>> STEP 16A-1 (Production Reconciliation) — BLOCKED ON PROD DB ACCESS; PLAN PREPARED <<<
+(Annotation 2026-09-29: every "jobquest-prod / kwmnljvyvqvbvimypnmw" statement below and in the M15 reports is DISPUTED by the operator — see Step 16A-0 above. History preserved.)
 
 STATUS: PARTIAL — repo/Vercel reconciliation done; production DB could NOT be inspected. SAFE TO RESUME.
 CURRENT PHASE: M15-E / Step 16A-1
@@ -167,7 +192,7 @@ Milestone 15 — Production Launch & Cutover
 ## Cross-cutting / unchanged by either branch
 - **Main HEAD Commit:** Pending PR Merge
 - **Vercel Production Deployment:** unchanged this session.
-- **Production Supabase DB:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`)
+- **Production Supabase DB:** `jobquest-prod` (`kwmnljvyvqvbvimypnmw`, AWS `us-east-1`) — **[DISPUTED 2026-09-29: operator states never created; UNRECONCILED, see Step 16A-0]**
   - Target Migrations: 18/18 applied cleanly through M14. The site branch adds a
     19th (`20261021100000_m15_legacy_claim_rpc.sql`), NOT YET applied to production.
   - Data Parity: 222 apps, 89 snapshots, 533 events, 49 tags (0 deltas)

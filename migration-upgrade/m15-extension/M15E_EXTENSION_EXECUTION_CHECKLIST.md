@@ -225,8 +225,31 @@ Checklist:
 [x] new exact-SHA CI (run 36646380294, exact SHA 1837debc8e12228a454492373191df8eb25e45de, both jobs PASS)
 [x] fresh Preview (dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L, https://jobquest2-ae69dyczb-one-piece-5779.vercel.app)
 [x] automated Preview QA (both suites PASS)
-[ ] operator focused retest
-[ ] Step 13C Opus closure review pending
+[x] operator focused retest — SKIPPED BY OPERATOR (not PASS)
+[x] Step 13C Opus closure review — BLOCKED (see Step 13C below)
+
+## Step 13C — Final Closure Review (Opus/High, invoked once)
+
+Result:
+BLOCKED — TARGETED REMEDIATION REQUIRED
+
+Reviewed: e19e9cce...1837debc (docs HEAD 466ee5f1 has no app/e2e diff).
+
+Verdicts: B1 CLOSED; N1 CLOSED; B2-R OPEN (CHECK_ERROR path only).
+PASS: warnings-off (code), cross-tab save isolation, old-context UI protection, override timing, legacy popup prod package, package mode isolation (reviewer built dev+prod from `git archive` with planted stale files; prod cleared, no popup assets).
+FAIL: save-time duplicate defense (CHECK_ERROR), real save() test coverage, race E2E adequacy.
+Security regression: NONE.
+
+BLOCKERS:
+1. Failed duplicate check at save time is treated as clean. `checkDuplicate` (api/jobquest.js:210-216) never throws; failures return `match_type: 'CHECK_ERROR'` (level `error`). `onDuplicateCheckResult` accepts it (checkedKey=key, isStale=false) and `canSafelySave` only blocks strong/probable/saved, so it returns `VERIFIED_SAFE` (sidepanel-logic.js:170-175, 253-288) and `createCapture` sends `duplicate_override:false`. Must abort/render error card; allow save only after explicit "save anyway" for that exact identity. Needs unit test.
+2. Test adequacy: (a) e2e/m15e-extension-sidepanel.spec.ts:468-479 B2-R step does not discriminate (identity key unchanged, screen stays "duplicate", footer is "View Existing Application" so save() never runs; old code also blocked). (b) No E2E for edit identity -> Save -> tab/identity change while recheck in flight -> assert no POST /captures and Job B UI untouched. (c) Warnings-OFF E2E (:484-496) never clicks Save; flag `b2r_warnings_disabled_save_verified` overstates. (d) No test for save-time check error. All B2-R unit tests call evaluateSaveGate/isSaveContextValid with stubs, not real save().
+   Close via real Side Panel E2E (delay/intercept /duplicates/check, switch tab mid-recheck, assert no /captures; warnings-OFF click Save asserts saved; check-error save) OR operator focused manual retest of those three scenarios.
+
+NON-BLOCKING: primary button can stall on "Saving…" after isCurrent() goes false without re-render (sidepanel.js:741-743, 759-762); no in-flight guard in save() / "Save as New Application Anyway" not disabled during save (:564-567) (pre-existing); in-flight debounce callback can re-enable footer during save (:1064-1071); saveIdentity.jobUrl fallback `none-paste-url` differs from currentCaptureIdentity (:648 vs :228); manifest.test.js:44-47 package check is string-contains on script source.
+
+Operator focused B2-R manual retest: SKIPPED BY OPERATOR.
+Automated evidence sufficient for release: NO.
+Do NOT re-invoke Opus for the full review; after remediation run exact-head CI and a focused re-check limited to the above items.
 
 ## Phase 14 — Operator Manual Extension QA
 Status: operator reported PASS against tested SHA e90ef9af (Preview

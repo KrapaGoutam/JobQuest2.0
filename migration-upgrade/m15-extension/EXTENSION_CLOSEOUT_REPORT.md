@@ -353,6 +353,19 @@ performed or attempted.
 
 ---
 
+## Step 13C — Final Closure Review (BLOCKED)
+
+- **Reviewer:** `release-security-reviewer` (Opus/High), invoked once, range `e19e9cce...1837debc` (application/tested SHA `1837debc8e12228a454492373191df8eb25e45de`; CI run `36646380294` PASS; Preview `https://jobquest2-ae69dyczb-one-piece-5779.vercel.app`).
+- **Verdict:** BLOCKED. B1 CLOSED, N1 CLOSED, **B2-R OPEN (CHECK_ERROR path)**. Warn-on-duplicates OFF, cross-tab save isolation, old-context UI protection, override timing, legacy popup production package, package mode isolation: PASS (code inspection / reviewer-built packages). Security regression: NONE.
+- **Blocker 1:** A failed save-time duplicate check (`CHECK_ERROR`, level `error`) resolves to `VERIFIED_SAFE` and the write proceeds with `duplicate_override:false` (`sidepanel-logic.js:170-175, 253-288`; `api/jobquest.js:210-216`). Must fail closed.
+- **Blocker 2:** No discriminating coverage of real `save()` wiring or the race. The B2-R "save during debounce" E2E step (`e2e/m15e-extension-sidepanel.spec.ts:468-479`) passes on the vulnerable code; no E2E for tab/identity change mid-recheck; warnings-OFF E2E never clicks Save; no check-error save test.
+- **Operator focused B2-R manual retest:** SKIPPED BY OPERATOR. Automated evidence sufficient for release: NO.
+- **Non-blocking:** see checklist Step 13C.
+- **Development / Main / Production:** UNCHANGED.
+- **Next:** Targeted remediation required (fail-closed CHECK_ERROR + real-browser E2E or operator manual retest for the three scenarios), exact-head CI, focused re-check. Step 15 NOT started.
+
+---
+
 ## Future Scope Log (Post-M15) — all DEFERRED, NON-BLOCKING for M15-E
 
 Corrected to the agreed feature definitions. Do not implement during M15-E.

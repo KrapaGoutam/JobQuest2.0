@@ -2,8 +2,10 @@
 
 ## Current Milestone
 Milestone 15 — Production Launch & Cutover
-**Phase M15-E: Extension Step 13B-R Targeted Security Remediation (B2-R Save-Time Duplicate Race & Legacy Popup Cleanup) — COMPLETE.**
-**Gate Status: Site branch — PASS. Extension branch — Step 13B-R complete. Application/tested SHA: 1837debc8e12228a454492373191df8eb25e45de. Exact CI PASS (run 36646380294, static 35s, database 6m30s). Preview PASS (dpl_9ERvaJBVg5xoGKuojTAGRLTiaf3L, https://jobquest2-ae69dyczb-one-piece-5779.vercel.app, automated QA PASS: sidepanel 59.9s, m11 27.6s). B1 CLOSED, B2-R CLOSED, N1 CLOSED, Legacy popup package CLOSED. Ready for operator focused re-test and Step 13C independent security review. NOT merged. Development/Main/Production UNCHANGED.**
+**Phase M15-E: Extension Step 13C Final Closure Review — BLOCKED. Targeted remediation required.**
+**Gate Status: Site branch — PASS. Extension branch — Step 13B-R PASS, Step 13C BLOCKED (Opus/High, invoked once; do not re-invoke for full review). Application/tested SHA: 1837debc8e12228a454492373191df8eb25e45de. Exact CI PASS (run 36646380294). Preview https://jobquest2-ae69dyczb-one-piece-5779.vercel.app (backend jobquest-dev). B1 CLOSED, N1 CLOSED, Legacy popup production package CLOSED (verified), B2-R OPEN. Operator focused retest: SKIPPED BY OPERATOR. Automated evidence sufficient: NO. Development/Main/Production UNCHANGED.**
+**Step 13C BLOCKERS:** (1) save-time duplicate check failure (`CHECK_ERROR`) resolves to `VERIFIED_SAFE` and writes silently (`sidepanel-logic.js:170-175, 253-288`; `api/jobquest.js:210-216`) — must fail closed. (2) No discriminating real-`save()`/race E2E: sidepanel spec `:468-479` passes on old code; need E2E (or operator manual retest) for tab/identity change mid-recheck (no POST /captures), warnings-OFF actual save, check-error at save. Details: `M15E_EXTENSION_EXECUTION_CHECKLIST.md` Step 13C.
+**NEXT EXACT ACTION:** Targeted remediation on `fix/m15e-extension-connection-ui` (fix CHECK_ERROR fail-closed + unit test; add real-browser E2E/manual retest), exact-head CI, Preview QA, then focused re-check limited to the blockers. Step 15 NOT started.
 
 ## Branch: fix/m15e-site-functional-remediation (site remediation)
 - **Branch HEAD:** `0a534b45` (pushed; matches origin)

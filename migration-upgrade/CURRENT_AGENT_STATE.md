@@ -1,3 +1,17 @@
+## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
+
+PHASE: PL-0 | STATUS: FORMALLY CLOSED.
+
+M15-E: CLOSED | PL-0A: CLOSED | PL-0B-1: CLOSED | PL-0B-R1: CLOSED | PL-0B-R2: CLOSED | PL-0B-2: CLOSED | PL-0B-3: CLOSED.
+
+FINAL CERTIFIED DEVELOPMENT SHA: `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0` | CI: `36783308738` | RESULT: PASS.
+
+GOVERNANCE INTEGRATION: `feature/pl-0-governance` (`d75d63f1d641063d5276acd0cfd2bbbf7bb847fd`) merged into development with no application, schema, configuration, workflow, environment, data, deployment, main, Production, jobquest-prod, or jobquest-dev changes. The exact development CI classified the merge as docs-only; classification and lightweight tracked-secret/committed-key checks passed, while install/lint/typecheck/unit/build/browser-bundle and migration/browser work were skipped.
+
+CLOSEOUT BRANCH: `docs/pl-0-closeout` | BASE: `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`. This branch records formal closeout only and must receive exact branch CI before its authorized no-ff integration into development. Main and Production remain unchanged.
+
+NEXT: after this closeout branch and its final development integration are certified, stop. The next phase is PL-1 — Critical Security + Extension Reliability; its first priority is plaintext smoke-tester credential hygiene. PL-1 requires a new session and explicit operator authorization.
+
 ## >>> PL-0B-2 — PERMANENT POST-LAUNCH GOVERNANCE / ROADMAP IMPLEMENTATION (2026-09-30) <<<
 
 PHASE: PL-0B-2 | STATUS: IN PROGRESS — governance documentation branch created; no development merge authorized.

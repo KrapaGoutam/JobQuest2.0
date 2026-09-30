@@ -25,7 +25,6 @@ import {
   testConnection,
 } from './api/jobquest.js';
 import {
-  authorizeDuplicateOverride,
   buildCaptureDraft,
   classifyConnectionScreen,
   classifyExtraction,
@@ -38,7 +37,6 @@ import {
   evaluateSaveGate,
   formatStatValue,
   initDuplicateContext,
-  isDuplicateOverriddenFor,
   isSaveContextValid,
   mapPipelineForDisplay,
   nextRovingIndex,
@@ -231,19 +229,22 @@ function currentCaptureIdentity(locationOverride) {
   };
 }
 
-async function runDuplicateCheck(identityOverride) {
+/**
+ * `force` is used only by the save-time gate: it always calls the API for the
+ * exact final identity. The "Warn on duplicates" preference only silences the
+ * proactive capture-time check/warning; it never skips save-time verification.
+ */
+async function runDuplicateCheck(identityOverride, { force = false } = {}) {
   const identity = identityOverride || currentCaptureIdentity();
-  if (!capturePreferences.warnOnDuplicates) {
-    duplicateInfo = { level: 'none', match: null };
-    return duplicateInfo;
-  }
-  if (isDuplicateOverriddenFor(duplicateState, identity)) {
-    duplicateInfo = { level: 'none', match: null };
-    return duplicateInfo;
-  }
-  if (!identity.jobUrl && !identity.company) {
-    duplicateInfo = { level: 'none', match: null };
-    return duplicateInfo;
+  if (!force) {
+    if (!capturePreferences.warnOnDuplicates) {
+      duplicateInfo = { level: 'none', match: null };
+      return duplicateInfo;
+    }
+    if (!identity.jobUrl && !identity.company) {
+      duplicateInfo = { level: 'none', match: null };
+      return duplicateInfo;
+    }
   }
   const currentContextSeq = captureRequestSeq;
   const { checkSeq } = onDuplicateCheckStart(duplicateState);
@@ -452,10 +453,10 @@ function matchDescription(match) {
 }
 
 const DUPLICATE_COPY = {
-  strong: { title: 'Strong duplicate: you already track this posting', why: 'Why matched: same job URL and requisition ID.', pill: 'STRONG' },
-  probable: { title: 'Probable duplicate: same company and role', why: 'Why matched: same company and role.', pill: 'PROBABLE' },
+  strong: { title: 'Strong duplicate: you already track this posting', why: 'Why matched: same job URL and requisition ID. Duplicates cannot be saved.', pill: 'STRONG' },
+  probable: { title: 'Probable duplicate: same company and role', why: 'Why matched: same company and role. Duplicates cannot be saved. Edit the details if this is a different job.', pill: 'PROBABLE' },
   saved: { title: 'Already in your Saved list', why: 'Why matched: same job URL, already saved.', pill: 'SAVED' },
-  error: { title: "Couldn't check for duplicates", why: "This isn't the same as no duplicate. Retry, or save anyway.", pill: 'ERROR' },
+  error: { title: "Couldn't check for duplicates", why: "Saving is blocked until the check succeeds. Click Save to retry.", pill: 'ERROR' },
 };
 
 function renderDuplicateCard() {
@@ -534,9 +535,6 @@ function openStageListbox() {
 
 function renderFooter() {
   const primary = button('footer-primary');
-  const secondary = button('footer-secondary');
-  secondary.hidden = true;
-  secondary.classList.remove('outline');
 
   if (currentCaptureScreen === 'saved') {
     primary.textContent = 'View Application';
@@ -558,13 +556,6 @@ function renderFooter() {
     primary.textContent = 'View Existing Application';
     primary.disabled = false;
     primary.onclick = () => openDuplicateMatch();
-    secondary.hidden = false;
-    secondary.classList.add('outline');
-    secondary.textContent = 'Save as New Application Anyway';
-    secondary.onclick = () => {
-      authorizeDuplicateOverride(duplicateState, currentCaptureIdentity());
-      void save();
-    };
     return;
   }
 
@@ -614,17 +605,25 @@ function renderCapture(screen) {
 // Save
 // ---------------------------------------------------------------------------
 
+/** The save currently in flight, or null when idle. A second save() is ignored
+ * only while this one is still bound to the live capture context; once the
+ * context/identity has moved on the old save is dead and cannot block a new one. */
+let activeSave = null;
+
 async function save() {
   if (!workflowReady) return;
-  const primary = button('footer-primary');
-  primary.disabled = true;
-  const originalLabel = primary.textContent;
-  primary.textContent = 'Saving…';
+  if (activeSave?.isCurrent()) return;
   // Snapshot immutable save context token (B2-R)
   const saveSeq = captureRequestSeq;
   const saveTabId = currentActiveTab?.id ?? null;
   /** @type {() => boolean} */
-  let isCurrent = () => true;
+  let isCurrent = () => saveSeq === captureRequestSeq;
+  const thisSave = { isCurrent: () => isCurrent() };
+  activeSave = thisSave;
+  const primary = button('footer-primary');
+  primary.disabled = true;
+  const originalLabel = primary.textContent;
+  primary.textContent = 'Saving…';
 
   try {
     const company = input('edit-company')?.value?.trim() || captured.company || '';
@@ -645,7 +644,7 @@ async function save() {
     const employmentType = select('edit-employment')?.value || captured.employmentType || '';
     const salaryStr = input('edit-salary')?.value?.trim() || captured.salaryRange || '';
     const salary = parseSalaryRange(salaryStr, captured.salaryMin, captured.salaryMax);
-    const jobUrl = input('edit-url')?.value?.trim() || captured.jobUrl || input('none-paste-url')?.value?.trim() || '';
+    const jobUrl = input('edit-url')?.value?.trim() || captured.jobUrl || '';
     const source = input('edit-source')?.value?.trim() || captured.source || '';
     const appliedAtDate = input('edit-date')?.value || new Date().toISOString().slice(0, 10);
     const notes = /** @type {HTMLTextAreaElement | null} */ (byId('edit-notes'))?.value?.trim() || captured.notes || '';
@@ -672,15 +671,14 @@ async function save() {
     });
     isCurrent = () => isSaveContextValid(getSaveContext(), getCurrentContext());
 
-    const warnOnDuplicates = Boolean(capturePreferences.warnOnDuplicates);
-
-    // Save-time duplicate defense (B2, B2-R, & B1):
+    // Save-time duplicate defense (fail closed): a fresh verification for the
+    // exact final identity always runs, regardless of the debounce timer or the
+    // "Warn on duplicates" preference. Only a current clean verdict may write.
     const gateResult = await evaluateSaveGate({
       duplicateState,
       saveIdentity,
-      warnOnDuplicates,
       runDuplicateCheck: async (id) => {
-        await runDuplicateCheck(id);
+        await runDuplicateCheck(id, { force: true });
       },
       isContextCurrent: isCurrent,
     });
@@ -699,13 +697,13 @@ async function save() {
       const banner = byId('capture-banner');
       banner.hidden = false;
       banner.className = 'banner warning';
-      banner.textContent = 'Could not verify duplicate status. Please retry.';
+      banner.textContent = 'Could not verify duplicate status. Nothing was saved. Please retry.';
+      // The failed check is now cached as level "error"; surface it on the card.
+      renderDuplicateCard();
       primary.disabled = false;
       primary.textContent = originalLabel;
       return;
     }
-
-    const isDuplicateOverridden = Boolean(gateResult.duplicateOverride);
 
     // Resume selection
     const resumeMode = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="sidepanel-resume-mode"]:checked'))?.value || 'existing';
@@ -731,7 +729,6 @@ async function save() {
       salary,
       notes,
       appliedAtDate,
-      duplicateOverride: isDuplicateOverridden,
       resumeId,
       resumeLabel,
     });
@@ -744,7 +741,7 @@ async function save() {
 
     createdPath = result.deep_link_path;
     byId('saved-meta').textContent = `Stage: ${workflow.stages?.find((s) => s.id === stageId)?.label || stageId} · ${formatTimestamp()}`;
-    // Clear duplicate state on save completion to prevent stale override from lingering (B1)
+    // Reset duplicate state on save completion (context already verified above)
     duplicateState = initDuplicateContext(captureRequestSeq);
     duplicateInfo = duplicateState.info;
     renderCapture('saved');
@@ -756,6 +753,7 @@ async function save() {
     banner.className = `banner ${isConnectionError(error) ? 'error' : 'warning'}`;
     banner.textContent = error instanceof Error ? error.message : 'Could not save this application.';
   } finally {
+    if (activeSave === thisSave) activeSave = null;
     if (isCurrent()) {
       primary.disabled = !workflowReady;
       if (primary.textContent === 'Saving…') primary.textContent = originalLabel;

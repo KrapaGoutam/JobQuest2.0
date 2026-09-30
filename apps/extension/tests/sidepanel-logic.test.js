@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
-  authorizeDuplicateOverride,
   buildCaptureDraft, canSafelySave, classifyConnectionScreen, classifyExtraction, clampPercent, computeCaptureCompleteness,
   computeDuplicateIdentityKey,
   computeGoalRemainder, DASHBOARD_PIPELINE_STAGES, describeEnvironment,
   evaluateSaveGate, formatStageLabel, formatStatValue,
-  initDuplicateContext, isDuplicateOverriddenFor, isSaveContextValid,
+  initDuplicateContext, isSaveContextValid,
   mapDuplicateLevel, mapPipelineForDisplay, nextRovingIndex, normalizeIdentity,
   onDuplicateCheckResult, onDuplicateCheckStart, onIdentityChange,
   resolveCaptureScreen, saveAsToStageId,
@@ -140,17 +140,18 @@ describe('active-tab change detection', () => {
 });
 
 describe('capture draft assembly', () => {
-  it('builds the same shape popup.js\'s save() posts to /captures', () => {
+  it('builds the same shape popup.js\'s save() posts to /captures and never emits duplicate_override=true', () => {
     const draft = buildCaptureDraft({
       captured: { externalJobId: 'ext-1', salaryCurrency: 'USD', description: 'desc', salaryRange: '$100k - $150k' },
       company: 'Acme', jobTitle: 'Engineer', stageId: 'APPLIED', jobUrl: 'https://a.test',
       source: 'LinkedIn', location: 'Remote', workArrangement: 'Remote', employmentType: 'Full-time',
       salary: { min: 100000, max: 150000 }, notes: 'note', appliedAtDate: '2026-01-01',
-      duplicateOverride: true, resumeId: 'r1', resumeLabel: null,
+      duplicateOverride: true, // legacy/forged caller input must be ignored
+      resumeId: 'r1', resumeLabel: null,
     });
     expect(draft).toMatchObject({
       company: 'Acme', job_title: 'Engineer', stage: 'APPLIED', external_job_id: 'ext-1',
-      salary_min: 100000, salary_max: 150000, duplicate_override: true, resume_id: 'r1',
+      salary_min: 100000, salary_max: 150000, duplicate_override: false, resume_id: 'r1',
       applied_at: '2026-01-01T12:00:00.000Z',
     });
     expect(draft.snapshot.description).toBe('desc');
@@ -293,7 +294,7 @@ describe('capture preferences storage (new chrome.storage.local keys)', () => {
   });
 });
 
-describe('duplicate lifecycle hardening (B1, B2, N1)', () => {
+describe('duplicate protection: duplicates are never saved (final M15-E policy)', () => {
   const jobA = {
     company: 'Stripe',
     jobTitle: 'Staff Software Engineer',
@@ -312,386 +313,314 @@ describe('duplicate lifecycle hardening (B1, B2, N1)', () => {
     location: 'San Francisco, CA',
   };
 
+  const dupResult = { match_type: 'EXACT_POSTING', matches: [{ application: { company_name: 'Stripe' } }] };
+  const cleanResult = { match_type: 'NONE', matches: [] };
+
+  /** Simulates the Side Panel's forced save-time check against `state`. */
+  const checkerReturning = (state, contextSeq, result) => vi.fn(async (identity) => {
+    const start = onDuplicateCheckStart(state);
+    onDuplicateCheckResult(state, contextSeq, start.checkSeq, identity, result);
+  });
+
   it('normalizes identity fields with safe whitespace trimming and defaults', () => {
     expect(normalizeIdentity({ company: '  Acme  ', jobTitle: ' Lead ' })).toEqual({
-      company: 'Acme',
-      jobTitle: 'Lead',
-      jobUrl: '',
-      externalJobId: '',
-      source: '',
-      location: '',
+      company: 'Acme', jobTitle: 'Lead', jobUrl: '', externalJobId: '', source: '', location: '',
     });
   });
 
-  it('B1-A: Duplicate Job A -> Save Anyway -> duplicate_override true for Job A only', () => {
-    let state = initDuplicateContext(1);
-    const start = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { company_name: 'Stripe', role_title: 'Staff Software Engineer' } }],
+  describe('no override path exists', () => {
+    it('the duplicate lifecycle exposes no override state or authorization API', async () => {
+      const logic = await import('../sidepanel-logic.js');
+      expect(logic.authorizeDuplicateOverride).toBeUndefined();
+      expect(logic.isDuplicateOverriddenFor).toBeUndefined();
+      expect(initDuplicateContext(1)).not.toHaveProperty('overrideKey');
     });
 
-    // Verify it is recognized as duplicate
-    expect(canSafelySave(state, jobA)).toEqual({ canSave: false, reason: 'BLOCKED_DUPLICATE' });
-
-    // Operator chooses "Save Anyway"
-    authorizeDuplicateOverride(state, jobA);
-    expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
-    expect(canSafelySave(state, jobA)).toEqual({ canSave: true, duplicateOverride: true, reason: 'OVERRIDDEN' });
-
-    // Override does NOT apply to a different job
-    expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
-  });
-
-  it('B1-B: After Job A override -> initialize Job B -> bypass/override false', () => {
-    let state = initDuplicateContext(1);
-    const startA = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, startA.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { company_name: 'Stripe' } }],
-    });
-    authorizeDuplicateOverride(state, jobA);
-    expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
-
-    // Switch to Job B / next context sequence
-    state = initDuplicateContext(2);
-    expect(isDuplicateOverriddenFor(state, jobA)).toBe(false);
-    expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
-    expect(state.overrideKey).toBeNull();
-  });
-
-  it('B1-C: After Job A override -> later duplicate Job B -> normal duplicate warning appears', () => {
-    let state = initDuplicateContext(1);
-    const startA = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, startA.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { company_name: 'Stripe' } }],
-    });
-    authorizeDuplicateOverride(state, jobA);
-
-    // Switch to Job B
-    state = initDuplicateContext(2);
-    const startB = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 2, startB.checkSeq, jobB, {
-      match_type: 'SAME_ROLE',
-      matches: [{ application: { company_name: 'Notion', role_title: 'Senior Product Manager' } }],
-    });
-
-    expect(state.info.level).toBe('probable');
-    expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
-    expect(canSafelySave(state, jobB)).toEqual({ canSave: false, reason: 'BLOCKED_DUPLICATE' });
-  });
-
-  it('B2-A: Duplicate check completes, then Company changes -> previous duplicate state invalidated -> duplicate check reruns', () => {
-    let state = initDuplicateContext(1);
-    const start = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { company_name: 'Stripe' } }],
-    });
-    expect(state.info.level).toBe('strong');
-
-    // Operator edits company
-    const edited = { ...jobA, company: 'Stripe Payments' };
-    onIdentityChange(state, edited);
-
-    expect(state.isStale).toBe(true);
-    expect(state.info.level).toBe('none');
-    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
-
-    // Recheck completes for new identity
-    const nextStart = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, nextStart.checkSeq, edited, { match_type: 'NONE', matches: [] });
-    expect(state.isStale).toBe(false);
-    expect(state.info.level).toBe('none');
-    expect(canSafelySave(state, edited)).toEqual({ canSave: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' });
-  });
-
-  it('B2-B: Duplicate check completes, then Job Title changes -> previous duplicate state invalidated', () => {
-    let state = initDuplicateContext(1);
-    const start = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { role_title: 'Staff Software Engineer' } }],
-    });
-    expect(state.info.level).toBe('strong');
-
-    const edited = { ...jobA, jobTitle: 'Principal Engineer' };
-    onIdentityChange(state, edited);
-
-    expect(state.isStale).toBe(true);
-    expect(state.info.level).toBe('none');
-    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
-  });
-
-  it('B2-C: Duplicate check completes, then Job URL changes -> previous duplicate state invalidated', () => {
-    let state = initDuplicateContext(1);
-    const start = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { job_url: 'https://stripe.com/jobs/123' } }],
-    });
-    expect(state.info.level).toBe('strong');
-
-    const edited = { ...jobA, jobUrl: 'https://stripe.com/jobs/999' };
-    onIdentityChange(state, edited);
-
-    expect(state.isStale).toBe(true);
-    expect(state.info.level).toBe('none');
-    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
-  });
-
-  it('B2-D: Save cannot use duplicate result for old identity values', () => {
-    let state = initDuplicateContext(1);
-    const start = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, { match_type: 'NONE', matches: [] });
-
-    // Old identity was safe
-    expect(canSafelySave(state, jobA)).toEqual({ canSave: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' });
-
-    // But if submitted with changed fields without checking, save must reject with NEEDS_CHECK
-    const edited = { ...jobA, company: 'Google' };
-    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
-  });
-
-  it('B2-E: Explicit override becomes invalid if identity changes afterward', () => {
-    let state = initDuplicateContext(1);
-    const start = onDuplicateCheckStart(state);
-    onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { company_name: 'Stripe' } }],
-    });
-
-    authorizeDuplicateOverride(state, jobA);
-    expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
-
-    // Operator edits company after clicking Save Anyway
-    const edited = { ...jobA, company: 'Stripe Inc' };
-    onIdentityChange(state, edited);
-
-    expect(isDuplicateOverriddenFor(state, edited)).toBe(false);
-    expect(isDuplicateOverriddenFor(state, jobA)).toBe(false);
-    expect(state.overrideKey).toBeNull();
-    expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
-  });
-
-  it('N1: Scheduled duplicate Job A -> switch to Job B -> late Job A timer/result cannot change Job B state/UI', () => {
-    // Context 1 for Job A
-    let state = initDuplicateContext(1);
-    const checkA = onDuplicateCheckStart(state);
-
-    // Context switches to 2 for Job B before checkA completes
-    state = initDuplicateContext(2);
-    const checkB = onDuplicateCheckStart(state);
-
-    // Check A completes late with contextSeq 1
-    const lateOutcomeA = onDuplicateCheckResult(state, 1, checkA.checkSeq, jobA, {
-      match_type: 'EXACT_POSTING',
-      matches: [{ application: { company_name: 'Stripe' } }],
-    });
-
-    expect(lateOutcomeA.ignored).toBe(true);
-    expect(lateOutcomeA.reason).toBe('CONTEXT_SUPERSEDED');
-    // Job B state is NOT corrupted by Job A's late duplicate result
-    expect(state.checkedKey).toBeNull();
-    expect(state.info.level).toBe('none');
-
-    // Check B completes with current contextSeq 2
-    const outcomeB = onDuplicateCheckResult(state, 2, checkB.checkSeq, jobB, {
-      match_type: 'NONE',
-      matches: [],
-    });
-    expect(outcomeB.ignored).toBe(false);
-    expect(state.info.level).toBe('none');
-    expect(computeDuplicateIdentityKey(jobB)).toBe(state.checkedKey);
-  });
-
-  describe('B2-R: Save-time duplicate race defense and context isolation', () => {
-    it('B2-R-1: Warnings disabled allows save immediately without running duplicate check', async () => {
-      let state = initDuplicateContext(1);
-      const runCheck = vi.fn();
-      const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: false,
-        runDuplicateCheck: runCheck,
-      });
-      expect(result).toEqual({ canProceed: true, duplicateOverride: false, reason: 'WARNINGS_DISABLED' });
-      expect(runCheck).not.toHaveBeenCalled();
-    });
-
-    it('B2-R-2: Clean verified safe state allows save with duplicateOverride false', async () => {
-      let state = initDuplicateContext(1);
+    it('a known duplicate stays BLOCKED for the exact identity and never becomes savable', () => {
+      const state = initDuplicateContext(1);
       const start = onDuplicateCheckStart(state);
-      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, { match_type: 'NONE', matches: [] });
-
-      const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: true,
-      });
-      expect(result).toEqual({ canProceed: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' });
+      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, dupResult);
+      expect(canSafelySave(state, jobA)).toEqual({ canSave: false, reason: 'BLOCKED_DUPLICATE' });
+      // Forging an override flag on the state changes nothing.
+      state.overrideKey = computeDuplicateIdentityKey(jobA);
+      expect(canSafelySave(state, jobA)).toEqual({ canSave: false, reason: 'BLOCKED_DUPLICATE' });
     });
 
-    it('B2-R-3: Exact identity override allows save with duplicateOverride true', async () => {
-      let state = initDuplicateContext(1);
+    it('sidepanel/popup source has no Save Anyway control, override authorization, or duplicate_override=true', () => {
+      const read = (name) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
+      for (const name of ['sidepanel.html', 'sidepanel.js', 'sidepanel-logic.js', 'popup.html', 'popup.js']) {
+        const source = read(name);
+        expect(source, name).not.toMatch(/Save as New Application Anyway|Save Anyway|save-anyway|footer-secondary/i);
+        expect(source, name).not.toMatch(/authorizeDuplicateOverride|isDuplicateOverriddenFor|overrideKey|overrideIdentityKey|bypassDuplicate/);
+        expect(source, name).not.toMatch(/duplicate_override\s*:\s*(?!false\b|\s)/i);
+      }
+    });
+  });
+
+  describe('B2: identity edits invalidate the verdict', () => {
+    const seed = () => {
+      const state = initDuplicateContext(1);
       const start = onDuplicateCheckStart(state);
-      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-        match_type: 'EXACT_POSTING',
-        matches: [{ application: { company_name: 'Stripe' } }],
-      });
-      authorizeDuplicateOverride(state, jobA);
+      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, dupResult);
+      expect(state.info.level).toBe('strong');
+      return state;
+    };
 
-      const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: true,
-      });
-      expect(result).toEqual({ canProceed: true, duplicateOverride: true, reason: 'OVERRIDDEN' });
-    });
-
-    it('B2-R-4: Stale state triggers recheck and proceeds if clean verdict returned', async () => {
-      let state = initDuplicateContext(1);
+    it.each([
+      ['Company', { company: 'Stripe Payments' }],
+      ['Title', { jobTitle: 'Principal Engineer' }],
+      ['Job URL', { jobUrl: 'https://stripe.com/jobs/999' }],
+      ['Job ID', { externalJobId: '999' }],
+      ['Source', { source: 'LinkedIn' }],
+      ['Location', { location: 'Berlin' }],
+    ])('editing %s invalidates duplicate state and requires a new check', (_field, patch) => {
+      const state = seed();
+      const edited = { ...jobA, ...patch };
+      onIdentityChange(state, edited);
       expect(state.isStale).toBe(true);
-
-      const runCheck = vi.fn(async (identity) => {
-        const start = onDuplicateCheckStart(state);
-        onDuplicateCheckResult(state, 1, start.checkSeq, identity, { match_type: 'NONE', matches: [] });
-      });
-
-      const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: true,
-        runDuplicateCheck: runCheck,
-      });
-      expect(runCheck).toHaveBeenCalledWith(jobA);
-      expect(result).toEqual({ canProceed: true, duplicateOverride: false, reason: 'VERIFIED_SAFE' });
+      expect(state.info.level).toBe('none');
+      expect(canSafelySave(state, edited)).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
     });
 
-    it('B2-R-5: Stale state triggers recheck and blocks if duplicate detected', async () => {
-      let state = initDuplicateContext(1);
+    it('a verdict for the old identity cannot authorize a save of changed fields', () => {
+      const state = initDuplicateContext(1);
+      const start = onDuplicateCheckStart(state);
+      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, cleanResult);
+      expect(canSafelySave(state, jobA)).toEqual({ canSave: true, reason: 'VERIFIED_SAFE' });
+      expect(canSafelySave(state, { ...jobA, company: 'Google' })).toEqual({ canSave: false, reason: 'NEEDS_CHECK' });
+    });
 
-      const runCheck = vi.fn(async (identity) => {
-        const start = onDuplicateCheckStart(state);
-        onDuplicateCheckResult(state, 1, start.checkSeq, identity, {
-          match_type: 'EXACT_POSTING',
-          matches: [{ application: { company_name: 'Stripe' } }],
-        });
-      });
+    it('recheck of the edited identity yields a fresh clean verdict', () => {
+      const state = seed();
+      const edited = { ...jobA, company: 'Stripe Payments' };
+      onIdentityChange(state, edited);
+      const next = onDuplicateCheckStart(state);
+      onDuplicateCheckResult(state, 1, next.checkSeq, edited, cleanResult);
+      expect(canSafelySave(state, edited)).toEqual({ canSave: true, reason: 'VERIFIED_SAFE' });
+    });
+  });
 
+  describe('save-time fail-closed gate', () => {
+    it('known duplicate cannot be saved', async () => {
+      const state = initDuplicateContext(1);
       const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: true,
-        runDuplicateCheck: runCheck,
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: checkerReturning(state, 1, dupResult),
       });
       expect(result).toEqual({ canProceed: false, reason: 'BLOCKED_DUPLICATE', abort: false });
     });
 
-    it('B2-R-6: FAIL CLOSED - Discarded / superseded recheck result blocks save instead of proceeding', async () => {
-      let state = initDuplicateContext(1);
-
-      // Simulated check where result is discarded due to check supersession
-      const runCheck = vi.fn(async (identity) => {
-        const start = onDuplicateCheckStart(state);
-        // Simulate another check started before this one returned
-        onDuplicateCheckStart(state);
-        // Late result arrives with old checkSeq -> ignored
-        onDuplicateCheckResult(state, 1, start.checkSeq, identity, { match_type: 'NONE', matches: [] });
-      });
-
+    it.each([
+      ['SAME_ROLE', { match_type: 'SAME_ROLE', matches: [{ application: { company_name: 'Stripe' } }] }],
+      ['EXACT_POSTING already SAVED', { match_type: 'EXACT_POSTING', matches: [{ application: { stage: 'SAVED' } }] }],
+    ])('%s verdict blocks save', async (_name, verdict) => {
+      const state = initDuplicateContext(1);
       const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: true,
-        runDuplicateCheck: runCheck,
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: checkerReturning(state, 1, verdict),
       });
-      // Must NOT proceed to save!
       expect(result.canProceed).toBe(false);
-      expect(result.abort).toBe(true);
-      expect(result.reason).toBe('NEEDS_CHECK');
+      expect(result.reason).toBe('BLOCKED_DUPLICATE');
     });
 
-    it('B2-R-7: Aborts save if context became stale / superseded during recheck await', async () => {
-      let state = initDuplicateContext(1);
-      let isCurrent = true;
+    it('current clean verdict saves (normal non-duplicate save)', async () => {
+      const state = initDuplicateContext(1);
+      const runCheck = checkerReturning(state, 1, cleanResult);
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck });
+      expect(runCheck).toHaveBeenCalledWith(jobA);
+      expect(result).toEqual({ canProceed: true, reason: 'VERIFIED_SAFE' });
+    });
 
+    it('company-only (possible) match is informational and still saves', async () => {
+      const state = initDuplicateContext(1);
+      const result = await evaluateSaveGate({
+        duplicateState: state, saveIdentity: jobA,
+        runDuplicateCheck: checkerReturning(state, 1, { match_type: 'COMPANY_ONLY', matches: [{ application: {} }] }),
+      });
+      expect(result.canProceed).toBe(true);
+    });
+
+    it('ALWAYS re-verifies at save time, even when a fresh clean verdict is already cached', async () => {
+      const state = initDuplicateContext(1);
+      const first = onDuplicateCheckStart(state);
+      onDuplicateCheckResult(state, 1, first.checkSeq, jobA, cleanResult);
+      expect(canSafelySave(state, jobA).canSave).toBe(true);
+
+      // Server now reports a duplicate (e.g. saved from another device meanwhile).
+      const runCheck = checkerReturning(state, 1, dupResult);
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck });
+      expect(runCheck).toHaveBeenCalledTimes(1);
+      expect(result.canProceed).toBe(false);
+      expect(result.reason).toBe('BLOCKED_DUPLICATE');
+    });
+
+    it('stale cached verdict (identity edited, debounce not yet fired) cannot bypass verification', async () => {
+      const state = initDuplicateContext(1);
+      const first = onDuplicateCheckStart(state);
+      onDuplicateCheckResult(state, 1, first.checkSeq, jobA, cleanResult); // clean for the OLD identity
+      const edited = { ...jobA, company: 'Existing Co', jobTitle: 'Existing Role' };
+      onIdentityChange(state, edited); // edit happened; debounce (350ms) has not fired
+      expect(canSafelySave(state, edited).reason).toBe('NEEDS_CHECK');
+
+      const runCheck = checkerReturning(state, 1, { match_type: 'SAME_ROLE', matches: [{ application: {} }] });
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: edited, runDuplicateCheck: runCheck });
+      expect(runCheck).toHaveBeenCalledWith(edited);
+      expect(result).toMatchObject({ canProceed: false, reason: 'BLOCKED_DUPLICATE' });
+    });
+
+    it('FAIL CLOSED: a failed duplicate check (CHECK_ERROR) never saves', async () => {
+      const state = initDuplicateContext(1);
+      const result = await evaluateSaveGate({
+        duplicateState: state, saveIdentity: jobA,
+        runDuplicateCheck: checkerReturning(state, 1, { match_type: 'CHECK_ERROR', has_duplicate: false, matches: [], error: 'boom' }),
+      });
+      expect(result).toEqual({ canProceed: false, reason: 'CHECK_FAILED', abort: true });
+    });
+
+    it('FAIL CLOSED: a cached CHECK_ERROR verdict cannot be treated as clean by canSafelySave', () => {
+      const state = initDuplicateContext(1);
+      const start = onDuplicateCheckStart(state);
+      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, { match_type: 'CHECK_ERROR', matches: [] });
+      expect(canSafelySave(state, jobA)).toEqual({ canSave: false, reason: 'CHECK_FAILED' });
+    });
+
+    it('FAIL CLOSED: a thrown check aborts the save', async () => {
+      const state = initDuplicateContext(1);
+      const result = await evaluateSaveGate({
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: async () => { throw new Error('network'); },
+      });
+      expect(result).toEqual({ canProceed: false, reason: 'CHECK_FAILED', abort: true });
+    });
+
+    it('FAIL CLOSED: a missing checker aborts instead of trusting cached state', async () => {
+      const state = initDuplicateContext(1);
+      const start = onDuplicateCheckStart(state);
+      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, cleanResult);
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: jobA });
+      expect(result.canProceed).toBe(false);
+      expect(result.abort).toBe(true);
+    });
+
+    it('FAIL CLOSED: a discarded check (no verdict recorded) blocks save', async () => {
+      const state = initDuplicateContext(1);
+      const result = await evaluateSaveGate({
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: vi.fn(async () => undefined),
+      });
+      expect(result).toEqual({ canProceed: false, reason: 'NEEDS_CHECK', abort: true });
+    });
+
+    it('FAIL CLOSED: a superseded check (newer check started) blocks save', async () => {
+      const state = initDuplicateContext(1);
       const runCheck = vi.fn(async (identity) => {
         const start = onDuplicateCheckStart(state);
-        onDuplicateCheckResult(state, 1, start.checkSeq, identity, { match_type: 'NONE', matches: [] });
-        // Simulate tab switch / context change while waiting
-        isCurrent = false;
+        onDuplicateCheckStart(state); // a newer check supersedes this one
+        onDuplicateCheckResult(state, 1, start.checkSeq, identity, cleanResult);
       });
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck });
+      expect(result).toEqual({ canProceed: false, reason: 'NEEDS_CHECK', abort: true });
+    });
 
+    it('FAIL CLOSED: a check superseded by a context switch is ignored and blocks save', async () => {
+      const state = initDuplicateContext(1);
+      const runCheck = vi.fn(async (identity) => {
+        const start = onDuplicateCheckStart(state);
+        // result arrives tagged with a different (newer) context sequence
+        onDuplicateCheckResult(state, 2, start.checkSeq, identity, cleanResult);
+      });
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck });
+      expect(result.canProceed).toBe(false);
+      expect(result.abort).toBe(true);
+    });
+
+    it('FAIL CLOSED: a check whose identity no longer matches the live form is discarded', async () => {
+      const state = initDuplicateContext(1);
+      const runCheck = vi.fn(async (identity) => {
+        const start = onDuplicateCheckStart(state);
+        onDuplicateCheckResult(state, 1, start.checkSeq, identity, cleanResult, jobB /* live form moved on */);
+      });
+      const result = await evaluateSaveGate({ duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck });
+      expect(result.canProceed).toBe(false);
+      expect(result.abort).toBe(true);
+    });
+
+    it('context changed during the save-time check aborts before any write (tab switch mid-check)', async () => {
+      const state = initDuplicateContext(1);
+      let isCurrent = true;
+      const runCheck = vi.fn(async (identity) => {
+        const start = onDuplicateCheckStart(state);
+        onDuplicateCheckResult(state, 1, start.checkSeq, identity, cleanResult); // a clean verdict arrives...
+        isCurrent = false; // ...but the operator switched tabs meanwhile
+      });
       const result = await evaluateSaveGate({
-        duplicateState: state,
-        saveIdentity: jobA,
-        warnOnDuplicates: true,
-        runDuplicateCheck: runCheck,
-        isContextCurrent: () => isCurrent,
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck, isContextCurrent: () => isCurrent,
       });
       expect(result).toEqual({ canProceed: false, reason: 'CONTEXT_SUPERSEDED', abort: true });
     });
 
-    it('B2-R-8: authorizeDuplicateOverride fails if state is stale or identity does not match checkedKey', () => {
-      let state = initDuplicateContext(1);
-      // Stale state: cannot authorize override (closes <=350ms window)
-      authorizeDuplicateOverride(state, jobA);
-      expect(isDuplicateOverriddenFor(state, jobA)).toBe(false);
-      expect(state.overrideKey).toBeNull();
-
-      // Now complete check for jobA
-      const start = onDuplicateCheckStart(state);
-      onDuplicateCheckResult(state, 1, start.checkSeq, jobA, {
-        match_type: 'EXACT_POSTING',
-        matches: [{ application: { company_name: 'Stripe' } }],
+    it('the gate has no warnOnDuplicates escape hatch: the preference cannot skip verification', async () => {
+      const state = initDuplicateContext(1);
+      const runCheck = checkerReturning(state, 1, dupResult);
+      const result = await evaluateSaveGate({
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: runCheck, warnOnDuplicates: false,
       });
-
-      // Authorizing jobB while jobA was checked must fail
-      authorizeDuplicateOverride(state, jobB);
-      expect(isDuplicateOverriddenFor(state, jobB)).toBe(false);
-      expect(state.overrideKey).toBeNull();
-
-      // Authorizing matching jobA succeeds
-      authorizeDuplicateOverride(state, jobA);
-      expect(isDuplicateOverriddenFor(state, jobA)).toBe(true);
-      expect(state.overrideKey).toBe(computeDuplicateIdentityKey(jobA));
+      expect(runCheck).toHaveBeenCalledTimes(1);
+      expect(result.canProceed).toBe(false);
     });
 
-    it('B2-R-9: onDuplicateCheckResult rejects result if active identity changed during in-flight check', () => {
-      let state = initDuplicateContext(1);
-      const start = onDuplicateCheckStart(state);
+    it('never returns a duplicateOverride outcome', async () => {
+      const state = initDuplicateContext(1);
+      const result = await evaluateSaveGate({
+        duplicateState: state, saveIdentity: jobA, runDuplicateCheck: checkerReturning(state, 1, cleanResult),
+      });
+      expect(result).not.toHaveProperty('duplicateOverride');
+    });
+  });
 
-      // Check was initiated for jobA, but by the time result returns, currentIdentity is jobB
-      const outcome = onDuplicateCheckResult(
-        state,
-        1,
-        start.checkSeq,
-        jobA,
-        { match_type: 'EXACT_POSTING', matches: [{ application: { company_name: 'Stripe' } }] },
-        jobB // currentIdentity in UI
-      );
-      expect(outcome.ignored).toBe(true);
-      expect(outcome.reason).toBe('IDENTITY_SUPERSEDED');
+  describe('N1 / context isolation', () => {
+    it('a fresh capture context starts stale with no verdict', () => {
+      const state = initDuplicateContext(2);
+      expect(state).toMatchObject({ checkedKey: null, isStale: true, info: { level: 'none', match: null } });
+      expect(canSafelySave(state, jobB).reason).toBe('NEEDS_CHECK');
+    });
+
+    it('late Job A result cannot change Job B state (old-context result cannot modify new tab UI state)', () => {
+      const stateA = initDuplicateContext(1);
+      const checkA = onDuplicateCheckStart(stateA);
+
+      const state = initDuplicateContext(2); // switched to Job B
+      const checkB = onDuplicateCheckStart(state);
+
+      const late = onDuplicateCheckResult(state, 1, checkA.checkSeq, jobA, dupResult);
+      expect(late).toMatchObject({ ignored: true, reason: 'CONTEXT_SUPERSEDED' });
       expect(state.checkedKey).toBeNull();
       expect(state.info.level).toBe('none');
+
+      const outcomeB = onDuplicateCheckResult(state, 2, checkB.checkSeq, jobB, cleanResult);
+      expect(outcomeB.ignored).toBe(false);
+      expect(state.checkedKey).toBe(computeDuplicateIdentityKey(jobB));
     });
 
-    it('B2-R-10: isSaveContextValid validates matching snapshot and rejects mutations across context/tab/identity', () => {
+    it('a Job A duplicate verdict never makes Job B savable or blocked', () => {
+      const stateA = initDuplicateContext(1);
+      const start = onDuplicateCheckStart(stateA);
+      onDuplicateCheckResult(stateA, 1, start.checkSeq, jobA, dupResult);
+      expect(canSafelySave(stateA, jobB).reason).toBe('NEEDS_CHECK');
+      const stateB = initDuplicateContext(2);
+      expect(canSafelySave(stateB, jobB).reason).toBe('NEEDS_CHECK');
+    });
+
+    it('onDuplicateCheckResult rejects a result when the active identity changed during the in-flight check', () => {
+      const state = initDuplicateContext(1);
+      const start = onDuplicateCheckStart(state);
+      const outcome = onDuplicateCheckResult(state, 1, start.checkSeq, jobA, dupResult, jobB);
+      expect(outcome).toMatchObject({ ignored: true, reason: 'IDENTITY_SUPERSEDED' });
+      expect(state.checkedKey).toBeNull();
+    });
+
+    it('isSaveContextValid validates matching snapshot and rejects mutations across context/tab/identity', () => {
       const ctxA = { contextSeq: 1, tabId: 100, identityKey: 'k1' };
       expect(isSaveContextValid(ctxA, { contextSeq: 1, tabId: 100, identityKey: 'k1' })).toBe(true);
-
-      // Context seq changed (e.g. reload or fresh capture)
       expect(isSaveContextValid(ctxA, { contextSeq: 2, tabId: 100, identityKey: 'k1' })).toBe(false);
-
-      // Tab switched
       expect(isSaveContextValid(ctxA, { contextSeq: 1, tabId: 101, identityKey: 'k1' })).toBe(false);
-
-      // Fields edited during save
       expect(isSaveContextValid(ctxA, { contextSeq: 1, tabId: 100, identityKey: 'k2' })).toBe(false);
-
-      // Missing arguments
       expect(isSaveContextValid(null, ctxA)).toBe(false);
       expect(isSaveContextValid(ctxA, null)).toBe(false);
     });

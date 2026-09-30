@@ -10,7 +10,6 @@ import {
   parseSalaryRange,
   testConnection,
 } from './api/jobquest.js';
-import { computeDuplicateIdentityKey } from './sidepanel-logic.js';
 
 const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const input = (id) => /** @type {HTMLInputElement} */ (document.getElementById(id));
@@ -27,7 +26,6 @@ const duplicateHeading = byId('dup-heading');
 const duplicateMessage = byId('dup-message');
 const duplicateActions = byId('dup-actions');
 const duplicateOpen = button('dup-open-btn');
-const duplicateSave = button('dup-save-anyway-btn');
 const duplicateCancel = button('dup-cancel-btn');
 const formError = byId('form-error');
 const saveButton = button('save-btn');
@@ -42,7 +40,6 @@ let captured = {};
 let workspace = null;
 let createdPath = '';
 let currentMatch = null;
-let overrideIdentityKey = null;
 let workflowReady = false;
 let duplicateTimer = 0;
 
@@ -72,7 +69,6 @@ function clearDuplicate() {
   duplicateMessage.textContent = '';
   duplicateActions.hidden = true;
   duplicateOpen.hidden = true;
-  duplicateSave.hidden = true;
   duplicateCancel.hidden = true;
   currentMatch = null;
 }
@@ -104,8 +100,7 @@ function renderDuplicate(result) {
     setState('X13', 'screen-capture', 'Duplicate check failed');
     duplicateBanner.className = 'banner danger';
     duplicateHeading.textContent = "Couldn't check for duplicates";
-    duplicateMessage.textContent = "This isn't the same as no duplicate. Retry, or save anyway.";
-    duplicateSave.hidden = false;
+    duplicateMessage.textContent = "Saving is blocked until the check succeeds. Retry.";
     duplicateCancel.hidden = false;
     return;
   }
@@ -124,12 +119,12 @@ function renderDuplicate(result) {
     duplicateBanner.className = 'banner danger';
     duplicateHeading.textContent = 'Strong duplicate: you already track this posting';
     duplicateMessage.textContent = matchDescription(currentMatch);
-    duplicateOpen.hidden = false; duplicateSave.hidden = false; duplicateCancel.hidden = false;
+    duplicateOpen.hidden = false; duplicateCancel.hidden = false;
   } else if (type === 'SAME_ROLE') {
     setState('X10', 'screen-capture', 'Probable duplicate');
     duplicateHeading.textContent = 'Probable duplicate: same company and role';
     duplicateMessage.textContent = matchDescription(currentMatch);
-    duplicateOpen.hidden = false; duplicateSave.hidden = false; duplicateCancel.hidden = false;
+    duplicateOpen.hidden = false; duplicateCancel.hidden = false;
   } else if (type === 'COMPANY_ONLY') {
     setState('X11', 'screen-capture', 'Possible duplicate');
     duplicateBanner.className = 'banner info';
@@ -141,14 +136,11 @@ function renderDuplicate(result) {
 
 async function runDuplicateCheck() {
   const identity = currentCaptureIdentity();
-  const currentKey = computeDuplicateIdentityKey(identity);
-  if (overrideIdentityKey && overrideIdentityKey === currentKey) return;
   if (!identity.jobUrl && !identity.company) { clearDuplicate(); return; }
   renderDuplicate(await checkDuplicate(settings.instanceUrl, settings.apiToken, identity));
 }
 
 function scheduleDuplicateCheck() {
-  overrideIdentityKey = null;
   window.clearTimeout(duplicateTimer);
   duplicateTimer = window.setTimeout(() => void runDuplicateCheck(), 350);
 }
@@ -251,7 +243,6 @@ async function initialize() {
   }
   const pending = (await chrome.storage.local.get(['pendingCapture'])).pendingCapture;
   captured = pending || await extractActivePage();
-  overrideIdentityKey = null;
   clearDuplicate();
   populateForm(captured);
   setState(captured.company && captured.jobTitle ? readyStateCode() : captured.company || captured.jobTitle ? 'X6' : 'X7', 'screen-capture');
@@ -273,9 +264,19 @@ async function save(event) {
   }
   const resumeMode = resumeManual.checked ? 'manual' : resumeNone.checked ? 'none' : 'existing';
   const selectedResume = resumeSelect.selectedOptions[0];
-  const currentIdentity = currentCaptureIdentity();
-  const currentIdentityKey = computeDuplicateIdentityKey(currentIdentity);
-  const isDuplicateOverridden = Boolean(overrideIdentityKey && overrideIdentityKey === currentIdentityKey);
+  // Fail closed: a fresh duplicate verdict for the exact final identity is
+  // required. Known duplicates and failed checks never write.
+  saveButton.disabled = true;
+  const verdict = await checkDuplicate(settings.instanceUrl, settings.apiToken, currentCaptureIdentity());
+  if (verdict.match_type !== 'NONE' && verdict.match_type !== 'COMPANY_ONLY') {
+    renderDuplicate(verdict);
+    formError.textContent = verdict.match_type === 'CHECK_ERROR'
+      ? 'Could not verify duplicate status. Nothing was saved. Retry.'
+      : 'This looks like a duplicate. Duplicates cannot be saved.';
+    formError.hidden = false;
+    saveButton.disabled = !workflowReady;
+    return;
+  }
   const salary = parseSalaryRange(input('input-salary').value, captured.salaryMin, captured.salaryMax);
   const draft = {
     company,
@@ -290,7 +291,7 @@ async function save(event) {
     salary_min: salary.min,
     salary_max: salary.max,
     salary_currency: captured.salaryCurrency || 'USD',
-    duplicate_override: isDuplicateOverridden,
+    duplicate_override: false, // deprecated compatibility field; duplicates are never saved
     notes: input('input-notes').value.trim() || null,
     applied_at: `${input('input-date').value}T12:00:00.000Z`,
     snapshot: {
@@ -308,7 +309,6 @@ async function save(event) {
   try {
     const result = await createCapture(settings.instanceUrl, settings.apiToken, draft);
     createdPath = result.deep_link_path;
-    overrideIdentityKey = null;
     await chrome.storage.local.remove(['pendingCapture']);
     byId('success-summary').textContent = `Saved ${title} at ${company} to ${workspace?.name || 'JobQuest'}.`;
     setState('X8', 'screen-success', 'Capture success');
@@ -327,13 +327,7 @@ for (const item of [resumeExisting, resumeManual, resumeNone]) item.addEventList
 button('options-btn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 button('open-settings-btn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 retryButton.addEventListener('click', () => void initialize());
-duplicateSave.addEventListener('click', () => {
-  overrideIdentityKey = computeDuplicateIdentityKey(currentCaptureIdentity());
-  clearDuplicate();
-  showStatus('Duplicate warning acknowledged. Saving a separate application is allowed.', 'warning');
-});
 duplicateCancel.addEventListener('click', () => {
-  overrideIdentityKey = null;
   clearDuplicate();
 });
 duplicateOpen.addEventListener('click', () => {
@@ -343,7 +337,6 @@ button('view-app-btn').addEventListener('click', () => {
   if (createdPath) chrome.tabs.create({ url: buildSecureJobQuestUrl(settings.instanceUrl, createdPath) });
 });
 button('capture-another-btn').addEventListener('click', () => {
-  overrideIdentityKey = null;
   void initialize();
 });
 

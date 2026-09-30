@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { unzipSync } from 'fflate';
 
 const root = new URL('../', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('manifest.json', root), 'utf8'));
@@ -44,5 +47,33 @@ describe('Manifest V3 package security', () => {
   it('packages clean production release without legacy popup assets, but retains them for dev/test', () => {
     const packageScript = readFileSync(new URL('scripts/package.mjs', root), 'utf8');
     expect(packageScript).toContain("...(mode === 'dev' ? ['popup.html', 'popup.css', 'popup.js'] : [])");
+  });
+
+  it('built prod package (directory AND zip) contains no legacy popup assets; manifest never references them', () => {
+    const cwd = fileURLToPath(root);
+    execFileSync(process.execPath, ['scripts/package.mjs', 'prod'], { cwd });
+    const prodDir = new URL('dist/jobquest-capture-prod/', root);
+    for (const name of ['popup.html', 'popup.css', 'popup.js']) {
+      expect(existsSync(new URL(name, prodDir)), `prod dir must not contain ${name}`).toBe(false);
+    }
+    const zipEntries = Object.keys(unzipSync(new Uint8Array(readFileSync(new URL('dist/jobquest-capture-prod.zip', root)))));
+    expect(zipEntries.filter((entry) => /(^|\/)popup\./.test(entry))).toEqual([]);
+    expect(zipEntries).toContain('sidepanel.js');
+    const builtManifest = readFileSync(new URL('manifest.json', prodDir), 'utf8');
+    expect(builtManifest).not.toMatch(/popup/i);
+    // No supported build artifact may carry an override control or a true override payload.
+    for (const entry of ['sidepanel.js', 'sidepanel-logic.js', 'sidepanel.html']) {
+      const built = readFileSync(new URL(entry, prodDir), 'utf8');
+      expect(built, entry).not.toMatch(/Save as New Application Anyway|authorizeDuplicateOverride|overrideKey/);
+      expect(built, entry).not.toMatch(/duplicate_override\s*:\s*(?!false|\s)/);
+    }
+  });
+
+  it('built dev package keeps popup assets only for regression testing and its popup has no override control', () => {
+    execFileSync(process.execPath, ['scripts/package.mjs', 'dev'], { cwd: fileURLToPath(root) });
+    const devDir = new URL('dist/jobquest-capture-dev/', root);
+    expect(existsSync(new URL('popup.js', devDir))).toBe(true);
+    expect(readFileSync(new URL('popup.html', devDir), 'utf8')).not.toMatch(/Save Anyway|save-anyway/i);
+    expect(readFileSync(new URL('popup.js', devDir), 'utf8')).not.toMatch(/overrideIdentityKey|save-anyway/);
   });
 });

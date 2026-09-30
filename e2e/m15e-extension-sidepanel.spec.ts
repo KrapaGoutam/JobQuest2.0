@@ -1,6 +1,7 @@
-import { expect, test, chromium, type Page, type ConsoleMessage } from '@playwright/test';
+import { expect, test, chromium, type Page, type ConsoleMessage, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
@@ -223,6 +224,34 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       await sidePanel.close();
       sidePanel = await context.newPage();
       trackConsoleErrors(sidePanel, consoleErrors, 'sidepanel');
+
+      // Network instrumentation for the duplicate-protection scenarios:
+      // count every POST /captures (a write) and every duplicate check, and let
+      // a scenario hold/fail duplicate checks for a specific company.
+      const capturePostRequests: string[] = [];
+      const capturePostStatuses: number[] = [];
+      let checkRequests = 0;
+      type CheckInterceptor = (route: Route, body: { company?: string } | null) => Promise<void>;
+      let checkInterceptor: CheckInterceptor | null = null;
+      sidePanel.on('request', (request) => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/api/ext/v1/captures')) {
+          capturePostRequests.push(request.url());
+        }
+      });
+      sidePanel.on('response', (response) => {
+        const request = response.request();
+        if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/api/ext/v1/captures')) {
+          capturePostStatuses.push(response.status());
+        }
+      });
+      await sidePanel.route('**/api/ext/v1/duplicates/check', async (route) => {
+        if (route.request().method() !== 'POST') { await route.continue(); return; }
+        checkRequests += 1;
+        const body = route.request().postDataJSON() as { company?: string } | null;
+        if (checkInterceptor) await checkInterceptor(route, body);
+        else await route.continue();
+      });
+
       await sidePanel.goto(`${extensionOrigin}/sidepanel.html`);
       await expect(sidePanel.locator('#panel-header')).toBeVisible();
       await expect(sidePanel.locator('#tabbar')).toBeVisible();
@@ -353,8 +382,11 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       // success state + toast + a real deep_link_path.
       // -----------------------------------------------------------------
       await sidePanel.locator('#save-as-applied').check();
+      const checksBeforeSaveB = checkRequests;
       await sidePanel.locator('#footer-primary').click();
       await expect(sidePanel.locator('#saved-card')).toBeVisible();
+      expect(checkRequests, 'Save runs its own duplicate verification').toBeGreaterThan(checksBeforeSaveB);
+      expect(capturePostRequests).toHaveLength(1);
       await expect(sidePanel.locator('#saved-card')).toContainText('Saved to JobQuest');
       await expect(sidePanel.locator('#toast')).toBeVisible();
       await expect(sidePanel.locator('#toast')).toContainText('Saved to JobQuest');
@@ -395,105 +427,254 @@ test.describe('Milestone 15E · extension Side Panel', () => {
       await shot(sidePanel, 'm15e-sidepanel-capture-duplicate');
 
       // -----------------------------------------------------------------
-      // Step 13A Remediation: B1 — Override isolation (does not leak across jobs)
+      // FINAL duplicate-protection policy (M15-E): a known duplicate is NEVER
+      // saved from the Side Panel. There is no "Save as New Application
+      // Anyway" control and no duplicate_override=true payload. Every save
+      // requires a CURRENT clean verdict produced at save time.
+      //
+      // Assertions below are discriminating: each one FAILS on the previous
+      // implementation (override button present / cached verdict trusted /
+      // CHECK_ERROR treated as clean) — see the per-scenario notes.
       // -----------------------------------------------------------------
-      // Job B is currently a duplicate. Operator clicks "Save as New Application Anyway".
-      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
-      await sidePanel.locator('#footer-secondary').click();
-      await expect(sidePanel.locator('#saved-card')).toBeVisible();
-      await expect(sidePanel.locator('#toast')).toContainText('Saved to JobQuest');
+      const dupCheckApi = async (payload: Record<string, string>) => {
+        const response = await context.request.post(`${baseURL}/api/ext/v1/duplicates/check`, {
+          headers: { Authorization: `Bearer ${rawToken}` },
+          data: payload,
+        });
+        expect(response.ok()).toBe(true);
+        return (await response.json()) as { match_type: string; matches: unknown[] };
+      };
+      const uniqueUrl = (slug: string) => `https://jobs.m15e.test/${run}/${slug}`;
+      /** Sets all four server-authoritative identity fields so the result is
+       *  not a URL / requisition-id "strong" match of the page's own job. */
+      const setIdentity = async (id: { company: string; title: string; url: string; source: string }) => {
+        if (await sidePanel.locator('#edit-fields-section').isHidden()) {
+          await sidePanel.locator('#edit-toggle-btn').click();
+        }
+        await sidePanel.locator('#edit-company').fill(id.company);
+        await sidePanel.locator('#edit-title').fill(id.title);
+        await sidePanel.locator('#edit-url').fill(id.url);
+        await sidePanel.locator('#edit-source').fill(id.source);
+      };
+      const waitForCheckResponse = (company: string) => sidePanel.waitForResponse((response) => {
+        const request = response.request();
+        return request.method() === 'POST'
+          && request.url().endsWith('/api/ext/v1/duplicates/check')
+          && (request.postDataJSON() as { company?: string } | null)?.company === company;
+      });
+      /** Holds every duplicate check for `company` until released. */
+      const holdChecksFor = (company: string) => {
+        let release!: () => void;
+        const released = new Promise<void>((resolveHold) => { release = resolveHold; });
+        checkInterceptor = async (route, body) => {
+          if (body?.company === company) await released;
+          await route.continue();
+        };
+        return () => { release(); };
+      };
+      /** Intentional-outage noise (Chrome logs failed fetches as console errors)
+       *  is removed ONLY for the window that deliberately injected it. */
+      const dropInjectedNetworkNoise = (fromIndex: number) => {
+        const injected = consoleErrors.splice(fromIndex);
+        consoleErrors.push(...injected.filter((message) => !/Failed to load resource|net::ERR|status of 5\d\d/.test(message)));
+      };
+      const sideButtons = (name: RegExp) => sidePanel.getByRole('button', { name });
 
-      // Now switch to Job A (Stripe / Staff Software Engineer)
+      // ---- Scenario A: open an existing duplicate ------------------------
+      // Fails on the old build: '#footer-secondary' "Save as New Application
+      // Anyway" existed and clicking it POSTed /captures with override=true.
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toHaveCount(0);
+      await expect(sideButtons(/anyway|save as new/i)).toHaveCount(0);
+      await expect(sidePanel.getByRole('button', { name: 'Save to JobQuest', exact: true })).toHaveCount(0);
+      expect(await sidePanel.locator('body').innerText()).not.toMatch(/anyway/i);
+      const postsBeforeA = capturePostRequests.length;
+      const viewExistingPromise = context.waitForEvent('page');
+      await sidePanel.locator('#footer-primary').click();
+      const existingPage = await viewExistingPromise;
+      await existingPage.waitForLoadState('domcontentloaded');
+      await expect(existingPage).toHaveURL(/\/w\/[^/]+\/applications\/[^/]+/);
+      await existingPage.close();
+      expect(capturePostRequests.length, 'View Existing must not POST /captures').toBe(postsBeforeA);
+      expect((await dupCheckApi({ job_url: jobUrlB })).matches, 'exactly one Job B application exists').toHaveLength(1);
+      evidence.scenario_a_duplicate_blocked_no_override_control = true;
+
+      // ---- Scenario D: normal verified non-duplicate save (Job A) --------
+      // Also proves save-time verification: a check fires DURING Save even
+      // though a clean capture-time verdict was already cached (the old
+      // build trusted the cache and issued no save-time check).
       await fixtureA.bringToFront();
       await expect(sidePanel.locator('#job-title')).toHaveText('Staff Software Engineer');
-      await expect(sidePanel.locator('#job-company')).toHaveText('Stripe');
-      // Save Job A as a separate application
-      await sidePanel.locator('#footer-primary').click();
-      await expect(sidePanel.locator('#saved-card')).toBeVisible();
-
-      // Now switch away to Job B and then back to Job A to force re-scan of Job A
-      await fixtureB.bringToFront();
-      await fixtureA.bringToFront();
-      // Job A is now an existing application in JobQuest -> MUST display duplicate warning!
-      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
-      await expect(sidePanel.locator('#dup-title')).toContainText('Strong duplicate');
-      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
-      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
-      evidence.b1_override_isolation_verified = true;
-
-      // -----------------------------------------------------------------
-      // Step 13A Remediation: B2 — Editing identity fields re-evaluates duplicate
-      // -----------------------------------------------------------------
-      if (await sidePanel.locator('#edit-fields-section').isHidden()) {
-        await sidePanel.locator('#edit-toggle-btn').click();
-      }
-      // Edit company and title to an unrecorded role -> duplicate card disappears
-      await sidePanel.locator('#edit-company').fill('Acme NonDuplicate Corp');
-      await sidePanel.locator('#edit-title').fill('Unique Engineering Fellow');
       await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
       await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
-      await expect(sidePanel.locator('#footer-secondary')).toBeHidden();
+      const checksBeforeSaveA = checkRequests;
+      const postsBeforeD = capturePostRequests.length;
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#saved-card')).toBeVisible();
+      expect(checkRequests, 'a duplicate check must run at save time').toBeGreaterThan(checksBeforeSaveA);
+      expect(capturePostRequests.length).toBe(postsBeforeD + 1);
+      expect(capturePostStatuses.at(-1)).toBeLessThan(300);
+      expect((await dupCheckApi({ job_url: jobUrlA })).matches).toHaveLength(1);
+      evidence.scenario_d_normal_save_verified = true;
 
-      // Now edit company and title back to match Job B (Notion / Senior Product Manager)
-      await sidePanel.locator('#edit-company').fill('Notion');
-      await sidePanel.locator('#edit-title').fill('Senior Product Manager');
-      // Duplicate detection re-evaluates -> duplicate card returns and blocks ordinary save
-      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
-      await expect(sidePanel.locator('#dup-title')).toContainText('duplicate');
-      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
-      await expect(sidePanel.locator('#footer-secondary')).toBeVisible();
-      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
-      evidence.b2_edit_duplicate_protection_verified = true;
-
-      // -----------------------------------------------------------------
-      // Step 13A Remediation: N1 — Late debounced duplicate timer safety
-      // -----------------------------------------------------------------
-      // Type in Job A, then immediately switch to Job B before the 350ms timer fires
-      await fixtureA.bringToFront();
-      await sidePanel.locator('#edit-company').fill('Late Timer Safety Corp');
+      // Job A is now an existing application -> a re-scan MUST block it.
       await fixtureB.bringToFront();
-      // Wait longer than 350ms debounce
-      await sidePanel.waitForTimeout(450);
-      // Job B must remain untouched: Notion / Senior Product Manager, duplicate card reflects Notion
+      await fixtureA.bringToFront();
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#duplicate-card')).toHaveAttribute('data-level', 'strong');
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toHaveCount(0);
+      evidence.duplicate_rescan_blocks_verified = true;
+
+      // ---- Scenario B: edit identity -> existing duplicate -> Save NOW ---
+      // First reach a settled, verified NON-duplicate identity.
+      const cleanSettled = waitForCheckResponse('Acme NonDuplicate Corp');
+      await setIdentity({
+        company: 'Acme NonDuplicate Corp', title: 'Unique Engineering Fellow',
+        url: uniqueUrl('unique-fellow'), source: 'unique-src-1',
+      });
+      await cleanSettled;
+      await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
+      expect((await dupCheckApi({
+        company: 'Acme NonDuplicate Corp', job_title: 'Unique Engineering Fellow',
+        job_url: uniqueUrl('unique-fellow'), source: 'unique-src-1',
+      })).match_type).toBe('NONE');
+
+      // Now edit into the already-saved Notion / Senior Product Manager role
+      // and click Save inside the 350 ms debounce window, with the check held
+      // so Save's own inline verification is provably what decides the outcome.
+      const releaseB = holdChecksFor('Notion');
+      const postsBeforeB = capturePostRequests.length;
+      await setIdentity({
+        company: 'Notion', title: 'Senior Product Manager',
+        url: uniqueUrl('edit-into-duplicate'), source: 'unique-src-2',
+      });
+      await sidePanel.locator('#footer-primary').click();
+      // 'Saving…' proves save() itself is awaiting its own verification (not
+      // the debounce path) and that nothing was written while unverified.
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('Saving…');
+      expect(capturePostRequests.length, 'no write while verification is pending').toBe(postsBeforeB);
+      releaseB();
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#dup-title')).toContainText('Probable duplicate');
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toHaveCount(0);
+      expect(capturePostRequests.length, 'duplicate edit-then-save must not write').toBe(postsBeforeB);
+      const notionRoles = await dupCheckApi({ company: 'Notion', job_title: 'Senior Product Manager' });
+      expect(notionRoles.match_type).toBe('SAME_ROLE');
+      expect(notionRoles.matches, 'still exactly one Notion / Senior Product Manager application').toHaveLength(1);
+      checkInterceptor = null;
+      evidence.scenario_b_edit_then_save_blocked = true;
+
+      // ---- Scenario C: Save -> switch tabs mid-check -> no stale write ----
+      const raceIdentity = {
+        company: 'Race Corp', title: 'Race Condition Engineer',
+        url: uniqueUrl('race'), source: 'unique-src-3',
+      };
+      const releaseC = holdChecksFor('Race Corp');
+      const postsBeforeC = capturePostRequests.length;
+      await setIdentity(raceIdentity);
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('Saving…');
+      // Operator switches to Job B while Job A's verification is still in flight.
+      await fixtureB.bringToFront();
       await expect(sidePanel.locator('#job-company')).toHaveText('Notion');
       await expect(sidePanel.locator('#job-title')).toHaveText('Senior Product Manager');
       await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
-      await expect(sidePanel.locator('#dup-match-meta')).toContainText('Notion');
-      await expect(sidePanel.locator('#dup-match-meta')).not.toContainText('Late Timer Safety');
-      evidence.n1_timer_safety_verified = true;
-
-      // -----------------------------------------------------------------
-      // Step 13B-R Remediation: B2-R — Save inside debounce window fails closed / rechecks
-      // -----------------------------------------------------------------
-      await fixtureA.bringToFront();
-      // Restore company and title to match an existing application (Stripe / Staff Software Engineer)
-      await sidePanel.locator('#edit-company').fill('Stripe');
-      await sidePanel.locator('#edit-title').fill('Staff Software Engineer');
-      // Click Save immediately (inside the 350ms debounce window before background check completes)
-      // Must NOT save blindly: evaluateSaveGate must run inline recheck, detect duplicate, and block
-      await sidePanel.locator('#footer-primary').click();
-      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
-      await expect(sidePanel.locator('#dup-title')).toContainText('duplicate');
       await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
-      await expect(sidePanel.locator('#footer-secondary')).toHaveText('Save as New Application Anyway');
-      evidence.b2r_debounce_save_fail_closed_verified = true;
+      const raceSettled = waitForCheckResponse('Race Corp');
+      releaseC(); // Job A's (clean!) verdict now arrives while Job B is showing
+      await raceSettled;
+      await sidePanel.waitForTimeout(500);
+      expect(capturePostRequests.length, 'Job A must not be written after the tab switch').toBe(postsBeforeC);
+      // Job B UI must be untouched by Job A's late result.
+      await expect(sidePanel.locator('#job-company')).toHaveText('Notion');
+      await expect(sidePanel.locator('#job-title')).toHaveText('Senior Product Manager');
+      await expect(sidePanel.locator('#edit-company')).toHaveValue('Notion');
+      await expect(sidePanel.locator('#saved-card')).toBeHidden();
+      await expect(sidePanel.locator('#capture-banner')).toBeHidden();
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#duplicate-card')).toHaveAttribute('data-level', 'strong');
+      await expect(sidePanel.locator('#dup-match-meta')).toContainText('Notion');
+      await expect(sidePanel.locator('#dup-match-meta')).not.toContainText('Race');
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      await expect(sidePanel.locator('#footer-secondary')).toHaveCount(0);
+      expect((await dupCheckApi({
+        company: raceIdentity.company, job_title: raceIdentity.title, job_url: raceIdentity.url, source: raceIdentity.source,
+      })).match_type, 'Race Corp was never written').toBe('NONE');
+      checkInterceptor = null;
+      evidence.scenario_c_cross_tab_no_stale_write_no_clobber = true;
 
-      // -----------------------------------------------------------------
-      // Step 13B-R Remediation: B2-R — Warn on Duplicates = OFF allows direct save
-      // -----------------------------------------------------------------
+      // ---- Save-time check FAILURE fails closed (old build saved it) ------
+      await fixtureA.bringToFront();
+      await expect(sidePanel.locator('#job-title')).toHaveText('Staff Software Engineer');
+      const outageIdentity = {
+        company: 'Check Error Corp', title: 'Outage Engineer',
+        url: uniqueUrl('check-error'), source: 'unique-src-4',
+      };
+      const consoleBeforeOutage = consoleErrors.length;
+      checkInterceptor = async (route, body) => {
+        if (body?.company === outageIdentity.company) {
+          await route.fulfill({
+            status: 503,
+            contentType: 'application/json',
+            headers: { 'access-control-allow-origin': '*' },
+            body: JSON.stringify({ error: { code: 'UNAVAILABLE', message: 'simulated duplicate-check outage' } }),
+          });
+          return;
+        }
+        await route.continue();
+      };
+      const postsBeforeOutage = capturePostRequests.length;
+      await setIdentity(outageIdentity);
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#capture-banner')).toContainText('Could not verify duplicate status');
+      await expect(sidePanel.locator('#capture-banner')).toContainText('Nothing was saved');
+      await expect(sidePanel.locator('#duplicate-card')).toHaveAttribute('data-level', 'error');
+      await expect(sidePanel.locator('#saved-card')).toBeHidden();
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
+      await expect(sidePanel.locator('#footer-primary')).toBeEnabled();
+      await expect(sidePanel.locator('#footer-secondary')).toHaveCount(0);
+      expect(capturePostRequests.length, 'a failed duplicate check must never write').toBe(postsBeforeOutage);
+      // Retry with the outage over: a current clean verdict now permits the save.
+      checkInterceptor = null;
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#saved-card')).toBeVisible();
+      expect(capturePostRequests.length).toBe(postsBeforeOutage + 1);
+      dropInjectedNetworkNoise(consoleBeforeOutage);
+      evidence.check_error_fails_closed_then_retry_saves = true;
+
+      // ---- Warn on duplicates = OFF must NOT let a duplicate through ------
       await sidePanel.locator('#settings-btn').click();
       await expect(sidePanel.locator('#back-header')).toContainText('Settings');
-      const warnCheckbox = sidePanel.locator('#pref-warn-duplicates');
-      await warnCheckbox.uncheck();
+      await sidePanel.locator('#pref-warn-duplicates').uncheck();
       await sidePanel.waitForTimeout(100);
       await sidePanel.locator('#back-btn').click();
 
-      // Switch to fixtureB to re-scan Notion / Senior Product Manager with warnings disabled
       await fixtureB.bringToFront();
-      // With warnOnDuplicates = false, duplicate check returns level: 'none' -> normal save available
+      await expect(sidePanel.locator('#job-company')).toHaveText('Notion');
+      // Warnings OFF: no proactive capture-time duplicate warning...
       await expect(sidePanel.locator('#duplicate-card')).toBeHidden();
       await expect(sidePanel.locator('#footer-primary')).toHaveText('Save to JobQuest');
-      evidence.b2r_warnings_disabled_save_verified = true;
+      // ...but Save still verifies and blocks the known duplicate.
+      const postsBeforeOff = capturePostRequests.length;
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#duplicate-card')).toBeVisible();
+      await expect(sidePanel.locator('#footer-primary')).toHaveText('View Existing Application');
+      expect(capturePostRequests.length, 'warnings OFF must not allow a duplicate write').toBe(postsBeforeOff);
+
+      // ...and an ordinary non-duplicate still saves with warnings OFF.
+      await fixtureA.bringToFront();
+      await expect(sidePanel.locator('#job-title')).toHaveText('Staff Software Engineer');
+      await setIdentity({
+        company: 'Warn Off Corp', title: 'Warnings Off Engineer',
+        url: uniqueUrl('warn-off'), source: 'unique-src-5',
+      });
+      await sidePanel.locator('#footer-primary').click();
+      await expect(sidePanel.locator('#saved-card')).toBeVisible();
+      expect(capturePostRequests.length).toBe(postsBeforeOff + 1);
+      evidence.warnings_off_blocks_duplicate_and_saves_clean = true;
 
       // Re-enable "Warn on duplicates" for remaining test coverage
       await sidePanel.locator('#settings-btn').click();
@@ -611,6 +792,28 @@ test.describe('Milestone 15E · extension Side Panel', () => {
     } finally {
       await context.close();
       rmSync(profilePath, { recursive: true, force: true });
+    }
+  });
+
+  // Scenario E — the production artifact carries neither the legacy popup nor
+  // any duplicate-override path. Builds the real prod package and inspects
+  // both the unpacked directory and the zip.
+  test('production package excludes the legacy popup and any duplicate-override path', () => {
+    const extensionRoot = resolve('apps/extension');
+    execFileSync(process.execPath, ['scripts/package.mjs', 'prod'], { cwd: extensionRoot });
+    const prodDir = resolve(extensionRoot, 'dist/jobquest-capture-prod');
+    for (const name of ['popup.html', 'popup.css', 'popup.js']) {
+      expect(existsSync(resolve(prodDir, name)), `${name} must not ship in production`).toBe(false);
+    }
+    // Zip entry names are stored uncompressed in the local/central headers.
+    const zipBytes = readFileSync(resolve(extensionRoot, 'dist/jobquest-capture-prod.zip')).toString('latin1');
+    expect(zipBytes).not.toMatch(/popup\.(html|css|js)/);
+    expect(zipBytes).toContain('sidepanel.js');
+    expect(readFileSync(resolve(prodDir, 'manifest.json'), 'utf8')).not.toMatch(/popup/i);
+    for (const file of ['sidepanel.html', 'sidepanel.js', 'sidepanel-logic.js']) {
+      const built = readFileSync(resolve(prodDir, file), 'utf8');
+      expect(built, file).not.toMatch(/Save as New Application Anyway|authorizeDuplicateOverride|overrideKey|footer-secondary/);
+      expect(built, file).not.toMatch(/duplicate_override\s*:\s*(?!false|\s)/);
     }
   });
 });

@@ -8,7 +8,7 @@ PL-1 — Critical Security + Extension Reliability — is closed through the app
 
 PL-1: `CLOSED`
 
-The formal disposition is complete. Repository integration remains governed by the closeout branch exact-SHA CI gate, explicit operator approval, a no-ff merge to `development`, and exact-SHA development CI. Until those gates pass, this report is the proposed closeout record rather than authority to bypass them.
+The formal disposition and repository integration are complete. Closeout feature SHA `bc515986f8aad691298d7661912fa178f84c8cee` passed CI run `36898779897`; following explicit operator approval, it was merged no-ff into `development` at `1086bcb41d1b0ab25959d182ec388a0f6da53042`, and exact development CI run `36903888076` passed. No merge to `main` or Production action occurred.
 
 | Workstream | Final disposition |
 | --- | --- |
@@ -82,7 +82,7 @@ Focused evidence: `63/63` side-panel tests and `3/3` normalization tests passed.
 - Next phase: PL-2 — Application Productivity.
 - PL-2 started: `NO`.
 
-PL-2 may begin only in a separate controlled task after this closeout branch passes exact-SHA CI, receives explicit operator approval, is integrated into `development`, and the exact development closeout SHA passes CI.
+PL-2 may begin only in a separate controlled task. This closeout does not start or authorize PL-2 implementation.
 
 ## Evidence limitations and open conditions
 

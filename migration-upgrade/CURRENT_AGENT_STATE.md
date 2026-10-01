@@ -1,8 +1,8 @@
-## >>> PL-1 CLOSEOUT — FEATURE DOCUMENTATION GATE (2026-10-01) <<<
+## >>> PL-1 FORMALLY CLOSED — DEVELOPMENT INTEGRATION CI PASS (2026-10-01) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: CLOSEOUT PREPARED, AWAITING EXACT BRANCH CI + OPERATOR-APPROVED DEVELOPMENT INTEGRATION | HISTORICAL CLASSIFICATION: UNKNOWN.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: NEXT / NOT STARTED | HISTORICAL CLASSIFICATION: UNKNOWN.
 
-CURRENT BRANCH: `feature/docs-pl1-closeout` | BASE: `2246c07466cec830717d198671f536d44dfed0b3` | APPLICATION SHA: `2246c07466cec830717d198671f536d44dfed0b3` (already certified in development CI `36892040319`) | CLOSEOUT DOCS SHA/CI: `PENDING`.
+CURRENT BRANCH: `development` | DEVELOPMENT HEAD/REMOTE: `1086bcb41d1b0ab25959d182ec388a0f6da53042` | DEVELOPMENT CI: `36903888076` PASS | CLOSEOUT FEATURE SHA: `bc515986f8aad691298d7661912fa178f84c8cee` | CLOSEOUT FEATURE CI: `36898779897` PASS.
 
 WORKSTREAMS: PL-1A `CLOSED`; PL-1B `NOT EXECUTED / CONDITIONAL`; PL-1C `CLOSED WITH LIVE-EVIDENCE LIMITATION`; PL-1D `ASSESSED / DEFERRED / TBD`.
 
@@ -10,11 +10,13 @@ PL-1C EVIDENCE: implementation review plus extension tests `97/97 PASS`; read-on
 
 PL-1D EVIDENCE: server duplicate enforcement risk, `duplicate_override` residue, and URL-normalization mismatch are confirmed and remain deferred; stale/out-of-order verdict handling is mitigated. Focused tests: side panel `63/63 PASS`; normalization `3/3 PASS`. No PL-1D implementation occurred.
 
-PRODUCTION: UNCHANGED/FROZEN | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: `2246c07466cec830717d198671f536d44dfed0b3` | AUTH SYSTEMS: UNCHANGED.
+PRODUCTION: UNCHANGED/FROZEN | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: PL-1 CLOSEOUT INTEGRATED | AUTH SYSTEMS: UNCHANGED.
 
-LAST COMPLETED: created the PL-1 formal closeout documentation from authoritative PL-1A/PL-1C/PL-1D evidence. Historical credential validity remains `UNKNOWN`; it was not tested or reused. Report: `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md`.
+LAST COMPLETED: certified closeout feature SHA `bc515986f8aad691298d7661912fa178f84c8cee` in CI run `36898779897`; merged it into development with no-ff merge `1086bcb41d1b0ab25959d182ec388a0f6da53042`; pushed development only; and certified exact development CI run `36903888076` PASS. The development merge was classified docs-only; tracked-secret and committed-key checks passed and application jobs were skipped. Historical credential validity remains `UNKNOWN`; it was not tested or reused. Report: `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md`.
 
-NEXT EXACT ACTION: validate the documentation and canonical secret scan, commit/push only `feature/docs-pl1-closeout`, require exact-SHA CI PASS, then STOP for operator approval. Do not merge development, modify main, touch Production, or start PL-2 automatically.
+POST-CI WORKING TREE: these final handoff updates are intentionally unstaged so no new untested development SHA is created; the pre-existing `.gitignore` operator change remains unstaged and untouched.
+
+NEXT EXACT ACTION: PL-2 — Application Productivity, in a separate controlled task. Do not start automatically, merge main, touch Production, execute M15-F, or retire legacy systems.
 
 ## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
 

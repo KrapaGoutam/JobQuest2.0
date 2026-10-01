@@ -14,9 +14,25 @@ M15-F is reserved and last. It cannot begin until PL-1 through PL-5 are complete
 | PL-0B-1 | COMPLETE | M15-E closeout integrated |
 | PL-0B-R1 | COMPLETE | CI/E2E remediation |
 | PL-0B-R2 | COMPLETE | development merge `fcadb2ff77f0850450242a1caf9c2143a08ceef4`, CI `36768885326` PASS |
-| PL-0B-2 | IN PROGRESS | this governance branch |
+| PL-0B-2 | COMPLETE | governance branch integrated |
+| PL-0B-3 | COMPLETE | formal closeout integration `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`, CI `36783308738` PASS |
+| PL-0 | CLOSED | governance and closeout certified |
 
 Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification are active; exact-SHA, single-observer, and GitHub backoff policies are documented; the browser security E2E synchronization repair preserves B03/B11/B12 assertions.
+
+## Current phase status
+
+| Phase | Status |
+| --- | --- |
+| PL-0 | `CLOSED` |
+| PL-1 | `CLOSED` formal disposition; closeout branch/development CI gates still govern repository integration |
+| PL-2 | `NEXT / NOT STARTED` |
+| PL-3 | `PENDING` |
+| PL-4A | `PENDING` |
+| PL-4B | `PENDING` |
+| PL-4C | `PENDING` |
+| PL-5 | `PENDING` |
+| M15-F | `RESERVED — FINAL PRODUCTION RELEASE + STABILIZATION — LAST` |
 
 ## Phase intent
 

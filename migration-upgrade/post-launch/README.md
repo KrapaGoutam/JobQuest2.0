@@ -15,6 +15,7 @@ This directory is the canonical source of truth for active post-launch planning 
 - [Deferred backlog](DEFERRED_BACKLOG.md) — permanent register of selected, deferred, verification, and reserved work.
 - [Agent handoff template](AGENT_HANDOFF_TEMPLATE.md) — required abrupt-stop and end-of-prompt handoff format.
 - [PL-0B-2 implementation report](PL0B2_GOVERNANCE_IMPLEMENTATION_REPORT.md) — evidence for this governance setup.
+- [PL-1 closeout report](PL1_CLOSEOUT_REPORT.md) — formal PL-1A/PL-1B/PL-1C/PL-1D dispositions, evidence limits, deferred risks, and Production freeze.
 
 ## Resuming work
 

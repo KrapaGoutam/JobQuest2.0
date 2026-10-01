@@ -22,15 +22,15 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-2` / `IMPLEMENTED + LOCAL VALIDATION PASS; EXACT-SHA CI/PREVIEW PENDING` |
-| Branch / base SHA / implementation commit / final feature SHA | `feature/pl2-application-productivity` / `1086bcb41d1b0ab25959d182ec388a0f6da53042` / `526b0318` / `PENDING` |
-| Last tested application SHA | `526b0318` plus the pending documentation commit; final exact SHA must be retested in CI |
-| CI run / CI SHA / CI result | `PENDING` |
-| Preview / database target / migrations | `PENDING` / required `jobquest-dev` / `NONE` |
+| TASK ID / STATUS | `PL-2` / `IMPLEMENTED + PREVIEW PASS; FINAL EVIDENCE-SHA CI PENDING` |
+| Branch / base SHA / implementation commit / final feature SHA | `feature/pl2-application-productivity` / `1086bcb41d1b0ab25959d182ec388a0f6da53042` / `526b0318` / evidence commit `PENDING` |
+| Last tested application SHA | `8bf4b1c38baae508388828b0d03f0c4ebf75bb04`; application code is unchanged by the pending evidence-only commit |
+| CI run / CI SHA / CI result | `36915890541` / `8bf4b1c38baae508388828b0d03f0c4ebf75bb04` / `PASS`; new exact-SHA docs certification required after this record is committed |
+| Preview / database target / migrations | `https://jobquest2-3vo0855vi-one-piece-5779.vercel.app` (`dpl_EcGew1upDBKvUUK9EGKfwfCCHDJz`, READY) / `jobquest-dev` / `NONE` |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Implemented verified gaps; lint/typecheck/unit `170/170`/integration `187/187`/build/secret scan passed; targeted browser evidence passed with zero blocking axe findings. |
-| Next exact action | Commit documentation, push only the feature branch, certify the final exact SHA in CI, verify the matching Preview, then stop for operator approval. |
-| Blockers / open questions | Local Playwright parent teardown hung after both targeted scenarios wrote completed PASS evidence; branch CI and Preview remain authoritative pending gates. |
+| Last completed action | Exact-SHA CI `36915890541` passed; matching Preview is READY, targets only `jobquest-dev`, health is 200, invalid-token rejection is 401, and inherited signed-out accessibility findings match unchanged development. |
+| Next exact action | Commit/push this evidence update, certify its exact final SHA in CI, then stop for operator approval. |
+| Blockers / open questions | No authorized Preview identity was available or created; authenticated PL-2 flows are covered by passing disposable local/CI browser suites. Local Playwright teardown limitation remains documented. |
 | Operator approval status | `NOT YET REQUESTED`; required only after final branch CI and Preview pass |
 | Report document | `migration-upgrade/post-launch/PL2_APPLICATION_PRODUCTIVITY_REPORT.md` |
 
@@ -46,7 +46,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0B-3 | CLOSED | Development governance integration CI `36783308738` passed for `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`; formal PL-0 closeout complete. |
 | PL-0 | CLOSED | Certified governance integration and formal closeout complete. |
 | PL-1 | CLOSED | Closeout feature CI `36898779897` and development integration CI `36903888076` passed; PL-1A closed, PL-1B conditional/not executed, PL-1C closed with evidence limitation, PL-1D assessed/deferred. |
-| PL-2 | IN PROGRESS | Implementation and local validation pass; exact-SHA branch CI and jobquest-dev Preview verification pending. |
+| PL-2 | IN PROGRESS | Implementation, exact-SHA application CI, and jobquest-dev Preview verification pass; evidence-only final SHA CI pending before operator approval. |
 | PL-3 | PENDING | Audit existing dashboard widgets/layouts/tokens before UX work. |
 | PL-4A | PENDING | Verify duplicate, bulk, and recruiter functionality under specified views. |
 | PL-4B | PENDING | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |

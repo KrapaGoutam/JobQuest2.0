@@ -8,7 +8,9 @@ Base: `1086bcb41d1b0ab25959d182ec388a0f6da53042`
 
 Implementation commit: `526b0318`
 
-Final feature SHA / CI / Preview: `PENDING`
+Pre-evidence branch SHA / CI: `8bf4b1c38baae508388828b0d03f0c4ebf75bb04` / `36915890541 PASS`
+
+Final feature SHA / CI: the evidence commit that contains this report must receive its own exact-SHA CI; record the resulting SHA/run in the operator handoff rather than claiming the earlier run certifies it.
 
 ## Scope
 
@@ -84,8 +86,9 @@ Canonical Date Added is `applications.created_at`, not `applied_at`, `updated_at
 | Lint | `PASS` |
 | Full workspace typecheck | `PASS` |
 | Production web build | `PASS`; existing >500 kB chunk warning remains |
-| Hardened tracked-secret scan | `PASS`; 938 tracked files, 0 findings |
+| Hardened tracked-secret scan | `PASS`; 941 tracked files, 0 findings |
 | `git diff --check` | `PASS` |
+| Exact-SHA branch CI | Run `36915890541` for `8bf4b1c38baae508388828b0d03f0c4ebf75bb04`: `PASS`; classification, lint, typecheck, unit, build, both secret scans, disposable-Supabase integration, extension checks, browser E2E, and axe all passed. |
 
 Targeted local Playwright evidence:
 
@@ -95,7 +98,14 @@ Targeted local Playwright evidence:
 
 ## Preview evidence
 
-`PENDING` until the final documentation commit is pushed and the matching Vercel Preview is identified. The Preview must belong to team `one-piece-5779`, project `jobquest2`, and target `jobquest-dev`.
+- URL: `https://jobquest2-3vo0855vi-one-piece-5779.vercel.app`
+- Deployment: `dpl_EcGew1upDBKvUUK9EGKfwfCCHDJz`
+- GitHub deployment record: `6793532898`, exact SHA `8bf4b1c38baae508388828b0d03f0c4ebf75bb04`
+- Team/project/target/status: `one-piece-5779` / `jobquest2` / `preview` / `READY`
+- Backend: `jobquest-dev` (`xpnkasclquplmrcmhsif`) is the only Supabase project ref in the compiled browser bundle; the Production project ref is absent.
+- Read-only runtime checks: `/`, `/auth/login`, and `/applications` returned HTTP 200 and rendered the signed-out JobQuest UI with no framework overlay or page error; `/api/health` returned 200; `/api/ext/v1/me` with a synthetic invalid token returned 401.
+- Accessibility/regression classification: the authenticated PL-2 M3/M6 browser suites passed in exact-SHA CI, and the targeted local evidence recorded zero violations across the changed Applications, contact-modal, and suggestion contexts. Anonymous Preview axe found `landmark-one-main`, `page-has-heading-one`, and `region` on the pre-existing sign-in page; the same findings and one expected signed-out 403 console response reproduced identically on the unchanged development Preview `1086bcb41d1b0ab25959d182ec388a0f6da53042`, so they are inherited baseline rather than PL-2 regressions.
+- Live authenticated Preview limitation: no authorized Preview identity was available, and none was created solely for QA. Authenticated PL-2 interactions therefore rely on disposable local and exact-SHA CI browser coverage.
 
 ## Known limitations and follow-ups
 
@@ -108,4 +118,4 @@ Targeted local Playwright evidence:
 
 ## Certification status
 
-PL-2 is implemented and locally validated. Exact-SHA branch CI, Vercel Preview verification, final evidence update, and operator approval are still pending. Development, main, and Production remain unchanged.
+PL-2 is implemented, locally validated, exact-SHA CI verified at the pre-evidence branch SHA, and verified on its matching `jobquest-dev` Vercel Preview. This evidence-only update requires a new exact-SHA CI PASS before the branch is ready for operator approval. Development, main, and Production remain unchanged.

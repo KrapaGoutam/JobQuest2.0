@@ -1,16 +1,16 @@
-## >>> PL-2 APPLICATION PRODUCTIVITY — LOCAL VALIDATION PASS / BRANCH CERTIFICATION PENDING (2026-10-01) <<<
+## >>> PL-2 APPLICATION PRODUCTIVITY — IMPLEMENTATION + PREVIEW PASS / FINAL EVIDENCE CI PENDING (2026-10-01) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: IN PROGRESS | PL-1D: DEFERRED / TBD | HISTORICAL CLASSIFICATION: UNKNOWN.
 
-CURRENT BRANCH: `feature/pl2-application-productivity` | BASE: `1086bcb41d1b0ab25959d182ec388a0f6da53042` | IMPLEMENTATION COMMIT: `526b0318` | FINAL FEATURE SHA / CI / PREVIEW: `PENDING`.
+CURRENT BRANCH: `feature/pl2-application-productivity` | BASE: `1086bcb41d1b0ab25959d182ec388a0f6da53042` | IMPLEMENTATION COMMIT: `526b0318` | PRE-EVIDENCE SHA / CI: `8bf4b1c38baae508388828b0d03f0c4ebf75bb04` / `36915890541 PASS` | FINAL EVIDENCE SHA / CI: `PENDING`.
 
 PL-2 DISCOVERY: Date Added filter `MISSING`; sort direction `PARTIAL`; group by month `MISSING`; suggestion area `PARTIAL`; application contact UX `PARTIAL`. Canonical Date Added is `applications.created_at`. No migration is required.
 
-LOCAL EVIDENCE: lint PASS; full typecheck PASS; unit `170/170`; integration `187/187`; build PASS; tracked-secret scan `938` files / `0` findings; two targeted browser scenarios wrote PASS evidence, with zero blocking axe findings and zero mobile overflow. The local Playwright parent hung during teardown after evidence completion; exact-SHA branch CI and Preview remain required.
+EVIDENCE: lint PASS; full typecheck PASS; unit `170/170`; integration `187/187`; build PASS; tracked-secret scan `941` files / `0` findings; two targeted local browser scenarios wrote PASS evidence with zero PL-2 axe findings and zero mobile overflow. Exact-SHA CI run `36915890541` passed for `8bf4b1c38baae508388828b0d03f0c4ebf75bb04`, including disposable-Supabase integration and browser/axe. Matching Preview `dpl_EcGew1upDBKvUUK9EGKfwfCCHDJz` at `https://jobquest2-3vo0855vi-one-piece-5779.vercel.app` is READY and targets only `jobquest-dev`; health 200 and synthetic invalid token 401. Authenticated Preview UI was not exercised because no authorized identity was available or created; local/CI disposable browser coverage is authoritative. The signed-out page's three structural axe findings and one 403 console response reproduce on unchanged development and are inherited baseline.
 
 PRODUCTION: UNCHANGED/FROZEN | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: UNCHANGED (`1086bcb41d1b0ab25959d182ec388a0f6da53042`) | AUTH SYSTEMS: UNCHANGED | DB SCHEMA: UNCHANGED.
 
-NEXT EXACT ACTION: commit PL-2 documentation, push only `feature/pl2-application-productivity`, require exact final-SHA CI PASS, verify its `jobquest-dev` Vercel Preview and accessibility, update branch evidence if needed, then STOP for explicit operator approval before any development merge. Preserve `.gitignore` unstaged.
+NEXT EXACT ACTION: commit this evidence-only documentation update, push only `feature/pl2-application-productivity`, require exact final-SHA CI PASS, then STOP for explicit operator approval before any development merge. Preserve `.gitignore` unstaged.
 
 Report: `migration-upgrade/post-launch/PL2_APPLICATION_PRODUCTIVITY_REPORT.md`.
 

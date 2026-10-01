@@ -18,21 +18,21 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | Operator approval status | `Required before work` |
 | Report document | `TBD` |
 
-## Active task record — PL-1 closeout
+## Active task record — PL-2 Application Productivity
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-1 CLOSEOUT` / `FORMALLY CLOSED — DEVELOPMENT INTEGRATION CI PASS` |
-| Branch / base SHA / feature SHA / development closeout SHA | `feature/docs-pl1-closeout` / `2246c07466cec830717d198671f536d44dfed0b3` / `bc515986f8aad691298d7661912fa178f84c8cee` / `1086bcb41d1b0ab25959d182ec388a0f6da53042` |
-| Last tested application SHA | `2246c07466cec830717d198671f536d44dfed0b3` (application code unchanged by closeout) |
-| CI run / CI SHA / CI result | Closeout branch `36898779897` / `bc515986f8aad691298d7661912fa178f84c8cee` / `PASS`; development `36903888076` / `1086bcb41d1b0ab25959d182ec388a0f6da53042` / `PASS` |
-| Preview / database target / migrations | PL-1C Preview `https://jobquest2-d0vixbma7-one-piece-5779.vercel.app` / `jobquest-dev` / `NONE` |
-| Production touched / development merged / main merged | `NO / YES / NO` |
-| Last completed action | Certified closeout branch CI; no-ff merged its exact SHA into development at `1086bcb41d1b0ab25959d182ec388a0f6da53042`; pushed development only; exact development CI `36903888076` passed. |
-| Next exact action | PL-2 — Application Productivity, under a separate controlled task; do not start automatically. |
-| Blockers / open questions | Successful PL-1C live stored-token authentication was not independently exercised because no authorized Preview token was available; accepted as non-blocking. Historical environment remains inaccessible. |
-| Operator approval status | `PL-1 DEVELOPMENT INTEGRATION COMPLETE`; main/Production, PL-2 execution, M15-F, and any smoke identity remain separately gated |
-| Report document | `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md` |
+| TASK ID / STATUS | `PL-2` / `IMPLEMENTED + LOCAL VALIDATION PASS; EXACT-SHA CI/PREVIEW PENDING` |
+| Branch / base SHA / implementation commit / final feature SHA | `feature/pl2-application-productivity` / `1086bcb41d1b0ab25959d182ec388a0f6da53042` / `526b0318` / `PENDING` |
+| Last tested application SHA | `526b0318` plus the pending documentation commit; final exact SHA must be retested in CI |
+| CI run / CI SHA / CI result | `PENDING` |
+| Preview / database target / migrations | `PENDING` / required `jobquest-dev` / `NONE` |
+| Production touched / development merged / main merged | `NO / NO / NO` |
+| Last completed action | Implemented verified gaps; lint/typecheck/unit `170/170`/integration `187/187`/build/secret scan passed; targeted browser evidence passed with zero blocking axe findings. |
+| Next exact action | Commit documentation, push only the feature branch, certify the final exact SHA in CI, verify the matching Preview, then stop for operator approval. |
+| Blockers / open questions | Local Playwright parent teardown hung after both targeted scenarios wrote completed PASS evidence; branch CI and Preview remain authoritative pending gates. |
+| Operator approval status | `NOT YET REQUESTED`; required only after final branch CI and Preview pass |
+| Report document | `migration-upgrade/post-launch/PL2_APPLICATION_PRODUCTIVITY_REPORT.md` |
 
 ## Phase queue
 
@@ -46,7 +46,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0B-3 | CLOSED | Development governance integration CI `36783308738` passed for `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`; formal PL-0 closeout complete. |
 | PL-0 | CLOSED | Certified governance integration and formal closeout complete. |
 | PL-1 | CLOSED | Closeout feature CI `36898779897` and development integration CI `36903888076` passed; PL-1A closed, PL-1B conditional/not executed, PL-1C closed with evidence limitation, PL-1D assessed/deferred. |
-| PL-2 | NEXT / NOT STARTED | Application Productivity: date controls, suggestion-area cleanup, and application contact UX. Start only in a separate controlled task after PL-1 integration CI. |
+| PL-2 | IN PROGRESS | Implementation and local validation pass; exact-SHA branch CI and jobquest-dev Preview verification pending. |
 | PL-3 | PENDING | Audit existing dashboard widgets/layouts/tokens before UX work. |
 | PL-4A | PENDING | Verify duplicate, bulk, and recruiter functionality under specified views. |
 | PL-4B | PENDING | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |

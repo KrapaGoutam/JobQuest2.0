@@ -26,7 +26,7 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | --- | --- |
 | PL-0 | `CLOSED` |
 | PL-1 | `CLOSED` — closeout feature CI `36898779897` and development integration CI `36903888076` PASS |
-| PL-2 | `NEXT / NOT STARTED` |
+| PL-2 | `IN PROGRESS` — implementation/local validation pass; exact-SHA branch CI and Preview pending |
 | PL-3 | `PENDING` |
 | PL-4A | `PENDING` |
 | PL-4B | `PENDING` |

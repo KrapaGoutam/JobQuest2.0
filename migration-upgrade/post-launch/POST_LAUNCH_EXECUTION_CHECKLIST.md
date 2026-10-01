@@ -22,16 +22,16 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-1A` / `BLOCKED — OPERATOR SECURITY AUTHORIZATION REQUIRED` |
-| Branch / base SHA / current HEAD / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / pending this security-hold checkpoint commit / pending initial branch push |
+| TASK ID / STATUS | `PL-1A` / `BLOCKED — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN` (`UNKNOWN`) |
+| Branch / base SHA / local docs checkpoint / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / see final handoff or branch tip (pre-checkpoint `f0774eb90fb446f550ab736545a0430805195857`) / `f0774eb90fb446f550ab736545a0430805195857` pending authorized push |
 | Last tested application SHA | `0994812e144a2a3d20298573506c141f45dab3bd` (no application changes) |
-| CI run / CI SHA / CI result | Pending exact security-hold checkpoint CI; capture in the final operator handoff without creating a self-referential documentation commit. |
+| CI run / CI SHA / CI result | `36789160703` / `f0774eb90fb446f550ab736545a0430805195857` / `PASS` (existing docs-only checkpoint) |
 | Preview / database target / migrations | `NOT REQUIRED` / `READ-ONLY verification only` / `NONE` |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Read-only checks proved the account absent from `jobquest-prod` and `jobquest-dev`; access to the associated superseded Supabase project was denied, so credential validity remains unknown. |
-| Next exact action | Obtain explicit operator authorization and access for invalidation in the superseded environment; do not remove the current plaintext evidence before that coordination. |
-| Blockers / open questions | Account existence, enabled state, and credential validity in old Supabase project `kwmnljvyvqvbvimypnmw` are unknown. |
-| Operator approval status | `REQUIRED FOR AUTH INVALIDATION`; not granted in PL-1A |
+| Last completed action | Verified reset Supabase/Vercel CLI identities read-only: DEV and PROD are visible; the repository is linked only to DEV; Vercel scope/project access is correct; historical project `kwmnljvyvqvbvimypnmw` belongs to an inaccessible/incorrect historical account and remains invisible, so classification remains `UNKNOWN`. Operator confirms current Production user is `Conan`; historical `smoke-tester` is absent and must not be created there. |
+| Next exact action | Provide authorized read-only visibility to historical project `kwmnljvyvqvbvimypnmw`, then inspect only whether `smoke-tester` exists and its safe status without testing the credential or mutating auth. |
+| Blockers / open questions | Historical project visibility and therefore account existence, enabled state, and credential validity remain unknown. The historical credential must not be tested, reused, recreated, or printed. Any future M15-F smoke identity must be new, temporary, minimally privileged, operator-approved, and use a new credential never stored in the repository. |
+| Operator approval status | `NOT REQUIRED` for the next read-only inspection; separately required if PL-1B invalidation becomes necessary |
 | Report document | `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md` |
 
 ## Phase queue
@@ -45,7 +45,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0B-2 | CLOSED | Governance branch exact CI passed and was no-ff integrated into development. |
 | PL-0B-3 | CLOSED | Development governance integration CI `36783308738` passed for `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`; closeout documentation is awaiting its authorized certification and integration. |
 | PL-0 | FORMALLY CLOSED PENDING FINAL DOCS INTEGRATION | The closeout record is complete; do not start PL-1 until the closeout branch and final development CI are green. |
-| PL-1 | BLOCKED ON PL-1A SECURITY HOLD | Obtain operator authorization and old-environment access for credential invalidation; do not start extension reliability work. |
+| PL-1 | BLOCKED ON PL-1A SECURITY HOLD | Obtain authorized read-only visibility to the historical project and classify the account; do not start cleanup, scanner hardening, invalidation, or extension reliability work. |
 | PL-2 | SELECTED | Audit current code for the actual productivity gaps before designing changes. |
 | PL-3 | SELECTED | Audit existing dashboard widgets/layouts/tokens before UX work. |
 | PL-4A | SELECTED | Verify duplicate, bulk, and recruiter functionality under specified views. |

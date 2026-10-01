@@ -1,14 +1,14 @@
-## >>> PL-1A SECURITY HOLD — OPERATOR AUTHORIZATION REQUIRED (2026-09-30) <<<
+## >>> PL-1A SECURITY HOLD — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN (2026-10-01) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: BLOCKED — OPERATOR SECURITY AUTHORIZATION REQUIRED.
+PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: BLOCKED — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN | CLASSIFICATION: UNKNOWN.
 
-BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd`.
+BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd` | VERIFIED STARTING HEAD/REMOTE: `f0774eb90fb446f550ab736545a0430805195857` | NEW DOCS CHECKPOINT: see final handoff/branch tip | EXISTING CI: `36789160703` PASS.
 
 PRODUCTION: UNCHANGED | MAIN: UNCHANGED | DEVELOPMENT: UNCHANGED | AUTH SYSTEMS: READ-ONLY VERIFICATION ONLY.
 
-LAST COMPLETED: located one current tracked plaintext copy without displaying its value; confirmed historical copies; proved the associated account absent from `jobquest-prod` and `jobquest-dev`; the authorized connector could not access the superseded old Supabase project associated with the credential, so validity is `UNKNOWN`. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
+LAST COMPLETED: after the operator reset both CLIs, Supabase CLI authentication was verified; current DEV `xpnkasclquplmrcmhsif` and PROD `kqsxdothjxtcktyirpux` are visible; the repository remains linked only to DEV and its linked migration list was read successfully; historical project `kwmnljvyvqvbvimypnmw` is still not visible. The operator confirms the historical project belongs to an inaccessible or incorrect historical account, current Production user is `Conan`, and `smoke-tester` is absent and must not be created in current Production. Vercel identity, scope `one-piece-5779`, and project `jobquest2` were verified read-only. No credential login test, auth mutation, account creation, deployment, environment change, or database write occurred. The historical account and credential therefore remain `UNKNOWN`. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
 
-NEXT EXACT ACTION: obtain explicit operator authorization and authorized access to invalidate the account/credential in the superseded environment if it exists. Do not redact the current actionable evidence, mutate authentication, rewrite history, or begin PL-1C before that gate is resolved.
+NEXT EXACT ACTION: have an authorized operator provide read-only visibility to historical project `kwmnljvyvqvbvimypnmw` under the correct Supabase account or organization, then inspect only whether `smoke-tester` exists and its safe enabled/disabled status. Do not test, reuse, recreate, or print the historical credential; do not create `smoke-tester` in current Production, redact the current evidence, mutate authentication, rewrite history, or begin PL-1C. Separate operator authorization is required only if a later PL-1B invalidation is necessary. Any future M15-F smoke account must be new, temporary, minimally privileged, operator-approved, and use a new credential never stored in the repository.
 
 ## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
 

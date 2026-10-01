@@ -22,16 +22,16 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-1A` / `REMEDIATION COMPLETE LOCALLY — AWAITING EXACT-SHA CI` (historical classification remains `UNKNOWN`) |
-| Branch / base SHA / current HEAD / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / pending remediation commit (previous certified `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4`) / `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4` |
+| TASK ID / STATUS | `PL-1A` / `REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED` (historical classification remains `UNKNOWN`) |
+| Branch / base SHA / current HEAD / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` |
 | Last tested application SHA | `0994812e144a2a3d20298573506c141f45dab3bd` (no application changes) |
-| CI run / CI SHA / CI result | New remediation CI pending; previous `36882374030` / `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4` / `PASS` |
+| CI run / CI SHA / CI result | `36887158468` attempt 2 / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` / `PASS` |
 | Preview / database target / migrations | `NOT REQUIRED` / `READ-ONLY verification only` / `NONE` |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Redacted the sole current tracked occurrence; added generic Markdown password-assignment detection and synthetic regression coverage; focused scanner/tooling tests, lint, and canonical scan pass (937 files, 0 findings). Historical validity remains `UNKNOWN`; no auth or environment mutation occurred. |
-| Next exact action | Final pre-commit scan/review, focused remediation commit, push only this branch, observe new exact-SHA CI, then stop for operator review. |
+| Last completed action | Redacted the sole current tracked occurrence; hardened the generic scanner; passed synthetic tests and the canonical 937-file scan; pushed exact remediation SHA `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`; and certified CI run `36887158468` on rerun attempt 2. Attempt 1's unrelated unchanged M3 timestamp assertion passed on same-SHA rerun. |
+| Next exact action | Commit and certify the final branch documentation, merge the exact tested branch into development with `--no-ff`, require exact development CI PASS, then stop without starting PL-1C or touching main/Production. |
 | Blockers / open questions | No remediation blocker. Historical project/account/credential validity remains inaccessible and `UNKNOWN`; redaction is not invalidation. |
-| Operator approval status | `AUTHORIZED FOR CURRENT REDACTION/SCANNER REMEDIATION`; future invalidation, Production smoke identity, or integration remains separately gated |
+| Operator approval status | `AUTHORIZED FOR FINAL DOCS CERTIFICATION AND DEVELOPMENT INTEGRATION`; future invalidation, main/Production, and any smoke identity remain separately gated |
 | Report document | `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md` |
 
 ## Phase queue

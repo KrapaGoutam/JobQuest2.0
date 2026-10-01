@@ -2,7 +2,7 @@
 
 PHASE: `PL-1A`
 
-STATUS: `REMEDIATION COMPLETE LOCALLY — AWAITING EXACT-SHA BRANCH CI`
+STATUS: `REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED`
 
 HISTORICAL CREDENTIAL CLASSIFICATION: `UNKNOWN`
 
@@ -16,7 +16,9 @@ PREVIOUS CERTIFIED BRANCH SHA: `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4`
 
 PREVIOUS EXACT-SHA CI: run `36882374030`, `PASS`
 
-NEW REMEDIATION SHA / CI: `PENDING COMMIT AND PUSH`
+REMEDIATION SHA: `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`
+
+EXACT-SHA CI: run `36887158468`, attempt 2, `PASS`
 
 LAST TESTED APPLICATION SHA: `0994812e144a2a3d20298573506c141f45dab3bd` (no application code changed in PL-1A)
 
@@ -80,6 +82,7 @@ VALIDATION:
 - Focused ESLint on scanner implementation/wrapper/test: `PASS`.
 - `npx.cmd vitest run --project integration tests/integration/m1b.test.ts`: `PASS` — 17 tests.
 - `git diff --check`: `PASS`.
+- GitHub Actions M1B CI run `36887158468`, exact SHA `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`: `PASS` on rerun attempt 2. Attempt 1's only failure was an unchanged M3 integration assertion comparing runner and database-container timestamps; the scanner/static job passed in attempt 1, the M3 test/RPC files had zero remediation delta, and rerunning failed jobs on the same SHA passed.
 
 APPLICATION CODE CHANGED: `NO`
 
@@ -103,4 +106,6 @@ MAIN CHANGED: `NO`
 
 PRE-EXISTING `.gitignore` CHANGE: `PRESERVED UNSTAGED AND UNMODIFIED`
 
-NEXT EXACT ACTION: complete final diff/secret-scan review, commit only the remediation paths, push only `fix/pl1-credential-hygiene`, and certify the new exact SHA in branch CI before operator review.
+POST-CI WORKING TREE: the final CI-result updates to this report, `migration-upgrade/CURRENT_AGENT_STATE.md`, and `migration-upgrade/post-launch/POST_LAUNCH_EXECUTION_CHECKLIST.md` are intentionally unstaged; the pre-existing `.gitignore` change also remains unstaged and untouched.
+
+NEXT EXACT ACTION: commit and certify the final branch documentation, then integrate the exact tested feature-branch head into development with a no-ff merge and require exact development CI PASS. Stop afterward without merging main or touching Production.

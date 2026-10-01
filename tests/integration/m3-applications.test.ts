@@ -556,6 +556,19 @@ describe.skipIf(!ready)('Milestone 3 — Applications Workflow & Data Grid Integ
       const day = 86_400_000;
       await admin.from('applications').update({ last_activity_at: new Date(Date.now() - 20 * day).toISOString() }).eq('id', created.stale!);
       await admin.from('applications').update({ last_activity_at: new Date(Date.now() - 45 * day).toISOString() }).eq('id', created.long!);
+      const createdAtByKey: Record<string, string> = {
+        comma: '2026-08-31T23:59:59.999Z',
+        percent: '2026-09-01T00:00:00.000Z',
+        plain: '2026-09-15T12:00:00.000Z',
+        long: '2026-09-20T12:00:00.000Z',
+        fresh: '2026-09-20T12:00:00.000Z',
+        quote: '2026-09-30T23:59:59.999Z',
+        stale: '2026-10-01T00:00:00.000Z',
+      };
+      for (const [key, createdAt] of Object.entries(createdAtByKey)) {
+        const update = await admin.from('applications').update({ created_at: createdAt }).eq('id', created[key]!);
+        expect(update.error).toBeNull();
+      }
     });
 
     const search = async (term: string) => {
@@ -611,6 +624,36 @@ describe.skipIf(!ready)('Milestone 3 — Applications Workflow & Data Grid Integ
       expect(p0.count).toBe(7);
       expect(new Set(ids).size).toBe(7);
       record('QRY-04', { status: 'PASS', total_count: p0.count, pages: [p0.data!.length, p1.data!.length, p2.data!.length], disjoint: true });
+    });
+
+    it('QRY-05: Date Added uses inclusive-from/exclusive-through boundaries with search, status, sort, and pagination', async () => {
+      const base = () => alice.db().from('applications').select('id, created_at', { count: 'exact' })
+        .eq('workspace_id', wsSearch)
+        .eq('status', 'OPEN')
+        .gte('created_at', '2026-09-01T00:00:00.000Z')
+        .lt('created_at', '2026-10-01T00:00:00.000Z')
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
+      const range = await base();
+      expect(range.error).toBeNull();
+      expect(range.count).toBe(5);
+      expect(range.data?.[0]?.id).toBe(created.percent);
+      expect(range.data?.at(-1)?.id).toBe(created.quote);
+      expect(range.data?.map((row) => row.id)).not.toContain(created.comma);
+      expect(range.data?.map((row) => row.id)).not.toContain(created.stale);
+
+      const searchFilter = buildSearchFilter('100');
+      const combined = await base().or(searchFilter!);
+      expect(combined.data?.map((row) => row.id)).toEqual([created.percent, created.plain]);
+
+      const [page0, page1, page2] = await Promise.all([base().range(0, 1), base().range(2, 3), base().range(4, 5)]);
+      const pageIds = [...page0.data!, ...page1.data!, ...page2.data!].map((row) => row.id);
+      expect(new Set(pageIds).size).toBe(5);
+
+      const empty = await alice.db().from('applications').select('id').eq('workspace_id', wsSearch)
+        .gte('created_at', '2026-07-01T00:00:00.000Z').lt('created_at', '2026-08-01T00:00:00.000Z');
+      expect(empty.data).toEqual([]);
+      record('QRY-05', { status: 'PASS', boundary_rows: range.count, combined_rows: combined.data?.length, pages: [page0.data?.length, page1.data?.length, page2.data?.length], empty_rows: 0 });
     });
   });
 });

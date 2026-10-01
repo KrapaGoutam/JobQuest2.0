@@ -27,6 +27,7 @@ import { ApplicationTasksSection } from '../tasks/ApplicationTasksSection';
 import { ApplicationDocumentsSection } from '../documents/ApplicationDocumentsSection';
 import { DoneSetNextDialog } from '../tasks/DoneSetNextDialog';
 import { useProfileTimeZone } from '../../hooks/useProfileTimeZone';
+import { ApplicationContactsSection } from './ApplicationContactsSection';
 
 export interface ApplicationDetailDrawerProps {
   isOpen: boolean;
@@ -270,6 +271,11 @@ export function ApplicationDetailDrawer({
             </Button>
           </div>
         )}
+
+        <ApplicationContactsSection
+          application={application}
+          onChanged={() => onApplicationChanged?.()}
+        />
 
         {/* M5: interviews for this application */}
         <ApplicationInterviewsSection

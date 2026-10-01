@@ -42,6 +42,7 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [quiet, setQuiet] = useState<{ items: QuietApplication[]; total: number }>({ items: [], total: 0 });
+  const [showAllQuiet, setShowAllQuiet] = useState(false);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<CanonicalWorkflow | null>(null);
@@ -282,7 +283,7 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
             ) : quiet.items.length === 0 ? (
               <div className="small muted" style={{ padding: '12px 16px' }}>No quiet applications. Everything has recent activity.</div>
             ) : (
-              quiet.items.slice(0, 3).map((a) => (
+              quiet.items.slice(0, showAllQuiet ? quiet.items.length : 3).map((a) => (
                 <div key={a.id} className="dash-quiet" data-testid="dash-quiet">
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div className="b ell">{a.company_name}</div>
@@ -296,7 +297,15 @@ export function DashboardView({ activeWorkspaceId: ws, isManager, currentUserId,
                 </div>
               ))
             )}
-            <div className="small muted" style={{ padding: '8px 16px 12px' }}>Suggestions only. Nothing is archived automatically.</div>
+            <div className="small muted" style={{ padding: '8px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Suggested reviews only. Changes happen only when you choose an action.</span>
+              <span style={{ flex: 1 }} />
+              {quiet.items.length > 3 && (
+                <button type="button" className="linkish small" onClick={() => setShowAllQuiet((value) => !value)} aria-expanded={showAllQuiet}>
+                  {showAllQuiet ? 'Show fewer' : `Show ${quiet.items.length - 3} more`}
+                </button>
+              )}
+            </div>
           </section>
         </div>
       </div>

@@ -50,6 +50,8 @@ import { ApplicationPreviewRail } from '../components/applications/ApplicationPr
 import { Dialog } from '../components/ui/Dialog';
 import { downloadExport } from '../api/importExport';
 import { consumeNewApplicationRequest, onNewApplicationRequest } from '../lib/newApplicationIntent';
+import { dateAddedBounds } from '../lib/applicationProductivity';
+import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
 
 export interface ApplicationRecord {
   id: string;
@@ -140,6 +142,7 @@ export function ApplicationsView({
   onDismissCodes,
 }: ApplicationsViewProps) {
   const { addToast } = useToast();
+  const { timeZone } = useProfileTimeZone(user?.id ?? null);
 
   const wsId = activeWorkspaceId || user?.active_workspace_id || '';
   // UX only: MANAGER sees owner columns/filters. Authorization is enforced by RLS.
@@ -173,6 +176,9 @@ export function ApplicationsView({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOwner, setSelectedOwner] = useState('ALL');
   const [sort, setSort] = useState<ApplicationSort>({ field: 'last_activity_at', direction: 'desc' });
+  const [dateAddedFrom, setDateAddedFrom] = useState('');
+  const [dateAddedTo, setDateAddedTo] = useState('');
+  const [groupByMonth, setGroupByMonth] = useState(false);
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -214,8 +220,9 @@ export function ApplicationsView({
   // ---------------------------------------------------------------------------
   // Loading
   // ---------------------------------------------------------------------------
-  const filters: ApplicationFilters = useMemo(
-    () => ({
+  const filters: ApplicationFilters = useMemo(() => {
+    const added = dateAddedBounds({ from: dateAddedFrom, to: dateAddedTo }, timeZone);
+    return {
       stage: activeStage,
       status: outcomeFilter === 'OPEN' || outcomeFilter === 'CLOSED' ? outcomeFilter : undefined,
       outcome: outcomeFilter !== 'ALL' && outcomeFilter !== 'OPEN' && outcomeFilter !== 'CLOSED' ? outcomeFilter : undefined,
@@ -224,9 +231,10 @@ export function ApplicationsView({
       archiveState,
       search: searchQuery,
       ownerId: selectedOwner,
-    }),
-    [activeStage, outcomeFilter, priorityFilter, agingFilter, archiveState, searchQuery, selectedOwner]
-  );
+      dateAddedFrom: added.from,
+      dateAddedToExclusive: added.toExclusive,
+    };
+  }, [activeStage, outcomeFilter, priorityFilter, agingFilter, archiveState, searchQuery, selectedOwner, dateAddedFrom, dateAddedTo, timeZone]);
 
   // Any filter or sort change returns to the first page and clears the selection.
   useEffect(() => {
@@ -558,6 +566,8 @@ export function ApplicationsView({
     setArchiveState('active');
     setSearchQuery('');
     setSelectedOwner('ALL');
+    setDateAddedFrom('');
+    setDateAddedTo('');
   };
 
   const pageStart = totalCount === 0 ? 0 : page * PAGE_SIZE + 1;
@@ -674,6 +684,24 @@ export function ApplicationsView({
           isPreviewOpen={isPreviewOpen}
           onTogglePreview={togglePreview}
           onOpenExport={() => setIsExportOpen(true)}
+          dateAddedFrom={dateAddedFrom}
+          dateAddedTo={dateAddedTo}
+          onDateAddedFromChange={(date) => {
+            setDateAddedFrom(date);
+            if (date && dateAddedTo && date > dateAddedTo) setDateAddedTo(date);
+          }}
+          onDateAddedToChange={(date) => {
+            setDateAddedTo(date);
+            if (date && dateAddedFrom && date < dateAddedFrom) setDateAddedFrom(date);
+          }}
+          onClearDateAdded={() => {
+            setDateAddedFrom('');
+            setDateAddedTo('');
+          }}
+          sort={sort}
+          onSortChange={setSort}
+          groupByMonth={groupByMonth}
+          onGroupByMonthChange={setGroupByMonth}
         />
 
         {loadError && (
@@ -698,6 +726,8 @@ export function ApplicationsView({
               isMobile={isMobile}
               members={members}
               workflow={workflow}
+              groupByMonth={groupByMonth}
+              timeZone={timeZone}
               onSelectRow={(id, selected) =>
                 setSelectedIds((prev) => (selected ? [...new Set([...prev, id])] : prev.filter((i) => i !== id)))
               }

@@ -22,16 +22,16 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-1A` / `BLOCKED — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN` (`UNKNOWN`) |
-| Branch / base SHA / local docs checkpoint / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / see final handoff or branch tip (pre-checkpoint `f0774eb90fb446f550ab736545a0430805195857`) / `f0774eb90fb446f550ab736545a0430805195857` pending authorized push |
+| TASK ID / STATUS | `PL-1A` / `REMEDIATION COMPLETE LOCALLY — AWAITING EXACT-SHA CI` (historical classification remains `UNKNOWN`) |
+| Branch / base SHA / current HEAD / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / pending remediation commit (previous certified `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4`) / `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4` |
 | Last tested application SHA | `0994812e144a2a3d20298573506c141f45dab3bd` (no application changes) |
-| CI run / CI SHA / CI result | `36789160703` / `f0774eb90fb446f550ab736545a0430805195857` / `PASS` (existing docs-only checkpoint) |
+| CI run / CI SHA / CI result | New remediation CI pending; previous `36882374030` / `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4` / `PASS` |
 | Preview / database target / migrations | `NOT REQUIRED` / `READ-ONLY verification only` / `NONE` |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Verified reset Supabase/Vercel CLI identities read-only: DEV and PROD are visible; the repository is linked only to DEV; Vercel scope/project access is correct; historical project `kwmnljvyvqvbvimypnmw` belongs to an inaccessible/incorrect historical account and remains invisible, so classification remains `UNKNOWN`. Operator confirms current Production user is `Conan`; historical `smoke-tester` is absent and must not be created there. |
-| Next exact action | Provide authorized read-only visibility to historical project `kwmnljvyvqvbvimypnmw`, then inspect only whether `smoke-tester` exists and its safe status without testing the credential or mutating auth. |
-| Blockers / open questions | Historical project visibility and therefore account existence, enabled state, and credential validity remain unknown. The historical credential must not be tested, reused, recreated, or printed. Any future M15-F smoke identity must be new, temporary, minimally privileged, operator-approved, and use a new credential never stored in the repository. |
-| Operator approval status | `NOT REQUIRED` for the next read-only inspection; separately required if PL-1B invalidation becomes necessary |
+| Last completed action | Redacted the sole current tracked occurrence; added generic Markdown password-assignment detection and synthetic regression coverage; focused scanner/tooling tests, lint, and canonical scan pass (937 files, 0 findings). Historical validity remains `UNKNOWN`; no auth or environment mutation occurred. |
+| Next exact action | Final pre-commit scan/review, focused remediation commit, push only this branch, observe new exact-SHA CI, then stop for operator review. |
+| Blockers / open questions | No remediation blocker. Historical project/account/credential validity remains inaccessible and `UNKNOWN`; redaction is not invalidation. |
+| Operator approval status | `AUTHORIZED FOR CURRENT REDACTION/SCANNER REMEDIATION`; future invalidation, Production smoke identity, or integration remains separately gated |
 | Report document | `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md` |
 
 ## Phase queue

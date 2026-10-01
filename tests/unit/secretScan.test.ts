@@ -38,6 +38,13 @@ describe('secret scanner: TRUE secret fixtures FAIL', () => {
   it('database URL with an embedded password', () => {
     expect(rules(`DB=postgresql://postgres.abcdefghijklmnopqrst:${rand(18)}@aws-0-us-west-2.pooler.supabase.com:5432/postgres`)).toContain('database-url-with-password');
   });
+  it('plaintext password assignment in Markdown', () => {
+    const label = ['Pass', 'word'].join('');
+    const dummy = ['DUMMY', 'ONLY', 'NOT', 'A', 'SECRET'].join('-');
+    const markdown = `| **${label}** | \`${dummy}\` | synthetic regression fixture |`;
+    expect(rules(markdown, { mode: 'source', scanDocumentationPasswords: true })).toContain('plaintext-password-assignment');
+    expect(rules(`${label.toUpperCase()}=${dummy}`, { mode: 'source', scanDocumentationPasswords: true })).toContain('plaintext-password-assignment');
+  });
   it('access tokens: Supabase PAT, GitHub token, JobQuest refresh / extension tokens', () => {
     expect(rules(`${P.sbp}${hex(20)}`)).toContain('supabase-personal-access-token');
     expect(rules(`ghp_${rand(30).replace(/[-_]/g, 'a').slice(0, 36)}`)).toContain('github-token');
@@ -72,6 +79,13 @@ describe('secret scanner: known harmless literals PASS', () => {
   it('database URL placeholders and password-less URLs', () => {
     expect(scan('postgresql://postgres:[YOUR-PASSWORD]@db.ref.supabase.co:5432/postgres')).toEqual([]);
     expect(scan('postgres://localhost:5432/app')).toEqual([]);
+  });
+  it('redacted password placeholders in source and Markdown', () => {
+    expect(scan('PASSWORD=[REDACTED]', { mode: 'source', scanDocumentationPasswords: true })).toEqual([]);
+    expect(scan('| **Password** | `[REDACTED]` | intentionally removed |', { mode: 'source', scanDocumentationPasswords: true })).toEqual([]);
+  });
+  it('explanatory security documentation without an assigned value', () => {
+    expect(scan('Plaintext passwords must never be stored in repository documentation.', { mode: 'source', scanDocumentationPasswords: true })).toEqual([]);
   });
   it('detector literals in test harnesses (e.g. the $argon2id$ marker, the old alias domain)', () => {
     expect(scan("html.includes('$argon2id$') || html.includes('jqr_') || x.includes('auth.jobquest.internal')")).toEqual([]);

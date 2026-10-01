@@ -1,14 +1,14 @@
-## >>> PL-1A SECURITY HOLD — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN (2026-10-01) <<<
+## >>> PL-1A REMEDIATION COMPLETE LOCALLY — AWAITING EXACT-SHA CI (2026-10-01) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: BLOCKED — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN | CLASSIFICATION: UNKNOWN.
+PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: REMEDIATION COMPLETE LOCALLY, AWAITING EXACT-SHA CI | HISTORICAL CLASSIFICATION: UNKNOWN.
 
-BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd` | VERIFIED STARTING HEAD/REMOTE: `f0774eb90fb446f550ab736545a0430805195857` | NEW DOCS CHECKPOINT: see final handoff/branch tip | EXISTING CI: `36789160703` PASS.
+BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd` | PREVIOUS CERTIFIED HEAD/REMOTE: `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4` | PREVIOUS CI: `36882374030` PASS | NEW REMEDIATION SHA/CI: PENDING.
 
-PRODUCTION: UNCHANGED | MAIN: UNCHANGED | DEVELOPMENT: UNCHANGED | AUTH SYSTEMS: READ-ONLY VERIFICATION ONLY.
+PRODUCTION: UNCHANGED | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: UNCHANGED (`0994812e144a2a3d20298573506c141f45dab3bd`) | AUTH SYSTEMS: UNCHANGED.
 
-LAST COMPLETED: after the operator reset both CLIs, Supabase CLI authentication was verified; current DEV `xpnkasclquplmrcmhsif` and PROD `kqsxdothjxtcktyirpux` are visible; the repository remains linked only to DEV and its linked migration list was read successfully; historical project `kwmnljvyvqvbvimypnmw` is still not visible. The operator confirms the historical project belongs to an inaccessible or incorrect historical account, current Production user is `Conan`, and `smoke-tester` is absent and must not be created in current Production. Vercel identity, scope `one-piece-5779`, and project `jobquest2` were verified read-only. No credential login test, auth mutation, account creation, deployment, environment change, or database write occurred. The historical account and credential therefore remain `UNKNOWN`. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
+LAST COMPLETED: removed the sole current tracked occurrence of the known historical plaintext credential from `migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md` without printing it; preserved historical commit/path metadata and classification `UNKNOWN`; added generic Markdown credential-table/uppercase-assignment detection with synthetic tests; proved the hardened scanner discriminates the known pre-redaction path; and passed 19 scanner unit tests, 17 M1B tooling integration tests, focused lint, and the canonical 937-file scan with 0 findings. No application code, auth, database, deployment, development, main, or Production change occurred. The pre-existing `.gitignore` change remains untouched and unstaged. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
 
-NEXT EXACT ACTION: have an authorized operator provide read-only visibility to historical project `kwmnljvyvqvbvimypnmw` under the correct Supabase account or organization, then inspect only whether `smoke-tester` exists and its safe enabled/disabled status. Do not test, reuse, recreate, or print the historical credential; do not create `smoke-tester` in current Production, redact the current evidence, mutate authentication, rewrite history, or begin PL-1C. Separate operator authorization is required only if a later PL-1B invalidation is necessary. Any future M15-F smoke account must be new, temporary, minimally privileged, operator-approved, and use a new credential never stored in the repository.
+NEXT EXACT ACTION: complete the final pre-commit review and canonical scan, commit/stage only the remediation files (never `.gitignore`), push only `fix/pl1-credential-hygiene`, and observe exact-SHA branch CI. After CI, record the result locally and stop for operator review without merging development/main or touching Production.
 
 ## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
 

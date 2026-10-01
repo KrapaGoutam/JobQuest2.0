@@ -2,100 +2,105 @@
 
 PHASE: `PL-1A`
 
-STATUS: `BLOCKED — HISTORICAL CREDENTIAL VALIDITY STILL UNKNOWN`
+STATUS: `REMEDIATION COMPLETE LOCALLY — AWAITING EXACT-SHA BRANCH CI`
 
-CLASSIFICATION: `UNKNOWN`
+HISTORICAL CREDENTIAL CLASSIFICATION: `UNKNOWN`
 
-BASE SHA: `0994812e144a2a3d20298573506c141f45dab3bd`
+BASE DEVELOPMENT SHA: `0994812e144a2a3d20298573506c141f45dab3bd`
+
+MAIN SHA: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`
 
 BRANCH: `fix/pl1-credential-hygiene`
 
-VERIFIED STARTING HEAD: `f0774eb90fb446f550ab736545a0430805195857`
+PREVIOUS CERTIFIED BRANCH SHA: `df99f794c1fe8e18fe63e3d4d3bce11f69b99dd4`
 
-REMOTE BRANCH HEAD AT RECHECK: `f0774eb90fb446f550ab736545a0430805195857`; the new local docs-only checkpoint commit is recorded by the final handoff/branch tip because a commit cannot record its own SHA.
+PREVIOUS EXACT-SHA CI: run `36882374030`, `PASS`
 
-LAST TESTED APPLICATION SHA: `0994812e144a2a3d20298573506c141f45dab3bd` (PL-1A changes are documentation-only)
+NEW REMEDIATION SHA / CI: `PENDING COMMIT AND PUSH`
 
-EXISTING BRANCH CI: run `36789160703`, exact SHA `f0774eb90fb446f550ab736545a0430805195857`, `PASS`
+LAST TESTED APPLICATION SHA: `0994812e144a2a3d20298573506c141f45dab3bd` (no application code changed in PL-1A)
 
-ACCOUNT IDENTIFIER: username `smoke-tester`; optional documented email `smoke-tester@jobquest.internal`; historical user ID `b763f0f9-bee2-406c-805b-ecf06bf97cac`
+## Environment and account boundary
 
-## 2026-10-01 CLI re-verification
+- Historical Supabase project `kwmnljvyvqvbvimypnmw`: inaccessible to the current authenticated account.
+- Historical smoke-test account: existence and status remain `UNKNOWN` in that project.
+- Historical credential: not tested, reused, recreated, printed, transformed, or used for authentication.
+- Current Production: `jobquest-prod` (`kqsxdothjxtcktyirpux`), a separate environment.
+- Current Production user: `Conan`.
+- Historical smoke-test account in current Production: absent and must not be recreated.
+- Auth system, database, environment configuration, Vercel deployment, development, main, and Production: unchanged.
 
-- Supabase CLI `2.117.0`: authenticated successfully using the operator's reset browser-authenticated session.
-- DEV `jobquest-dev` (`xpnkasclquplmrcmhsif`): visible and healthy.
-- PROD `jobquest-prod` (`kqsxdothjxtcktyirpux`): visible and healthy.
-- Historical project `kwmnljvyvqvbvimypnmw`: not visible to the authenticated account.
-- Repository linked target: DEV `xpnkasclquplmrcmhsif`; no relink was performed.
-- `npx supabase migration list --linked`: succeeded read-only against DEV. No migration was applied; no database push was performed.
-- Vercel CLI `61.0.0`: authenticated identity verified.
-- Vercel scope/team `one-piece-5779`: accessible.
-- Vercel project `one-piece-5779/jobquest2`: accessible by read-only project inspection.
-- No deployment, environment-variable change, project configuration change, or auth mutation occurred.
+Redacting the current repository copy does not invalidate the historical credential and does not change its classification. The classification remains exactly `UNKNOWN` because the historical environment cannot be inspected.
 
-## Relevant environments
+## Current exposure remediation
 
-- Superseded old Supabase project `kwmnljvyvqvbvimypnmw`, where repository evidence associates the account and credential. It remains unavailable to the operator's current authenticated Supabase account.
-- `jobquest-prod` (`kqsxdothjxtcktyirpux`), checked read-only on 2026-09-30 and confirmed visible by CLI on 2026-10-01.
-- `jobquest-dev` (`xpnkasclquplmrcmhsif`), checked read-only on 2026-09-30 and confirmed visible by CLI on 2026-10-01.
-- Repository evidence does not associate this credential with the legacy JobQuest1 account store or local-only testing.
+CURRENT TRACKED PLAINTEXT EXPOSURE: `REMOVED / REDACTED`
 
-## Exposure record
+- Remediated path: `migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md`
+- Replacement: an explicit redaction marker and non-secret historical handling guidance.
+- Equivalent current tracked occurrences of the known value before redaction: `1`, at the remediated path only. This comparison emitted path/count metadata only.
+- The obsolete plan now states that the historical credential must not be tested or reused and that a future M15-F smoke identity, if separately authorized, must be new, temporary, minimally privileged, and provisioned through a non-repository secret channel.
 
-CURRENT PLAINTEXT COPIES: `1`
+GIT HISTORY: `UNCHANGED`
 
-- `migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md:18`
+- Earliest known historical commit: `6067066bbae5c68e212956a6c8579d44ff26fb1a`
+- Historical path metadata is retained without reproducing the credential.
+- No history rewrite is authorized or performed.
 
-The value is intentionally not reproduced. The current copy remains in place because the `UNKNOWN` decision gate prohibits redaction before historical validity can be established.
+## Scanner root cause and hardening
 
-HISTORICAL COPIES: `YES`
+SCANNER GAP ROOT CAUSE: `RULE/PATTERN GAP`
 
-- Earliest known relevant commit: `6067066bbae5c68e212956a6c8579d44ff26fb1a`
-- Historical path: `migration-upgrade/m15/PRODUCTION_SMOKE_PLAN.md`
-- The prior investigation found the credential in 89 reachable commits. Shared history was not rewritten.
+The canonical `--tracked` scanner already enumerated all Git-tracked text files, including Markdown. It was not limited to staged files and did not exclude `migration-upgrade/`. Its rules recognized structured platform/API tokens, privileged JWTs, private keys, database URLs containing passwords, and exact environment-provided secrets, but had no rule for a plaintext password value documented in a Markdown credential table.
 
-## Account evidence and classification
+SCANNER HARDENED: `YES`
 
-- `jobquest-prod`: account absent. A prior read-only aggregate query found no matching application account, credential record, or active session.
-- Operator clarification: the current Production user is `Conan`; the historical `smoke-tester` must not be created or recreated in current Production.
-- `jobquest-dev`: account absent. A prior read-only aggregate query found no matching application account, credential record, or active session.
-- Historical project `kwmnljvyvqvbvimypnmw`: account existence and status remain `UNKNOWN`. The operator confirms that the project belongs to an inaccessible or incorrect historical account, and it is not visible to the current authenticated CLI account.
-- The historical plaintext password was not tested by login.
-- The historical credential must not be tested, reused, recreated, or printed.
-- No account, password, session, recovery, or auth state was changed.
+- Added generic detection for concrete password/passphrase values in three-column Markdown credential-definition tables.
+- Added detection for explicit uppercase `PASSWORD=` documentation assignments.
+- Explicit redaction/placeholders remain allowed.
+- Descriptive password-policy tables, form specifications, and API architecture rows are not treated as credentials.
+- Findings continue to emit rule, path, and offset only; matched values are never printed.
+- No historical value, fragment, derivative, account-specific rule, path allowlist, or denylist was added.
 
-The credential cannot be classified as non-live everywhere relevant because the historical environment where it was used still cannot be enumerated safely. Under the PL-1A classification rules, the result remains exactly `UNKNOWN`.
+## Synthetic regression validation
 
-## Cleanup and scanner state
+SYNTHETIC TESTS: `PASS`
 
-CURRENT DOCS REDACTED: `BLOCKED`
+- Dangerous runtime-generated plaintext value in a synthetic Markdown credential table: detected.
+- Safe `PASSWORD=[REDACTED]` placeholder: passed.
+- Safe Markdown redaction marker: passed.
+- Explanatory security documentation without an assigned value: passed.
+- Repository after redaction: passed.
 
-SCANNER GAP IDENTIFIED: `YES` (from the prior investigation)
+VALIDATION:
 
-The canonical tracked-file scanner scans Markdown but has no generic rule for a plaintext password assignment in documentation. It therefore did not detect the known current copy. No real credential may be used as a fixture.
+- `npx.cmd vitest run --project unit tests/unit/secretScan.test.ts`: `PASS` — 19 tests.
+- Pre-redaction discrimination run: `PASS` — exactly one metadata-only finding at the known path.
+- `npm.cmd run check:secrets`: `PASS` — 937 tracked files, 0 findings after redaction.
+- Focused ESLint on scanner implementation/wrapper/test: `PASS`.
+- `npx.cmd vitest run --project integration tests/integration/m1b.test.ts`: `PASS` — 17 tests.
+- `git diff --check`: `PASS`.
 
-SCANNER HARDENED: `NO — prohibited by the UNKNOWN stop gate`
+APPLICATION CODE CHANGED: `NO`
 
-SECRET SCAN THIS SESSION: `PASS — 937 tracked files, 0 findings` (run only as the mandatory pre-commit safety check; this does not resolve the known generic scanner gap)
-
-PRIOR VALIDATION: `npm.cmd run check:secrets` passed at the existing PL-1A checkpoint (937 tracked files, 0 findings), confirming the documented scanner gap. Scanner regression tests were not run because scanner behavior was not changed. Application lint, typecheck, unit tests, and build were not required because no executable application or scanner code changed.
+Changes are limited to the scanner/tooling test, the sanitized historical smoke-plan document, and PL-1A state/report/checklist documentation.
 
 ## Safety and handoff
 
-PRODUCTION MUTATED: `NO`
+PRODUCTION CHANGED: `NO`
 
-AUTH SYSTEM MUTATED: `NO`
+AUTH MUTATION: `NO`
 
-HISTORY REWRITTEN: `NO`
+HISTORICAL CREDENTIAL TESTED: `NO`
 
-DEVELOPMENT MERGED: `NO`
+HISTORICAL CREDENTIAL REUSED: `NO`
 
-MAIN MERGED: `NO`
+HISTORICAL SMOKE-TEST ACCOUNT RECREATED: `NO`
 
-WORKING TREE: pre-existing unstaged `.gitignore` change adds only two local CLI-helper ignore entries; preserved and excluded from PL-1A staging.
+DEVELOPMENT CHANGED: `NO`
 
-OPERATOR APPROVAL REQUIRED: `NOT REQUIRED for the next read-only inspection; separately required if a later PL-1B invalidation is necessary`
+MAIN CHANGED: `NO`
 
-FUTURE M15-F SMOKE IDENTITY: If M15-F later requires a smoke account, it must be a newly created, operator-approved, temporary, minimally privileged account with a new credential that is never stored in the repository. This is future M15-F scope only; no account creation is authorized or needed in PL-1A.
+PRE-EXISTING `.gitignore` CHANGE: `PRESERVED UNSTAGED AND UNMODIFIED`
 
-NEXT EXACT ACTION: Have an authorized operator provide read-only visibility to historical project `kwmnljvyvqvbvimypnmw` under the correct Supabase account or organization, then inspect only whether `smoke-tester` exists and its safe enabled/disabled status without testing the credential or mutating auth.
+NEXT EXACT ACTION: complete final diff/secret-scan review, commit only the remediation paths, push only `fix/pl1-credential-hygiene`, and certify the new exact SHA in branch CI before operator review.

@@ -1,3 +1,15 @@
+## >>> PL-1A REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED (2026-10-01) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: REMEDIATION CI PASS, DEVELOPMENT INTEGRATION AUTHORIZED | HISTORICAL CLASSIFICATION: UNKNOWN.
+
+BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd` | HEAD/REMOTE: `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` | EXACT CI: `36887158468` attempt 2 PASS.
+
+PRODUCTION: UNCHANGED | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: UNCHANGED (`0994812e144a2a3d20298573506c141f45dab3bd`) | AUTH SYSTEMS: UNCHANGED.
+
+LAST COMPLETED: removed the sole current tracked occurrence of the known historical plaintext credential without printing it; preserved classification `UNKNOWN`; added generic Markdown credential-table/uppercase-assignment detection with synthetic tests; passed 19 scanner unit tests, 17 M1B tooling integration tests, focused lint, and the canonical 937-file scan with 0 findings; committed/pushed exact SHA `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`; and certified GitHub Actions run `36887158468` on rerun attempt 2. Attempt 1's only failure was an unchanged M3 runner/database timestamp assertion; the relevant scanner/static job passed initially and all rerun jobs passed on the same SHA. No application code, auth, database, deployment, development, main, or Production change occurred. The post-CI updates to the three PL-1A documents and the pre-existing `.gitignore` change remain unstaged. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
+
+NEXT EXACT ACTION: commit and certify these final branch documentation updates, then integrate the exact tested branch into development with a no-ff merge and require exact development CI PASS. Stop afterward; do not start PL-1C, merge main, or touch Production automatically.
+
 ## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
 
 PHASE: PL-0 | STATUS: FORMALLY CLOSED.

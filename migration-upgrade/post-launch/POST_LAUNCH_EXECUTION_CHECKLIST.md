@@ -18,6 +18,22 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | Operator approval status | `Required before work` |
 | Report document | `TBD` |
 
+## Active task record — PL-1A
+
+| Field | Record |
+| --- | --- |
+| TASK ID / STATUS | `PL-1A` / `REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED` (historical classification remains `UNKNOWN`) |
+| Branch / base SHA / current HEAD / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` |
+| Last tested application SHA | `0994812e144a2a3d20298573506c141f45dab3bd` (no application changes) |
+| CI run / CI SHA / CI result | `36887158468` attempt 2 / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` / `PASS` |
+| Preview / database target / migrations | `NOT REQUIRED` / `READ-ONLY verification only` / `NONE` |
+| Production touched / development merged / main merged | `NO / NO / NO` |
+| Last completed action | Redacted the sole current tracked occurrence; hardened the generic scanner; passed synthetic tests and the canonical 937-file scan; pushed exact remediation SHA `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`; and certified CI run `36887158468` on rerun attempt 2. Attempt 1's unrelated unchanged M3 timestamp assertion passed on same-SHA rerun. |
+| Next exact action | Commit and certify the final branch documentation, merge the exact tested branch into development with `--no-ff`, require exact development CI PASS, then stop without starting PL-1C or touching main/Production. |
+| Blockers / open questions | No remediation blocker. Historical project/account/credential validity remains inaccessible and `UNKNOWN`; redaction is not invalidation. |
+| Operator approval status | `AUTHORIZED FOR FINAL DOCS CERTIFICATION AND DEVELOPMENT INTEGRATION`; future invalidation, main/Production, and any smoke identity remain separately gated |
+| Report document | `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md` |
+
 ## Phase queue
 
 | Phase | Status | First exact action |
@@ -29,7 +45,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0B-2 | CLOSED | Governance branch exact CI passed and was no-ff integrated into development. |
 | PL-0B-3 | CLOSED | Development governance integration CI `36783308738` passed for `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`; closeout documentation is awaiting its authorized certification and integration. |
 | PL-0 | FORMALLY CLOSED PENDING FINAL DOCS INTEGRATION | The closeout record is complete; do not start PL-1 until the closeout branch and final development CI are green. |
-| PL-1 | SELECTED | Obtain operator authorization; validate smoke-tester credential scope without exposing it, then reproduce extension connection issue. |
+| PL-1 | BLOCKED ON PL-1A SECURITY HOLD | Obtain authorized read-only visibility to the historical project and classify the account; do not start cleanup, scanner hardening, invalidation, or extension reliability work. |
 | PL-2 | SELECTED | Audit current code for the actual productivity gaps before designing changes. |
 | PL-3 | SELECTED | Audit existing dashboard widgets/layouts/tokens before UX work. |
 | PL-4A | SELECTED | Verify duplicate, bulk, and recruiter functionality under specified views. |

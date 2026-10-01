@@ -2,7 +2,7 @@
 
 PHASE: `PL-1A`
 
-STATUS: `REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED`
+STATUS: `CLOSED — DEVELOPMENT INTEGRATION CI PASS`
 
 HISTORICAL CREDENTIAL CLASSIFICATION: `UNKNOWN`
 
@@ -19,6 +19,14 @@ PREVIOUS EXACT-SHA CI: run `36882374030`, `PASS`
 REMEDIATION SHA: `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`
 
 EXACT-SHA CI: run `36887158468`, attempt 2, `PASS`
+
+FINAL FEATURE BRANCH SHA: `44a824228a5d96412fc8851a228551b2ad0143b7`
+
+FINAL FEATURE BRANCH CI: run `36891683169`, `PASS`
+
+DEVELOPMENT MERGE SHA: `2246c07466cec830717d198671f536d44dfed0b3`
+
+DEVELOPMENT CI: run `36892040319`, `PASS`
 
 LAST TESTED APPLICATION SHA: `0994812e144a2a3d20298573506c141f45dab3bd` (no application code changed in PL-1A)
 
@@ -100,12 +108,18 @@ HISTORICAL CREDENTIAL REUSED: `NO`
 
 HISTORICAL SMOKE-TEST ACCOUNT RECREATED: `NO`
 
-DEVELOPMENT CHANGED: `NO`
+DEVELOPMENT CHANGED: `YES — PL-1A integrated by no-ff merge at 2246c07466cec830717d198671f536d44dfed0b3; exact CI PASS`
 
 MAIN CHANGED: `NO`
 
 PRE-EXISTING `.gitignore` CHANGE: `PRESERVED UNSTAGED AND UNMODIFIED`
 
-POST-CI WORKING TREE: the final CI-result updates to this report, `migration-upgrade/CURRENT_AGENT_STATE.md`, and `migration-upgrade/post-launch/POST_LAUNCH_EXECUTION_CHECKLIST.md` are intentionally unstaged; the pre-existing `.gitignore` change also remains unstaged and untouched.
+POST-DEVELOPMENT-CI WORKING TREE: the final development CI updates to this report, `migration-upgrade/CURRENT_AGENT_STATE.md`, and `migration-upgrade/post-launch/POST_LAUNCH_EXECUTION_CHECKLIST.md` are intentionally unstaged so no new untested development commit is created; the pre-existing `.gitignore` change also remains unstaged and untouched.
 
-NEXT EXACT ACTION: commit and certify the final branch documentation, then integrate the exact tested feature-branch head into development with a no-ff merge and require exact development CI PASS. Stop afterward without merging main or touching Production.
+## PL-1 closeout relationship
+
+PL-1A remains `CLOSED`. PL-1B was `NOT EXECUTED / CONDITIONAL`, because the historical environment remains inaccessible; it was not a failed invalidation attempt. The historical credential classification remains `UNKNOWN`, and no current Production smoke-tester was created.
+
+PL-1C subsequently closed with a documented live-evidence limitation, and PL-1D was assessed and remains `DEFERRED / TBD`. The consolidated disposition and evidence are recorded in `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md`.
+
+NEXT EXACT ACTION: certify the PL-1 closeout documentation branch, stop for explicit operator approval, and only then integrate it into development with exact-SHA CI. Main and Production remain frozen; PL-2 is next but not started.

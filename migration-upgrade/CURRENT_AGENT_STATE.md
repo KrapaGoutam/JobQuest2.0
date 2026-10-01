@@ -1,14 +1,20 @@
-## >>> PL-1A REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED (2026-10-01) <<<
+## >>> PL-1 CLOSEOUT — FEATURE DOCUMENTATION GATE (2026-10-01) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: STARTED | PL-1A: REMEDIATION CI PASS, DEVELOPMENT INTEGRATION AUTHORIZED | HISTORICAL CLASSIFICATION: UNKNOWN.
+PL-0: FORMALLY CLOSED | PL-1: CLOSEOUT PREPARED, AWAITING EXACT BRANCH CI + OPERATOR-APPROVED DEVELOPMENT INTEGRATION | HISTORICAL CLASSIFICATION: UNKNOWN.
 
-BRANCH: `fix/pl1-credential-hygiene` | BASE: `0994812e144a2a3d20298573506c141f45dab3bd` | HEAD/REMOTE: `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` | EXACT CI: `36887158468` attempt 2 PASS.
+CURRENT BRANCH: `feature/docs-pl1-closeout` | BASE: `2246c07466cec830717d198671f536d44dfed0b3` | APPLICATION SHA: `2246c07466cec830717d198671f536d44dfed0b3` (already certified in development CI `36892040319`) | CLOSEOUT DOCS SHA/CI: `PENDING`.
 
-PRODUCTION: UNCHANGED | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: UNCHANGED (`0994812e144a2a3d20298573506c141f45dab3bd`) | AUTH SYSTEMS: UNCHANGED.
+WORKSTREAMS: PL-1A `CLOSED`; PL-1B `NOT EXECUTED / CONDITIONAL`; PL-1C `CLOSED WITH LIVE-EVIDENCE LIMITATION`; PL-1D `ASSESSED / DEFERRED / TBD`.
 
-LAST COMPLETED: removed the sole current tracked occurrence of the known historical plaintext credential without printing it; preserved classification `UNKNOWN`; added generic Markdown credential-table/uppercase-assignment detection with synthetic tests; passed 19 scanner unit tests, 17 M1B tooling integration tests, focused lint, and the canonical 937-file scan with 0 findings; committed/pushed exact SHA `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`; and certified GitHub Actions run `36887158468` on rerun attempt 2. Attempt 1's only failure was an unchanged M3 runner/database timestamp assertion; the relevant scanner/static job passed initially and all rerun jobs passed on the same SHA. No application code, auth, database, deployment, development, main, or Production change occurred. The post-CI updates to the three PL-1A documents and the pre-existing `.gitignore` change remain unstaged. Report: `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md`.
+PL-1C EVIDENCE: implementation review plus extension tests `97/97 PASS`; read-only Preview `dpl_7d64jmpkzzEchdPkNJPBT6ktpSek` at `https://jobquest2-d0vixbma7-one-piece-5779.vercel.app` targeted `jobquest-dev`; health returned 200 and `/api/ext/v1/me` with a synthetic invalid token returned 401 `EXTENSION_TOKEN_INVALID`. Successful live stored-token authentication was not independently exercised because no authorized Preview token was available; no credential/account was created solely for verification.
 
-NEXT EXACT ACTION: commit and certify these final branch documentation updates, then integrate the exact tested branch into development with a no-ff merge and require exact development CI PASS. Stop afterward; do not start PL-1C, merge main, or touch Production automatically.
+PL-1D EVIDENCE: server duplicate enforcement risk, `duplicate_override` residue, and URL-normalization mismatch are confirmed and remain deferred; stale/out-of-order verdict handling is mitigated. Focused tests: side panel `63/63 PASS`; normalization `3/3 PASS`. No PL-1D implementation occurred.
+
+PRODUCTION: UNCHANGED/FROZEN | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: `2246c07466cec830717d198671f536d44dfed0b3` | AUTH SYSTEMS: UNCHANGED.
+
+LAST COMPLETED: created the PL-1 formal closeout documentation from authoritative PL-1A/PL-1C/PL-1D evidence. Historical credential validity remains `UNKNOWN`; it was not tested or reused. Report: `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md`.
+
+NEXT EXACT ACTION: validate the documentation and canonical secret scan, commit/push only `feature/docs-pl1-closeout`, require exact-SHA CI PASS, then STOP for operator approval. Do not merge development, modify main, touch Production, or start PL-2 automatically.
 
 ## >>> PL-0 FORMALLY CLOSED — GOVERNANCE INTEGRATION + CLOSEOUT (2026-09-30) <<<
 

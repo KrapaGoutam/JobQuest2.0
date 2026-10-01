@@ -18,21 +18,21 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | Operator approval status | `Required before work` |
 | Report document | `TBD` |
 
-## Active task record — PL-1A
+## Active task record — PL-1 closeout
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-1A` / `REMEDIATION CI PASS — DEVELOPMENT INTEGRATION AUTHORIZED` (historical classification remains `UNKNOWN`) |
-| Branch / base SHA / current HEAD / remote HEAD | `fix/pl1-credential-hygiene` / `0994812e144a2a3d20298573506c141f45dab3bd` / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` |
-| Last tested application SHA | `0994812e144a2a3d20298573506c141f45dab3bd` (no application changes) |
-| CI run / CI SHA / CI result | `36887158468` attempt 2 / `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9` / `PASS` |
-| Preview / database target / migrations | `NOT REQUIRED` / `READ-ONLY verification only` / `NONE` |
-| Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Redacted the sole current tracked occurrence; hardened the generic scanner; passed synthetic tests and the canonical 937-file scan; pushed exact remediation SHA `22dfebe590d1a7693a4fc4475bb952d6ac6ae5b9`; and certified CI run `36887158468` on rerun attempt 2. Attempt 1's unrelated unchanged M3 timestamp assertion passed on same-SHA rerun. |
-| Next exact action | Commit and certify the final branch documentation, merge the exact tested branch into development with `--no-ff`, require exact development CI PASS, then stop without starting PL-1C or touching main/Production. |
-| Blockers / open questions | No remediation blocker. Historical project/account/credential validity remains inaccessible and `UNKNOWN`; redaction is not invalidation. |
-| Operator approval status | `AUTHORIZED FOR FINAL DOCS CERTIFICATION AND DEVELOPMENT INTEGRATION`; future invalidation, main/Production, and any smoke identity remain separately gated |
-| Report document | `migration-upgrade/post-launch/PL1A_CREDENTIAL_HYGIENE_REPORT.md` |
+| TASK ID / STATUS | `PL-1 CLOSEOUT` / `DOCUMENTATION PREPARED — BRANCH CI AND DEVELOPMENT INTEGRATION GATES PENDING` |
+| Branch / base SHA / current HEAD / remote HEAD | `feature/docs-pl1-closeout` / `2246c07466cec830717d198671f536d44dfed0b3` / `PENDING COMMIT` / `NOT PUSHED` |
+| Last tested application SHA | `2246c07466cec830717d198671f536d44dfed0b3` (application code unchanged by closeout) |
+| CI run / CI SHA / CI result | Closeout branch: `PENDING`; certified PL-1A development baseline: `36892040319` / `2246c07466cec830717d198671f536d44dfed0b3` / `PASS` |
+| Preview / database target / migrations | PL-1C Preview `https://jobquest2-d0vixbma7-one-piece-5779.vercel.app` / `jobquest-dev` / `NONE` |
+| Production touched / development merged / main merged | `NO / NO / NO` for this closeout task |
+| Last completed action | Recorded PL-1A `CLOSED`; PL-1B `NOT EXECUTED / CONDITIONAL`; PL-1C `CLOSED WITH LIVE-EVIDENCE LIMITATION`; and PL-1D `ASSESSED / DEFERRED / TBD`. Historical classification remains `UNKNOWN`. |
+| Next exact action | Run documentation checks and the canonical secret scan; commit/push only this branch; require exact-SHA branch CI PASS; then stop for explicit operator approval. |
+| Blockers / open questions | Successful PL-1C live stored-token authentication was not independently exercised because no authorized Preview token was available; accepted as non-blocking. Historical environment remains inaccessible. |
+| Operator approval status | `REQUIRED AFTER EXACT-SHA CLOSEOUT BRANCH CI`; development merge, main/Production, PL-2, and any smoke identity remain separately gated |
+| Report document | `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md` |
 
 ## Phase queue
 
@@ -44,15 +44,15 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0B-R2 | CLOSED | Closed as part of the certified PL-0 governance record. |
 | PL-0B-2 | CLOSED | Governance branch exact CI passed and was no-ff integrated into development. |
 | PL-0B-3 | CLOSED | Development governance integration CI `36783308738` passed for `24c0b40d2c8fe4e5f452ccdf8c9fd903a7dae2c0`; closeout documentation is awaiting its authorized certification and integration. |
-| PL-0 | FORMALLY CLOSED PENDING FINAL DOCS INTEGRATION | The closeout record is complete; do not start PL-1 until the closeout branch and final development CI are green. |
-| PL-1 | BLOCKED ON PL-1A SECURITY HOLD | Obtain authorized read-only visibility to the historical project and classify the account; do not start cleanup, scanner hardening, invalidation, or extension reliability work. |
-| PL-2 | SELECTED | Audit current code for the actual productivity gaps before designing changes. |
-| PL-3 | SELECTED | Audit existing dashboard widgets/layouts/tokens before UX work. |
-| PL-4A | SELECTED | Verify duplicate, bulk, and recruiter functionality under specified views. |
-| PL-4B | DEFERRED | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |
-| PL-4C | DEFERRED | Verify existing goals/recurrence; scope templates as independent canonical tasks. |
-| PL-5 | DEFERRED | Gather evidence after implementation phases; leave production metrics for M15-F when needed. |
-| M15-F | RESERVED | Requires explicit operator authorization after prior work is completed/deferred. |
+| PL-0 | CLOSED | Certified governance integration and formal closeout complete. |
+| PL-1 | CLOSEOUT IN PROGRESS | Formal disposition is `CLOSED`; branch CI, explicit operator approval, development integration, and exact development CI remain before repository closeout is certified. |
+| PL-2 | NEXT / NOT STARTED | Application Productivity: date controls, suggestion-area cleanup, and application contact UX. Start only in a separate controlled task after PL-1 integration CI. |
+| PL-3 | PENDING | Audit existing dashboard widgets/layouts/tokens before UX work. |
+| PL-4A | PENDING | Verify duplicate, bulk, and recruiter functionality under specified views. |
+| PL-4B | PENDING | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |
+| PL-4C | PENDING | Verify existing goals/recurrence; scope templates as independent canonical tasks. |
+| PL-5 | PENDING | Gather evidence after implementation phases; leave production metrics for M15-F when needed. |
+| M15-F | RESERVED — LAST | Final Production release and stabilization; requires explicit authorization after prior work is completed, deferred, or otherwise decided. |
 | Legacy retirement | RESERVED | Requires separate authorization after M15-F; never automatic. |
 
 ## Completion gate for every task

@@ -252,29 +252,31 @@ export function PaceChart({
           Goal
         </span>
       </div>
-      <table className="sr-only">
-        <caption>Weekly search activity values</caption>
-        <thead>
-          <tr>
-            <th>Week</th>
-            <th>Applications</th>
-            <th>Responses</th>
-            <th>Interviews</th>
-            <th>Goal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.week_start}>
-              <th>{row.week_label}</th>
-              <td>{row.applied}</td>
-              <td>{row.responses}</td>
-              <td>{row.interviews}</td>
-              <td>{row.target}</td>
+      <div className="sr-only">
+        <table>
+          <caption>Weekly search activity values</caption>
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th>Applications</th>
+              <th>Responses</th>
+              <th>Interviews</th>
+              <th>Goal</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.week_start}>
+                <th>{row.week_label}</th>
+                <td>{row.applied}</td>
+                <td>{row.responses}</td>
+                <td>{row.interviews}</td>
+                <td>{row.target}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -345,25 +347,27 @@ export function AttainmentStrip({ points }: { points: WeeklyPacingPoint[] }) {
           );
         })}
       </div>
-      <table className="sr-only">
-        <caption>Weekly goal attainment</caption>
-        <thead>
-          <tr>
-            <th>Week</th>
-            <th>Applications</th>
-            <th>Goal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.week_start}>
-              <th>{row.week_label}</th>
-              <td>{row.applied}</td>
-              <td>{row.target}</td>
+      <div className="sr-only">
+        <table>
+          <caption>Weekly goal attainment</caption>
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th>Applications</th>
+              <th>Goal</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.week_start}>
+                <th>{row.week_label}</th>
+                <td>{row.applied}</td>
+                <td>{row.target}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

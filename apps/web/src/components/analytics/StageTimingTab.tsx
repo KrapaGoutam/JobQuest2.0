@@ -88,27 +88,29 @@ export function StageTimingTab({ data }: { data: StageTiming }) {
               </tbody>
             </table>
           </div>
-          <table className="sr-only">
-            <caption>Stage transition timing ranges</caption>
-            <thead>
-              <tr>
-                <th>Transition</th>
-                <th>Minimum</th>
-                <th>Median</th>
-                <th>Maximum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.transitions.map((row) => (
-                <tr key={row.transition}>
-                  <th>{row.transition}</th>
-                  <td>{row.min_days}</td>
-                  <td>{row.median_days}</td>
-                  <td>{row.max_days}</td>
+          <div className="sr-only">
+            <table>
+              <caption>Stage transition timing ranges</caption>
+              <thead>
+                <tr>
+                  <th>Transition</th>
+                  <th>Minimum</th>
+                  <th>Median</th>
+                  <th>Maximum</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.transitions.map((row) => (
+                  <tr key={row.transition}>
+                    <th>{row.transition}</th>
+                    <td>{row.min_days}</td>
+                    <td>{row.median_days}</td>
+                    <td>{row.max_days}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
         <Card className="analytics-card">
           <header className="analytics-card-head">

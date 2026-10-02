@@ -145,23 +145,25 @@ export function AgingReportTab({
             ) : null,
           )}
         </div>
-        <table className="sr-only">
-          <caption>Application aging distribution</caption>
-          <thead>
-            <tr>
-              <th>Band</th>
-              <th>Applications</th>
-            </tr>
-          </thead>
-          <tbody>
-            {BANDS.map(({ id, label }) => (
-              <tr key={id}>
-                <th>{label}</th>
-                <td>{counts[id]}</td>
+        <div className="sr-only">
+          <table>
+            <caption>Application aging distribution</caption>
+            <thead>
+              <tr>
+                <th>Band</th>
+                <th>Applications</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {BANDS.map(({ id, label }) => (
+                <tr key={id}>
+                  <th>{label}</th>
+                  <td>{counts[id]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
       <div
         className="aging-filter-row"

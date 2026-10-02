@@ -10,7 +10,7 @@ Main baseline: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`
 
 ## Status
 
-Implementation and full local certification are complete. Exact feature-branch CI and the matching jobquest-dev Preview remain pending. Development integration requires explicit operator approval; main and Production remain unchanged.
+Implementation, exact application/evidence SHA CI, and the matching jobquest-dev Preview are certified. Development integration requires explicit operator approval; main and Production remain unchanged.
 
 ## Discovery matrix
 
@@ -56,6 +56,18 @@ Local certification on the feature branch:
 - browser bundle secret scan: three files, zero findings
 - extension package secret scan: 45 files, zero findings
 
+Exact feature CI run `37033042789` passed for application/evidence SHA `cc240dc4948ac9e34a61ccc516686cf2c5e830f1`. It passed classification, lint, typecheck, `174/174` unit tests, build, tracked/browser secret scans, migrations, `187/187` integration tests, extension validation, `22/22` browser E2E plus axe, sanitized evidence upload, and disposable-stack cleanup.
+
+## Preview evidence
+
+- URL: `https://jobquest2-dx21j0l5o-one-piece-5779.vercel.app`
+- Deployment: `dpl_H6nWmXctR1oGB7mXpEah4jYK9nRt`
+- Target/status/SHA: `preview` / `READY` / `cc240dc4948ac9e34a61ccc516686cf2c5e830f1`
+- `/api/health`: HTTP 200 with `{"status":"ok"}`
+- Backend binding: compiled browser asset contains only jobquest-dev (`xpnkasclquplmrcmhsif`); the Production project ref is absent.
+- Focused authenticated Preview suites: Applications and Contacts `2/2 PASS` in 1.1 minutes.
+- Preview accessibility/responsive evidence: eleven axe contexts, zero blocking violations, and zero mobile horizontal overflow.
+
 The disposable local Supabase environment was stopped without a backup after successful testing.
 
 ## Limits and deferred follow-ups
@@ -68,9 +80,9 @@ The disposable local Supabase environment was stopped without a backup after suc
 
 ## Promotion state
 
-Feature CI: PENDING
+Application/evidence SHA CI: `37033042789` PASS at `cc240dc4948ac9e34a61ccc516686cf2c5e830f1`
 
-Preview: PENDING
+Preview: `dpl_H6nWmXctR1oGB7mXpEah4jYK9nRt` READY at the same SHA
 
 Development merge: NOT AUTHORIZED
 
@@ -80,4 +92,4 @@ Production/jobquest-prod: UNCHANGED
 
 PL-1D: UNCHANGED / DEFERRED
 
-Next: push only this feature branch, certify its exact SHA in CI and on the matching jobquest-dev Preview, update the evidence here, then stop for operator approval before any development merge.
+Next: certify the docs-only closeout tip, then stop for explicit operator approval before any development merge. No main or Production action is authorized.

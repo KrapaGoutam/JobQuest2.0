@@ -1,6 +1,6 @@
-## >>> PL-4A IMPLEMENTATION + LOCAL CERTIFICATION COMPLETE / REMOTE CERTIFICATION PENDING (2026-10-02) <<<
+## >>> PL-4A FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FEATURE CERTIFICATION PENDING | PL-1D: DEFERRED / UNCHANGED.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / UNCHANGED.
 
 CURRENT BRANCH: `feature/pl4a-duplicate-bulk-recruiter` | DEVELOPMENT BASE: `11116ca2a577c70e18b4bcfac796dfa6260bda15` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
 
@@ -12,9 +12,9 @@ LOCAL EVIDENCE: lint PASS; typecheck PASS; unit `174/174`; integration `187/187`
 
 NON-CHANGES: no migration, schema, RLS, auth, dependency, workflow, external API contract, main, Production, jobquest-prod, or PL-1D change. The operator's pre-existing `.gitignore` edit remains unstaged and untouched.
 
-REMOTE STATE: feature push, exact-SHA CI, and matching jobquest-dev Preview are pending. Development integration is not authorized.
+REMOTE EVIDENCE: exact feature CI `37033042789` PASS for application/evidence SHA `cc240dc4948ac9e34a61ccc516686cf2c5e830f1`. Matching Preview `dpl_H6nWmXctR1oGB7mXpEah4jYK9nRt` at `https://jobquest2-dx21j0l5o-one-piece-5779.vercel.app` is READY, healthy, and bound only to jobquest-dev. Focused authenticated Applications and Contacts Preview suites passed with eleven axe contexts, zero blocking violations, and zero mobile overflow.
 
-NEXT EXACT ACTION: commit this PL-4A report/state, push only the feature branch, certify exact branch CI and matching jobquest-dev Preview, persist final evidence, then stop for explicit operator approval before any development merge.
+NEXT EXACT ACTION: certify the docs-only closeout tip, then stop for explicit operator approval before any development merge. Do not touch main, Production, jobquest-prod, or PL-1D.
 
 Report: `migration-upgrade/post-launch/PL4A_DUPLICATE_BULK_RECRUITER_REPORT.md`.
 

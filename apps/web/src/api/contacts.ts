@@ -25,6 +25,56 @@ export interface FetchContactsResult {
 
 export const CONTACTS_PAGE_SIZE = 50;
 
+export interface ContactFacetCounts {
+  all: number;
+  followUpDue: number;
+  recruiters: number;
+  hiringManagers: number;
+  referrals: number;
+  interviewers: number;
+  networking: number;
+}
+
+async function countContacts(workspaceId: string, filters: ContactFilters): Promise<number> {
+  let query = supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId);
+  if (filters.archiveState === 'archived') query = query.not('archived_at', 'is', null);
+  else if (filters.archiveState !== 'all') query = query.is('archived_at', null);
+  if (filters.relationshipType && filters.relationshipType !== 'ALL') query = query.eq('relationship_type', filters.relationshipType);
+  if (filters.company?.trim()) {
+    const literal = filters.company.trim().slice(0, 100).replace(/[\\%_]/g, (character) => `\\${character}`);
+    query = query.ilike('company_name', `%${literal}%`);
+  }
+  if (filters.followUpDueOnly) {
+    const today = new Date().toISOString().split('T')[0];
+    query = query.not('next_follow_up_date', 'is', null).lte('next_follow_up_date', today);
+  }
+  if (filters.ownerId) query = query.eq('user_id', filters.ownerId);
+  const searchFilter = filters.search ? buildSearchFilter(filters.search, CONTACT_SEARCH_COLUMNS) : null;
+  if (searchFilter) query = query.or(searchFilter);
+  const { count, error } = await query;
+  if (error) throw new Error(`fetchContactFacetCounts failed: ${error.message}`);
+  return count ?? 0;
+}
+
+/** Exact server-side tab counts under the current non-tab filters. */
+export async function fetchContactFacetCounts(
+  workspaceId: string,
+  filters: Omit<ContactFilters, 'relationshipType' | 'followUpDueOnly'> = {},
+): Promise<ContactFacetCounts> {
+  const count = (extra: Pick<ContactFilters, 'relationshipType' | 'followUpDueOnly'> = {}) => countContacts(workspaceId, { ...filters, ...extra });
+  const [all, followUpDue, recruiters, hiringManagers, referrals, interviewers, peers, general] = await Promise.all([
+    count(),
+    count({ followUpDueOnly: true }),
+    count({ relationshipType: 'RECRUITER' }),
+    count({ relationshipType: 'HIRING_MANAGER' }),
+    count({ relationshipType: 'REFERRAL' }),
+    count({ relationshipType: 'INTERVIEWER' }),
+    count({ relationshipType: 'PEER' }),
+    count({ relationshipType: 'CONTACT' }),
+  ]);
+  return { all, followUpDue, recruiters, hiringManagers, referrals, interviewers, networking: peers + general };
+}
+
 /**
  * Fetch contacts list with server-side filters, sorting, and pagination under RLS.
  */

@@ -14,6 +14,7 @@ import {
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { Select } from '../ui/Select';
+import { Input } from '../ui/Input';
 import { CreateContactModal } from '../contacts/CreateContactModal';
 import { useToast } from '../../context/ToastContext';
 
@@ -28,9 +29,11 @@ const ROLE_OPTIONS = [
 export function ApplicationContactsSection({
   application,
   onChanged,
+  onNavigateToContact,
 }: {
   application: Application;
   onChanged?: () => void;
+  onNavigateToContact?: (contactId: string) => void;
 }) {
   const { addToast } = useToast();
   const [links, setLinks] = useState<Awaited<ReturnType<typeof fetchApplicationContacts>>>([]);
@@ -42,6 +45,7 @@ export function ApplicationContactsSection({
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedContactId, setSelectedContactId] = useState('');
+  const [linkSearch, setLinkSearch] = useState('');
   const [roleInProcess, setRoleInProcess] = useState('RECRUITER');
   const [saving, setSaving] = useState(false);
   const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
@@ -72,10 +76,17 @@ export function ApplicationContactsSection({
   }, [application.workspace_id]);
 
   const linkedIds = useMemo(() => new Set(links.map((link) => link.contact_id)), [links]);
-  const choices = availableContacts.filter((contact) => !linkedIds.has(contact.id));
+  const choices = availableContacts.filter((contact) => {
+    if (linkedIds.has(contact.id)) return false;
+    const term = linkSearch.trim().toLowerCase();
+    return !term || [contact.full_name, contact.company_name, contact.job_title, contact.email]
+      .filter(Boolean)
+      .some((value) => value!.toLowerCase().includes(term));
+  });
 
   const openLink = async () => {
     setSelectedContactId('');
+    setLinkSearch('');
     setRoleInProcess('RECRUITER');
     setLinkOpen(true);
     try {
@@ -195,6 +206,9 @@ export function ApplicationContactsSection({
                   <Button size="sm" variant="ghost" aria-expanded={expanded} onClick={() => setExpandedContactId(expanded ? null : contact.id)}>
                     {expanded ? 'Hide details' : 'View details'}
                   </Button>
+                  {onNavigateToContact && (
+                    <Button size="sm" variant="ghost" onClick={() => onNavigateToContact(contact.id)}>Open contact</Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => void openContactModal(contact)}>Edit</Button>
                 </div>
                 {expanded && (
@@ -228,6 +242,15 @@ export function ApplicationContactsSection({
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <label className="label" htmlFor="application-contact-select">Contact</label>
+          <Input
+            aria-label="Search saved contacts"
+            placeholder="Search by name, company, title, or email"
+            value={linkSearch}
+            onChange={(event) => {
+              setLinkSearch(event.target.value);
+              setSelectedContactId('');
+            }}
+          />
           <Select id="application-contact-select" value={selectedContactId} onChange={(event) => setSelectedContactId(event.target.value)}>
             <option value="">Select a contact...</option>
             {choices.map((contact) => <option key={contact.id} value={contact.id}>{contact.full_name}{contact.company_name ? ` — ${contact.company_name}` : ''}</option>)}

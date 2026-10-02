@@ -1,5 +1,5 @@
 import { completeContactFollowUp, setContactFollowUp } from '../api/tasks';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useToast } from '../context/ToastContext';
@@ -15,6 +15,8 @@ import {
   unlinkApplicationContact,
   fetchCompanies,
   fetchWorkspaceMembers,
+  fetchContactFacetCounts,
+  type ContactFacetCounts,
 } from '../api/contacts';
 import { fetchApplications } from '../api/applications';
 import type {
@@ -31,9 +33,14 @@ import { ContactDetailDrawer } from '../components/contacts/ContactDetailDrawer'
 import { CreateContactModal } from '../components/contacts/CreateContactModal';
 import { LogInteractionModal } from '../components/contacts/LogInteractionModal';
 import { LinkApplicationModal } from '../components/contacts/LinkApplicationModal';
+import { Button } from '../components/ui/Button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 export interface ContactsViewProps {
   activeWorkspaceId?: string | null;
   isManager?: boolean;
+  initialContactId?: string | null;
+  onDeepLinkClose?: () => void;
+  onDeepLinkMissing?: () => void;
 }
 
 /** One CSV cell: quoted, and neutralised against spreadsheet formula injection. */
@@ -46,6 +53,9 @@ function csvCell(value: string | null | undefined): string {
 export function ContactsView({
   activeWorkspaceId: propWorkspaceId,
   isManager: propIsManager,
+  initialContactId = null,
+  onDeepLinkClose,
+  onDeepLinkMissing,
 }: ContactsViewProps = {}) {
   const ctx = useWorkspace();
   const [resolvedWsId, setResolvedWsId] = useState<string | null>(propWorkspaceId ?? ctx.activeWorkspaceId ?? null);
@@ -88,8 +98,9 @@ export function ContactsView({
     field: 'next_follow_up_date',
     direction: 'asc',
   });
-  const [page] = useState(0);
+  const [page, setPage] = useState(0);
   const pageSize = 50;
+  const [counts, setCounts] = useState<ContactFacetCounts>({ all: 0, followUpDue: 0, recruiters: 0, hiringManagers: 0, referrals: 0, interviewers: 0, networking: 0 });
 
   // Reference data
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -106,6 +117,7 @@ export function ContactsView({
   const [contactForLog, setContactForLog] = useState<Contact | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [contactForLink, setContactForLink] = useState<Contact | null>(null);
+  const handledDeepLink = useRef<string | null>(null);
 
   const showToast = (msg: string, variant: 'success' | 'danger' = 'success') => {
     addToast({ title: msg, type: variant });
@@ -147,24 +159,25 @@ export function ContactsView({
           ? (selectedTab as ContactRelationshipType)
           : undefined;
 
-      const result = await fetchContacts(
-        activeWorkspaceId,
-        {
+      const baseFilters = {
+        company: companyFilter || undefined,
+        archiveState,
+        ownerId: ownerFilter,
+        search: debouncedSearch || undefined,
+      } as const;
+      const [result, facetCounts] = await Promise.all([
+        fetchContacts(activeWorkspaceId, {
           relationshipType: relType,
-          company: companyFilter || undefined,
           followUpDueOnly: isDueOnly,
-          archiveState,
-          ownerId: ownerFilter,
-          search: debouncedSearch || undefined,
-        },
-        sort,
-        page,
-        pageSize
-      );
+          ...baseFilters,
+        }, sort, page, pageSize),
+        fetchContactFacetCounts(activeWorkspaceId, baseFilters),
+      ]);
 
       if (seq !== requestSeq.current) return;
       setContacts(result.contacts);
       setTotalCount(result.totalCount);
+      setCounts(facetCounts);
     } catch (err: unknown) {
       if (seq !== requestSeq.current) return;
       const msg = err instanceof Error ? err.message : 'Failed to load contacts.';
@@ -173,6 +186,10 @@ export function ContactsView({
       if (seq === requestSeq.current) setIsLoading(false);
     }
   }, [activeWorkspaceId, selectedTab, companyFilter, ownerFilter, archiveState, debouncedSearch, sort, page, pageSize]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [activeWorkspaceId, selectedTab, companyFilter, ownerFilter, archiveState, debouncedSearch, sort]);
 
   // Initial load on workspace change
   useEffect(() => {
@@ -192,37 +209,19 @@ export function ContactsView({
     }
   };
 
-  // Category counts computed from contacts
-  const counts = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0] ?? '';
-    const all = totalCount;
-    let followUpDue = 0;
-    let recruiters = 0;
-    let hiringManagers = 0;
-    let referrals = 0;
-    let interviewers = 0;
-    let networking = 0;
-
-    // Approximate counts from loaded contacts for tabs
-    for (const c of contacts) {
-      if (c.next_follow_up_date && c.next_follow_up_date <= today) followUpDue++;
-      if (c.relationship_type === 'RECRUITER') recruiters++;
-      else if (c.relationship_type === 'HIRING_MANAGER') hiringManagers++;
-      else if (c.relationship_type === 'REFERRAL') referrals++;
-      else if (c.relationship_type === 'INTERVIEWER') interviewers++;
-      else networking++;
-    }
-
-    return {
-      all,
-      followUpDue,
-      recruiters,
-      hiringManagers,
-      referrals,
-      interviewers,
-      networking,
-    };
-  }, [contacts, totalCount]);
+  useEffect(() => {
+    if (!initialContactId || !activeWorkspaceId || handledDeepLink.current === initialContactId) return;
+    handledDeepLink.current = initialContactId;
+    fetchContactDetail(initialContactId)
+      .then((contact) => {
+        if (contact.workspace_id !== activeWorkspaceId) throw new Error('Contact is not in this workspace.');
+        setSelectedContact(contact);
+      })
+      .catch(() => {
+        addToast({ title: 'Contact unavailable', description: 'This contact was removed or is not available in your workspace.', type: 'warning' });
+        onDeepLinkMissing?.();
+      });
+  }, [initialContactId, activeWorkspaceId, addToast, onDeepLinkMissing]);
 
   // Handlers
   const handleSelectContact = async (contact: Contact) => {
@@ -476,12 +475,26 @@ export function ContactsView({
         page={page}
         pageSize={pageSize}
       />
+      {totalCount > pageSize && (
+        <nav aria-label="Contacts pages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+          <Button size="sm" variant="outline" disabled={page === 0 || isLoading} onClick={() => setPage((current) => Math.max(0, current - 1))} aria-label="Previous contacts page">
+            <ChevronLeft size={14} aria-hidden="true" />
+          </Button>
+          <span className="small muted" aria-live="polite">Page {page + 1} of {Math.ceil(totalCount / pageSize)}</span>
+          <Button size="sm" variant="outline" disabled={(page + 1) * pageSize >= totalCount || isLoading} onClick={() => setPage((current) => current + 1)} aria-label="Next contacts page">
+            <ChevronRight size={14} aria-hidden="true" />
+          </Button>
+        </nav>
+      )}
 
       {/* Contact Detail Drawer */}
       <ContactDetailDrawer
         isOpen={Boolean(selectedContact)}
         contact={selectedContact}
-        onClose={() => setSelectedContact(null)}
+        onClose={() => {
+          setSelectedContact(null);
+          if (initialContactId) onDeepLinkClose?.();
+        }}
         onEdit={(c) => {
           setContactToEdit(c);
           setIsCreateModalOpen(true);

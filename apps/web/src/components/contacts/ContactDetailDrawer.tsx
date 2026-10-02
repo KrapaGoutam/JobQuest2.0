@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   X,
   Globe,
@@ -22,6 +22,7 @@ import {
 } from '../../types/contacts';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
+import { useOverlay } from '../ui/useOverlay';
 
 export interface ContactDetailDrawerProps {
   isOpen: boolean;
@@ -55,6 +56,8 @@ export function ContactDetailDrawer({
   const [quickType, setQuickType] = useState<ContactInteractionType>('EMAIL');
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  useOverlay(isOpen, onClose, drawerRef);
 
   if (!isOpen || !contact) return null;
 
@@ -101,10 +104,12 @@ export function ContactDetailDrawer({
     <>
       <div className="scrim" onClick={onClose} aria-hidden="true" />
       <div
+        ref={drawerRef}
         className="drawer contact-detail-drawer"
         role="dialog"
         aria-modal="true"
         aria-label={`Contact details for ${contact.full_name}`}
+        tabIndex={-1}
         style={{
           width: '740px',
           maxWidth: '100vw',

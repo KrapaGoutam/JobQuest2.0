@@ -109,24 +109,29 @@ export function CreateApplicationModal({
 
   // Debounced duplicate detection
   const checkTimerRef = useRef<number | undefined>(undefined);
+  const duplicateRequestRef = useRef(0);
 
   useEffect(() => {
+    const requestId = ++duplicateRequestRef.current;
+    setOverrideDuplicate(false);
     if (!isOpen) {
       setDuplicateResult(null);
       setDuplicateError(null);
-      setOverrideDuplicate(false);
+      setIsCheckingDuplicate(false);
       return;
     }
 
     if (!companyName.trim() && !jobUrl.trim() && !externalJobId.trim()) {
       setDuplicateResult(null);
+      setDuplicateError(null);
+      setIsCheckingDuplicate(false);
       return;
     }
 
     window.clearTimeout(checkTimerRef.current);
+    setIsCheckingDuplicate(true);
     checkTimerRef.current = window.setTimeout(async () => {
       try {
-        setIsCheckingDuplicate(true);
         setDuplicateError(null);
         const res = await checkApplicationDuplicate(
           workspaceId,
@@ -135,11 +140,13 @@ export function CreateApplicationModal({
           jobUrl.trim() || null,
           externalJobId.trim() || null
         );
+        if (requestId !== duplicateRequestRef.current) return;
         setDuplicateResult(res);
       } catch (err: unknown) {
+        if (requestId !== duplicateRequestRef.current) return;
         setDuplicateError((err as Error).message || 'Check failed');
       } finally {
-        setIsCheckingDuplicate(false);
+        if (requestId === duplicateRequestRef.current) setIsCheckingDuplicate(false);
       }
     }, 400);
 
@@ -151,6 +158,11 @@ export function CreateApplicationModal({
     const problem = validateApplicationFields({ companyName, roleTitle, jobUrl, salaryMin, salaryMax, salaryCurrency });
     if (problem) {
       setValidationError(problem);
+      return;
+    }
+
+    if (isCheckingDuplicate) {
+      setValidationError('Wait for the duplicate check to finish before creating this application.');
       return;
     }
 
@@ -265,7 +277,7 @@ export function CreateApplicationModal({
           <Button variant="outline" type="button" onClick={requestClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit" form="create-application-form" disabled={submitting}>
+          <Button variant="primary" type="submit" form="create-application-form" disabled={submitting || isCheckingDuplicate}>
             {submitting ? 'Creating...' : 'Create Application'}
           </Button>
         </>
@@ -361,7 +373,10 @@ export function CreateApplicationModal({
           <DuplicateWarningCard
             checkResult={duplicateResult}
             checkError={duplicateError}
-            onViewExisting={onViewExisting}
+            onViewExisting={onViewExisting ? (applicationId) => {
+              handleReset();
+              onViewExisting(applicationId);
+            } : undefined}
             onOverride={() => setOverrideDuplicate(true)}
             hasOverridden={overrideDuplicate}
           />

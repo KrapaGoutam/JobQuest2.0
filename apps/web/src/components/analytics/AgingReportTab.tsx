@@ -1,255 +1,265 @@
-import React, { useState } from 'react';
-import type { AgingApplication } from '../../types/analytics';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { supabase } from '../../supabase';
-import { useToast } from '../../context/ToastContext';
-import {
-  Circle,
-  Hourglass,
-  BellRing,
-  Moon,
-  AlarmClockOff,
-} from 'lucide-react';
+import { useMemo, useState } from "react";
+import { AlarmClockOff, BellRing, Circle, Hourglass, Moon } from "lucide-react";
+import type { AgingApplication, AgingBand } from "../../types/analytics";
+import { supabase } from "../../supabase";
+import { useToast } from "../../context/ToastContext";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
+import { ScopeTag } from "./AnalyticsCharts";
 
 interface AgingReportTabProps {
   applications: AgingApplication[];
   onRefresh: () => void;
 }
+type Filter = "ALL" | AgingBand;
+const BANDS: Array<{
+  id: AgingBand;
+  label: string;
+  range: string;
+  icon: typeof Circle;
+}> = [
+  { id: "NEW", label: "New", range: "≤3 days", icon: Circle },
+  { id: "WAITING", label: "Waiting", range: "4–7 days", icon: Hourglass },
+  {
+    id: "FOLLOW_UP_RECOMMENDED",
+    label: "Follow up",
+    range: "8–14 days",
+    icon: BellRing,
+  },
+  { id: "STALE", label: "Stale", range: "15–30 days", icon: Moon },
+  {
+    id: "LONG_WAITING",
+    label: "Long waiting",
+    range: "31+ days",
+    icon: AlarmClockOff,
+  },
+];
 
-export function AgingReportTab({ applications, onRefresh }: AgingReportTabProps) {
+export function AgingReportTab({
+  applications,
+  onRefresh,
+}: AgingReportTabProps) {
   const { addToast } = useToast();
+  const [filter, setFilter] = useState<Filter>("ALL");
   const [actingId, setActingId] = useState<string | null>(null);
-
-  // Categorize counts
-  const newCount = applications.filter((a) => a.aging_band === 'NEW').length;
-  const waitingCount = applications.filter((a) => a.aging_band === 'WAITING').length;
-  const followUpCount = applications.filter((a) => a.aging_band === 'FOLLOW_UP_RECOMMENDED').length;
-  const staleCount = applications.filter((a) => a.aging_band === 'STALE').length;
-  const longWaitingCount = applications.filter((a) => a.aging_band === 'LONG_WAITING').length;
-
-  const handleKeepActive = async (id: string) => {
+  const counts = useMemo(
+    () =>
+      Object.fromEntries(
+        BANDS.map(({ id }) => [
+          id,
+          applications.filter((app) => app.aging_band === id).length,
+        ]),
+      ) as Record<AgingBand, number>,
+    [applications],
+  );
+  const visible =
+    filter === "ALL"
+      ? applications
+      : applications.filter((app) => app.aging_band === filter);
+  const act = async (
+    app: AgingApplication,
+    action: "keep" | "ghost" | "archive",
+  ) => {
+    setActingId(app.id);
     try {
-      setActingId(id);
-      const { error } = await supabase.rpc('rpc_keep_application_active', {
-        p_application_id: id,
+      const result =
+        action === "keep"
+          ? await supabase.rpc("rpc_keep_application_active", {
+              p_application_id: app.id,
+            })
+          : action === "ghost"
+            ? await supabase.rpc("rpc_set_application_outcome", {
+                p_application_id: app.id,
+                p_outcome: "GHOSTED",
+                p_closure_notes: "Marked ghosted from Aging Report",
+              })
+            : await supabase.rpc("rpc_archive_application", {
+                p_application_id: app.id,
+              });
+      if (result.error) throw result.error;
+      addToast({
+        type: "success",
+        title:
+          action === "keep"
+            ? "Application marked as active"
+            : action === "ghost"
+              ? "Application marked as Ghosted"
+              : "Application archived",
       });
-      if (error) throw error;
-      addToast({ type: 'success', title: 'Application marked as active' });
       onRefresh();
-    } catch (err: unknown) {
-      addToast({ type: 'danger', title: (err as Error).message || 'Failed to keep active' });
+    } catch (cause) {
+      addToast({
+        type: "danger",
+        title: (cause as Error).message || "Failed to update application",
+      });
     } finally {
       setActingId(null);
-    }
-  };
-
-  const handleMarkGhosted = async (id: string) => {
-    try {
-      setActingId(id);
-      const { error } = await supabase.rpc('rpc_set_application_outcome', {
-        p_application_id: id,
-        p_outcome: 'GHOSTED',
-        p_closure_notes: 'Marked ghosted from Aging Report',
-      });
-      if (error) throw error;
-      addToast({ type: 'success', title: 'Application marked as Ghosted' });
-      onRefresh();
-    } catch (err: unknown) {
-      addToast({ type: 'danger', title: (err as Error).message || 'Failed to mark ghosted' });
-    } finally {
-      setActingId(null);
-    }
-  };
-
-  const handleArchive = async (id: string) => {
-    try {
-      setActingId(id);
-      const { error } = await supabase.rpc('rpc_archive_application', {
-        p_application_id: id,
-      });
-      if (error) throw error;
-      addToast({ type: 'success', title: 'Application archived' });
-      onRefresh();
-    } catch (err: unknown) {
-      addToast({ type: 'danger', title: (err as Error).message || 'Failed to archive' });
-    } finally {
-      setActingId(null);
-    }
-  };
-
-  const getAgingBadge = (band: string, days: number) => {
-    switch (band) {
-      case 'NEW':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-            <Circle size={10} className="text-muted-foreground" />
-            New · {days}d
-          </span>
-        );
-      case 'WAITING':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-            <Hourglass size={12} className="text-muted-foreground" />
-            Waiting · {days}d
-          </span>
-        );
-      case 'FOLLOW_UP_RECOMMENDED':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-amber-500 font-medium">
-            <BellRing size={12} className="text-amber-500" />
-            Follow up · {days}d
-          </span>
-        );
-      case 'STALE':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-rose-500 font-semibold">
-            <Moon size={12} className="text-rose-500" />
-            Stale · {days}d
-          </span>
-        );
-      case 'LONG_WAITING':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 text-xs text-rose-600 font-bold">
-            <AlarmClockOff size={12} className="text-rose-600" />
-            Long Waiting · {days}d
-          </span>
-        );
     }
   };
 
   return (
-    <div className="space-y-5">
-      {/* 5 Aging Band Header Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 bg-surface border border-border rounded-xl p-4 shadow-sm">
-        <div className="p-2 border-r border-border">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Circle size={12} />
-            New
+    <div className="analytics-stack aging-view">
+      <section
+        className="aging-distribution"
+        aria-labelledby="aging-distribution-title"
+      >
+        <div className="analytics-card-head">
+          <div>
+            <h2 id="aging-distribution-title">Open application aging</h2>
+            <p>Current state · unaffected by the date range above</p>
           </div>
-          <div className="text-2xl font-bold text-foreground mt-1">{newCount}</div>
-          <div className="text-xs text-muted-foreground">≤3 days</div>
+          <ScopeTag tone="current">Current</ScopeTag>
         </div>
-
-        <div className="p-2 border-r border-border">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Hourglass size={12} />
-            Waiting
-          </div>
-          <div className="text-2xl font-bold text-foreground mt-1">{waitingCount}</div>
-          <div className="text-xs text-muted-foreground">4–7 days</div>
+        <div className="aging-band-grid">
+          {BANDS.map(({ id, label, range, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`aging-band aging-band-${id.toLowerCase()} ${filter === id ? "selected" : ""}`}
+              onClick={() => setFilter(filter === id ? "ALL" : id)}
+              aria-pressed={filter === id}
+            >
+              <Icon size={14} aria-hidden="true" />
+              <span>
+                {label}
+                <small>{range}</small>
+              </span>
+              <strong>{counts[id]}</strong>
+            </button>
+          ))}
         </div>
-
-        <div className="p-2 border-r border-border">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-500">
-            <BellRing size={12} />
-            Follow-Up Recommended
-          </div>
-          <div className="text-2xl font-bold text-foreground mt-1">{followUpCount}</div>
-          <div className="text-xs text-muted-foreground">8–14 days</div>
+        <div
+          className="aging-bar"
+          aria-label={`${applications.length} open applications by aging band`}
+        >
+          {BANDS.map(({ id }) =>
+            applications.length ? (
+              <span
+                key={id}
+                className={`aging-segment aging-segment-${id.toLowerCase()}`}
+                style={{
+                  width: `${(counts[id] / applications.length) * 100}%`,
+                }}
+                title={`${id}: ${counts[id]}`}
+              />
+            ) : null,
+          )}
         </div>
-
-        <div className="p-2 border-r border-border">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-500">
-            <Moon size={12} />
-            Stale
-          </div>
-          <div className="text-2xl font-bold text-foreground mt-1">{staleCount}</div>
-          <div className="text-xs text-muted-foreground">15–30 days</div>
-        </div>
-
-        <div className="p-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-600">
-            <AlarmClockOff size={12} />
-            Long Waiting
-          </div>
-          <div className="text-2xl font-bold text-foreground mt-1">{longWaitingCount}</div>
-          <div className="text-xs text-muted-foreground">31+ days</div>
-        </div>
-      </div>
-
-      {/* Review Quiet Applications Banner */}
-      <div className="p-4 rounded-xl bg-muted/60 border border-border flex items-start gap-3 text-xs leading-relaxed text-foreground">
-        <AlarmClockOff size={16} className="text-muted-foreground shrink-0 mt-0.5" />
-        <div>
-          <strong className="font-semibold">{longWaitingCount} applications</strong> have had no
-          activity for <strong className="font-semibold">31+ days</strong> (Long Waiting band) and
-          appear in <strong className="font-semibold">Review quiet applications</strong> on the
-          dashboard (OQ-022 resolved). Review actions: Keep Active, Mark Ghosted, Archive.{' '}
-          <span className="text-muted-foreground">Zero automatic state changes.</span>
-        </div>
-      </div>
-
-      {/* Table of Open Applications & Aging Actions */}
-      <Card className="p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+        <div className="sr-only">
+          <table>
+            <caption>Application aging distribution</caption>
             <thead>
-              <tr className="border-b border-border bg-muted/40 text-muted-foreground font-medium">
-                <th className="py-3 px-4">Application</th>
-                <th className="py-3 px-3">Stage</th>
-                <th className="py-3 px-3">Aging</th>
-                <th className="py-3 px-3">Last Activity</th>
-                <th className="py-3 px-3">Next Action</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+              <tr>
+                <th>Band</th>
+                <th>Applications</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {applications.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                    No active applications found
-                  </td>
+            <tbody>
+              {BANDS.map(({ id, label }) => (
+                <tr key={id}>
+                  <th>{label}</th>
+                  <td>{counts[id]}</td>
                 </tr>
-              ) : (
-                applications.map((app) => (
-                  <tr key={app.id} className="hover:bg-muted/30">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-foreground">{app.company_name}</div>
-                      <div className="text-muted-foreground">{app.role_title}</div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <div
+        className="aging-filter-row"
+        role="group"
+        aria-label="Filter applications by aging"
+      >
+        <button
+          type="button"
+          aria-pressed={filter === "ALL"}
+          onClick={() => setFilter("ALL")}
+        >
+          All <span>{applications.length}</span>
+        </button>
+        {BANDS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={filter === id}
+            onClick={() => setFilter(id)}
+          >
+            {label} <span>{counts[id]}</span>
+          </button>
+        ))}
+      </div>
+      <Card className="analytics-card aging-table-card">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          aria-label="Open applications aging table"
+        >
+          <table className="analytics-table aging-table">
+            <thead>
+              <tr>
+                <th scope="col">Application</th>
+                <th scope="col">Stage</th>
+                <th scope="col">Aging</th>
+                <th scope="col">Last activity</th>
+                <th scope="col">Next action</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length ? (
+                visible.map((app) => (
+                  <tr key={app.id}>
+                    <th>
+                      <strong>{app.company_name}</strong>
+                      <small>{app.role_title}</small>
+                    </th>
+                    <td>
+                      <span className="stage-pill">{app.stage}</span>
                     </td>
-                    <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded bg-muted text-foreground font-medium text-[11px]">
-                        {app.stage}
+                    <td>
+                      <span
+                        className={`aging-status aging-status-${app.aging_band.toLowerCase()}`}
+                      >
+                        {
+                          BANDS.find((band) => band.id === app.aging_band)
+                            ?.label
+                        }{" "}
+                        · {app.days_inactive}d
                       </span>
                     </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      {getAgingBadge(app.aging_band, app.days_inactive)}
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">
-                      {new Date(app.last_activity_at).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground">
-                      {app.next_action_title ? (
-                        <div>
-                          <div className="font-medium text-foreground truncate max-w-[150px]">
-                            {app.next_action_title}
-                          </div>
-                          {app.next_action_due && (
-                            <div className="text-[11px] text-muted-foreground">
-                              {new Date(app.next_action_due).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground italic">None scheduled</span>
+                    <td>
+                      {new Date(app.last_activity_at).toLocaleDateString(
+                        undefined,
+                        { month: "short", day: "numeric" },
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5 justify-end">
+                    <td>
+                      {app.next_action_title ? (
+                        <span>
+                          {app.next_action_title}
+                          <small>
+                            {app.next_action_due
+                              ? new Date(
+                                  app.next_action_due,
+                                ).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : ""}
+                          </small>
+                        </span>
+                      ) : (
+                        <span className="muted">None scheduled</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="aging-actions">
                         <Button
                           variant="ghost"
                           size="sm"
                           disabled={actingId === app.id}
-                          onClick={() => handleKeepActive(app.id)}
-                          className="h-7 text-xs px-2"
+                          aria-label={`Keep ${app.company_name} active`}
+                          onClick={() => void act(app, "keep")}
                         >
                           Keep
                         </Button>
@@ -257,17 +267,17 @@ export function AgingReportTab({ applications, onRefresh }: AgingReportTabProps)
                           variant="ghost"
                           size="sm"
                           disabled={actingId === app.id}
-                          onClick={() => handleMarkGhosted(app.id)}
-                          className="h-7 text-xs px-2 text-amber-500 hover:text-amber-600"
+                          aria-label={`Mark ${app.company_name} ghosted`}
+                          onClick={() => void act(app, "ghost")}
                         >
-                          Mark Ghosted
+                          Ghosted
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           disabled={actingId === app.id}
-                          onClick={() => handleArchive(app.id)}
-                          className="h-7 text-xs px-2 text-rose-500 hover:text-rose-600"
+                          aria-label={`Archive ${app.company_name}`}
+                          onClick={() => void act(app, "archive")}
                         >
                           Archive
                         </Button>
@@ -275,6 +285,12 @@ export function AgingReportTab({ applications, onRefresh }: AgingReportTabProps)
                     </td>
                   </tr>
                 ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="empty-cell">
+                    No applications match this aging filter.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

@@ -1,16 +1,38 @@
-## >>> PL-2 APPLICATION PRODUCTIVITY — IMPLEMENTATION + PREVIEW PASS / FINAL EVIDENCE CI PENDING (2026-10-01) <<<
+## >>> PL-3 DIRECTION C FEATURE CERTIFIED — OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: IN PROGRESS | PL-1D: DEFERRED / TBD | HISTORICAL CLASSIFICATION: UNKNOWN.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FEATURE CERTIFIED / AWAITING OPERATOR APPROVAL | PL-1D: DEFERRED / TBD.
 
-CURRENT BRANCH: `feature/pl2-application-productivity` | BASE: `1086bcb41d1b0ab25959d182ec388a0f6da53042` | IMPLEMENTATION COMMIT: `526b0318` | PRE-EVIDENCE SHA / CI: `8bf4b1c38baae508388828b0d03f0c4ebf75bb04` / `36915890541 PASS` | FINAL EVIDENCE SHA / CI: `PENDING`.
+CURRENT BRANCH: `feature/pl3-dashboard-analytics-redesign` | IMPLEMENTATION BASE: `5dfce2086f04abd26efb1a3a36ebd73132bda986` | APPLICATION-CERTIFIED SHA: `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` | CI: `36972469514 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+DESIGN: Direction C — Job Search Cockpit. Handoff `FeatureUpgrade1/JobQuest-PL3-ClaudeCode-Handoff` validated as local reference input and remains excluded/untracked. Directions A/B and Analytics All Sections were not implemented.
+
+IMPLEMENTATION: canonical Dashboard hierarchy, Week-default Search Pulse, Today’s Work, Progress, Your Widgets, enhanced 30-widget customization, and four-tab Analytics redesign. Offers and Aging Applications are represented in new user defaults. All 30 widget IDs remain accounted for. No schema, RLS, auth, API contract, shell, main, or Production change.
+
+CERTIFICATION EVIDENCE: lint PASS; typecheck PASS; unit `171/171`; integration `187/187`; build PASS; tracked-secret scan `944` files / `0` findings; full browser E2E `22/22 PASS`. Original SHA `012fc37eddd10783b9b1df2d7edf80d50e979f0f` failed CI `36966023286` only because a screen-reader-only pace-chart table created 9px Linux Chromium overflow at 390px. The table is now contained by a clipped wrapper without removing table semantics. Exact application-fix CI `36972469514` passed for `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`.
+
+PREVIEW EVIDENCE: `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app` (`dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`) is READY for exact application SHA `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`. Health returned 200; the bundle targets only `jobquest-dev`; focused Dashboard and Analytics Preview suites passed with 30/30 widgets, zero mobile overflow, and zero axe violations.
+
+PROTECTION STATE: `.gitignore` and the unrelated PL-2 report update remain unstaged and untouched. `development` remains `5dfce2086f04abd26efb1a3a36ebd73132bda986`; `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production is unchanged.
+
+NEXT EXACT ACTION: stop for explicit operator approval before any PL-3 merge to `development`. Do not merge to development/main or touch Production automatically.
+
+Report: `migration-upgrade/post-launch/PL3_DASHBOARD_ANALYTICS_REPORT.md`.
+
+## >>> PL-2 APPLICATION PRODUCTIVITY — FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-01) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD | HISTORICAL CLASSIFICATION: UNKNOWN.
+
+CURRENT BRANCH: `development` | PL-2 BASE: `1086bcb41d1b0ab25959d182ec388a0f6da53042` | IMPLEMENTATION COMMIT: `526b0318` | CERTIFIED FEATURE SHA / CI: `298d112d4379dedf6930572015d6f7498feff4ea` / `36918359854 PASS` | DEVELOPMENT MERGE SHA / CI: `5dfce2086f04abd26efb1a3a36ebd73132bda986` / `36960378949 PASS`.
 
 PL-2 DISCOVERY: Date Added filter `MISSING`; sort direction `PARTIAL`; group by month `MISSING`; suggestion area `PARTIAL`; application contact UX `PARTIAL`. Canonical Date Added is `applications.created_at`. No migration is required.
 
-EVIDENCE: lint PASS; full typecheck PASS; unit `170/170`; integration `187/187`; build PASS; tracked-secret scan `941` files / `0` findings; two targeted local browser scenarios wrote PASS evidence with zero PL-2 axe findings and zero mobile overflow. Exact-SHA CI run `36915890541` passed for `8bf4b1c38baae508388828b0d03f0c4ebf75bb04`, including disposable-Supabase integration and browser/axe. Matching Preview `dpl_EcGew1upDBKvUUK9EGKfwfCCHDJz` at `https://jobquest2-3vo0855vi-one-piece-5779.vercel.app` is READY and targets only `jobquest-dev`; health 200 and synthetic invalid token 401. Authenticated Preview UI was not exercised because no authorized identity was available or created; local/CI disposable browser coverage is authoritative. The signed-out page's three structural axe findings and one 403 console response reproduce on unchanged development and are inherited baseline.
+EVIDENCE: lint PASS; full typecheck PASS; unit `170/170`; integration `187/187`; build PASS; tracked-secret scan `941` files / `0` findings; two targeted local browser scenarios wrote PASS evidence with zero PL-2 axe findings and zero mobile overflow. Final feature CI run `36918359854` passed for `298d112d4379dedf6930572015d6f7498feff4ea`. Matching Preview `dpl_3PcsXLanZhRMww5bTdfjXSTtux87` at `https://jobquest2-86tuv7yxd-one-piece-5779.vercel.app` is READY and targets only `jobquest-dev`. Exact development CI run `36960378949` passed for merge SHA `5dfce2086f04abd26efb1a3a36ebd73132bda986`, including classification, lint, typecheck, unit, build, both secret scans, disposable-Supabase integration, extension validation, browser E2E, and axe.
 
-PRODUCTION: UNCHANGED/FROZEN | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: UNCHANGED (`1086bcb41d1b0ab25959d182ec388a0f6da53042`) | AUTH SYSTEMS: UNCHANGED | DB SCHEMA: UNCHANGED.
+PRODUCTION: UNCHANGED/FROZEN | MAIN: UNCHANGED (`bfa82eb557c5e748ba5d7c91fe122fb8294d2313`) | DEVELOPMENT: PL-2 INTEGRATED AND CERTIFIED (`5dfce2086f04abd26efb1a3a36ebd73132bda986`) | AUTH SYSTEMS: UNCHANGED | DB SCHEMA: UNCHANGED.
 
-NEXT EXACT ACTION: commit this evidence-only documentation update, push only `feature/pl2-application-productivity`, require exact final-SHA CI PASS, then STOP for explicit operator approval before any development merge. Preserve `.gitignore` unstaged.
+POST-CI WORKING TREE: this closeout metadata is intentionally unstaged so no new untested development SHA is created; the pre-existing `.gitignore` operator change remains unstaged and untouched.
+
+NEXT EXACT ACTION: PL-3 — Dashboard + Analytics redesign, in a separate controlled task. Do not start automatically, merge main, touch Production, implement PL-1D, execute M15-F, or retire legacy systems.
 
 Report: `migration-upgrade/post-launch/PL2_APPLICATION_PRODUCTIVITY_REPORT.md`.
 

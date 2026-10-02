@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import type { AnalyticsOverview } from '../../types/analytics';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { EditGoalModal } from './EditGoalModal';
-import { Target, CheckCircle2, Check } from 'lucide-react';
+import { useState } from "react";
+import { Check, Target } from "lucide-react";
+import type { AnalyticsOverview } from "../../types/analytics";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
+import {
+  AttainmentStrip,
+  GoalRing,
+  ProgressTrack,
+  ScopeTag,
+} from "./AnalyticsCharts";
+import { EditGoalModal } from "./EditGoalModal";
 
 interface GoalsTabProps {
   overview: AnalyticsOverview;
@@ -13,170 +19,140 @@ interface GoalsTabProps {
   isManagerAggregate?: boolean;
 }
 
-export function GoalsTab({ overview, workspaceId, onRefresh, targetUserId, isManagerAggregate }: GoalsTabProps) {
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const activeGoal = overview.active_goal;
-  const pacing = overview.weekly_pacing || [];
-
-  // Current week is the last item in weekly pacing
-  const currentWeek = pacing[pacing.length - 1] || {
-    week_label: 'This week',
+export function GoalsTab({
+  overview,
+  workspaceId,
+  onRefresh,
+  targetUserId,
+  isManagerAggregate,
+}: GoalsTabProps) {
+  const [editing, setEditing] = useState(false);
+  const pacing = [...(overview.weekly_pacing || [])].sort((a, b) =>
+    a.week_start.localeCompare(b.week_start),
+  );
+  const current = pacing.at(-1) ?? {
+    week_start: "",
+    week_label: "This week",
     applied: 0,
     responses: 0,
     interviews: 0,
     outreach: 0,
-    target: activeGoal?.target_applications ?? 15,
+    target: 15,
   };
+  const goal = overview.active_goal;
+  const applicationsTarget = goal?.target_applications ?? current.target ?? 15;
+  const outreachTarget = goal?.target_outreach ?? 5;
+  const met = pacing
+    .slice(-12)
+    .filter((week) => week.applied >= week.target).length;
 
-  const appTarget = activeGoal?.target_applications ?? 15;
-  const outreachTarget = activeGoal?.target_outreach ?? 5;
-  const appPct = Math.min(100, Math.round((currentWeek.applied / Math.max(1, appTarget)) * 100));
-  const isAppMet = currentWeek.applied >= appTarget;
-
-  if (isManagerAggregate) {
+  if (isManagerAggregate)
     return (
-      <Card className="p-6">
-        <h2 className="text-base font-semibold text-foreground">Workspace goal pacing</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The Overview chart uses the sum of each member&apos;s effective weekly target.
-          Select a workspace member above to inspect or edit that member&apos;s goal history.
-        </p>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Action Header */}
-      <div className="flex items-center justify-between">
+      <Card className="analytics-card manager-goal-message">
+        <Target aria-hidden="true" />
         <div>
-          <h2 className="text-base font-semibold text-foreground">Weekly Activity Targets</h2>
-          <p className="text-xs text-muted-foreground">
-            Goals · week of {currentWeek.week_label} (profile week start)
+          <h2>Workspace goal pacing</h2>
+          <p>
+            The Overview pace chart uses the sum of each member’s effective
+            weekly target. Select a member above to inspect or edit an
+            individual goal.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)} className="gap-2" disabled={isManagerAggregate}>
-          <Target size={14} />
+      </Card>
+    );
+
+  return (
+    <div className="analytics-stack goals-view">
+      <div className="goals-heading">
+        <div>
+          <h2>Weekly activity targets</h2>
+          <p>
+            Week of {current.week_label} · actuals are counted automatically
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setEditing(true)}
+          leftIcon={<Target size={14} />}
+        >
           Edit targets
         </Button>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-        {/* Card: This Week */}
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-base font-semibold text-foreground">This week</span>
-            <span className="text-xs text-muted-foreground">{currentWeek.week_label}</span>
-          </div>
-
-          <div className="space-y-5">
-            {/* Applications Progress */}
+      <section className="goals-grid">
+        <Card className="analytics-card goal-current-card">
+          <header className="analytics-card-head">
             <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <span className="font-semibold text-foreground">Applications Submitted</span>
-                <span className="flex items-center gap-1.5">
-                  <strong className="text-foreground">{currentWeek.applied}</strong> / {appTarget}
-                  {isAppMet && <CheckCircle2 size={14} className="text-emerald-500" />}
+              <h2>This week</h2>
+              <p>
+                {goal?.id ? "Active weekly goal" : "Using the default target"}
+              </p>
+            </div>
+            <ScopeTag tone="fixed">Weekly</ScopeTag>
+          </header>
+          <div className="goal-current-content">
+            <GoalRing value={current.applied} target={applicationsTarget} />
+            <div className="goal-progress-list">
+              <div>
+                <span>
+                  <strong>Applications</strong>
+                  <b>
+                    {current.applied} / {applicationsTarget}
+                  </b>
                 </span>
+                <ProgressTrack
+                  value={current.applied}
+                  max={applicationsTarget}
+                  tone={
+                    current.applied >= applicationsTarget
+                      ? "positive"
+                      : "primary"
+                  }
+                />
               </div>
-              <div className="h-2.5 rounded bg-muted overflow-hidden">
-                <div
-                  className={`h-full ${isAppMet ? 'bg-emerald-500' : 'bg-primary'} rounded transition-all`}
-                  style={{ width: `${appPct}%` }}
+              <div>
+                <span>
+                  <strong>Outreach &amp; follow-ups</strong>
+                  <b>
+                    {current.outreach} / {outreachTarget}
+                  </b>
+                </span>
+                <ProgressTrack
+                  value={current.outreach}
+                  max={outreachTarget}
+                  tone={
+                    current.outreach >= outreachTarget ? "positive" : "primary"
+                  }
                 />
               </div>
             </div>
-
-            {/* Outreach Progress */}
+          </div>
+        </Card>
+        <Card className="analytics-card goal-history-card">
+          <header className="analytics-card-head">
             <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <span className="font-semibold text-foreground">Outreach &amp; Follow-ups</span>
-                <span className="flex items-center gap-1.5">
-                  <strong className="text-foreground">{currentWeek.outreach}</strong> / {outreachTarget}
-                  {currentWeek.outreach >= outreachTarget && (
-                    <CheckCircle2 size={14} className="text-emerald-500" />
-                  )}
-                </span>
-              </div>
-              <div className="h-2.5 rounded bg-muted overflow-hidden">
-                <div
-                  className={`h-full ${
-                    currentWeek.outreach >= outreachTarget ? 'bg-emerald-500' : 'bg-primary'
-                  } rounded transition-all`}
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      Math.round((currentWeek.outreach / Math.max(1, outreachTarget)) * 100)
-                    )}%`,
-                  }}
-                />
-              </div>
+              <h2>
+                Target met in {met} of {Math.min(12, pacing.length)} weeks
+              </h2>
+              <p>Latest 12 weeks · each period keeps its effective target</p>
             </div>
-
-            <div className="pt-3 border-t border-border text-xs text-muted-foreground leading-relaxed">
-              Actuals are counted automatically from your activity events; they are never typed in.
-              Weekly periods use your workspace/profile week start.
-            </div>
+            <ScopeTag tone="fixed">12 weeks</ScopeTag>
+          </header>
+          <AttainmentStrip points={pacing} />
+          <div className="attainment-legend">
+            <span>
+              <Check size={13} /> Target met
+            </span>
+            <span>— Below target</span>
           </div>
         </Card>
-
-        {/* Card: History (Last weeks pacing) */}
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-base font-semibold text-foreground">Recent History</span>
-            <span className="text-xs text-muted-foreground">Past weeks · target met</span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground font-medium">
-                  <th className="py-2.5 pr-2">Week</th>
-                  <th className="py-2.5 px-2 text-right">Apps</th>
-                  <th className="py-2.5 px-2 text-right">Outreach</th>
-                  <th className="py-2.5 pl-2 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {pacing.slice(-6).reverse().map((w) => {
-                  const met = w.applied >= (w.target || appTarget);
-                  return (
-                    <tr key={w.week_label} className="hover:bg-muted/40">
-                      <td className="py-2.5 pr-2 font-medium text-foreground">{w.week_label}</td>
-                      <td className="py-2.5 px-2 text-right">
-                        <strong className="text-foreground">{w.applied}</strong> / {w.target || appTarget}
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-muted-foreground">
-                        {w.outreach}
-                      </td>
-                      <td className="py-2.5 pl-2 text-right">
-                        {met ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-500">
-                            Met <Check size={12} />
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-border text-xs text-muted-foreground leading-relaxed">
-            Each week uses the goal effective for that period. Later target edits cannot delete
-            earlier effective periods.
-          </div>
-        </Card>
-      </div>
-
+      </section>
       <EditGoalModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
+        key={`${targetUserId ?? "self"}-${goal?.id ?? "default"}`}
+        isOpen={editing}
+        onClose={() => setEditing(false)}
         workspaceId={workspaceId}
-        currentGoal={activeGoal}
+        currentGoal={goal}
         targetUserId={targetUserId}
         onGoalUpdated={onRefresh}
       />

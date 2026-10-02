@@ -1,47 +1,55 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertCircle, Download, RefreshCw } from "lucide-react";
 import {
   fetchAnalyticsOverview,
   fetchStageTiming,
   fetchAgingApplications,
   exportAnalyticsToCsv,
   exportAnalyticsToJson,
-} from '../api/analytics';
-import { fetchWorkspaceMembers, type WorkspaceMemberInfo } from '../api/applications';
-import type { AnalyticsOverview, StageTiming, AgingApplication } from '../types/analytics';
-import { AnalyticsOverviewTab } from '../components/analytics/AnalyticsOverviewTab';
-import { StageTimingTab } from '../components/analytics/StageTimingTab';
-import { AgingReportTab } from '../components/analytics/AgingReportTab';
-import { GoalsTab } from '../components/analytics/GoalsTab';
-import { Button } from '../components/ui/Button';
-import { Select } from '../components/ui/Select';
-import { Tabs, TabList, Tab, TabPanel } from '../components/ui/Tabs';
-import { useToast } from '../context/ToastContext';
+} from "../api/analytics";
 import {
-  Download,
-  AlertCircle,
-  RefreshCw,
-} from 'lucide-react';
+  fetchWorkspaceMembers,
+  type WorkspaceMemberInfo,
+} from "../api/applications";
+import type {
+  AgingApplication,
+  AnalyticsOverview,
+  StageTiming,
+} from "../types/analytics";
+import { AnalyticsOverviewTab } from "../components/analytics/AnalyticsOverviewTab";
+import { StageTimingTab } from "../components/analytics/StageTimingTab";
+import { AgingReportTab } from "../components/analytics/AgingReportTab";
+import { GoalsTab } from "../components/analytics/GoalsTab";
+import { Button } from "../components/ui/Button";
+import { Select } from "../components/ui/Select";
+import { Tab, TabList, TabPanel, Tabs } from "../components/ui/Tabs";
+import { useToast } from "../context/ToastContext";
 
 export interface AnalyticsViewProps {
   activeWorkspaceId: string | null;
   isManager: boolean;
   initialTab?: AnalyticsTab;
 }
+export type AnalyticsTab = "overview" | "timing" | "aging" | "goals";
+export type DateRangePreset = "30d" | "90d" | "180d" | "1y";
 
-export type AnalyticsTab = 'overview' | 'timing' | 'aging' | 'goals';
-export type DateRangePreset = '30d' | '90d' | '180d' | '1y';
+const RANGE_LABEL: Record<DateRangePreset, string> = {
+  "30d": "30 days",
+  "90d": "90 days",
+  "180d": "180 days",
+  "1y": "1 year",
+};
 
 export function AnalyticsView({
   activeWorkspaceId,
   isManager,
-  initialTab = 'overview',
+  initialTab = "overview",
 }: AnalyticsViewProps) {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
-  const [dateRange, setDateRange] = useState<DateRangePreset>('90d');
-  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
+  const [dateRange, setDateRange] = useState<DateRangePreset>("90d");
+  const [selectedMemberId, setSelectedMemberId] = useState("");
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
-
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [timing, setTiming] = useState<StageTiming | null>(null);
   const [aging, setAging] = useState<AgingApplication[]>([]);
@@ -49,8 +57,6 @@ export function AnalyticsView({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
-
-  // Load workspace members if manager
   useEffect(() => {
     if (!activeWorkspaceId || !isManager) return;
     fetchWorkspaceMembers(activeWorkspaceId)
@@ -60,21 +66,20 @@ export function AnalyticsView({
 
   const getDateBounds = useCallback((range: DateRangePreset) => {
     const end = new Date();
-    const start = new Date();
-    if (range === '30d') {
-      start.setDate(end.getDate() - 30);
-    } else if (range === '90d') {
-      start.setDate(end.getDate() - 90);
-    } else if (range === '180d') {
-      start.setDate(end.getDate() - 180);
-    } else if (range === '1y') {
-      start.setFullYear(end.getFullYear() - 1);
-    }
+    const start = new Date(end);
+    if (range === "1y") start.setFullYear(start.getFullYear() - 1);
+    else start.setDate(start.getDate() - Number.parseInt(range, 10));
     return {
       startDate: start.toISOString(),
       endDate: end.toISOString(),
-      startLabel: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      endLabel: end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      startLabel: start.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
+      endLabel: end.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
     };
   }, []);
 
@@ -82,162 +87,184 @@ export function AnalyticsView({
     if (!activeWorkspaceId) return;
     setLoading(true);
     setError(null);
-
     const bounds = getDateBounds(dateRange);
-    const targetUserId = isManager && selectedMemberId ? selectedMemberId : null;
-
+    const userId = isManager && selectedMemberId ? selectedMemberId : null;
     try {
-      const [overviewRes, timingRes, agingRes] = await Promise.all([
+      const [overviewResult, timingResult, agingResult] = await Promise.all([
         fetchAnalyticsOverview(activeWorkspaceId, {
           startDate: bounds.startDate,
           endDate: bounds.endDate,
-          userId: targetUserId,
+          userId,
         }),
         fetchStageTiming(activeWorkspaceId, {
           startDate: bounds.startDate,
           endDate: bounds.endDate,
-          userId: targetUserId,
+          userId,
         }),
-        fetchAgingApplications(activeWorkspaceId, {
-          userId: targetUserId,
-        }),
+        fetchAgingApplications(activeWorkspaceId, { userId }),
       ]);
-
-      setOverview(overviewRes);
-      setTiming(timingRes);
-      setAging(agingRes);
-    } catch (err: unknown) {
-      console.error('Failed to load analytics:', err);
-      setError((err as Error).message || 'Failed to load analytics');
-      addToast({ type: 'danger', title: 'Unable to retrieve search analytics data' });
+      setOverview(overviewResult);
+      setTiming(timingResult);
+      setAging(agingResult);
+    } catch (cause) {
+      console.error("Failed to load analytics:", cause);
+      setError("Failed to load analytics");
+      addToast({
+        type: "danger",
+        title: "Unable to retrieve search analytics data",
+      });
     } finally {
       setLoading(false);
     }
-  }, [activeWorkspaceId, dateRange, selectedMemberId, isManager, getDateBounds, addToast]);
+  }, [
+    activeWorkspaceId,
+    addToast,
+    dateRange,
+    getDateBounds,
+    isManager,
+    selectedMemberId,
+  ]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
+  const bounds = getDateBounds(dateRange);
+  const selectedMember = useMemo(
+    () => members.find((member) => member.user_id === selectedMemberId),
+    [members, selectedMemberId],
+  );
+  const memberName = selectedMember
+    ? selectedMember.display_name || selectedMember.username
+    : null;
+  const ownerCopy = isManager
+    ? memberName
+      ? `Member: ${memberName}`
+      : `All members${members.length ? ` (${members.length})` : ""}`
+    : "Your applications";
 
-  const handleExportCsv = () => {
+  const exportCsv = () => {
     if (!overview) return;
     try {
       exportAnalyticsToCsv(overview, `jobquest-analytics-${dateRange}.csv`);
-      addToast({ type: 'success', title: 'Exported analytics CSV (formula-sanitized)' });
+      addToast({
+        type: "success",
+        title: "Exported analytics CSV (formula-sanitized)",
+      });
     } catch {
-      addToast({ type: 'danger', title: 'Failed to export CSV' });
+      addToast({ type: "danger", title: "Failed to export CSV" });
     }
   };
-
-  const handleExportJson = () => {
+  const exportJson = () => {
     if (!overview) return;
     try {
-      exportAnalyticsToJson(overview, timing ?? undefined, `jobquest-analytics-${dateRange}.json`);
-      addToast({ type: 'success', title: 'Exported analytics JSON' });
+      exportAnalyticsToJson(
+        overview,
+        timing ?? undefined,
+        `jobquest-analytics-${dateRange}.json`,
+      );
+      addToast({ type: "success", title: "Exported analytics JSON" });
     } catch {
-      addToast({ type: 'danger', title: 'Failed to export JSON' });
+      addToast({ type: "danger", title: "Failed to export JSON" });
     }
   };
 
-  const dateBounds = getDateBounds(dateRange);
-
   return (
-    <div className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
-      {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+    <div className="page analytics-page">
+      <header className="analytics-header">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Analytics</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Applied {dateBounds.startLabel} – {dateBounds.endLabel} ·{' '}
-            {isManager
-              ? selectedMemberId
-                ? `Member view: ${members.find((m) => m.user_id === selectedMemberId)?.user_id ?? 'selected'}`
-                : `All members aggregate (${members.length || 'workspace'})`
-              : 'your applications'}
+          <h1>Analytics</h1>
+          <p>
+            Applied {bounds.startLabel}–{bounds.endLabel} · {ownerCopy}
           </p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Manager Member Selector */}
+        <div
+          className="analytics-toolbar"
+          role="toolbar"
+          aria-label="Analytics controls"
+        >
           {isManager && (
-            <div className="w-44">
-              <Select
-                aria-label="Filter by workspace member"
-                value={selectedMemberId}
-                onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="text-xs h-8"
-              >
-                <option value="">Owner: All members</option>
-                {members.map((m) => (
-                  <option key={m.user_id} value={m.user_id}>
-                    {m.user_id.slice(0, 8)}... ({m.role})
-                  </option>
-                ))}
-              </Select>
-            </div>
+            <Select
+              aria-label="Filter by workspace member"
+              value={selectedMemberId}
+              onChange={(event) => setSelectedMemberId(event.target.value)}
+            >
+              <option value="">Owner: All members</option>
+              {members.map((member) => (
+                <option value={member.user_id} key={member.user_id}>
+                  {member.display_name || member.username} ({member.role})
+                </option>
+              ))}
+            </Select>
           )}
-
-          {/* Date Range Segmented Control */}
-          <div className="inline-flex items-center gap-1.5" role="group" aria-label="Date range preset">
-            {(['30d', '90d', '180d', '1y'] as DateRangePreset[]).map((preset) => (
+          <div className="analytics-range" role="group" aria-label="Date range">
+            {(Object.keys(RANGE_LABEL) as DateRangePreset[]).map((range) => (
               <button
-                key={preset}
+                key={range}
                 type="button"
-                onClick={() => setDateRange(preset)}
-                className={`btn sm ${dateRange === preset ? 'primary' : 'ghost'}`}
-                style={{ minHeight: '32px', minWidth: '44px' }}
+                aria-pressed={dateRange === range}
+                onClick={() => setDateRange(range)}
               >
-                {preset}
+                {RANGE_LABEL[range]}
               </button>
             ))}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Export CSV"
+            onClick={exportCsv}
+            disabled={!overview}
+            leftIcon={<Download size={14} aria-hidden="true" />}
+          >
+            <span className="export-label">Export CSV</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={exportJson}
+            disabled={!overview}
+          >
+            JSON
+          </Button>
+        </div>
+      </header>
 
-          {/* Export Buttons */}
-          <div className="inline-flex items-center gap-2">
+      <Tabs
+        id="analytics-tabs"
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as AnalyticsTab)}
+      >
+        <div className="analytics-tab-scroll">
+          <TabList aria-label="Analytics sections">
+            <Tab id="overview">Overview</Tab>
+            <Tab id="timing">Stage timing</Tab>
+            <Tab id="aging">
+              Aging <span className="tab-count">{aging.length}</span>
+            </Tab>
+            <Tab id="goals">Goals</Tab>
+          </TabList>
+        </div>
+        {loading ? (
+          <div className="analytics-loading" role="status">
+            <div className="analytics-skeleton skel" />
+            <div className="analytics-skeleton-grid">
+              <div className="skel" />
+              <div className="skel" />
+              <div className="skel" />
+            </div>
+            <span className="sr-only">Computing analytics metrics</span>
+          </div>
+        ) : error ? (
+          <div className="analytics-error" role="alert">
+            <AlertCircle aria-hidden="true" />
+            <h2>{error}</h2>
+            <p>We could not compute your analytics right now.</p>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportCsv}
-              disabled={!overview}
-              className="text-xs h-8 min-h-[32px] px-3 gap-1.5"
+              onClick={() => void loadData()}
+              leftIcon={<RefreshCw size={14} />}
             >
-              <Download size={13} />
-              Export CSV
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleExportJson}
-              disabled={!overview}
-              className="text-xs h-8 min-h-[32px] px-3"
-              title="Export complete analytics payload as JSON"
-            >
-              JSON
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs Bar & Tab Panels */}
-      <Tabs id="analytics-tabs" activeTab={activeTab} onTabChange={(t) => setActiveTab(t as AnalyticsTab)}>
-        <TabList aria-label="Analytics sections">
-          <Tab id="overview">Overview</Tab>
-          <Tab id="timing">Stage timing</Tab>
-          <Tab id="aging">Aging</Tab>
-          <Tab id="goals">Goals</Tab>
-        </TabList>
-
-        {/* Main Content Area */}
-        {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center text-muted-foreground space-y-3">
-            <RefreshCw size={24} className="animate-spin text-primary" />
-            <p className="text-xs">Computing analytics metrics...</p>
-          </div>
-        ) : error ? (
-          <div className="py-16 text-center space-y-3">
-            <AlertCircle size={32} className="mx-auto text-rose-500" />
-            <p className="text-sm font-medium text-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={loadData}>
               Retry
             </Button>
           </div>
@@ -245,18 +272,18 @@ export function AnalyticsView({
           <>
             <TabPanel id="overview">
               {overview && (
-                <AnalyticsOverviewTab data={overview} isManager={isManager && !selectedMemberId} />
+                <AnalyticsOverviewTab
+                  data={overview}
+                  isManager={isManager && !selectedMemberId}
+                />
               )}
             </TabPanel>
-
             <TabPanel id="timing">
               {timing && <StageTimingTab data={timing} />}
             </TabPanel>
-
             <TabPanel id="aging">
               <AgingReportTab applications={aging} onRefresh={loadData} />
             </TabPanel>
-
             <TabPanel id="goals">
               {overview && (
                 <GoalsTab

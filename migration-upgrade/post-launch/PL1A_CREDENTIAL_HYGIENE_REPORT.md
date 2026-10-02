@@ -122,4 +122,6 @@ PL-1A remains `CLOSED`. PL-1B was `NOT EXECUTED / CONDITIONAL`, because the hist
 
 PL-1C subsequently closed with a documented live-evidence limitation, and PL-1D was assessed and remains `DEFERRED / TBD`. The consolidated disposition and evidence are recorded in `migration-upgrade/post-launch/PL1_CLOSEOUT_REPORT.md`.
 
-NEXT EXACT ACTION: certify the PL-1 closeout documentation branch, stop for explicit operator approval, and only then integrate it into development with exact-SHA CI. Main and Production remain frozen; PL-2 is next but not started.
+PL-1 CLOSEOUT INTEGRATION: closeout feature SHA `bc515986f8aad691298d7661912fa178f84c8cee` passed CI `36898779897`; development merge SHA `1086bcb41d1b0ab25959d182ec388a0f6da53042` passed CI `36903888076`.
+
+NEXT EXACT ACTION: PL-2 — Application Productivity, in a separate controlled task. Main and Production remain frozen; PL-2 is next but not started.

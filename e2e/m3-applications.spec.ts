@@ -155,7 +155,20 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await expect(page.getByRole('columnheader', { name: 'Company · Role' })).toHaveAttribute('aria-sort', 'ascending');
     await expect(page.getByTestId('application-row').first()).toContainText('Acme Rockets');
     await expect(page.getByLabel('Filter by aging')).toBeVisible();
-    evidence['E2E-02-search-filter-sort'] = 'PASS';
+    await page.getByLabel('Sort applications by').selectOption('created_at');
+    await expect(page.getByRole('button', { name: 'Sort direction: Oldest to newest' })).toBeVisible();
+    await page.getByRole('button', { name: 'Sort direction: Oldest to newest' }).click();
+    await expect(page.getByRole('button', { name: 'Sort direction: Newest to oldest' })).toBeVisible();
+    const today = new Date().toISOString().slice(0, 10);
+    await page.getByLabel('Date Added from').fill(today);
+    await page.getByLabel('Date Added through').fill(today);
+    await expect(row(page, company)).toBeVisible();
+    await page.getByRole('button', { name: 'Group by month' }).click();
+    await expect(page.getByRole('heading', { name: new RegExp(new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })) })).toBeVisible();
+    await expect(page.getByTestId('application-row')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Clear Date Added filter' }).click();
+    await page.getByRole('button', { name: 'Group by month' }).click();
+    evidence['E2E-02-search-filter-sort'] = { search: 'PASS', stage: 'PASS', date_added: 'PASS', direction: 'PASS', month_grouping: 'PASS' };
     // AC-GRID-01: dense rows (44px + 1px border)
     const rowHeights = await page.getByTestId('application-row').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
     expect(Math.max(...rowHeights)).toBeLessThanOrEqual(45);
@@ -182,6 +195,26 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await expect(drawer.getByText('Application created')).toBeVisible();
     await expect(drawer.getByText('Job posting snapshot captured')).toBeVisible();
     await expect(drawer.getByText('by You').first()).toBeVisible();
+    await expect(drawer.getByRole('heading', { name: 'Hiring contacts' })).toBeVisible();
+    await expect(drawer.getByText('No contacts linked yet')).toBeVisible();
+    const contactName = `Riley Recruiter ${run}`;
+    await drawer.getByRole('button', { name: 'Add contact' }).click();
+    const contactDialog = page.getByRole('dialog', { name: 'New contact' });
+    await expect(contactDialog).toBeVisible();
+    await contactDialog.locator('#contact-name').fill(contactName);
+    await contactDialog.locator('#contact-email').fill(`riley.${run}@starlight.example`);
+    a11y.push(await audit(page, 'application-contact-create'));
+    await contactDialog.getByRole('button', { name: 'Save contact' }).click();
+    await expect(contactDialog).toBeHidden();
+    await expect(drawer.getByText(contactName)).toBeVisible();
+    await drawer.getByRole('button', { name: 'View details' }).click();
+    await expect(drawer.getByText(`riley.${run}@starlight.example`)).toBeVisible();
+    await drawer.getByRole('button', { name: 'Link existing' }).click();
+    const linkContactDialog = page.getByRole('dialog', { name: 'Link an existing contact' });
+    await expect(linkContactDialog.getByText('No unlinked active contacts are available')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(linkContactDialog).toBeHidden();
+    evidence['E2E-contacts'] = { empty: 'PASS', create_and_link: 'PASS', linked_details: 'PASS', link_existing_empty_state: 'PASS' };
     await shot(page, 'applications-detail-drawer');
     a11y.push(await audit(page, 'detail-drawer'));
 

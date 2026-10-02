@@ -9,6 +9,7 @@ import {
   type ContactRelationshipType,
   type ContactInteractionType,
   type ContactUpdate,
+  type ApplicationContactJoin,
 } from '../types/contacts';
 import { buildSearchFilter } from '../types/applications';
 
@@ -149,6 +150,25 @@ export async function fetchContactDetail(contactId: string): Promise<Contact> {
   }
 
   return withLastContact(contact);
+}
+
+/** Linked people for one application, resolved under the existing join-table RLS. */
+export async function fetchApplicationContacts(applicationId: string): Promise<ApplicationContactJoin[]> {
+  const { data, error } = await supabase
+    .from('application_contacts')
+    .select(`
+      application_id,
+      contact_id,
+      workspace_id,
+      role_in_process,
+      created_at,
+      contacts(*)
+    `)
+    .eq('application_id', applicationId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`fetchApplicationContacts failed: ${error.message}`);
+  return (data ?? []) as unknown as ApplicationContactJoin[];
 }
 
 export interface CreateContactParams {

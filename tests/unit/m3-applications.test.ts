@@ -4,13 +4,63 @@ import {
   buildSearchFilter,
   calculateDaysInactive,
   computeAgingBand,
+  type Application,
   type ApplicationEvent,
   type CanonicalWorkflow,
 } from '../../apps/web/src/types/applications';
 import { validateApplicationFields } from '../../apps/web/src/components/applications/validation';
 import { describeEvent } from '../../apps/web/src/components/applications/eventText';
+import {
+  dateAddedBounds,
+  groupApplicationsByMonth,
+  sortDirectionLabel,
+} from '../../apps/web/src/lib/applicationProductivity';
 
 const DAY = 86_400_000;
+
+describe('PL-2 application productivity', () => {
+  const application = (id: string, createdAt: string): Application => ({
+    id,
+    created_at: createdAt,
+  } as Application);
+
+  it('leaves Date Added unbounded when no filter is selected', () => {
+    expect(dateAddedBounds({ from: '', to: '' }, 'America/Chicago')).toEqual({
+      from: undefined,
+      toExclusive: undefined,
+    });
+  });
+
+  it('builds inclusive Date Added boundaries in the profile time zone', () => {
+    expect(dateAddedBounds({ from: '2026-03-08', to: '2026-03-08' }, 'America/Chicago')).toEqual({
+      from: '2026-03-08T06:00:00.000Z',
+      toExclusive: '2026-03-09T05:00:00.000Z',
+    });
+  });
+
+  it('groups the bounded result set by Date Added month across years without duplicates', () => {
+    const applications = [
+      application('jan-2026', '2026-01-15T12:00:00Z'),
+      application('dec-2025', '2025-12-31T23:00:00Z'),
+      application('jan-2026-b', '2026-01-02T12:00:00Z'),
+    ];
+    const groups = groupApplicationsByMonth(applications, 'UTC');
+    expect(groups.map((group) => [group.label, group.applications.map((item) => item.id)])).toEqual([
+      ['January 2026', ['jan-2026', 'jan-2026-b']],
+      ['December 2025', ['dec-2025']],
+    ]);
+    expect(groups.flatMap((group) => group.applications).map((item) => item.id).sort()).toEqual(
+      applications.map((item) => item.id).sort(),
+    );
+  });
+
+  it('uses human-readable direction labels for text and Date Added sorts', () => {
+    expect(sortDirectionLabel({ field: 'company_name', direction: 'asc' })).toBe('A to Z');
+    expect(sortDirectionLabel({ field: 'company_name', direction: 'desc' })).toBe('Z to A');
+    expect(sortDirectionLabel({ field: 'created_at', direction: 'asc' })).toBe('Oldest to newest');
+    expect(sortDirectionLabel({ field: 'created_at', direction: 'desc' })).toBe('Newest to oldest');
+  });
+});
 
 describe('M3 aging bands (Gate 02B §4.5)', () => {
   it('maps whole days of inactivity to the approved bands', () => {

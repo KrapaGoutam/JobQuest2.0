@@ -25,8 +25,8 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | Phase | Status |
 | --- | --- |
 | PL-0 | `CLOSED` |
-| PL-1 | `CLOSED` formal disposition; closeout branch/development CI gates still govern repository integration |
-| PL-2 | `NEXT / NOT STARTED` |
+| PL-1 | `CLOSED` — closeout feature CI `36898779897` and development integration CI `36903888076` PASS |
+| PL-2 | `IN PROGRESS` — implementation, exact-SHA application CI, and jobquest-dev Preview pass; final evidence-SHA CI and operator approval pending |
 | PL-3 | `PENDING` |
 | PL-4A | `PENDING` |
 | PL-4B | `PENDING` |

@@ -262,23 +262,37 @@ test.describe('Milestone 6 — Tasks, Habits & Unified Queue E2E', () => {
 
     // ------------------------------------------------------------ D1 dashboard + quiet review
     const svc = serviceClient();
-    const { data: quietApp } = await svc.from('applications').select('id').eq('company_name', quietCo).single();
+    const { data: quietApp } = await svc.from('applications').select('id, workspace_id, user_id').eq('company_name', quietCo).single();
     await svc.from('applications').update({ last_activity_at: new Date(Date.now() - 40 * 86_400_000).toISOString() }).eq('id', quietApp!.id);
+    const extraQuiet = [32, 33, 34].map((days, index) => ({
+      workspace_id: quietApp!.workspace_id,
+      user_id: quietApp!.user_id,
+      company_name: `Quiet Review ${index + 1} ${run}`,
+      role_title: 'Product Designer',
+      last_activity_at: new Date(Date.now() - days * 86_400_000).toISOString(),
+    }));
+    const extraInsert = await svc.from('applications').insert(extraQuiet);
+    expect(extraInsert.error).toBeNull();
     await nav(page, 'Dashboard');
     await expect(page.getByRole('heading', { name: 'What needs attention today', level: 1 })).toBeVisible();
     await expect(page.getByTestId('dash-interview').first()).toContainText(meridian);
     const quietRow = page.getByTestId('dash-quiet').filter({ hasText: quietCo });
     await expect(quietRow).toContainText('Long Waiting · 40d');
-    await expect(page.getByTestId('dash-stats')).toContainText('1 to review');
+    await expect(page.getByTestId('dash-stats')).toContainText('4 to review');
     await expect(page.getByTestId('dash-stats')).toContainText('1 overdue');
+    await expect(page.getByTestId('dash-quiet')).toHaveCount(3);
+    await page.getByRole('button', { name: 'Show 1 more' }).click();
+    await expect(page.getByTestId('dash-quiet')).toHaveCount(4);
+    await quietRow.locator('summary', { hasText: 'More' }).click();
+    await expect(quietRow.getByRole('button', { name: `Mark ${quietCo} ghosted` })).toBeVisible();
     await expect(page.getByTestId('queue-row').first()).toContainText('Ask Jonah for intro');
     await expect(page.getByTestId('queue-row').first()).toContainText('2d overdue');
     await shot(page, 'dashboard-light');
     a11y.push(await audit(page, 'dashboard'));
     await quietRow.getByRole('button', { name: `Keep ${quietCo} active` }).click();
     await expect(quietRow).toHaveCount(0);
-    await expect(page.getByTestId('dash-stats')).toContainText('0 to review');
-    evidence['E2E-08-dashboard-review'] = 'PASS';
+    await expect(page.getByTestId('dash-stats')).toContainText('3 to review');
+    evidence['E2E-08-dashboard-review'] = { keep: 'PASS', compact_actions: 'PASS', show_more: 'PASS' };
 
     // ------------------------------------------------------------ application drawer integration
     await nav(page, 'Applications');

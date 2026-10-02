@@ -225,6 +225,18 @@ export function ApplicationsTable({
       : [{ key: 'all', label: '', applications }];
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <label className="application-mobile-select-all">
+          <input
+            type="checkbox"
+            className="checkbox"
+            checked={isAllSelected}
+            ref={(input) => {
+              if (input) input.indeterminate = isPartiallySelected;
+            }}
+            onChange={(event) => onSelectAll(event.target.checked)}
+          />
+          <span>{isAllSelected ? `All ${applications.length} applications on this page selected` : `Select all ${applications.length} applications on this page`}</span>
+        </label>
         {groups.map((group) => (
           <section key={group.key} aria-labelledby={groupByMonth ? `application-month-${group.key}` : undefined}>
             {groupByMonth && (
@@ -247,18 +259,27 @@ export function ApplicationsTable({
                     gap: '8px',
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onActiveRowChange(app.id);
-                      onRowClick(app);
-                    }}
-                    style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', minHeight: '44px' }}
-                    aria-label={`Open ${app.role_title} at ${app.company_name}`}
-                  >
-                    <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--color-text-primary)' }}>{app.company_name}</div>
-                    <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{app.role_title}</div>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <input
+                      type="checkbox"
+                      className="checkbox application-mobile-checkbox"
+                      checked={selectedIds.includes(app.id)}
+                      onChange={(event) => onSelectRow(app.id, event.target.checked)}
+                      aria-label={`Select ${app.role_title} at ${app.company_name}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onActiveRowChange(app.id);
+                        onRowClick(app);
+                      }}
+                      style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', minHeight: '44px', flex: 1 }}
+                      aria-label={`Open ${app.role_title} at ${app.company_name}`}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--color-text-primary)' }}>{app.company_name}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{app.role_title}</div>
+                    </button>
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <StagePips stage={app.stage} isClosed={app.status === 'CLOSED'} maxSteps={8} />

@@ -1,8 +1,28 @@
-## >>> PL-3 DIRECTION C FEATURE CERTIFIED — OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
+## >>> PL-4A FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FEATURE CERTIFIED / AWAITING OPERATOR APPROVAL | PL-1D: DEFERRED / TBD.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / UNCHANGED.
 
-CURRENT BRANCH: `feature/pl3-dashboard-analytics-redesign` | IMPLEMENTATION BASE: `5dfce2086f04abd26efb1a3a36ebd73132bda986` | APPLICATION-CERTIFIED SHA: `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` | CI: `36972469514 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+CURRENT BRANCH: `feature/pl4a-duplicate-bulk-recruiter` | DEVELOPMENT BASE: `11116ca2a577c70e18b4bcfac796dfa6260bda15` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+DISCOVERY: Duplicate UX `PARTIAL`; bulk selection `PARTIAL`; bulk actions `PARTIAL`; recruiter tracking `PARTIAL`; application-contact association `EXISTING`; recruiter search/filter/detail `PARTIAL`.
+
+IMPLEMENTATION: race-safe duplicate checks, multi-match navigation/metadata, mobile and page-scoped application selection, mixed-state bulk eligibility, confirmation/pending/partial-failure handling, canonical contact deep links, exact facets, 50-row contact pagination, searchable linking, and accessible contact table/drawer behavior. Existing duplicate/contact/RPC architecture remains canonical.
+
+LOCAL EVIDENCE: lint PASS; typecheck PASS; unit `174/174`; integration `187/187`; build PASS; full browser E2E + axe `22/22`; extension `97/97` plus typecheck/package; tracked-source, browser-bundle, and extension secret scans all report zero findings. Focused PL-4A and contact evidence report zero axe violations and zero mobile overflow.
+
+NON-CHANGES: no migration, schema, RLS, auth, dependency, workflow, external API contract, main, Production, jobquest-prod, or PL-1D change. The operator's pre-existing `.gitignore` edit remains unstaged and untouched.
+
+REMOTE EVIDENCE: exact feature CI `37033042789` PASS for application/evidence SHA `cc240dc4948ac9e34a61ccc516686cf2c5e830f1`. Matching Preview `dpl_H6nWmXctR1oGB7mXpEah4jYK9nRt` at `https://jobquest2-dx21j0l5o-one-piece-5779.vercel.app` is READY, healthy, and bound only to jobquest-dev. Focused authenticated Applications and Contacts Preview suites passed with eleven axe contexts, zero blocking violations, and zero mobile overflow.
+
+NEXT EXACT ACTION: certify the docs-only closeout tip, then stop for explicit operator approval before any development merge. Do not touch main, Production, jobquest-prod, or PL-1D.
+
+Report: `migration-upgrade/post-launch/PL4A_DUPLICATE_BULK_RECRUITER_REPORT.md`.
+
+## >>> PL-3 DIRECTION C — FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-02) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.
+
+CURRENT BRANCH: `development` | IMPLEMENTATION BASE: `5dfce2086f04abd26efb1a3a36ebd73132bda986` | FINAL FEATURE SHA / CI: `2745abb7ac3c70f7877e4d2a304c53e54215cce5` / `36973633143 PASS` | DEVELOPMENT MERGE SHA / CI: `11116ca2a577c70e18b4bcfac796dfa6260bda15` / `37012301480 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
 
 DESIGN: Direction C — Job Search Cockpit. Handoff `FeatureUpgrade1/JobQuest-PL3-ClaudeCode-Handoff` validated as local reference input and remains excluded/untracked. Directions A/B and Analytics All Sections were not implemented.
 
@@ -12,9 +32,13 @@ CERTIFICATION EVIDENCE: lint PASS; typecheck PASS; unit `171/171`; integration `
 
 PREVIEW EVIDENCE: `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app` (`dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`) is READY for exact application SHA `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`. Health returned 200; the bundle targets only `jobquest-dev`; focused Dashboard and Analytics Preview suites passed with 30/30 widgets, zero mobile overflow, and zero axe violations.
 
-PROTECTION STATE: `.gitignore` and the unrelated PL-2 report update remain unstaged and untouched. `development` remains `5dfce2086f04abd26efb1a3a36ebd73132bda986`; `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production is unchanged.
+DEVELOPMENT INTEGRATION: operator-approved no-ff merge `11116ca2a577c70e18b4bcfac796dfa6260bda15` has parents `5dfce2086f04abd26efb1a3a36ebd73132bda986` and `2745abb7ac3c70f7877e4d2a304c53e54215cce5`. Exact development CI `37012301480` passed classification, lint, typecheck, unit, build, secret scans, disposable-Supabase integration, extension validation, browser E2E, and axe.
 
-NEXT EXACT ACTION: stop for explicit operator approval before any PL-3 merge to `development`. Do not merge to development/main or touch Production automatically.
+PROTECTION STATE: `.gitignore` and the PL-2 report update remain unstaged and untouched. `development` is integrated and certified at `11116ca2a577c70e18b4bcfac796dfa6260bda15`; `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production is unchanged.
+
+POST-CI WORKING TREE: this final PL-3 closeout metadata is intentionally unstaged so no new untested development SHA is created.
+
+NEXT EXACT ACTION: PL-4A, in a separate controlled task with explicit authorization. Do not start automatically, merge development to main, touch Production, implement PL-1D, execute M15-F, or retire legacy systems.
 
 Report: `migration-upgrade/post-launch/PL3_DASHBOARD_ANALYTICS_REPORT.md`.
 

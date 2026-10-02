@@ -2,7 +2,7 @@
 
 ## Status
 
-PL-3 implementation and feature certification are complete on `feature/pl3-dashboard-analytics-redesign`. Exact-feature-SHA CI and the matching Vercel Preview passed. PL-3 is awaiting operator approval; this report does not authorize a merge to `development`, `main`, or Production.
+PL-3 is formally closed. The feature branch passed exact-SHA certification and matching Vercel Preview verification, then was merged into `development` with operator approval. Exact development-merge CI passed. No merge to `main` or Production action was authorized or performed.
 
 ## Baseline and design authority
 
@@ -84,8 +84,14 @@ Implementation screenshots were compared with the canonical Direction C PNGs for
 - Matching Preview: `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app`, deployment `dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`, READY, team `one-piece-5779`, project `jobquest2`, exact SHA `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`.
 - Preview target verification: `/api/health` returned 200; the compiled asset contained the `jobquest-dev` ref `xpnkasclquplmrcmhsif` and did not contain the Production ref.
 - Focused matching-Preview Dashboard and Analytics suites both passed. Dashboard verified 30/30 widgets, persistence, drill-through, themes, manager/owner scope, axe, and zero 390px page overflow. Analytics verified all four tabs, timing, aging, goals, export, themes, and zero axe violations.
-- `.gitignore` and the unrelated PL-2 report update remained unstaged and untouched. `development`, `main`, Production, database, auth, and dependencies remain unchanged.
+- Final feature tip: `2745abb7ac3c70f7877e4d2a304c53e54215cce5`; exact docs-only feature CI `36973633143` PASS.
+- `.gitignore` and the unrelated PL-2 report update remained unstaged and untouched. Main, Production, database, auth, and dependencies remain unchanged.
 
-## Remaining gate
+## Development integration and formal closeout
 
-Stop for explicit operator approval before any PL-3 merge to `development`. A development merge, exact development CI, `main`, and Production are separate future gates and are not authorized by this report.
+- Operator approval was received for PL-3 to `development` only.
+- No-ff merge commit: `11116ca2a577c70e18b4bcfac796dfa6260bda15` (`merge: integrate PL-3 dashboard analytics redesign`).
+- Merge parents: certified development baseline `5dfce2086f04abd26efb1a3a36ebd73132bda986` and final feature tip `2745abb7ac3c70f7877e4d2a304c53e54215cce5`.
+- Exact development CI: run `37012301480` PASS, including classification, static checks, secret scans, disposable-Supabase integration, extension validation, browser E2E, and axe.
+- `origin/development` is certified at the merge SHA. `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production remains unchanged.
+- PL-3 is formally closed. PL-4A is next but was not started. Development-to-main and Production remain separate, unauthorized gates.

@@ -22,16 +22,16 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-3` / `FEATURE CERTIFIED — AWAITING OPERATOR APPROVAL` |
-| Branch / base SHA / application-certified SHA | `feature/pl3-dashboard-analytics-redesign` / `5dfce2086f04abd26efb1a3a36ebd73132bda986` / `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` |
-| Last tested application SHA | `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` |
-| CI run / CI SHA / CI result | `36972469514` / `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` / `PASS` |
+| TASK ID / STATUS | `PL-3` / `FORMALLY CLOSED` |
+| Branch / base SHA / final feature SHA | `feature/pl3-dashboard-analytics-redesign` / `5dfce2086f04abd26efb1a3a36ebd73132bda986` / `2745abb7ac3c70f7877e4d2a304c53e54215cce5` |
+| Last tested application SHA | `11116ca2a577c70e18b4bcfac796dfa6260bda15` development merge SHA |
+| CI run / CI SHA / CI result | Feature `36973633143` / `2745abb7ac3c70f7877e4d2a304c53e54215cce5` / `PASS`; development `37012301480` / `11116ca2a577c70e18b4bcfac796dfa6260bda15` / `PASS` |
 | Preview / database target / migrations | `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app` (`dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`, READY, exact application SHA) / `jobquest-dev` / `NONE` |
-| Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Recovered the original 9px Linux Chromium mobile-overflow failure to a hidden pace-chart table; contained all hidden analytics tables; passed exact-SHA CI and matching-Preview Dashboard/Analytics/axe verification. |
-| Next exact action | Stop for explicit operator approval before any PL-3 no-ff merge to `development`; development CI is a separate future gate. |
-| Blockers / open questions | No product blocker; operator approval for development integration is required. |
-| Operator approval status | PL-3 implementation authorized; merge to development is not authorized. |
+| Production touched / development merged / main merged | `NO / YES / NO` |
+| Last completed action | Operator-approved no-ff merge `11116ca2a577c70e18b4bcfac796dfa6260bda15` was pushed to development and passed exact CI run `37012301480`, including all static, secret, integration, extension, browser, and axe gates. |
+| Next exact action | PL-4A in a separate controlled task; do not start automatically. |
+| Blockers / open questions | None for PL-3 closeout. |
+| Operator approval status | `APPROVED AND COMPLETED` for PL-3 → development only |
 | Report document | `migration-upgrade/post-launch/PL3_DASHBOARD_ANALYTICS_REPORT.md` |
 
 ## Most recently closed task record — PL-2 Application Productivity
@@ -63,8 +63,8 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0 | CLOSED | Certified governance integration and formal closeout complete. |
 | PL-1 | CLOSED | Closeout feature CI `36898779897` and development integration CI `36903888076` passed; PL-1A closed, PL-1B conditional/not executed, PL-1C closed with evidence limitation, PL-1D assessed/deferred. |
 | PL-2 | CLOSED | Feature CI `36918359854` and development integration CI `36960378949` passed; PL-2 is formally closed. |
-| PL-3 | FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED | Exact application SHA CI and matching jobquest-dev Preview passed; stop before development integration. |
-| PL-4A | PENDING | Verify duplicate, bulk, and recruiter functionality under specified views. |
+| PL-3 | CLOSED | Feature certification and matching Preview passed; development merge `11116ca2a577c70e18b4bcfac796dfa6260bda15` passed CI `37012301480`. |
+| PL-4A | FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED | Feature CI `37033042789` passed at `cc240dc4948ac9e34a61ccc516686cf2c5e830f1`; matching jobquest-dev Preview `dpl_H6nWmXctR1oGB7mXpEah4jYK9nRt` is READY and focused Preview E2E/a11y passed. Development merge is not authorized. |
 | PL-4B | PENDING | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |
 | PL-4C | PENDING | Verify existing goals/recurrence; scope templates as independent canonical tasks. |
 | PL-5 | PENDING | Gather evidence after implementation phases; leave production metrics for M15-F when needed. |

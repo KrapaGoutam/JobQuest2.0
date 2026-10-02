@@ -368,6 +368,7 @@ function AppContent() {
   // Route title resolver
   const getPageTitle = (path: string): string => {
     if (/^\/w\/[^/]+\/applications\/[^/]+$/.test(path)) return 'Application';
+    if (/^\/w\/[^/]+\/contacts\/[^/]+$/.test(path)) return 'Contact';
     switch (path) {
       case '/':
       case '/applications':
@@ -418,6 +419,7 @@ function AppContent() {
   // Render active view
   const renderRouteView = () => {
     const applicationDeepLink = currentPath.match(/^\/w\/([^/]+)\/applications\/([^/?#]+)$/);
+    const contactDeepLink = currentPath.match(/^\/w\/([^/]+)\/contacts\/([^/?#]+)$/);
     if (currentPath === '/' || currentPath === '/applications' || applicationDeepLink) {
       let routeWorkspaceId = applicationDeepLink?.[1] ? decodeURIComponent(applicationDeepLink[1]) : activeWs;
       // Foreign workspace check: if routeWorkspaceId is not in user's active memberships, deny foreign access safely
@@ -434,6 +436,7 @@ function AppContent() {
           initialApplicationId={routeApplicationId}
           onDeepLinkMissing={handleDeepLinkMissing}
           userRole={memberships.find((m) => m.workspace_id === routeWorkspaceId)?.role ?? 'USER'}
+          onNavigateToContact={(contactId) => navigate(`/w/${routeWorkspaceId}/contacts/${contactId}`)}
           onRefresh={refresh}
           onLogout={onLogout}
           onCreateApp={onCreateApp}
@@ -469,11 +472,19 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/contacts') {
+    if (currentPath === '/contacts' || contactDeepLink) {
+      let routeWorkspaceId = contactDeepLink?.[1] ? decodeURIComponent(contactDeepLink[1]) : activeWs;
+      if (routeWorkspaceId && !memberships.some((membership) => membership.workspace_id === routeWorkspaceId)) {
+        routeWorkspaceId = activeWs;
+      }
+      const routeContactId = contactDeepLink?.[2] ? decodeURIComponent(contactDeepLink[2]) : null;
       return (
         <ContactsView
-          activeWorkspaceId={activeWs}
-          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          activeWorkspaceId={routeWorkspaceId}
+          isManager={memberships.find((m) => m.workspace_id === routeWorkspaceId)?.role === 'MANAGER'}
+          initialContactId={routeContactId}
+          onDeepLinkClose={() => navigate('/contacts')}
+          onDeepLinkMissing={() => navigate('/contacts')}
         />
       );
     }

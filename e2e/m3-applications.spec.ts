@@ -110,7 +110,16 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await page.locator('#app-job-url').fill(jobUrl);
     await expect(createDialog.getByTestId('duplicate-warning-strong')).toBeVisible({ timeout: 8000 });
     await expect(createDialog.getByRole('button', { name: 'Save anyway' })).toBeVisible();
+    await expect(createDialog.getByRole('list', { name: 'Matching applications' })).toContainText(`${role} at ${company}`);
+    await expect(createDialog.getByRole('list', { name: 'Matching applications' })).toContainText('Open');
     await shot(page, 'applications-duplicate-strong');
+    await createDialog.getByRole('button', { name: 'View existing' }).click();
+    await expect(createDialog).toBeHidden();
+    await expect(page.getByRole('dialog', { name: new RegExp(`${role}.*${company}`) })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.getByTestId('new-application-btn').click();
+    await page.locator('#app-company').fill(company);
+    await page.locator('#app-role').fill(role);
     // AC-CREATE-02: leaving with unsaved input asks first
     await createDialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(createDialog.getByTestId('unsaved-changes')).toBeVisible();
@@ -183,6 +192,10 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await expect(bulk.getByRole('button', { name: 'Archive' })).toBeVisible();
     await page.getByRole('checkbox', { name: 'Select all applications on this page' }).check();
     await expect(page.getByText('2 applications selected')).toBeVisible();
+    await bulk.getByRole('button', { name: /Archive \(2\)/ }).click();
+    const archiveBulkDialog = page.getByRole('dialog', { name: 'Archive applications?' });
+    await expect(archiveBulkDialog).toContainText('2 active applications on the current page');
+    await archiveBulkDialog.getByRole('button', { name: 'Cancel' }).click();
     await shot(page, 'applications-bulk-selection');
     await bulk.getByRole('button', { name: 'Clear selection' }).click();
     await expect(bulk).toBeHidden();
@@ -209,6 +222,13 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await expect(drawer.getByText(contactName)).toBeVisible();
     await drawer.getByRole('button', { name: 'View details' }).click();
     await expect(drawer.getByText(`riley.${run}@starlight.example`)).toBeVisible();
+    await drawer.getByRole('button', { name: 'Open contact' }).click();
+    await expect(page).toHaveURL(/#\/w\/[^/]+\/contacts\/[^/]+$/);
+    await expect(page.getByRole('dialog', { name: `Contact details for ${contactName}` })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.goto('/applications');
+    await row(page, company).getByText(role).click();
+    await expect(drawer).toBeVisible();
     await drawer.getByRole('button', { name: 'Link existing' }).click();
     const linkContactDialog = page.getByRole('dialog', { name: 'Link an existing contact' });
     await expect(linkContactDialog.getByText('No unlinked active contacts are available')).toBeVisible();
@@ -324,6 +344,10 @@ test.describe('Milestone 3 — Applications Workflow & Data Grid', () => {
     await shot(page, 'applications-tablet-768');
     await page.setViewportSize({ width: 375, height: 812 });
     await expect(page.getByTestId('application-card').filter({ hasText: company })).toBeVisible();
+    await page.getByRole('checkbox', { name: `Select ${role} at ${company}` }).check();
+    await expect(page.getByText('1 application selected')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Bulk actions toolbar' })).toBeVisible();
+    await page.getByRole('button', { name: 'Clear selection' }).click();
     await shot(page, 'applications-mobile');
     a11y.push(await audit(page, 'mobile-cards'));
     await page.getByRole('button', { name: `Open ${role} at ${company}` }).click();

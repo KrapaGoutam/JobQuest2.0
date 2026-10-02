@@ -26,9 +26,9 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | --- | --- |
 | PL-0 | `CLOSED` |
 | PL-1 | `CLOSED` — closeout feature CI `36898779897` and development integration CI `36903888076` PASS |
-| PL-2 | `IN PROGRESS` — implementation, exact-SHA application CI, and jobquest-dev Preview pass; final evidence-SHA CI and operator approval pending |
-| PL-3 | `PENDING` |
-| PL-4A | `PENDING` |
+| PL-2 | `CLOSED` — feature CI `36918359854` and development integration CI `36960378949` PASS |
+| PL-3 | `CLOSED` — feature certification, matching Preview, and development integration CI `37012301480` PASS |
+| PL-4A | `FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED` — exact feature CI `37033042789` and matching jobquest-dev Preview passed; development merge is not authorized |
 | PL-4B | `PENDING` |
 | PL-4C | `PENDING` |
 | PL-5 | `PENDING` |

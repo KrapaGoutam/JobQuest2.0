@@ -3460,6 +3460,78 @@ button.chip:focus-visible,
   }
 }
 
+/* PL-4A: page-scoped application selection and responsive bulk controls. */
+.application-mobile-select-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.application-mobile-checkbox {
+  flex: 0 0 auto;
+  margin-top: 12px;
+}
+.application-bulk-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  padding: 0;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.2s ease-out;
+}
+.application-bulk-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+}
+.application-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .application-bulk-bar {
+    right: 12px;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    left: 12px;
+    max-width: none;
+    padding: 10px 12px;
+    transform: none;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .application-bulk-divider {
+    width: 100%;
+    height: 1px;
+  }
+  .application-bulk-actions {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .application-bulk-actions .btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+  }
+}
+
 @media (max-width: 767px) {
   .extension-settings-heading {
     flex-direction: column;

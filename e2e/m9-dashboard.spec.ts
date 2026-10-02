@@ -279,12 +279,23 @@ test.describe("Milestone 9 · Dashboard parity E2E", () => {
             .slice(0, 20),
         };
       });
-    await expect
-      .poll(async () => (await readOverflow()).overflow, {
-        message: "dashboard should settle without horizontal overflow",
-      })
-      .toBeLessThanOrEqual(0);
-    const overflowSnapshot = await readOverflow();
+    let overflowSnapshot = await readOverflow();
+    try {
+      await expect
+        .poll(
+          async () => {
+            overflowSnapshot = await readOverflow();
+            return overflowSnapshot.overflow;
+          },
+          { message: "dashboard should settle without horizontal overflow" },
+        )
+        .toBeLessThanOrEqual(0);
+    } catch (cause) {
+      overflowSnapshot = await readOverflow();
+      throw new Error(
+        `Dashboard overflow snapshot: ${JSON.stringify(overflowSnapshot, null, 2)}\n${cause instanceof Error ? cause.message : String(cause)}`,
+      );
+    }
     const overflow = overflowSnapshot.overflow;
     expect(
       overflow,

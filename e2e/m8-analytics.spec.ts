@@ -75,6 +75,12 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
     await page.getByRole("button", { name: "I saved them" }).click();
     await page.goto("/applications");
     await expect(page.getByTestId("new-application-btn")).toBeVisible();
+    await page.getByRole("button", { name: /Switch workspace/ }).click();
+    await page
+      .getByRole("menu", { name: "Workspaces" })
+      .getByRole("menuitemradio")
+      .first()
+      .click();
 
     // 2. Create sample applications to populate pipeline and analytics
     await page.getByTestId("new-application-btn").click();

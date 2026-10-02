@@ -10,7 +10,9 @@ Implementation commit: `526b0318`
 
 Pre-evidence branch SHA / CI: `8bf4b1c38baae508388828b0d03f0c4ebf75bb04` / `36915890541 PASS`
 
-Final feature SHA / CI: the evidence commit that contains this report must receive its own exact-SHA CI; record the resulting SHA/run in the operator handoff rather than claiming the earlier run certifies it.
+Final feature SHA / CI: `298d112d4379dedf6930572015d6f7498feff4ea` / `36918359854 PASS`
+
+Development merge SHA / CI: `5dfce2086f04abd26efb1a3a36ebd73132bda986` / `36960378949 PASS`
 
 ## Scope
 
@@ -70,7 +72,8 @@ Canonical Date Added is `applications.created_at`, not `applied_at`, `updated_at
 - AI model/provider/prompt change: `NO`
 - Unbounded applications or contacts load: `NO` (application page remains 50 rows; link choices are capped at 200)
 - Default application ordering change: `NO`
-- Main or development branch change: `NO`
+- Main branch change: `NO`
+- Development branch change: `YES`; the operator-approved PL-2 no-ff merge is certified at `5dfce2086f04abd26efb1a3a36ebd73132bda986`
 - Production deployment: `NO`
 - PL-1D remediation: `NO`; PL-1D remains `DEFERRED / TBD`
 - Dashboard/Analytics redesign: `NO`
@@ -118,4 +121,6 @@ Targeted local Playwright evidence:
 
 ## Certification status
 
-PL-2 is implemented, locally validated, exact-SHA CI verified at the pre-evidence branch SHA, and verified on its matching `jobquest-dev` Vercel Preview. This evidence-only update requires a new exact-SHA CI PASS before the branch is ready for operator approval. Development, main, and Production remain unchanged.
+PL-2 is formally closed. The final feature SHA `298d112d4379dedf6930572015d6f7498feff4ea` passed CI run `36918359854` and was merged into `development` with the approved no-ff merge `5dfce2086f04abd26efb1a3a36ebd73132bda986`. Exact development CI run `36960378949` passed classification, lint, typecheck, unit, build, tracked/browser secret scans, disposable-Supabase migrations and integration, extension validation, browser E2E, and axe. Main and Production remain unchanged. PL-3 is next and was not started in this session.
+
+The post-development-CI closeout edits in this report and the canonical state/checklist are intentionally left unstaged so they do not create an untested development commit.

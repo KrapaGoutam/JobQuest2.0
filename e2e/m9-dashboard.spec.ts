@@ -77,6 +77,12 @@ test.describe("Milestone 9 · Dashboard parity E2E", () => {
       await login.getByLabel("Password").fill(password);
       await login.getByRole("button", { name: "Sign in" }).click();
       await expect(page.getByTestId("new-application-btn")).toBeVisible();
+      await page.getByRole("button", { name: /Switch workspace/ }).click();
+      await page
+        .getByRole("menu", { name: "Workspaces" })
+        .getByRole("menuitemradio")
+        .first()
+        .click();
     } else {
       await page.getByRole("button", { name: "Create account" }).click();
       const registration = page.getByRole("form", { name: "Register" });
@@ -252,12 +258,38 @@ test.describe("Milestone 9 · Dashboard parity E2E", () => {
     await expect(
       page.getByRole("status", { name: "Loading dashboard widgets" }),
     ).toHaveCount(0);
-    const overflow = await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth -
-        document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
+    const readOverflow = () =>
+      page.evaluate(() => {
+        const viewportWidth = document.documentElement.clientWidth;
+        return {
+          overflow: document.documentElement.scrollWidth - viewportWidth,
+          offenders: [...document.querySelectorAll<HTMLElement>("body *")]
+            .map((element) => {
+              const rect = element.getBoundingClientRect();
+              return {
+                tag: element.tagName.toLowerCase(),
+                className: element.className?.toString() || "",
+                text: element.textContent?.trim().slice(0, 80) || "",
+                left: Math.round(rect.left),
+                right: Math.round(rect.right),
+                width: Math.round(rect.width),
+              };
+            })
+            .filter(({ left, right }) => left < 0 || right > viewportWidth)
+            .slice(0, 20),
+        };
+      });
+    await expect
+      .poll(async () => (await readOverflow()).overflow, {
+        message: "dashboard should settle without horizontal overflow",
+      })
+      .toBeLessThanOrEqual(0);
+    const overflowSnapshot = await readOverflow();
+    const overflow = overflowSnapshot.overflow;
+    expect(
+      overflow,
+      JSON.stringify(overflowSnapshot.offenders, null, 2),
+    ).toBeLessThanOrEqual(0);
     await shot(page, "D4-dashboard-mobile");
     a11y.push(await audit(page, "dashboard-mobile"));
 

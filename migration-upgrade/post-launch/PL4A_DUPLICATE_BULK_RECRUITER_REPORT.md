@@ -1,0 +1,83 @@
+# PL-4A — Duplicate UX, Bulk Application Operations, and Recruiter Tracking
+
+Date: 2026-10-02
+
+Branch: `feature/pl4a-duplicate-bulk-recruiter`
+
+Development baseline: `11116ca2a577c70e18b4bcfac796dfa6260bda15`
+
+Main baseline: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`
+
+## Status
+
+Implementation and full local certification are complete. Exact feature-branch CI and the matching jobquest-dev Preview remain pending. Development integration requires explicit operator approval; main and Production remain unchanged.
+
+## Discovery matrix
+
+| Area | Baseline finding | Result |
+| --- | --- | --- |
+| Duplicate UX | PARTIAL | Existing STRONG/PROBABLE/POSSIBLE RPC tiers are preserved. Create now prevents stale verdict races, blocks submit while checking, resets overrides when identity changes, shows every match with useful metadata, and provides direct navigation. |
+| Bulk selection | PARTIAL | Selection now works on desktop and mobile, is page-scoped, and clears on page changes. |
+| Bulk actions | PARTIAL | Existing per-record RPCs are retained. Available actions reflect active/archived/open selection state, destructive actions require confirmation, pending actions lock controls, and partial failures remain selected for retry. |
+| Recruiter tracking | PARTIAL | Existing contact types, roles, follow-ups, activities, and application links are retained. Contact facets are exact, the list is paginated, app-to-contact navigation is canonical, and the link-existing picker is searchable. |
+| Application-contact association | EXISTING | Existing tables and RPCs remain canonical; no second relationship model was created. |
+| Recruiter search/filter/detail | PARTIAL | Search/filter/detail existed; pagination, exact counts, keyboard semantics, overlay behavior, and canonical deep links were completed. |
+
+## Implementation
+
+- Added race-safe duplicate checking and submit gating to the application-create flow.
+- Expanded duplicate results from a single row to an accessible list with tier reason, status, outcome, stage, applied date, and a direct “View existing” action.
+- Added mobile application selection and page-scoped selection behavior.
+- Made bulk controls selection-aware across active, archived, and open applications; added confirmation for archive and Ghosted transitions; preserved failed/ineligible IDs after partial execution.
+- Added a small sequential bulk runner with explicit success/failure accounting. Operations remain intentionally non-atomic because the canonical backend contract is per record.
+- Added canonical contact routes (`/w/:workspace/contacts/:contact`) and application-to-contact deep links.
+- Added exact server-side contact facet counts, 50-row pagination, searchable application-link selection, keyboard-operable rows, and shared accessible overlay behavior.
+
+## Database, API, and security impact
+
+No migration, schema, RLS, authentication, external API contract, environment variable, dependency, or workflow change was required. The only new helper is client-side. Existing workspace/user authorization and canonical RPC boundaries are unchanged.
+
+PL-1D was not implemented. Server-side capture duplicate enforcement, stored `duplicate_override` residue, and URL-normalization alignment remain deferred. Manual entry, import, and extension capture intentionally keep their existing distinct duplicate semantics.
+
+## Verification
+
+Local certification on the feature branch:
+
+- lint: PASS
+- TypeScript: PASS
+- unit: `174/174` PASS across 21 files
+- integration: `187/187` PASS across 18 files
+- production build: PASS (existing chunk-size advisory only)
+- full browser E2E and axe: `22/22` PASS
+- PL-4A focused browser evidence: PASS; seven axe contexts with zero violations; mobile horizontal overflow `0`
+- contact focused browser evidence: PASS; four axe contexts with zero violations
+- extension: `97/97` PASS; typecheck/package PASS
+- tracked source secret scan: 944 files, zero findings
+- browser bundle secret scan: three files, zero findings
+- extension package secret scan: 45 files, zero findings
+
+The disposable local Supabase environment was stopped without a backup after successful testing.
+
+## Limits and deferred follow-ups
+
+- Editing an existing application does not perform duplicate checking because the current RPC has no exclude-current-application argument. Adding that behavior requires an API-contract decision.
+- The canonical duplicate RPC excludes archived applications; changing that policy is deferred.
+- The existing-contact picker remains bounded to 200 candidates. A server-search contract should precede removing that bound.
+- Contact entity deduplication remains a product-policy follow-up; PL-4A does not merge contacts automatically.
+- Bulk actions use sequential canonical per-record RPC calls. They report partial failure honestly but are not atomic.
+
+## Promotion state
+
+Feature CI: PENDING
+
+Preview: PENDING
+
+Development merge: NOT AUTHORIZED
+
+Main: UNCHANGED
+
+Production/jobquest-prod: UNCHANGED
+
+PL-1D: UNCHANGED / DEFERRED
+
+Next: push only this feature branch, certify its exact SHA in CI and on the matching jobquest-dev Preview, update the evidence here, then stop for operator approval before any development merge.

@@ -1,3 +1,23 @@
+## >>> PL-4A IMPLEMENTATION + LOCAL CERTIFICATION COMPLETE / REMOTE CERTIFICATION PENDING (2026-10-02) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FEATURE CERTIFICATION PENDING | PL-1D: DEFERRED / UNCHANGED.
+
+CURRENT BRANCH: `feature/pl4a-duplicate-bulk-recruiter` | DEVELOPMENT BASE: `11116ca2a577c70e18b4bcfac796dfa6260bda15` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+DISCOVERY: Duplicate UX `PARTIAL`; bulk selection `PARTIAL`; bulk actions `PARTIAL`; recruiter tracking `PARTIAL`; application-contact association `EXISTING`; recruiter search/filter/detail `PARTIAL`.
+
+IMPLEMENTATION: race-safe duplicate checks, multi-match navigation/metadata, mobile and page-scoped application selection, mixed-state bulk eligibility, confirmation/pending/partial-failure handling, canonical contact deep links, exact facets, 50-row contact pagination, searchable linking, and accessible contact table/drawer behavior. Existing duplicate/contact/RPC architecture remains canonical.
+
+LOCAL EVIDENCE: lint PASS; typecheck PASS; unit `174/174`; integration `187/187`; build PASS; full browser E2E + axe `22/22`; extension `97/97` plus typecheck/package; tracked-source, browser-bundle, and extension secret scans all report zero findings. Focused PL-4A and contact evidence report zero axe violations and zero mobile overflow.
+
+NON-CHANGES: no migration, schema, RLS, auth, dependency, workflow, external API contract, main, Production, jobquest-prod, or PL-1D change. The operator's pre-existing `.gitignore` edit remains unstaged and untouched.
+
+REMOTE STATE: feature push, exact-SHA CI, and matching jobquest-dev Preview are pending. Development integration is not authorized.
+
+NEXT EXACT ACTION: commit this PL-4A report/state, push only the feature branch, certify exact branch CI and matching jobquest-dev Preview, persist final evidence, then stop for explicit operator approval before any development merge.
+
+Report: `migration-upgrade/post-launch/PL4A_DUPLICATE_BULK_RECRUITER_REPORT.md`.
+
 ## >>> PL-3 DIRECTION C — FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-02) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.

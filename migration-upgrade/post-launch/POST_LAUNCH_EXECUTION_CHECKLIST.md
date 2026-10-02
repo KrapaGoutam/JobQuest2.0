@@ -64,7 +64,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-1 | CLOSED | Closeout feature CI `36898779897` and development integration CI `36903888076` passed; PL-1A closed, PL-1B conditional/not executed, PL-1C closed with evidence limitation, PL-1D assessed/deferred. |
 | PL-2 | CLOSED | Feature CI `36918359854` and development integration CI `36960378949` passed; PL-2 is formally closed. |
 | PL-3 | CLOSED | Feature certification and matching Preview passed; development merge `11116ca2a577c70e18b4bcfac796dfa6260bda15` passed CI `37012301480`. |
-| PL-4A | PENDING | Verify duplicate, bulk, and recruiter functionality under specified views. |
+| PL-4A | FEATURE CERTIFICATION PENDING | Discovery and implementation complete on `feature/pl4a-duplicate-bulk-recruiter`; full local suite passes. Exact feature CI and matching jobquest-dev Preview remain required before operator review. |
 | PL-4B | PENDING | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |
 | PL-4C | PENDING | Verify existing goals/recurrence; scope templates as independent canonical tasks. |
 | PL-5 | PENDING | Gather evidence after implementation phases; leave production metrics for M15-F when needed. |

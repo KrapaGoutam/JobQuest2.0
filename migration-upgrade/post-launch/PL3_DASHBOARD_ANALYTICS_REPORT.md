@@ -2,7 +2,7 @@
 
 ## Status
 
-PL-3 implementation is complete on `feature/pl3-dashboard-analytics-redesign` and is awaiting exact-feature-SHA CI, Vercel Preview verification, and operator approval. This report does not authorize a merge to `development`, `main`, or Production.
+PL-3 implementation and feature certification are complete on `feature/pl3-dashboard-analytics-redesign`. Exact-feature-SHA CI and the matching Vercel Preview passed. PL-3 is awaiting operator approval; this report does not authorize a merge to `development`, `main`, or Production.
 
 ## Baseline and design authority
 
@@ -63,7 +63,7 @@ PL-3 implementation is complete on `feature/pl3-dashboard-analytics-redesign` an
 - Unit: 171/171 PASS.
 - Integration: 187/187 PASS against the configured development test target.
 - Build: PASS (existing Vite chunk-size advisory only).
-- Tracked-secret scan: 941 files, 0 findings.
+- Tracked-secret scan: 944 files, 0 findings.
 - Focused Dashboard browser E2E: PASS.
 - Focused Analytics browser E2E: PASS.
 - Full browser E2E: 22/22 PASS after updating the M6 regression assertions for the Direction C heading and visible review actions.
@@ -73,9 +73,19 @@ PL-3 implementation is complete on `feature/pl3-dashboard-analytics-redesign` an
 
 Implementation screenshots were compared with the canonical Direction C PNGs for hierarchy, density, typography, card composition, charts, light/dark themes, manager context, customization, and mobile reflow. Intentional deviations retain real data, existing shell behavior, and accessible native controls rather than reproducing static mock content. Desktop, dark, manager, customization, and 390px mobile captures have no page-level horizontal overflow.
 
-## Remaining certification gates
+## Feature certification and recovery evidence
 
-1. Commit and push only `feature/pl3-dashboard-analytics-redesign` with exact-path staging; preserve `.gitignore` and the PL-2 report change unstaged.
-2. Require exact-SHA feature CI PASS.
-3. Verify the matching Vercel Preview belongs to team `one-piece-5779`, project `jobquest2`, and backend `jobquest-dev`; record its URL and deployment ID.
-4. Perform final Preview visual/accessibility review, then stop for operator approval before any development merge.
+- Original implementation commit: `012fc37eddd10783b9b1df2d7edf80d50e979f0f`.
+- Original CI: run `36966023286` failed only M9's 390px horizontal-overflow assertion by 9px; 21/22 browser tests passed, including M8 Analytics and axe.
+- Root cause: Linux Chromium allowed a native `<table className="sr-only">` in the Search Pulse pace chart to retain a 352px intrinsic table width. At x=47 in a 390px viewport, its right edge reached 399px. The visible Dashboard layout did not overflow.
+- Test stabilization commits `bfe981dbd0575fb5b4696dd03a148087a544d763`, `ddfe78d067d9616e0314488ff7f475fc860f98cf`, and `1a904b28167740a7d344f82ffb0b46aec6138afd` made Preview workspace selection explicit and preserved element-level overflow diagnostics. Those diagnostics identified the hidden pace table exactly.
+- Application fix commit: `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`. All four screen-reader-only analytics tables now retain native table semantics inside clipped `sr-only` wrappers, preventing intrinsic table layout from expanding the document.
+- Exact application-fix CI: run `36972469514` PASS. Classification, lint, typecheck, 171/171 unit tests, build, secret scans, disposable-Supabase integration (187/187), extension validation, and browser E2E/axe (22/22) passed.
+- Matching Preview: `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app`, deployment `dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`, READY, team `one-piece-5779`, project `jobquest2`, exact SHA `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`.
+- Preview target verification: `/api/health` returned 200; the compiled asset contained the `jobquest-dev` ref `xpnkasclquplmrcmhsif` and did not contain the Production ref.
+- Focused matching-Preview Dashboard and Analytics suites both passed. Dashboard verified 30/30 widgets, persistence, drill-through, themes, manager/owner scope, axe, and zero 390px page overflow. Analytics verified all four tabs, timing, aging, goals, export, themes, and zero axe violations.
+- `.gitignore` and the unrelated PL-2 report update remained unstaged and untouched. `development`, `main`, Production, database, auth, and dependencies remain unchanged.
+
+## Remaining gate
+
+Stop for explicit operator approval before any PL-3 merge to `development`. A development merge, exact development CI, `main`, and Production are separate future gates and are not authorized by this report.

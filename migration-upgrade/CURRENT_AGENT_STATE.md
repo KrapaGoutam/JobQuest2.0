@@ -1,16 +1,20 @@
-## >>> PL-3 DIRECTION C IMPLEMENTATION COMPLETE LOCALLY — CERTIFICATION PENDING (2026-10-01) <<<
+## >>> PL-3 DIRECTION C FEATURE CERTIFIED — OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: IMPLEMENTED LOCALLY / FEATURE CERTIFICATION PENDING | PL-1D: DEFERRED / TBD.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FEATURE CERTIFIED / AWAITING OPERATOR APPROVAL | PL-1D: DEFERRED / TBD.
 
-CURRENT BRANCH: `feature/pl3-dashboard-analytics-redesign` | IMPLEMENTATION BASE: `5dfce2086f04abd26efb1a3a36ebd73132bda986` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+CURRENT BRANCH: `feature/pl3-dashboard-analytics-redesign` | IMPLEMENTATION BASE: `5dfce2086f04abd26efb1a3a36ebd73132bda986` | APPLICATION-CERTIFIED SHA: `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` | CI: `36972469514 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
 
 DESIGN: Direction C — Job Search Cockpit. Handoff `FeatureUpgrade1/JobQuest-PL3-ClaudeCode-Handoff` validated as local reference input and remains excluded/untracked. Directions A/B and Analytics All Sections were not implemented.
 
 IMPLEMENTATION: canonical Dashboard hierarchy, Week-default Search Pulse, Today’s Work, Progress, Your Widgets, enhanced 30-widget customization, and four-tab Analytics redesign. Offers and Aging Applications are represented in new user defaults. All 30 widget IDs remain accounted for. No schema, RLS, auth, API contract, shell, main, or Production change.
 
-LOCAL EVIDENCE: lint PASS; typecheck PASS; unit `171/171`; integration `187/187`; build PASS; tracked-secret scan `941` files / `0` findings; full browser E2E `22/22 PASS`, including focused Dashboard/Analytics desktop, dark, mobile, manager, customization, exports, mutations, and axe flows with zero blocking findings. Exact feature commit/push/CI, Preview, and operator gate remain pending.
+CERTIFICATION EVIDENCE: lint PASS; typecheck PASS; unit `171/171`; integration `187/187`; build PASS; tracked-secret scan `944` files / `0` findings; full browser E2E `22/22 PASS`. Original SHA `012fc37eddd10783b9b1df2d7edf80d50e979f0f` failed CI `36966023286` only because a screen-reader-only pace-chart table created 9px Linux Chromium overflow at 390px. The table is now contained by a clipped wrapper without removing table semantics. Exact application-fix CI `36972469514` passed for `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`.
 
-NEXT EXACT ACTION: exact-path stage PL-3 files while leaving `.gitignore` and the unrelated PL-2 report change unstaged; commit/push only the feature branch; certify exact-SHA CI and matching jobquest-dev Preview; then stop for operator approval before development integration.
+PREVIEW EVIDENCE: `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app` (`dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`) is READY for exact application SHA `fda08f2ec465fbfbe961ecc5bd40e98269ca7674`. Health returned 200; the bundle targets only `jobquest-dev`; focused Dashboard and Analytics Preview suites passed with 30/30 widgets, zero mobile overflow, and zero axe violations.
+
+PROTECTION STATE: `.gitignore` and the unrelated PL-2 report update remain unstaged and untouched. `development` remains `5dfce2086f04abd26efb1a3a36ebd73132bda986`; `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production is unchanged.
+
+NEXT EXACT ACTION: stop for explicit operator approval before any PL-3 merge to `development`. Do not merge to development/main or touch Production automatically.
 
 Report: `migration-upgrade/post-launch/PL3_DASHBOARD_ANALYTICS_REPORT.md`.
 

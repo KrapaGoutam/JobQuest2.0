@@ -22,15 +22,15 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-3` / `IMPLEMENTED LOCALLY — FEATURE CERTIFICATION PENDING` |
-| Branch / base SHA / current HEAD / remote HEAD | `feature/pl3-dashboard-analytics-redesign` / `5dfce2086f04abd26efb1a3a36ebd73132bda986` / `UNCOMMITTED LOCAL IMPLEMENTATION` / `NOT PUSHED` |
-| Last tested application SHA | Base plus current local PL-3 working tree; commit pending |
-| CI run / CI SHA / CI result | `PENDING` |
-| Preview / database target / migrations | `PENDING` / must be `jobquest-dev` / `NONE` |
+| TASK ID / STATUS | `PL-3` / `FEATURE CERTIFIED — AWAITING OPERATOR APPROVAL` |
+| Branch / base SHA / application-certified SHA | `feature/pl3-dashboard-analytics-redesign` / `5dfce2086f04abd26efb1a3a36ebd73132bda986` / `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` |
+| Last tested application SHA | `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` |
+| CI run / CI SHA / CI result | `36972469514` / `fda08f2ec465fbfbe961ecc5bd40e98269ca7674` / `PASS` |
+| Preview / database target / migrations | `https://jobquest2-kmyr2pq0v-one-piece-5779.vercel.app` (`dpl_62fhBQL3Jd6iuPy5YS7sKXvRqnea`, READY, exact application SHA) / `jobquest-dev` / `NONE` |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Direction C implementation and complete local gate passed: lint, typecheck, 171 unit, 187 integration, build, secret scan, and 22/22 browser E2E with axe. |
-| Next exact action | Exact-path commit/push, exact-SHA feature CI, matching Preview verification, then operator approval gate. |
-| Blockers / open questions | No product blocker; feature certification and Preview evidence pending. |
+| Last completed action | Recovered the original 9px Linux Chromium mobile-overflow failure to a hidden pace-chart table; contained all hidden analytics tables; passed exact-SHA CI and matching-Preview Dashboard/Analytics/axe verification. |
+| Next exact action | Stop for explicit operator approval before any PL-3 no-ff merge to `development`; development CI is a separate future gate. |
+| Blockers / open questions | No product blocker; operator approval for development integration is required. |
 | Operator approval status | PL-3 implementation authorized; merge to development is not authorized. |
 | Report document | `migration-upgrade/post-launch/PL3_DASHBOARD_ANALYTICS_REPORT.md` |
 
@@ -63,7 +63,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-0 | CLOSED | Certified governance integration and formal closeout complete. |
 | PL-1 | CLOSED | Closeout feature CI `36898779897` and development integration CI `36903888076` passed; PL-1A closed, PL-1B conditional/not executed, PL-1C closed with evidence limitation, PL-1D assessed/deferred. |
 | PL-2 | CLOSED | Feature CI `36918359854` and development integration CI `36960378949` passed; PL-2 is formally closed. |
-| PL-3 | IMPLEMENTED LOCALLY / CERTIFICATION PENDING | Complete exact-SHA feature CI, jobquest-dev Preview review, and operator gate. |
+| PL-3 | FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED | Exact application SHA CI and matching jobquest-dev Preview passed; stop before development integration. |
 | PL-4A | PENDING | Verify duplicate, bulk, and recruiter functionality under specified views. |
 | PL-4B | PENDING | Define the calendar/timeline/archive gap after PL-4A or explicit reprioritization. |
 | PL-4C | PENDING | Verify existing goals/recurrence; scope templates as independent canonical tasks. |

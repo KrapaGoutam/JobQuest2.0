@@ -293,7 +293,8 @@ test.describe("Milestone 9 · Dashboard parity E2E", () => {
     } catch (cause) {
       overflowSnapshot = await readOverflow();
       throw new Error(
-        `Dashboard overflow snapshot: ${JSON.stringify(overflowSnapshot, null, 2)}\n${cause instanceof Error ? cause.message : String(cause)}`,
+        `Dashboard overflow snapshot: ${JSON.stringify(overflowSnapshot, null, 2)}`,
+        { cause },
       );
     }
     const overflow = overflowSnapshot.overflow;

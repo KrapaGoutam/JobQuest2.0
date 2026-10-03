@@ -223,7 +223,7 @@ test.describe('PL-4B Calendar, Timeline, and Archive', () => {
     if (await dark.isVisible()) {
       await dark.click();
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running' && animation.playState !== 'pending'));
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running' && !animation.pending));
       a11y.push(await audit(page, 'archive-dark'));
     }
 

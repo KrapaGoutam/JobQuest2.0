@@ -10,7 +10,7 @@ Main baseline: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`
 
 ## Status
 
-Implementation, exact application/evidence SHA CI, and the matching jobquest-dev Preview are certified. Development integration requires explicit operator approval; main and Production remain unchanged.
+PL-4A is formally closed. Implementation, exact feature certification, matching jobquest-dev Preview verification, operator-approved development integration, and exact development CI all passed. Main and Production remain unchanged.
 
 ## Discovery matrix
 
@@ -84,7 +84,7 @@ Application/evidence SHA CI: `37033042789` PASS at `cc240dc4948ac9e34a61ccc51668
 
 Preview: `dpl_H6nWmXctR1oGB7mXpEah4jYK9nRt` READY at the same SHA
 
-Development merge: NOT AUTHORIZED
+Development merge: `80076446a120388fe2b05f7d36ccc131bb72d538` — COMPLETE
 
 Main: UNCHANGED
 
@@ -92,4 +92,8 @@ Production/jobquest-prod: UNCHANGED
 
 PL-1D: UNCHANGED / DEFERRED
 
-Next: certify the docs-only closeout tip, then stop for explicit operator approval before any development merge. No main or Production action is authorized.
+Development CI: `37050583184` — PASS
+
+The no-ff development merge has parents `11116ca2a577c70e18b4bcfac796dfa6260bda15` and `89d6764015e96bc4639158fe74a0f5a89e25a032`. Exact development CI passed classification, static checks, secret scans, migrations, `174/174` unit tests, `187/187` integration tests, extension validation, and `22/22` browser E2E plus axe.
+
+PL-4A is CLOSED. PL-4B is NEXT / NOT STARTED. No main or Production action is authorized.

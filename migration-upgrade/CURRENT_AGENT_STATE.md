@@ -1,3 +1,21 @@
+## >>> PL-4A FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-02) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.
+
+FEATURE BRANCH: `feature/pl4a-duplicate-bulk-recruiter` | FINAL FEATURE SHA / CI: `89d6764015e96bc4639158fe74a0f5a89e25a032` / `37034644123 PASS` | FULL APPLICATION CI: `cc240dc4948ac9e34a61ccc516686cf2c5e830f1` / `37033042789 PASS`.
+
+DEVELOPMENT INTEGRATION: operator-approved no-ff merge `80076446a120388fe2b05f7d36ccc131bb72d538` has parents `11116ca2a577c70e18b4bcfac796dfa6260bda15` and `89d6764015e96bc4639158fe74a0f5a89e25a032`. Exact development CI `37050583184` passed classification, lint, typecheck, `174/174` unit tests, build, secret scans, migrations, `187/187` integration tests, extension validation, `22/22` browser E2E plus axe, evidence upload, and disposable-stack cleanup.
+
+PREVIEW EVIDENCE: final feature Preview `dpl_6nKw3dbtH4nGhKptGrTt99HMCugr` at `https://jobquest2-jbb8az212-one-piece-5779.vercel.app` is READY, healthy, and targets only jobquest-dev. Focused authenticated Applications and Contacts Preview suites passed with eleven axe contexts, zero blocking violations, and zero mobile overflow.
+
+PROTECTION STATE: `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production/jobquest-prod and PL-1D are unchanged. The operator's `.gitignore` modification remains unstaged and untouched; `FeatureUpgrade1` remains locally excluded.
+
+POST-DEVELOPMENT-CI DOCUMENTATION: this formal closeout metadata is intentionally unstaged so no new untested development SHA is created.
+
+NEXT EXACT ACTION: PL-4B — Calendar / Timeline-Gantt / Archive, in a separate controlled task with explicit authorization. Do not start automatically, merge development to main, touch Production, implement PL-1D, execute M15-F, or retire legacy systems.
+
+Report: `migration-upgrade/post-launch/PL4A_DUPLICATE_BULK_RECRUITER_REPORT.md`.
+
 ## >>> PL-4A FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / UNCHANGED.

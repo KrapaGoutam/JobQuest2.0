@@ -1,8 +1,8 @@
-## >>> PL-4B CANDIDATE CERTIFIED / FINAL DOCS-TIP CI REQUIRED (2026-10-03) <<<
+## >>> PL-4B FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-03) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: CANDIDATE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-4C: NOT STARTED | PL-1D: DEFERRED / TBD.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.
 
-CURRENT BRANCH: `feature/pl4b-calendar-timeline-archive` | DEVELOPMENT BASE: `80076446a120388fe2b05f7d36ccc131bb72d538` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+CURRENT BRANCH: `development` | PL-4B BASE: `80076446a120388fe2b05f7d36ccc131bb72d538` | FINAL FEATURE SHA / CI: `8ee3dcaa024ae9780ca395d246e61667a09dc580` / `37128248294 PASS` | DEVELOPMENT MERGE SHA / CI: `dfa5a59b6619d12e319fe82b316be2339280f673` / `37128826840 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
 
 IMPLEMENTATION: real timezone-aware Calendar month/agenda; cross-application event and defensible-duration Timeline/Gantt; consolidated recovery-only Archive Center for applications, contacts, habits, and documents. Existing canonical tables, RLS, manager visibility, source navigation, and restore RPCs are retained. No migration, schema, API contract, RLS, auth, dependency, workflow, Production, or PL-1D change.
 
@@ -12,9 +12,13 @@ LOCAL EVIDENCE: lint PASS; typecheck PASS; unit `179/179`; integration `187/187`
 
 FINAL APPLICATION/TEST CANDIDATE: `f8890b4d33bb8470ed3564951436cab869135389` | CI `37127378593` PASS. Matching Preview `dpl_AHAeH26jLYdd2AgMSafhHAdFjWvV` at `https://jobquest2-pb0szhpwp-one-piece-5779.vercel.app` is READY, healthy, and bound only to jobquest-dev.
 
-PROTECTION STATE: development, main, Production/jobquest-prod, PL-1D, the operator's unstaged `.gitignore` edit, and locally excluded `FeatureUpgrade1` are unchanged.
+DEVELOPMENT INTEGRATION: operator-approved no-ff merge `dfa5a59b6619d12e319fe82b316be2339280f673` has parents `80076446a120388fe2b05f7d36ccc131bb72d538` and `8ee3dcaa024ae9780ca395d246e61667a09dc580`. Exact development CI `37128826840` passed classification, lint, typecheck, unit, build, secret scans, migrations, integration, extension validation, browser E2E, axe, evidence upload, and disposable-stack cleanup.
 
-NEXT EXACT ACTION: commit/push final PL-4B evidence docs, certify the new final feature SHA, then stop for explicit operator approval before PL-4B -> development. Do not merge development/main, touch Production, or start PL-4C.
+PROTECTION STATE: main remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production/jobquest-prod and PL-1D are unchanged. The operator's `.gitignore` modification remains unstaged and untouched; `FeatureUpgrade1` remains locally excluded.
+
+POST-DEVELOPMENT-CI DOCUMENTATION: this formal closeout metadata is intentionally unstaged so no new untested development SHA is created.
+
+NEXT EXACT ACTION: PL-4C — Goals + Task Templates + Recurrence Enhancements, in a separate controlled task with explicit authorization. Do not start automatically, merge development to main, touch Production, implement PL-1D, execute M15-F, or retire legacy systems.
 
 Report: `migration-upgrade/post-launch/PL4B_CALENDAR_TIMELINE_ARCHIVE_REPORT.md`.
 

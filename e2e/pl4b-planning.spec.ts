@@ -94,9 +94,9 @@ test.describe('PL-4B Calendar, Timeline, and Archive', () => {
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
 
     await expect.poll(() => page.evaluate(() => {
-      const value = (window as unknown as { __jqState?: { user?: { active_workspace_id?: string }; activeWs?: string } }).__jqState;
-      return value?.activeWs ?? value?.user?.active_workspace_id ?? '';
-    })).toBeTruthy();
+      const value = (window as unknown as { __jqState?: { user?: { id?: string; active_workspace_id?: string }; activeWs?: string } }).__jqState;
+      return Boolean(value?.user?.id && (value.activeWs ?? value.user.active_workspace_id));
+    })).toBe(true);
     const state = await page.evaluate(() => {
       const value = (window as unknown as { __jqState?: { user?: { id?: string; active_workspace_id?: string }; activeWs?: string } }).__jqState;
       return { userId: value?.user?.id ?? '', workspaceId: value?.activeWs ?? value?.user?.active_workspace_id ?? '' };
@@ -242,6 +242,21 @@ test.describe('PL-4B Calendar, Timeline, and Archive', () => {
     await expect(page.getByRole('button', { name: new RegExp(`Restore application ${archiveNames.application}`) })).toBeVisible();
     expect(await overflow(page)).toBeLessThanOrEqual(1);
     a11y.push(await audit(page, 'archive-mobile'));
+
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.goto(`/calendar?date=${today}`);
+    await expect(page.locator('.desktop-calendar')).toBeVisible();
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    a11y.push(await audit(page, 'calendar-tablet'));
+    await page.goto('/timeline?range=90&mode=duration');
+    await expect(page.locator('.timeline-duration-grid')).toBeVisible();
+    await expect(page.locator('.timeline-mobile-lanes')).toBeHidden();
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    a11y.push(await audit(page, 'timeline-tablet'));
+    await page.goto('/archive');
+    await expect(page.getByRole('button', { name: new RegExp(`Restore application ${archiveNames.application}`) })).toBeVisible();
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    a11y.push(await audit(page, 'archive-tablet'));
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/archive');

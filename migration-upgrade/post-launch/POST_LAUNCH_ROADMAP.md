@@ -28,8 +28,8 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | PL-1 | `CLOSED` — closeout feature CI `36898779897` and development integration CI `36903888076` PASS |
 | PL-2 | `CLOSED` — feature CI `36918359854` and development integration CI `36960378949` PASS |
 | PL-3 | `CLOSED` — feature certification, matching Preview, and development integration CI `37012301480` PASS |
-| PL-4A | `FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED` — exact feature CI `37033042789` and matching jobquest-dev Preview passed; development merge is not authorized |
-| PL-4B | `PENDING` |
+| PL-4A | `CLOSED` — final feature CI `37034644123` and development merge `80076446a120388fe2b05f7d36ccc131bb72d538` / CI `37050583184` PASS |
+| PL-4B | `CANDIDATE CERTIFIED / DOCS-TIP CI REQUIRED` — candidate `f8890b4d33bb8470ed3564951436cab869135389` / CI `37127378593` PASS; Preview READY/PASS; final docs-tip CI required |
 | PL-4C | `PENDING` |
 | PL-5 | `PENDING` |
 | M15-F | `RESERVED — FINAL PRODUCTION RELEASE + STABILIZATION — LAST` |
@@ -55,6 +55,8 @@ Start by verifying direct duplicate navigation across filters, pagination, archi
 ### PL-4B — Calendar, timeline/Gantt, archive (P2/P3)
 
 Build only the verified missing calendar aggregation of interviews, tasks, follow-ups, and next actions with timezone-aware dates. Scope cross-application Timeline/Gantt separately from existing per-application/contact timelines. Decide whether archive work is a consolidated center or targeted UX improvements.
+
+Implementation result (2026-10-03): the placeholder was replaced by a timezone-aware Calendar; a cross-application event/defensible-duration Timeline was added without inventing point-event durations; and a consolidated recovery-only Archive Center was selected for applications, contacts, habits, and documents because those domains already expose genuine archive/restore semantics. No migration, API contract, RLS, auth, dependency, main, or Production change was required. Certification remains gated on final exact-SHA CI and operator approval.
 
 ### PL-4C — Goals, task templates, recurrence (P2)
 

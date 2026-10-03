@@ -1,3 +1,41 @@
+## >>> PL-4B CANDIDATE CERTIFIED / FINAL DOCS-TIP CI REQUIRED (2026-10-03) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: CANDIDATE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-4C: NOT STARTED | PL-1D: DEFERRED / TBD.
+
+CURRENT BRANCH: `feature/pl4b-calendar-timeline-archive` | DEVELOPMENT BASE: `80076446a120388fe2b05f7d36ccc131bb72d538` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+IMPLEMENTATION: real timezone-aware Calendar month/agenda; cross-application event and defensible-duration Timeline/Gantt; consolidated recovery-only Archive Center for applications, contacts, habits, and documents. Existing canonical tables, RLS, manager visibility, source navigation, and restore RPCs are retained. No migration, schema, API contract, RLS, auth, dependency, workflow, Production, or PL-1D change.
+
+RECOVERY: original SHA `3c7ecb7bd12549b51ccbef9318df045dd6c76fb5` failed CI run `37101076139` at TypeScript `TS2367` because a test compared `Animation.playState` with impossible value `pending`. The semantic correction uses `!animation.pending`; intermediate SHA `a7aeeb4172d77befd8f3677384afb0e23a4a930b` passed exact CI `37126669497`. Preview synchronization now waits for both `user.id` and workspace readiness; explicit tablet acceptance was added.
+
+LOCAL EVIDENCE: lint PASS; typecheck PASS; unit `179/179`; integration `187/187`; build PASS; extension `97/97`; full browser E2E + axe `23/23`; tracked secret scan 955 files / zero findings; browser and extension bundle scans zero findings. Focused PL-4B Preview acceptance passes ten axe contexts and desktop/tablet/mobile with zero horizontal overflow.
+
+FINAL APPLICATION/TEST CANDIDATE: `f8890b4d33bb8470ed3564951436cab869135389` | CI `37127378593` PASS. Matching Preview `dpl_AHAeH26jLYdd2AgMSafhHAdFjWvV` at `https://jobquest2-pb0szhpwp-one-piece-5779.vercel.app` is READY, healthy, and bound only to jobquest-dev.
+
+PROTECTION STATE: development, main, Production/jobquest-prod, PL-1D, the operator's unstaged `.gitignore` edit, and locally excluded `FeatureUpgrade1` are unchanged.
+
+NEXT EXACT ACTION: commit/push final PL-4B evidence docs, certify the new final feature SHA, then stop for explicit operator approval before PL-4B -> development. Do not merge development/main, touch Production, or start PL-4C.
+
+Report: `migration-upgrade/post-launch/PL4B_CALENDAR_TIMELINE_ARCHIVE_REPORT.md`.
+
+## >>> PL-4A FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-02) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.
+
+FEATURE BRANCH: `feature/pl4a-duplicate-bulk-recruiter` | FINAL FEATURE SHA / CI: `89d6764015e96bc4639158fe74a0f5a89e25a032` / `37034644123 PASS` | FULL APPLICATION CI: `cc240dc4948ac9e34a61ccc516686cf2c5e830f1` / `37033042789 PASS`.
+
+DEVELOPMENT INTEGRATION: operator-approved no-ff merge `80076446a120388fe2b05f7d36ccc131bb72d538` has parents `11116ca2a577c70e18b4bcfac796dfa6260bda15` and `89d6764015e96bc4639158fe74a0f5a89e25a032`. Exact development CI `37050583184` passed classification, lint, typecheck, `174/174` unit tests, build, secret scans, migrations, `187/187` integration tests, extension validation, `22/22` browser E2E plus axe, evidence upload, and disposable-stack cleanup.
+
+PREVIEW EVIDENCE: final feature Preview `dpl_6nKw3dbtH4nGhKptGrTt99HMCugr` at `https://jobquest2-jbb8az212-one-piece-5779.vercel.app` is READY, healthy, and targets only jobquest-dev. Focused authenticated Applications and Contacts Preview suites passed with eleven axe contexts, zero blocking violations, and zero mobile overflow.
+
+PROTECTION STATE: `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production/jobquest-prod and PL-1D are unchanged. The operator's `.gitignore` modification remains unstaged and untouched; `FeatureUpgrade1` remains locally excluded.
+
+POST-DEVELOPMENT-CI DOCUMENTATION: this formal closeout metadata is intentionally unstaged so no new untested development SHA is created.
+
+NEXT EXACT ACTION: PL-4B — Calendar / Timeline-Gantt / Archive, in a separate controlled task with explicit authorization. Do not start automatically, merge development to main, touch Production, implement PL-1D, execute M15-F, or retire legacy systems.
+
+Report: `migration-upgrade/post-launch/PL4A_DUPLICATE_BULK_RECRUITER_REPORT.md`.
+
 ## >>> PL-4A FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-02) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / UNCHANGED.

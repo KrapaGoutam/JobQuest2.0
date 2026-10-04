@@ -39,6 +39,11 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [repeat, setRepeat] = useState('');
+  const [repeatInterval, setRepeatInterval] = useState(1);
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([]);
+  const [repeatEnd, setRepeatEnd] = useState<'never' | 'until' | 'after'>('never');
+  const [repeatUntil, setRepeatUntil] = useState('');
+  const [repeatCount, setRepeatCount] = useState(10);
   const [notes, setNotes] = useState('');
   const [targets, setTargets] = useState<Targets | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -62,6 +67,11 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
         setTime('');
       }
       setRepeat(editing.recurrence_rule ?? '');
+      setRepeatInterval(editing.recurrence_interval ?? 1);
+      setRepeatWeekdays(editing.recurrence_weekdays ?? []);
+      setRepeatEnd(editing.recurrence_until ? 'until' : editing.recurrence_occurrence_limit ? 'after' : 'never');
+      setRepeatUntil(editing.recurrence_until ?? '');
+      setRepeatCount(editing.recurrence_occurrence_limit ?? 10);
       setNotes(editing.details ?? '');
     } else {
       setType(initialType);
@@ -71,6 +81,11 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
       setDate(initialType === 'REMINDER' ? dayKey(Date.now(), timeZone) : '');
       setTime('');
       setRepeat('');
+      setRepeatInterval(1);
+      setRepeatWeekdays([]);
+      setRepeatEnd('never');
+      setRepeatUntil('');
+      setRepeatCount(10);
       setNotes('');
     }
     // Keyed on ids so a parent re-render never wipes typed input (M5 lesson).
@@ -91,19 +106,33 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
   ];
   const nextOccurrenceHint = useMemo(() => {
     if (!repeat || !date) return null;
-    const step: Record<string, number> = { DAILY: 1, WEEKLY: 7, BIWEEKLY: 14 };
     let next = '';
-    if (repeat in step) next = addDaysKey(date, step[repeat]!);
+    if (repeat === 'DAILY') next = addDaysKey(date, repeatInterval);
     else if (repeat === 'WEEKDAYS') {
       next = addDaysKey(date, 1);
       while ([0, 6].includes(new Date(`${next}T00:00:00Z`).getUTCDay())) next = addDaysKey(next, 1);
+    } else if (repeat === 'WEEKLY' && repeatWeekdays.length) {
+      const anchorIsoDay = new Date(`${date}T00:00:00Z`).getUTCDay() || 7;
+      const anchorWeek = addDaysKey(date, -(anchorIsoDay - 1));
+      next = date;
+      for (let guard = 0; guard < 3000; guard += 1) {
+        next = addDaysKey(next, 1);
+        const isoDay = new Date(`${next}T00:00:00Z`).getUTCDay() || 7;
+        const candidateWeek = addDaysKey(next, -(isoDay - 1));
+        const weekDifference = Math.round((Date.parse(`${candidateWeek}T00:00:00Z`) - Date.parse(`${anchorWeek}T00:00:00Z`)) / (7 * 86_400_000));
+        if (repeatWeekdays.includes(isoDay) && weekDifference % repeatInterval === 0) break;
+      }
+    } else if (repeat === 'WEEKLY') {
+      next = addDaysKey(date, 7 * repeatInterval);
+    } else if (repeat === 'BIWEEKLY') {
+      next = addDaysKey(date, 14);
     } else if (repeat === 'MONTHLY') {
       const [y, m, d] = date.split('-').map(Number);
-      const last = new Date(Date.UTC(y!, m! + 1, 0)).getUTCDate();
-      next = new Date(Date.UTC(y!, m!, Math.min(d!, last))).toISOString().slice(0, 10);
+      const last = new Date(Date.UTC(y!, m! + repeatInterval, 0)).getUTCDate();
+      next = new Date(Date.UTC(y!, m! - 1 + repeatInterval, Math.min(d!, last))).toISOString().slice(0, 10);
     }
     return next ? formatInZone(`${next}T12:00:00Z`, 'UTC', { weekday: 'short', month: 'short', day: 'numeric' }) : null;
-  }, [repeat, date]);
+  }, [repeat, date, repeatInterval, repeatWeekdays]);
 
   const submit = async () => {
     const errs: Record<string, string> = {};
@@ -112,6 +141,11 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
     if (type === 'FOLLOW_UP' && !link) errs.link = 'Choose what to follow up on.';
     if (type === 'REMINDER' && !date) errs.date = 'Reminders need a date.';
     if (repeat && !date) errs.date = 'Repeating tasks need a due date.';
+    if (repeatInterval < 1 || repeatInterval > 365) errs.repeat = 'Interval must be between 1 and 365.';
+    if (repeat === 'WEEKLY' && repeatWeekdays.length === 0 && repeatInterval > 1) errs.repeat = 'Choose at least one weekday for a custom weekly schedule.';
+    if (repeatEnd === 'until' && !repeatUntil) errs.repeatEnd = 'Choose an end date.';
+    if (repeatEnd === 'until' && date && repeatUntil < date) errs.repeatEnd = 'End date must be on or after the first due date.';
+    if (repeatEnd === 'after' && (repeatCount < 1 || repeatCount > 10000)) errs.repeatEnd = 'Occurrences must be between 1 and 10,000.';
     if (time && !date) errs.date = 'Choose a date for this time.';
     let dueAt: string | null = null;
     if (date && time) {
@@ -136,6 +170,10 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
       due_at: dueAt,
       priority: priority as Task['priority'],
       recurrence_rule: (repeat || null) as Task['recurrence_rule'],
+      recurrence_interval: repeat && !['WEEKDAYS', 'BIWEEKLY'].includes(repeat) ? repeatInterval : 1,
+      recurrence_weekdays: repeat === 'WEEKLY' && repeatWeekdays.length ? [...repeatWeekdays].sort((a, b) => a - b) : null,
+      recurrence_until: repeat && repeatEnd === 'until' ? repeatUntil : null,
+      recurrence_occurrence_limit: repeat && repeatEnd === 'after' ? repeatCount : null,
       ...linkFields,
     };
     setSaving(true);
@@ -235,13 +273,47 @@ export function TaskDialog({ isOpen, onClose, workspaceId, ownerId, timeZone, ed
           </FormField>
           <FormField label="Repeat" optional>
             {(p) => (
-              <Select {...p} value={repeat} onChange={(e) => setRepeat(e.target.value)}>
+              <Select {...p} value={repeat} onChange={(e) => setRepeat(e.target.value)} aria-invalid={Boolean(errors.repeat)}>
                 <option value="">Does not repeat</option>
                 {RECURRENCE_RULES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
               </Select>
             )}
           </FormField>
         </div>
+        {errors.repeat && <div className="help danger" role="alert">{errors.repeat}</div>}
+        {repeat && (
+          <div className="col" style={{ gap: 12 }}>
+            {!['WEEKDAYS', 'BIWEEKLY'].includes(repeat) && (
+              <FormField label={repeat === 'MONTHLY' ? 'Every N months' : repeat === 'WEEKLY' ? 'Every N weeks' : 'Every N days'}>
+                {(p) => <Input {...p} type="number" min={1} max={365} value={repeatInterval} onChange={(e) => setRepeatInterval(Number(e.target.value) || 1)} />}
+              </FormField>
+            )}
+            {repeat === 'WEEKLY' && (
+              <fieldset className="field">
+                <legend className="label">On weekdays <span className="opt">(optional for every week)</span></legend>
+                <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label, index) => {
+                    const day = index + 1;
+                    return <button key={label} type="button" className={`chip sm ${repeatWeekdays.includes(day) ? 'on' : ''}`} aria-pressed={repeatWeekdays.includes(day)} onClick={() => setRepeatWeekdays((current) => current.includes(day) ? current.filter((value) => value !== day) : [...current, day])}>{label}</button>;
+                  })}
+                </div>
+              </fieldset>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 12 }}>
+              <FormField label="Ends" error={errors.repeatEnd}>
+                {(p) => (
+                  <Select {...p} value={repeatEnd} onChange={(e) => setRepeatEnd(e.target.value as typeof repeatEnd)}>
+                    <option value="never">Never</option>
+                    <option value="until">On date</option>
+                    <option value="after">After occurrences</option>
+                  </Select>
+                )}
+              </FormField>
+              {repeatEnd === 'until' && <FormField label="Last occurrence">{(p) => <Input {...p} type="date" value={repeatUntil} onChange={(e) => setRepeatUntil(e.target.value)} />}</FormField>}
+              {repeatEnd === 'after' && <FormField label="Occurrences">{(p) => <Input {...p} type="number" min={1} max={10000} value={repeatCount} onChange={(e) => setRepeatCount(Number(e.target.value) || 1)} />}</FormField>}
+            </div>
+          </div>
+        )}
         <div className="help">Times are in {timeZone.replace(/_/g, ' ')}, your profile time zone.</div>
         {repeat && (
           <div className="banner info small" data-testid="recurrence-hint">

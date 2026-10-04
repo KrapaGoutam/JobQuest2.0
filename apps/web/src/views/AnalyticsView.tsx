@@ -6,6 +6,7 @@ import {
   fetchAgingApplications,
   exportAnalyticsToCsv,
   exportAnalyticsToJson,
+  fetchGoalProgress,
 } from "../api/analytics";
 import {
   fetchWorkspaceMembers,
@@ -15,6 +16,7 @@ import type {
   AgingApplication,
   AnalyticsOverview,
   StageTiming,
+  GoalProgressResponse,
 } from "../types/analytics";
 import { AnalyticsOverviewTab } from "../components/analytics/AnalyticsOverviewTab";
 import { StageTimingTab } from "../components/analytics/StageTimingTab";
@@ -53,6 +55,7 @@ export function AnalyticsView({
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [timing, setTiming] = useState<StageTiming | null>(null);
   const [aging, setAging] = useState<AgingApplication[]>([]);
+  const [goalProgress, setGoalProgress] = useState<GoalProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +93,7 @@ export function AnalyticsView({
     const bounds = getDateBounds(dateRange);
     const userId = isManager && selectedMemberId ? selectedMemberId : null;
     try {
-      const [overviewResult, timingResult, agingResult] = await Promise.all([
+      const [overviewResult, timingResult, agingResult, goalResult] = await Promise.all([
         fetchAnalyticsOverview(activeWorkspaceId, {
           startDate: bounds.startDate,
           endDate: bounds.endDate,
@@ -102,10 +105,12 @@ export function AnalyticsView({
           userId,
         }),
         fetchAgingApplications(activeWorkspaceId, { userId }),
+        fetchGoalProgress(activeWorkspaceId, { userId }),
       ]);
       setOverview(overviewResult);
       setTiming(timingResult);
       setAging(agingResult);
+      setGoalProgress(goalResult);
     } catch (cause) {
       console.error("Failed to load analytics:", cause);
       setError("Failed to load analytics");
@@ -288,6 +293,7 @@ export function AnalyticsView({
               {overview && (
                 <GoalsTab
                   overview={overview}
+                  progress={goalProgress}
                   workspaceId={activeWorkspaceId!}
                   onRefresh={loadData}
                   targetUserId={selectedMemberId || null}

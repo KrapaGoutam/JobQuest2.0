@@ -43,13 +43,12 @@ export function SearchPulse({
       ),
     [data.all.weekly_pacing],
   );
-  const currentWeek = weekly.at(-1);
   const appDelta =
     period === "week" ? weeklyPulseDelta(weekly, "applied") : null;
   const responseDelta =
     period === "week" ? weeklyPulseDelta(weekly, "responses") : null;
-  const goalTarget =
-    currentWeek?.target ?? overview.active_goal?.target_applications ?? 15;
+  const goalPeriod = period === 'today' ? 'DAILY' : period === 'week' ? 'WEEKLY' : 'MONTHLY';
+  const applicationGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS' && goal.period_type === goalPeriod);
   const cells = [
     {
       id: "applications",
@@ -139,19 +138,7 @@ export function SearchPulse({
           enabled.has("goal-comparison")) && (
           <div className="pulse-cell pulse-goal">
             <span>Goal</span>
-            <GoalRing
-              value={
-                period === "today"
-                  ? data.today.total_applications
-                  : (currentWeek?.applied ?? data.week.total_applications)
-              }
-              target={
-                period === "today"
-                  ? Math.max(1, Math.ceil(goalTarget / 5))
-                  : goalTarget
-              }
-              label={`${period} application goal`}
-            />
+            {applicationGoal ? <GoalRing value={applicationGoal.actual} target={applicationGoal.target_value} label={`${period} application goal`} /> : <small>No {period} application goal</small>}
           </div>
         )}
       </div>
@@ -171,22 +158,11 @@ export function DashboardProgress({
   const [pipelineMode, setPipelineMode] = useState<"historical" | "current">(
     "historical",
   );
-  const [goalPeriod, setGoalPeriod] = useState<"day" | "week">("week");
-  const latest = [...data.all.weekly_pacing]
-    .sort((a, b) => a.week_start.localeCompare(b.week_start))
-    .at(-1);
-  const weeklyTarget =
-    latest?.target ?? data.week.active_goal?.target_applications ?? 15;
-  const target =
-    goalPeriod === "day"
-      ? Math.max(1, Math.ceil(weeklyTarget / 5))
-      : weeklyTarget;
-  const actual =
-    goalPeriod === "day"
-      ? data.today.total_applications
-      : (latest?.applied ?? data.week.total_applications);
-  const outreach = latest?.outreach ?? 0;
-  const outreachTarget = data.week.active_goal?.target_outreach ?? 5;
+  const applicationGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS');
+  const networkingGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'NETWORKING');
+  const aggregateTarget = data.week.active_goal?.target_applications;
+  const target = applicationGoal?.target_value ?? aggregateTarget ?? 0;
+  const actual = applicationGoal?.actual ?? (isManagerAggregate ? data.week.total_applications : 0);
   const showActivity =
     enabled.has("activity-chart") || enabled.has("goal-trends");
   const showPipeline =
@@ -273,28 +249,9 @@ export function DashboardProgress({
                     : "Your search target"}
                 </p>
               </div>
-              <div
-                className="mini-switch"
-                role="group"
-                aria-label="Goal period"
-              >
-                <button
-                  type="button"
-                  aria-pressed={goalPeriod === "day"}
-                  onClick={() => setGoalPeriod("day")}
-                >
-                  Day
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={goalPeriod === "week"}
-                  onClick={() => setGoalPeriod("week")}
-                >
-                  Week
-                </button>
-              </div>
+              {applicationGoal && <ScopeTag tone="fixed">{applicationGoal.period_type.toLowerCase()}</ScopeTag>}
             </header>
-            <div className="dashboard-goal-body">
+            {target > 0 ? <div className="dashboard-goal-body">
               <GoalRing value={actual} target={target} />
               <div>
                 <span className="goal-status">
@@ -308,19 +265,19 @@ export function DashboardProgress({
                     </>
                   )}
                 </span>
-                {!isManagerAggregate && (
+                {!isManagerAggregate && networkingGoal && (
                   <>
                     <div className="goal-inline">
                       <span>Outreach</span>
                       <b>
-                        {outreach} / {outreachTarget}
+                        {networkingGoal.actual} / {networkingGoal.target_value}
                       </b>
                     </div>
-                    <ProgressTrack value={outreach} max={outreachTarget} />
+                    <ProgressTrack value={networkingGoal.actual} max={networkingGoal.target_value} />
                   </>
                 )}
               </div>
-            </div>
+            </div> : <p className="analytics-note">No active application goal. Add one from Analytics.</p>}
             {isManagerAggregate && (
               <p className="analytics-note">
                 Member-level goal comparison is shown after selecting an owner.

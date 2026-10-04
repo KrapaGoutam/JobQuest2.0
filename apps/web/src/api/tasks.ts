@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { TASK_EDITABLE_FIELDS, type Task, type TaskTab, type TaskType, type TaskUpdate } from '../types/tasks';
+import { TASK_EDITABLE_FIELDS, type Task, type TaskTab, type TaskTemplate, type TaskTemplateInput, type TaskType, type TaskUpdate } from '../types/tasks';
 import type { NextActionSource, OutcomeSource } from '../lib/queue';
 
 const SELECT = `
@@ -132,12 +132,46 @@ export interface NewTask {
   due_at?: string | null;
   priority: string;
   recurrence_rule?: string | null;
+  recurrence_interval?: number;
+  recurrence_weekdays?: number[] | null;
+  recurrence_until?: string | null;
+  recurrence_occurrence_limit?: number | null;
   application_id?: string | null;
   contact_id?: string | null;
   interview_id?: string | null;
 }
 export async function createTask(t: NewTask): Promise<Task> {
   const { data, error } = await supabase.from('tasks').insert(t).select(SELECT).single();
+  if (error) throw new Error(friendly(error.message));
+  return data as Task;
+}
+
+export async function fetchTaskTemplates(workspaceId: string, includeInactive = false, ownerId?: string): Promise<TaskTemplate[]> {
+  let query = supabase.from('task_templates').select('*').eq('workspace_id', workspaceId);
+  if (!includeInactive) query = query.eq('is_active', true);
+  if (ownerId) query = query.eq('user_id', ownerId);
+  const { data, error } = await query.order('updated_at', { ascending: false });
+  if (error) throw new Error(friendly(error.message));
+  return (data ?? []) as TaskTemplate[];
+}
+
+export async function createTaskTemplate(input: TaskTemplateInput): Promise<TaskTemplate> {
+  const { data, error } = await supabase.from('task_templates').insert(input).select('*').single();
+  if (error) throw new Error(friendly(error.message));
+  return data as TaskTemplate;
+}
+
+export async function updateTaskTemplate(id: string, updates: Partial<Omit<TaskTemplateInput, 'workspace_id' | 'user_id'>> & { is_active?: boolean }): Promise<TaskTemplate> {
+  const { data, error } = await supabase.from('task_templates').update(updates).eq('id', id).select('*').single();
+  if (error) throw new Error(friendly(error.message));
+  return data as TaskTemplate;
+}
+
+export async function applyTaskTemplate(templateId: string, applicationId: string): Promise<Task> {
+  const { data, error } = await supabase.rpc('rpc_apply_task_template', {
+    p_template_id: templateId,
+    p_application_id: applicationId,
+  });
   if (error) throw new Error(friendly(error.message));
   return data as Task;
 }

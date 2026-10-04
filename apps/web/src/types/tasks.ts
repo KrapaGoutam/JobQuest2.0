@@ -41,6 +41,11 @@ export interface Task {
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
   completed_at: string | null;
   recurrence_rule: RecurrenceRule | null;
+  recurrence_interval?: number;
+  recurrence_weekdays?: number[] | null;
+  recurrence_until?: string | null;
+  recurrence_occurrence_limit?: number | null;
+  recurrence_occurrence_number?: number;
   parent_task_id: string | null;
   created_at: string;
   updated_at: string;
@@ -61,8 +66,37 @@ export const TASK_EDITABLE_FIELDS = [
   'due_at',
   'priority',
   'recurrence_rule',
+  'recurrence_interval',
+  'recurrence_weekdays',
+  'recurrence_until',
+  'recurrence_occurrence_limit',
 ] as const;
 export type TaskUpdate = Partial<Pick<Task, (typeof TASK_EDITABLE_FIELDS)[number]>>;
+
+export interface TaskTemplate {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  title: string;
+  details: string | null;
+  task_type: TaskType;
+  priority: TaskPriority;
+  due_offset_days: number | null;
+  recurrence_rule: RecurrenceRule | null;
+  recurrence_interval: number;
+  recurrence_weekdays: number[] | null;
+  recurrence_until: string | null;
+  recurrence_occurrence_limit: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TaskTemplateInput = Pick<TaskTemplate,
+  'workspace_id' | 'user_id' | 'title' | 'details' | 'task_type' | 'priority' |
+  'due_offset_days' | 'recurrence_rule' | 'recurrence_interval' |
+  'recurrence_weekdays' | 'recurrence_until' | 'recurrence_occurrence_limit'
+>;
 
 export type TaskTab = 'overdue' | 'today' | 'upcoming' | 'nodate' | 'completed';
 

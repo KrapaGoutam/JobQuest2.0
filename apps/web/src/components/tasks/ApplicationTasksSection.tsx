@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Copy, Plus } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TaskDialog } from './TaskDialog';
+import { TaskTemplatePicker } from './TaskTemplatePicker';
 import { QueueRow, useQueueActions } from './QueueRow';
 import { fetchTasksFor } from '../../api/tasks';
 import { buildQueue } from '../../lib/queue';
@@ -29,6 +30,7 @@ export function ApplicationTasksSection({
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [usingTemplate, setUsingTemplate] = useState(false);
   const load = useCallback(() => {
     setError(null);
     fetchTasksFor({ applicationId: application.id })
@@ -54,6 +56,7 @@ export function ApplicationTasksSection({
       <div className="row" style={{ gap: 8 }}>
         <h3 id={`app-tasks-${application.id}`} className="sec-t" style={{ margin: 0 }}>Tasks {tasks ? `· ${tasks.length}` : ''}</h3>
         <span style={{ flex: 1 }} />
+        <Button size="sm" variant="ghost" leftIcon={<Copy size={13} />} onClick={() => setUsingTemplate(true)}>Use template</Button>
         <Button size="sm" variant="secondary" leftIcon={<Plus size={13} />} onClick={() => setAdding(true)}>Add task</Button>
       </div>
       {tasks === null ? (
@@ -75,6 +78,14 @@ export function ApplicationTasksSection({
         timeZone={timeZone}
         preset={{ applicationId: application.id }}
         onSaved={changed}
+      />
+      <TaskTemplatePicker
+        isOpen={usingTemplate}
+        onClose={() => setUsingTemplate(false)}
+        workspaceId={application.workspace_id}
+        ownerId={application.user_id}
+        applicationId={application.id}
+        onApplied={changed}
       />
       {actions.dialogs}
     </section>

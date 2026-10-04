@@ -52,7 +52,7 @@ import {
   zonedWallTimeToUtcIso,
 } from "../lib/time";
 import { weekStartKey } from "../lib/habits";
-import { fetchAnalyticsOverview, fetchStageTiming } from "../api/analytics";
+import { fetchAnalyticsOverview, fetchGoalProgress, fetchStageTiming } from "../api/analytics";
 import {
   fetchDashboardApplications,
   fetchDashboardLayout,
@@ -182,6 +182,7 @@ export function DashboardView({
         allOverview,
         timing,
         applications,
+        goalProgress,
       ] = await Promise.all([
         fetchQueueTasks(
           ws,
@@ -209,6 +210,7 @@ export function DashboardView({
         fetchAnalyticsOverview(ws, { userId: owner || null }),
         fetchStageTiming(ws, { userId: owner || null }),
         fetchDashboardApplications(ws, owner),
+        isManager && !owner ? Promise.resolve(null) : fetchGoalProgress(ws, { userId: owner || null }),
       ]);
       if (mine !== seq.current) return;
       const nextQueue = buildQueue(
@@ -225,6 +227,7 @@ export function DashboardView({
         all: allOverview,
         timing,
         applications,
+        goalProgress,
         queue: nextQueue,
         interviews: upcoming.interviews,
         quiet: q,
@@ -237,7 +240,7 @@ export function DashboardView({
         setLoadedKey(key);
       }
     }
-  }, [ws, ownerId, timeZone, weekStart]);
+  }, [ws, ownerId, timeZone, weekStart, isManager]);
   useEffect(() => {
     void load();
   }, [load]);

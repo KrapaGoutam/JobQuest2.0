@@ -206,9 +206,16 @@ test.describe("Milestone 6 — Tasks, Habits & Unified Queue E2E", () => {
     await tdlg.getByRole("radio", { name: "High" }).click();
     await tdlg.getByRole("button", { name: "Today", exact: true }).click();
     await tdlg.getByLabel(/^Repeat/).selectOption("WEEKLY");
+    await tdlg.getByLabel("Every N weeks").fill("2");
+    await tdlg.getByRole("button", { name: "Mon", exact: true }).click();
+    await tdlg.getByRole("button", { name: "Wed", exact: true }).click();
+    await tdlg.getByRole("button", { name: "Fri", exact: true }).click();
+    await tdlg.getByLabel("Ends").selectOption("after");
+    await tdlg.getByLabel("Occurrences").fill("3");
     await expect(tdlg.getByTestId("recurrence-hint")).toContainText(
       "When you complete it, the next one is created for",
     );
+    await expect(tdlg.getByTestId("recurrence-hint")).toContainText(/Mon|Wed|Fri/);
     await shot(page, "task-new-recurring");
     a11y.push(await audit(page, "task-form"));
     await tdlg.getByRole("button", { name: "Create task" }).click();
@@ -439,6 +446,22 @@ test.describe("Milestone 6 — Tasks, Habits & Unified Queue E2E", () => {
       review_more: "PASS",
     };
 
+    // ------------------------------------------------------------ reusable task template
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("button", { name: "Task Templates" }).click();
+    await page.getByRole("button", { name: "New template" }).click();
+    const templateDialog = page.getByRole("dialog", { name: "New task template" });
+    await templateDialog.getByLabel("Title").fill("Prepare interview packet");
+    await templateDialog.getByLabel("Due in days").fill("2");
+    await templateDialog.getByLabel("Repeat").selectOption("WEEKLY");
+    await templateDialog.getByLabel("Interval").fill("2");
+    await templateDialog.getByRole("button", { name: "Mon", exact: true }).click();
+    await templateDialog.getByLabel("Ends").selectOption("after");
+    await templateDialog.getByRole("spinbutton", { name: "Occurrences", exact: true }).fill("3");
+    await templateDialog.getByRole("button", { name: "Save template" }).click();
+    await expect(templateDialog).toBeHidden();
+    await expect(page.getByText("Prepare interview packet")).toBeVisible();
+
     // ------------------------------------------------------------ application drawer integration
     await nav(page, "Applications");
     await page
@@ -458,8 +481,16 @@ test.describe("Milestone 6 — Tasks, Habits & Unified Queue E2E", () => {
     await adlg.getByRole("button", { name: "Create task" }).click();
     await expectClosed(adlg);
     await expect(tcard).toContainText("Prepare salary answer");
+    await tcard.getByRole("button", { name: "Use template" }).click();
+    const templatePicker = page.getByRole("dialog", { name: "Use task template" });
+    await expect(templatePicker.getByText("Prepare interview packet").first()).toBeVisible();
+    await expect(templatePicker).toContainText("in 2 day(s)");
+    await templatePicker.getByRole("button", { name: "Create task" }).click();
+    await expect(templatePicker).toBeHidden();
+    await expect(tcard).toContainText("Prepare interview packet");
     await drawer.getByRole("button", { name: "Close drawer" }).click();
     evidence["E2E-09-application-integration"] = "PASS";
+    evidence["PL4C-template-review-apply"] = "PASS";
 
     // ------------------------------------------------------------ H1/H2 habits
     await nav(page, "Habits");

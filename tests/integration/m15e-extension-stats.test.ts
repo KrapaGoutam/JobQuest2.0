@@ -93,10 +93,18 @@ describe.skipIf(!ready)('Milestone 15E — extension stats endpoint', () => {
     const savedAppId = apps.data!.find((a) => a.stage === 'SAVED')!.id as string;
 
     // Goal: WEEKLY, effective at the current week start, so it is picked up as active.
-    const goal = await admin.from('goals').insert({
-      workspace_id: workspaceId, user_id: alice.userId!, period_type: 'WEEKLY',
-      target_applications: 5, target_outreach: 2, effective_date: weekStartKey,
-    });
+    const goal = await admin.from('goals').insert([
+      {
+        workspace_id: workspaceId, user_id: alice.userId!, goal_type: 'APPLICATIONS',
+        target_value: 5, is_enabled: true, period_type: 'WEEKLY',
+        target_applications: 5, target_outreach: 2, effective_date: weekStartKey,
+      },
+      {
+        workspace_id: workspaceId, user_id: alice.userId!, goal_type: 'NETWORKING',
+        target_value: 2, is_enabled: true, period_type: 'WEEKLY',
+        target_applications: 5, target_outreach: 2, effective_date: weekStartKey,
+      },
+    ]);
     expect(goal.error).toBeNull();
 
     // Interviews: only a future, outcome-less one should count as "upcoming".

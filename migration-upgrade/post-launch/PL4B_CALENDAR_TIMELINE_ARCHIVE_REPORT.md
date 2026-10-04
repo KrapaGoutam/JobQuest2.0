@@ -114,11 +114,13 @@ Application/test candidate: `f8890b4d33bb8470ed3564951436cab869135389`
 
 Application CI: `37127378593` — PASS
 
-Final feature SHA: pending documentation commit
+Final feature SHA: `8ee3dcaa024ae9780ca395d246e61667a09dc580`
 
-Final feature CI: pending
+Final feature CI: `37128248294` — PASS
 
-Development: `80076446a120388fe2b05f7d36ccc131bb72d538` — UNCHANGED
+Development merge: `dfa5a59b6619d12e319fe82b316be2339280f673` — operator-approved no-ff merge with parents `80076446a120388fe2b05f7d36ccc131bb72d538` and `8ee3dcaa024ae9780ca395d246e61667a09dc580`
+
+Development CI: `37128826840` — PASS
 
 Main: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313` — UNCHANGED
 
@@ -126,4 +128,6 @@ Production/jobquest-prod: UNCHANGED
 
 PL-1D: DEFERRED / TBD — UNCHANGED
 
-Next action: commit final evidence documentation, certify the new documentation tip, and stop for explicit operator approval before any PL-4B merge to development.
+Status: PL-4B formally closed. This post-development-CI closeout metadata remains intentionally unstaged so it does not create a new untested development SHA.
+
+Next action: PL-4C — Goals + Task Templates + Recurrence Enhancements, in a separate controlled task with explicit authorization. Do not start automatically.

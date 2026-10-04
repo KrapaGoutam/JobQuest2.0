@@ -267,24 +267,27 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
     await settle(page);
 
     await expect(
-      page.getByRole("heading", { name: "Weekly activity targets" }),
+      page.getByRole("heading", { name: "Activity goals" }),
     ).toBeVisible();
-    await expect(page.getByText("This week").first()).toBeVisible();
+    await expect(page.getByText("No active goals yet.")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Target met in/ }),
     ).toBeVisible();
 
-    // Edit targets dialog
-    await page.getByRole("button", { name: "Edit targets" }).click();
+    // Create an independently configured goal.
+    await page.getByRole("button", { name: "Add goal" }).click();
     const goalModal = page.getByRole("dialog", {
-      name: "Edit Weekly Search Goals",
+      name: "Add goal",
     });
     await expect(goalModal).toBeVisible();
 
-    await goalModal.getByRole("spinbutton").first().fill("18");
-    await goalModal.getByRole("button", { name: "Save Goals" }).click();
+    await goalModal.getByLabel("Target").fill("18");
+    await goalModal.getByLabel("Period").selectOption("MONTHLY");
+    await goalModal.getByRole("button", { name: "Save goal" }).click();
     await settle(page);
     await dismissToasts(page);
+    await expect(page.getByRole("heading", { name: "Applications" })).toBeVisible();
+    await expect(page.getByText("monthly · effective")).toBeVisible();
 
     // Screenshot R3 · Goals (light mode)
     await shot(page, "R3-goals-light");

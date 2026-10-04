@@ -4,6 +4,9 @@ import type {
   StageTiming,
   AgingApplication,
   AgingBand,
+  GoalPeriod,
+  GoalProgressResponse,
+  GoalType,
 } from '../types/analytics';
 
 export interface AnalyticsQueryOptions {
@@ -267,6 +270,43 @@ export async function upsertGoal(
     p_user_id: params.userId ?? null,
   });
 
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchGoalProgress(
+  workspaceId: string,
+  options: { userId?: string | null; periodCount?: number } = {},
+): Promise<GoalProgressResponse> {
+  const { data, error } = await supabase.rpc('rpc_get_goal_progress', {
+    p_workspace_id: workspaceId,
+    p_user_id: options.userId ?? null,
+    p_period_count: options.periodCount ?? 12,
+  });
+  if (error) throw error;
+  return data as GoalProgressResponse;
+}
+
+export async function setGoal(
+  workspaceId: string,
+  params: {
+    goalType: GoalType;
+    targetValue: number;
+    periodType: GoalPeriod;
+    effectiveDate?: string;
+    isEnabled?: boolean;
+    userId?: string | null;
+  },
+) {
+  const { data, error } = await supabase.rpc('rpc_set_goal_for_user', {
+    p_workspace_id: workspaceId,
+    p_goal_type: params.goalType,
+    p_target_value: params.targetValue,
+    p_period_type: params.periodType,
+    p_effective_date: params.effectiveDate ?? null,
+    p_is_enabled: params.isEnabled ?? true,
+    p_user_id: params.userId ?? null,
+  });
   if (error) throw error;
   return data;
 }

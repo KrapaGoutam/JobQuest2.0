@@ -5,7 +5,7 @@ import {
   Target,
   TriangleAlert,
 } from "lucide-react";
-import type { AnalyticsOverview, StageTiming } from "../../types/analytics";
+import type { AnalyticsOverview, GoalProgressResponse, StageTiming } from "../../types/analytics";
 import type { Interview } from "../../types/interviews";
 import type { QueueItem } from "../../lib/queue";
 import type { QuietApplication } from "../../api/tasks";
@@ -23,6 +23,7 @@ export interface DashboardWidgetData {
   month: AnalyticsOverview;
   all: AnalyticsOverview;
   timing: StageTiming;
+  goalProgress: GoalProgressResponse | null;
   applications: DashboardApplication[];
   queue: QueueItem[];
   interviews: Interview[];
@@ -94,21 +95,19 @@ function GoalProgress({
   data,
   period,
 }: {
-  data: AnalyticsOverview;
+  data: DashboardWidgetData;
   period: "day" | "week";
 }) {
-  const goal = data.active_goal;
+  const goal = data.goalProgress?.active_goals.find((item) =>
+    item.goal_type === 'APPLICATIONS' && item.period_type === (period === 'day' ? 'DAILY' : 'WEEKLY'));
   if (!goal)
     return (
       <p className="small muted dash-widget-empty">
         No active goal. Add one from Analytics.
       </p>
     );
-  const actual = data.total_applications;
-  const target =
-    period === "day"
-      ? Math.max(1, Math.ceil(goal.target_applications / 5))
-      : goal.target_applications;
+  const actual = goal.actual;
+  const target = goal.target_value;
   const pct = Math.min(100, Math.round((actual / Math.max(1, target)) * 100));
   return (
     <div className="dash-goal">
@@ -260,13 +259,13 @@ function content(id: string, data: DashboardWidgetData) {
     case "acceptances":
       return <Metric value={data.all.accepted_count} label="accepted" />;
     case "daily-goals":
-      return <GoalProgress data={data.today} period="day" />;
+      return <GoalProgress data={data} period="day" />;
     case "daily-goal-chart":
-      return <GoalProgress data={data.today} period="day" />;
+      return <GoalProgress data={data} period="day" />;
     case "weekly-goals":
-      return <GoalProgress data={data.week} period="week" />;
+      return <GoalProgress data={data} period="week" />;
     case "goal-comparison":
-      return <GoalProgress data={data.week} period="week" />;
+      return <GoalProgress data={data} period="week" />;
     case "activity-chart":
       return <PaceChart points={data.all.weekly_pacing} compact />;
     case "job-funnel":

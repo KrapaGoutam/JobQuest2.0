@@ -18,21 +18,39 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | Operator approval status | `Required before work` |
 | Report document | `TBD` |
 
+## Current task record — PL-4C Goals + Task Templates + Recurrence Enhancements
+
+| Field | Record |
+| --- | --- |
+| TASK ID / STATUS | `PL-4C` / `FEATURE CERTIFIED — OPERATOR APPROVAL REQUIRED` |
+| Branch / base SHA / application-certified SHA | `feature/pl4c-goals-task-templates-recurrence` / `dfa5a59b6619d12e319fe82b316be2339280f673` / `eff714e2564391953638e7a7fa2cf7ed729ed71a` |
+| Local certification | Reused: lint/typecheck/build PASS; unit `179/179`; integration `192/192`; extension `97/97`; Playwright/axe `23/23`; migration/RLS/concurrency/responsive/secret gates PASS. |
+| Remote migration verification | jobquest-dev `xpnkasclquplmrcmhsif`; M15 `20261021100000` then PL-4C `20261022100000` applied; history aligned; catalog/RLS/grants and focused integration `5/5` PASS. |
+| CI run / CI SHA / CI result | Application `37181003327` / `eff714e2564391953638e7a7fa2cf7ed729ed71a` / `PASS`; documentation-tip run recorded in final operator handoff. |
+| Preview / database target / migrations | `https://jobquest2-gnmajdb53-one-piece-5779.vercel.app` (`dpl_4oRca2xD5zSdq5TccycvD71gxTNp`, READY, application SHA) / `jobquest-dev` / M15 predecessor + PL-4C applied |
+| Focused Preview acceptance | `2/2 PASS`: representative configurable goals, task-template application/independence, recurrence, mobile, and axe. Bundle contains dev ref and excludes Production ref. |
+| Production touched / development merged / main merged | `NO / NO / NO` |
+| Last completed action | Exact application CI and matching focused Preview acceptance passed; final evidence documentation prepared. |
+| Next exact action | Certify the docs-only feature tip, then stop for explicit operator approval before PL-4C → development. |
+| Blockers / open questions | None known. |
+| Operator approval status | `REQUIRED` before PL-4C → development |
+| Report document | `migration-upgrade/post-launch/PL4C_GOALS_TASK_TEMPLATES_RECURRENCE_REPORT.md` |
+
 ## Current task record — PL-4B Calendar + Timeline/Gantt + Archive
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `PL-4B` / `CANDIDATE CERTIFIED — FINAL DOCS-TIP CI REQUIRED` |
-| Branch / base SHA / application-test candidate | `feature/pl4b-calendar-timeline-archive` / `80076446a120388fe2b05f7d36ccc131bb72d538` / `f8890b4d33bb8470ed3564951436cab869135389` |
+| TASK ID / STATUS | `PL-4B` / `FORMALLY CLOSED` |
+| Branch / base SHA / final feature SHA | `feature/pl4b-calendar-timeline-archive` / `80076446a120388fe2b05f7d36ccc131bb72d538` / `8ee3dcaa024ae9780ca395d246e61667a09dc580` |
 | Original failed SHA / CI | `3c7ecb7bd12549b51ccbef9318df045dd6c76fb5` / `37101076139 FAIL` (`TS2367` in PL-4B E2E animation state handling) |
 | Corrected intermediate SHA / CI | `a7aeeb4172d77befd8f3677384afb0e23a4a930b` / `37126669497 PASS` |
-| Candidate CI run / result | `37127378593` / `PASS`; final docs tip and exact CI still required |
+| CI run / CI SHA / CI result | Feature `37128248294` / `8ee3dcaa024ae9780ca395d246e61667a09dc580` / `PASS`; development `37128826840` / `dfa5a59b6619d12e319fe82b316be2339280f673` / `PASS` |
 | Preview / database target / migrations | `https://jobquest2-pb0szhpwp-one-piece-5779.vercel.app` (`dpl_AHAeH26jLYdd2AgMSafhHAdFjWvV`, READY, exact candidate SHA) / `jobquest-dev` / `NONE` |
-| Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Exact candidate Preview passed authenticated Calendar/Timeline/Archive acceptance across desktop/tablet/mobile with ten axe contexts and zero page overflow; jobquest-dev binding verified. |
-| Next exact action | Commit final evidence docs, certify the new final feature SHA, then stop for operator approval. |
-| Blockers / open questions | No product blocker; final documentation-tip CI remains gating. |
-| Operator approval status | `REQUIRED BEFORE PL-4B -> DEVELOPMENT` |
+| Production touched / development merged / main merged | `NO / YES / NO` |
+| Last completed action | Operator-approved no-ff merge `dfa5a59b6619d12e319fe82b316be2339280f673` was pushed to development and passed exact CI run `37128826840`, including all static, secret, migration, integration, extension, browser, and axe gates. |
+| Next exact action | PL-4C in a separate controlled task; do not start automatically. |
+| Blockers / open questions | None for PL-4B closeout. |
+| Operator approval status | `APPROVED AND COMPLETED` for PL-4B → development only |
 | Report document | `migration-upgrade/post-launch/PL4B_CALENDAR_TIMELINE_ARCHIVE_REPORT.md` |
 
 ## Current task record — PL-3 Dashboard + Analytics Redesign
@@ -82,8 +100,8 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-2 | CLOSED | Feature CI `36918359854` and development integration CI `36960378949` passed; PL-2 is formally closed. |
 | PL-3 | CLOSED | Feature certification and matching Preview passed; development merge `11116ca2a577c70e18b4bcfac796dfa6260bda15` passed CI `37012301480`. |
 | PL-4A | CLOSED | Final feature CI `37034644123` passed; operator-approved development merge `80076446a120388fe2b05f7d36ccc131bb72d538` passed exact development CI `37050583184`. |
-| PL-4B | CANDIDATE CERTIFIED / DOCS-TIP CI REQUIRED | Candidate `f8890b4d33bb8470ed3564951436cab869135389` passed CI `37127378593`; require final evidence-doc commit/CI and operator approval before development merge. |
-| PL-4C | PENDING | Verify existing goals/recurrence; scope templates as independent canonical tasks. |
+| PL-4B | CLOSED | Final feature CI `37128248294` passed; operator-approved development merge `dfa5a59b6619d12e319fe82b316be2339280f673` passed exact development CI `37128826840`. |
+| PL-4C | FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED | Application CI `37181003327`, jobquest-dev migrations/verification, and focused matching Preview acceptance passed; no development merge. |
 | PL-5 | PENDING | Gather evidence after implementation phases; leave production metrics for M15-F when needed. |
 | M15-F | RESERVED — LAST | Final Production release and stabilization; requires explicit authorization after prior work is completed, deferred, or otherwise decided. |
 | Legacy retirement | RESERVED | Requires separate authorization after M15-F; never automatic. |

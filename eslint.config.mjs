@@ -1,32 +1,50 @@
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import globals from 'globals';
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', 'migration-upgrade/**', 'supabase/**', '.vercel/**'] },
+  {
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "migration-upgrade/**",
+      "supabase/**",
+      ".vercel/**",
+      "FeatureUpgrade1/**",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   { languageOptions: { globals: { ...globals.node, ...globals.browser } } },
   {
-    files: ['tests/**', 'e2e/**'],
-    rules: { '@typescript-eslint/no-explicit-any': 'off', '@typescript-eslint/no-non-null-asserted-optional-chain': 'off' },
+    files: ["tests/**", "e2e/**"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
+    },
   },
   {
-    files: ['apps/extension/**/*.js'],
+    files: ["apps/extension/**/*.js"],
     languageOptions: { globals: { ...globals.webextensions } },
   },
   {
     // These source-compatible legacy extractors intentionally ignore selector
     // failures and retain a defensive fallback assignment verified by fixtures.
-    files: ['apps/extension/content.js', 'apps/extension/extractors/**/*.js'],
-    rules: { 'no-empty': 'off', 'no-useless-assignment': 'off' },
+    files: ["apps/extension/content.js", "apps/extension/extractors/**/*.js"],
+    rules: { "no-empty": "off", "no-useless-assignment": "off" },
   },
   {
     // The browser bundle must never reference server secrets.
-    files: ['apps/web/**'],
+    files: ["apps/web/**"],
     rules: {
-      'no-restricted-syntax': ['error', { selector: "Literal[value=/SECRET|SERVICE_ROLE/]", message: 'Server secrets must never be referenced from the web app.' }],
-      'no-restricted-imports': ['error', { patterns: ['**/apps/api/**'] }],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/SECRET|SERVICE_ROLE/]",
+          message: "Server secrets must never be referenced from the web app.",
+        },
+      ],
+      "no-restricted-imports": ["error", { patterns: ["**/apps/api/**"] }],
     },
   },
 );

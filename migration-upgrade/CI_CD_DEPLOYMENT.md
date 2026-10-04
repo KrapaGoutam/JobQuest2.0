@@ -1,123 +1,52 @@
 # CI/CD and Deployment
 
-CURRENT STATE, from `.github/workflows/ci.yml` and `render.yaml` directly.
+## Current CI
 
-## Current CI (GitHub Actions, `.github/workflows/ci.yml`)
+The active workflow is `.github/workflows/m1b-ci.yml` (`M1B CI`). It runs on pushes to `feature/**`, `fix/**`, `development`, and `main`; pull requests targeting `development` or `main`; and manual `workflow_dispatch`. Historical Render-era descriptions are not the current repository contract. The application now uses the Vercel/Supabase architecture recorded in the M15 launch documentation.
 
-Triggers: `push` to `feature/upgrade-lovable-ui-reference`/`development`/`main`/
-`master`; `pull_request` targeting `development`/`main`/`master`; manual
-`workflow_dispatch`. Concurrency group cancels in-progress runs of the same
-workflow+ref/PR.
+## Change classification
 
-5 parallel jobs, all on `ubuntu-latest`, Node 24:
+Every run starts with a native, deny-by-default classifier. Manual dispatches, missing comparison commits, empty comparisons, classifier errors, and unknown paths all select `FULL_CI`.
 
-| Job | Timeout | What it does |
-|---|---|---|
-| `static-quality` | 10m | `npm ci` → `migrate:check` (fresh-DB migration validation) → `lint` → `typecheck` → `build` → `build:frontend` (Vite) |
-| `tests` (matrix: backend/frontend/integration/e2e/extension) | 10m each | Real `postgres:17-alpine` service container (except frontend/extension suites, which need no DB) → `migrate:postgres` → `npm run test:${suite}` |
-| `security` | 10m | `npm audit --audit-level=high` (backend + frontend) → grep gate rejecting committed `.sqlite*`/`.env*` files and raw secret-shaped key/value assignments |
-| `sqlite-postgres-migration` | 10m | Dedicated Postgres container → `migrate:postgres` → `node --test test/migration.test.js` |
-| `browser-and-visual` | 20m | Dedicated Postgres container → `migrate:postgres` → `npx playwright install --with-deps chromium` → `npm run test:browser` (full functional/a11y/responsive/visual suite) → uploads `playwright-report`/`test-results` as artifacts on failure |
+`DOCS_ONLY` is selected only when every changed file is Markdown in an approved location: a root-level `*.md`, `migration-upgrade/**/*.md`, `docs/**/*.md`, or `.agents/**/*.md`. Everything else selects `FULL_CI`, including all `.github/**`, application, package, API, Supabase, script, test, E2E, dependency-lock, Playwright, TypeScript, Vite, and Vercel configuration changes. Mixed docs/code changes always receive full CI.
 
-Note: `lint`/`typecheck`/`build` are all `node --check` syntax validation across
-every backend/frontend/extension source file (the project is plain JavaScript, not
-TypeScript — there is no real type-checker in this pipeline today, just parse
-validation).
+The static job remains a completed, recognizable check for docs-only runs. Its lightweight path checks out the repository, scans every tracked file for secrets, and rejects committed environment/key files. Confirmed docs-only changes skip dependency installation, lint, typecheck, unit tests, build, bundle scan, local Supabase, extension packaging, and Playwright.
 
-## Current deployment (Render, `render.yaml`)
+## Full CI
 
-```
-Developer → feature/<round>-<slug> branch (off development)
-    → Pull Request → GitHub Actions (5 jobs above)
-    → PR approval → merge into development (regular merge commit, not squash)
-    → [explicit, separate approval] → merge development into main
-    → Render auto-deploys main:
-        buildCommand: npm ci && npm run build:frontend
-        preDeployCommand: npm run migrate:postgres   (runs before traffic switches)
-        startCommand: npm start
-        healthCheckPath: /api/health                  (fast, DB-independent)
-```
+For `FULL_CI`, the workflow runs:
 
-Plus a **second migration path** added as a production hotfix: `server.js` also
-runs `migratePostgres()` at process startup (not just `preDeployCommand`), because
-one deploy did not reliably invoke `preDeployCommand` and left the database on an
-older schema version (`extension_tokens` missing in production — see
-`brain/AGENT_HANDOFF_LOG.md` "PRODUCTION HOTFIX"). Both mechanisms are active
-simultaneously today; a target platform without an equivalent `preDeployCommand`
-hook (most serverless/edge platforms) would need the startup-migration path to be
-the *primary* mechanism, not a backup — factor this into `docs/IMPLEMENTATION_PLAN.md`.
+- static: tracked-file secret scan, committed environment/key checks, frozen dependency install, lint, typecheck, unit tests, production web build, and B24 browser-bundle scan;
+- database/browser: ephemeral signing key, disposable local Supabase migrations, integration suites, Chromium installation, extension unit/typecheck/package checks, full Playwright E2E (including B03/B11/B12), sanitized evidence upload, and unconditional local-stack teardown.
 
-Migration safety already enforced by `postgres-migrate.js`: refuses to run against
-a database whose name doesn't end in `_test` unless
-`NODE_ENV=production`/`RENDER` is set, or an explicit
-`CONFIRM_PRODUCTION_MIGRATION=yes-migrate-jobquest` override is provided.
+## Concurrency
 
-## Target CI/CD (GitHub Actions + Vercel + Supabase migrations)
+The concurrency group is `${{ github.workflow }}-${{ github.ref }}`. `cancel-in-progress` is enabled except on `refs/heads/development` and `refs/heads/main`.
 
-```
-Developer
-    ↓
-Feature Branch
-    ↓
-Pull Request
-    ↓
-GitHub Actions
-    ├── install
-    ├── lint (real TypeScript/ESLint, not just node --check)
-    ├── typecheck (real tsc, since the target stack is TypeScript)
-    ├── unit tests
-    ├── integration tests (against an ephemeral/branched Supabase instance)
-    ├── frontend build (Vite/Next, whichever the TRD selects)
-    ├── backend build
-    ├── Supabase migration validation (apply to a clean/branch DB, verify no drift)
-    └── Playwright smoke (+ a11y + visual regression, carried forward)
-    ↓
-PR Approval
-    ↓
-development (or the target repo's equivalent integration branch — see `docs/PRD.md` §Out of Scope on branch-naming decisions)
-    ↓
-Preview deployment (Vercel preview URL per PR — genuinely new capability vs. today, since today has no preview environment at all)
-    ↓
-main
-    ↓
-Vercel production deployment (frontend) + Supabase migration apply (backend/DB, via `supabase db push` or an equivalent CI step — explicit, gated, never automatic-on-every-push without a review step)
+- `feature/**` and `fix/**`: a newer same-ref run cancels stale work.
+- `development`: an active certification is never cancelled by a later push; the later run queues.
+- `main`: an active release certification is never cancelled by a later push; the later run queues.
+
+## Exact-SHA certification
+
+An application SHA remains the certification target until every required job for that exact SHA is final. While an integration-branch certification is active, do not push a docs/checkpoint-only commit to that same branch. Keep temporary state in the agent response or safe local notes, then commit documentation after certification finishes.
+
+Never create empty, timestamp, touch, or fake-source commits to trigger CI. If an unchanged SHA had a cancelled or failed infrastructure attempt, prefer `gh run rerun <RUN_ID>` when appropriate. Record application/CI-tested SHA and a later docs HEAD separately; never claim a docs-only SHA received application CI unless it did.
+
+## GitHub Actions observation and rate limits
+
+Use one CI observer per phase: the primary agent. Subagents, other assistants, connectors, and parallel terminals must not independently poll the same run. After a push, discover the exact run once, record its run ID and head SHA, then prefer `gh run view <RUN_ID>`. For active monitoring, use one `gh run watch <RUN_ID> --interval 60 --exit-status`; never poll more frequently than every 60 seconds. Fetch failure logs only after an actual failure.
+
+On GitHub API HTTP 403 or 429, stop polling immediately. Check the local primary quota once with:
+
+```text
+gh api rate_limit --jq '.resources.core | {limit,remaining,used,reset}'
 ```
 
-Every principle from the current pipeline should carry forward: migrations are
-schema-versioned and CI-validated before merge; no manual production schema
-changes; security audit gate (dependency + secret scan) on every PR; the full
-existing Playwright accessibility/visual-regression suite is a **preservation
-requirement**, not optional — it is what proves feature parity during the
-migration (see `TESTING_STRATEGY.md`).
+If `remaining` is zero, wait for reset. If positive, treat the result as possible secondary throttling or a different client/authentication bucket. Honor `Retry-After` when supplied; otherwise back off for 1, 2, 5, then 10 minutes. Never rotate accounts or tokens to evade a limit. If another connector is throttled while local `gh` is healthy, keep local `gh` as the sole observer.
 
-## Target deployment architecture
+## Branch and deployment governance
 
-```mermaid
-flowchart TD
-    Browser -->|HTTPS| Vercel[Vercel: React app]
-    Vercel -->|Auth calls| SupaAuth[Supabase Auth]
-    Vercel -->|API calls| NodeAPI[Node/TypeScript API layer]
-    NodeAPI -->|SQL / RLS-scoped| SupaDB[(Supabase PostgreSQL)]
-    SupaAuth --> SupaDB
-    Extension[Browser Extension] -->|Bearer token| NodeAPI
-    SupaDB --> Tables[Tables + RLS + Views]
-```
+Normal implementation occurs on `feature/*` or `fix/*`, never directly on `development` or `main`. `development` is the integration branch. `main` and Production remain frozen until the separately authorized M15-F gate. Do not merge `development` to `main`, deploy Production, change Production variables, or alter production data/infrastructure without explicit operator authorization.
 
-Whether the Node/TypeScript API layer is a separate deployable (e.g. Vercel
-Serverless/Edge Functions colocated with the frontend, or Supabase Edge
-Functions) or the frontend talks to Supabase directly for most CRUD (with RLS as
-the sole authorization layer) and only routes through a thin API for
-manager-cross-user RPCs and the extension's bearer-token endpoints, is a real
-architectural decision — see `docs/TRD.md` §Target Architecture and
-`OPEN_QUESTIONS.md`.
-
-## Supabase migration policy (target)
-
-- Schema changes only through versioned Supabase migrations (`supabase/
-  migrations/*.sql` or the CLI-generated equivalent) — never a manual dashboard
-  schema edit in any environment past local dev.
-- CI validates every migration applies cleanly to a fresh database before merge
-  (direct equivalent of today's `migrate:check` job).
-- Migrations are forward-only/additive by the same policy already in force today
-  (see `docs/BACKEND_SCHEMA.md` §Migration history) — carry the policy forward
-  verbatim, don't relax it just because the tooling changed.
+Schema changes remain versioned in `supabase/migrations/*.sql`, validated against the disposable local stack, and promoted only through the approved branch and release gates.

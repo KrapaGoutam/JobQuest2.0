@@ -7,12 +7,16 @@
 //    publishable tokens are browser-safe by design.
 //  * Private keys: PEM private-key blocks, and JWKs that carry a private component (`d`).
 //  * Database URLs are flagged only when they embed a real password, not a placeholder.
+//  * Plaintext password assignments in source/docs are flagged when they contain a
+//    concrete value; explicit placeholders such as [REDACTED] remain allowed.
 //  * Exact-value matching for known secret values present in the environment, so a
 //    rotated or unusual-format secret is still caught.
 //  * Allowlist entries are EXACT strings with a documented reason; there are no
 //    directory or pattern-wide exemptions.
 
 const B64URL = '[A-Za-z0-9_-]';
+const PLAINTEXT_PASSWORD_ASSIGNMENT =
+  /^[ \t]*(?:[-*]\s*)?(?:\|\s*)?(?:\*\*|__|`)?(?:password|passphrase)(?:\*\*|__|`)?[ \t]*(?:\||[:=])[ \t]*(?:`([^`\r\n|]+)`|"([^"\r\n|]+)"|'([^'\r\n|]+)'|([^|\r\n#]+?))[ \t]*(?=\||$|#)/gim;
 
 export const RULES = [
   { id: 'supabase-secret-key', re: new RegExp(`\\bsb_secret_${B64URL}{20,}`, 'g') },
@@ -24,6 +28,12 @@ export const RULES = [
   { id: 'pem-private-key', re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/g },
   { id: 'jwk-private-key', re: new RegExp(`"d"\\s*:\\s*"${B64URL}{32,}"`, 'g'), context: /"kty"\s*:/ },
   { id: 'database-url-with-password', re: /\bpostgres(?:ql)?:\/\/[^\s:@/'"`]+:([^\s@'"`]+)@[^\s'"`]+/g, check: (m) => !isPlaceholder(m[1]) },
+  {
+    id: 'plaintext-password-assignment',
+    re: PLAINTEXT_PASSWORD_ASSIGNMENT,
+    check: isConcretePasswordAssignment,
+    documentationOnly: true,
+  },
   { id: 'server-secret-env-name', re: /\b(?:SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|JQ_JWT_PRIVATE_JWK|EXTENSION_TOKEN_PEPPER|SUPABASE_DB_PASSWORD|SUPABASE_DB_URL)\b/g, bundleOnly: true },
 ];
 
@@ -31,7 +41,23 @@ const JWT = new RegExp(`\\beyJ${B64URL}{10,}\\.eyJ${B64URL}{10,}\\.${B64URL}{10,
 const PRIVILEGED_ROLES = new Set(['service_role', 'supabase_admin', 'postgres', 'supabase_auth_admin']);
 
 function isPlaceholder(pw) {
-  return /^(\[.*\]|<.*>|\$\{.*\}|\*+|x+|password|your[-_]?password|changeme|placeholder)$/i.test(pw);
+  return /^(\[.*\]|<.*>|\$\{.*\}|\*+|x+|password|your[-_]?password|changeme|placeholder|redacted|removed|omitted|not[-_ ]?(?:set|stored|applicable)|none|n\/a|tbd)$/i.test(pw);
+}
+
+function isConcretePasswordAssignment(match) {
+  const value = match.slice(1).find(Boolean)?.trim() ?? '';
+  if (!value || isPlaceholder(value)) return false;
+  const lineStart = match.input.lastIndexOf('\n', match.index - 1) + 1;
+  const nextNewline = match.input.indexOf('\n', match.index);
+  const line = match.input.slice(lineStart, nextNewline < 0 ? undefined : nextNewline).trim();
+
+  if (line.startsWith('|')) {
+    const cells = line.split('|').slice(1, line.endsWith('|') ? -1 : undefined).map((cell) => cell.trim());
+    return cells.length === 3 && /^(?:\*\*|__)(?:password|passphrase)(?:\*\*|__)$/i.test(cells[0]);
+  }
+
+  const isDelimited = Boolean(match[1] || match[2] || match[3]);
+  return /^PASSWORD\s*[:=]/.test(line) && (isDelimited || !/\s/.test(value));
 }
 
 function decodeSegment(seg) {
@@ -44,7 +70,7 @@ function decodeSegment(seg) {
 
 /**
  * @param {string} text
- * @param {{ knownSecrets?: string[], allowlist?: {value: string, reason: string}[], mode?: 'bundle' | 'source' }} [opts]
+ * @param {{ knownSecrets?: string[], allowlist?: {value: string, reason: string}[], mode?: 'bundle' | 'source', scanDocumentationPasswords?: boolean }} [opts]
  *   mode 'bundle' (default) also flags server-secret variable NAMES, which must never reach browser code.
  * @returns {{ rule: string, index: number }[]}  findings (never the matched value itself)
  */
@@ -54,6 +80,7 @@ export function scanText(text, opts = {}) {
   const mode = opts.mode ?? 'bundle';
   for (const rule of RULES) {
     if (rule.bundleOnly && mode !== 'bundle') continue;
+    if (rule.documentationOnly && !opts.scanDocumentationPasswords) continue;
     rule.re.lastIndex = 0;
     for (const m of text.matchAll(rule.re)) {
       if (allow.has(m[0])) continue;

@@ -1,6 +1,6 @@
 import { AlertTriangle, AlertCircle, Info, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/Button';
-import type { DuplicateCheckResult } from '../../types/applications';
+import type { Application, DuplicateCheckResult } from '../../types/applications';
 
 export interface DuplicateWarningCardProps {
   checkResult: DuplicateCheckResult | null;
@@ -8,6 +8,45 @@ export interface DuplicateWarningCardProps {
   onViewExisting?: (applicationId: string) => void;
   onOverride?: () => void;
   hasOverridden?: boolean;
+}
+
+function duplicateDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function DuplicateMatches({
+  matches,
+  onViewExisting,
+}: {
+  matches: Partial<Application>[];
+  onViewExisting?: (applicationId: string) => void;
+}) {
+  return (
+    <ul aria-label="Matching applications" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+      {matches.map((match, index) => {
+        const when = duplicateDate(match.applied_at ?? match.created_at);
+        const state = match.status === 'CLOSED' ? (match.outcome ? `Closed · ${match.outcome.toLowerCase().replaceAll('_', ' ')}` : 'Closed') : 'Open';
+        return (
+          <li key={match.id ?? `${match.company_name}-${match.role_title}-${index}`} style={{ padding: '9px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 600 }}>{match.role_title || 'Untitled role'} at {match.company_name || 'Unknown company'}</div>
+              <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>
+                {state}{match.stage ? ` · ${match.stage.toLowerCase().replaceAll('_', ' ')}` : ''}{when ? ` · Applied ${when}` : ''}
+              </div>
+            </div>
+            {match.id && onViewExisting && (
+              <Button type="button" variant="outline" size="sm" onClick={() => onViewExisting(match.id!)}>
+                <ExternalLink size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
+                View existing
+              </Button>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 export function DuplicateWarningCard({
@@ -49,7 +88,6 @@ export function DuplicateWarningCard({
     return null;
   }
 
-  const match = checkResult.matches[0];
   const { tier } = checkResult;
 
   if (tier === 'STRONG') {
@@ -74,22 +112,10 @@ export function DuplicateWarningCard({
           </span>
         </div>
         <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-          Found existing tracking record for <strong>{match?.role_title}</strong> at <strong>{match?.company_name}</strong> (Stage: {match?.stage})
-          {match?.job_url ? <span style={{ display: 'block', wordBreak: 'break-all' }}>URL: {match.job_url}</span> : null}
-          {match?.external_job_id ? <span>Requisition: {match.external_job_id}</span> : null}
+          The posting URL or requisition ID matches {checkResult.matches.length === 1 ? 'an existing record' : `${checkResult.matches.length} existing records`}.
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-          {match?.id && onViewExisting && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onViewExisting(match.id!)}
-            >
-              <ExternalLink size={14} style={{ marginRight: '6px' }} />
-              View existing
-            </Button>
-          )}
+        <DuplicateMatches matches={checkResult.matches} onViewExisting={onViewExisting} />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
           {onOverride && !hasOverridden && (
             <Button
               type="button"
@@ -133,20 +159,10 @@ export function DuplicateWarningCard({
           </span>
         </div>
         <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-          You already have an application for <strong>{match?.role_title}</strong> at <strong>{match?.company_name}</strong> in stage <strong>{match?.stage}</strong>.
+          The company and role title match {checkResult.matches.length === 1 ? 'an existing record' : `${checkResult.matches.length} existing records`}.
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-          {match?.id && onViewExisting && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onViewExisting(match.id!)}
-            >
-              <ExternalLink size={14} style={{ marginRight: '6px' }} />
-              View existing
-            </Button>
-          )}
+        <DuplicateMatches matches={checkResult.matches} onViewExisting={onViewExisting} />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
           {onOverride && !hasOverridden && (
             <Button
               type="button"
@@ -172,16 +188,20 @@ export function DuplicateWarningCard({
           background: 'var(--color-surface-2)',
           border: '1px solid var(--color-brand-primary)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'stretch',
+          flexDirection: 'column',
           gap: '10px',
         }}
         role="status"
         data-testid="duplicate-warning-possible"
       >
-        <Info size={18} style={{ color: 'var(--color-brand-primary)', flexShrink: 0 }} />
-        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-          You have applied to <strong>{match?.company_name}</strong> before ({checkResult.matches.length} other application{checkResult.matches.length > 1 ? 's' : ''}).
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Info size={18} style={{ color: 'var(--color-brand-primary)', flexShrink: 0 }} aria-hidden="true" />
+          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+            You have other applications at this company. Review them before creating another record.
+          </div>
         </div>
+        <DuplicateMatches matches={checkResult.matches} onViewExisting={onViewExisting} />
       </div>
     );
   }

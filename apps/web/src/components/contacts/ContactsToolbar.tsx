@@ -130,6 +130,7 @@ export function ContactsToolbar({
           <Search size={14} className="muted" />
           <input
             type="text"
+            aria-label="Search contacts"
             placeholder="Filter contacts..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -145,6 +146,7 @@ export function ContactsToolbar({
           {search && (
             <button
               type="button"
+              aria-label="Clear contact search"
               onClick={() => onSearchChange('')}
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
             >

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
 import { StatusBadge } from '../ui/StatusBadge';
 import { StagePips, PriorityBars } from '../ui/StagePips';
@@ -20,6 +20,8 @@ import {
 import { calculateDaysInactive, computeAgingBand } from '../../types/applications';
 import type { Application, ApplicationSort, CanonicalWorkflow } from '../../types/applications';
 import type { WorkspaceMemberInfo } from '../../api/applications';
+import { formatInZone } from '../../lib/time';
+import { groupApplicationsByMonth } from '../../lib/applicationProductivity';
 
 export interface ApplicationsTableProps {
   applications: Application[];
@@ -43,6 +45,8 @@ export interface ApplicationsTableProps {
   onRestore: (appId: string) => Promise<void>;
   onOpenCreate: () => void;
   onClearFilters: () => void;
+  groupByMonth?: boolean;
+  timeZone?: string;
 }
 
 const miniBtn: CSSProperties = {
@@ -174,6 +178,8 @@ export function ApplicationsTable({
   onRestore,
   onOpenCreate,
   onClearFilters,
+  groupByMonth = false,
+  timeZone = 'UTC',
 }: ApplicationsTableProps) {
   const isAllSelected = applications.length > 0 && applications.every((a) => selectedIds.includes(a.id));
   const isPartiallySelected = selectedIds.length > 0 && !isAllSelected;
@@ -214,48 +220,88 @@ export function ApplicationsTable({
 
   // Mobile (<768px): card list; tapping a card opens the full-screen detail sheet.
   if (isMobile) {
+    const groups = groupByMonth
+      ? groupApplicationsByMonth(applications, timeZone, sort.field === 'created_at' ? sort.direction : 'desc')
+      : [{ key: 'all', label: '', applications }];
     return (
-      <ul aria-label="Applications list" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {applications.map((app) => (
-          <li
-            key={app.id}
-            data-testid="application-card"
-            style={{
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--color-surface-1)',
-              padding: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <label className="application-mobile-select-all">
+          <input
+            type="checkbox"
+            className="checkbox"
+            checked={isAllSelected}
+            ref={(input) => {
+              if (input) input.indeterminate = isPartiallySelected;
             }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                onActiveRowChange(app.id);
-                onRowClick(app);
-              }}
-              style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', minHeight: '44px' }}
-              aria-label={`Open ${app.role_title} at ${app.company_name}`}
-            >
-              <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--color-text-primary)' }}>{app.company_name}</div>
-              <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{app.role_title}</div>
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <StagePips stage={app.stage} isClosed={app.status === 'CLOSED'} maxSteps={8} />
-                <span style={{ fontSize: '12px' }}>{stageLabel(workflow, app.stage)}</span>
-              </div>
-              <StatusCell app={app} workflow={workflow} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <AgingChip app={app} />
-              <PriorityBars priority={app.priority} />
-            </div>
-          </li>
+            onChange={(event) => onSelectAll(event.target.checked)}
+          />
+          <span>{isAllSelected ? `All ${applications.length} applications on this page selected` : `Select all ${applications.length} applications on this page`}</span>
+        </label>
+        {groups.map((group) => (
+          <section key={group.key} aria-labelledby={groupByMonth ? `application-month-${group.key}` : undefined}>
+            {groupByMonth && (
+              <h2 id={`application-month-${group.key}`} style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+                {group.label} <span className="muted">({group.applications.length})</span>
+              </h2>
+            )}
+            <ul aria-label={groupByMonth ? `Applications added in ${group.label}` : 'Applications list'} style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {group.applications.map((app) => (
+                <li
+                  key={app.id}
+                  data-testid="application-card"
+                  style={{
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'var(--color-surface-1)',
+                    padding: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <input
+                      type="checkbox"
+                      className="checkbox application-mobile-checkbox"
+                      checked={selectedIds.includes(app.id)}
+                      onChange={(event) => onSelectRow(app.id, event.target.checked)}
+                      aria-label={`Select ${app.role_title} at ${app.company_name}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onActiveRowChange(app.id);
+                        onRowClick(app);
+                      }}
+                      style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', minHeight: '44px', flex: 1 }}
+                      aria-label={`Open ${app.role_title} at ${app.company_name}`}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--color-text-primary)' }}>{app.company_name}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{app.role_title}</div>
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <StagePips stage={app.stage} isClosed={app.status === 'CLOSED'} maxSteps={8} />
+                      <span style={{ fontSize: '12px' }}>{stageLabel(workflow, app.stage)}</span>
+                    </div>
+                    <StatusCell app={app} workflow={workflow} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <AgingChip app={app} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                        Added {formatInZone(app.created_at, timeZone, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      <PriorityBars priority={app.priority} />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+      </div>
     );
   }
 
@@ -303,6 +349,7 @@ export function ApplicationsTable({
             <TableHead style={{ width: '110px' }}>Status</TableHead>
             {sortHead('priority', 'Priority', { width: '80px' })}
             {sortHead('last_activity_at', 'Aging', { width: '120px' })}
+            {sortHead('created_at', 'Date Added', { width: '120px' })}
             <TableHead style={{ width: '150px' }}>Next Action</TableHead>
             <TableHead style={{ width: '110px' }}>{isManager ? 'Owner' : 'Location'}</TableHead>
             <TableHead style={{ width: '136px', textAlign: 'right' }}>Actions</TableHead>
@@ -310,7 +357,21 @@ export function ApplicationsTable({
         </TableHeader>
 
         <TableBody>
-          {applications.map((app) => {
+          {(groupByMonth
+            ? groupApplicationsByMonth(applications, timeZone, sort.field === 'created_at' ? sort.direction : 'desc')
+            : [{ key: 'all', label: '', applications }]
+          ).map((group) => (
+            <Fragment key={group.key}>
+              {groupByMonth && (
+                <tr style={{ background: 'var(--color-surface-2)' }}>
+                  <th colSpan={10} scope="colgroup" style={{ padding: '9px 12px', textAlign: 'left' }}>
+                    <h2 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                      {group.label} <span className="muted">({group.applications.length})</span>
+                    </h2>
+                  </th>
+                </tr>
+              )}
+              {group.applications.map((app) => {
             const isSelected = selectedIds.includes(app.id);
             const isActive = activeId === app.id;
             return (
@@ -380,6 +441,12 @@ export function ApplicationsTable({
                   <AgingChip app={app} />
                 </TableCell>
 
+                <TableCell style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                  <time dateTime={app.created_at}>
+                    {formatInZone(app.created_at, timeZone, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </time>
+                </TableCell>
+
                 <TableCell>
                   {app.next_action ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
@@ -414,8 +481,10 @@ export function ApplicationsTable({
                   />
                 </TableCell>
               </TableRow>
-            );
-          })}
+                );
+              })}
+            </Fragment>
+          ))}
         </TableBody>
       </Table>
     </div>

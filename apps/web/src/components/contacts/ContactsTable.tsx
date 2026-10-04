@@ -147,13 +147,16 @@ export function ContactsTable({
       <div className="tbl" role="grid" aria-rowcount={totalCount} style={{ width: '100%' }}>
         {/* Table header */}
         <div role="row" className="tr th" style={{ gridTemplateColumns: cols }}>
-          <span
-            role="columnheader"
-            className={`cb ${selectedIds.size === contacts.length && contacts.length > 0 ? 'on' : ''}`}
-            onClick={toggleSelectAll}
-            title="Select all"
-          >
-            {selectedIds.size === contacts.length && contacts.length > 0 && <Check size={12} />}
+          <span role="columnheader">
+            <button
+              type="button"
+              className={`cb ${selectedIds.size === contacts.length && contacts.length > 0 ? 'on' : ''}`}
+              onClick={toggleSelectAll}
+              aria-label="Select all contacts on this page"
+              aria-pressed={selectedIds.size === contacts.length && contacts.length > 0}
+            >
+              {selectedIds.size === contacts.length && contacts.length > 0 && <Check size={12} aria-hidden="true" />}
+            </button>
           </span>
           <span role="columnheader">Name · Title</span>
           <span role="columnheader">Type</span>
@@ -202,12 +205,16 @@ export function ContactsTable({
               }}
             >
               {/* Checkbox */}
-              <span
-                role="gridcell"
-                className={`cb ${isChecked ? 'on' : ''}`}
-                onClick={(e) => toggleSelectRow(c.id, e)}
-              >
-                {isChecked && <Check size={12} />}
+              <span role="gridcell">
+                <button
+                  type="button"
+                  className={`cb ${isChecked ? 'on' : ''}`}
+                  onClick={(event) => toggleSelectRow(c.id, event)}
+                  aria-label={`Select ${c.full_name}`}
+                  aria-pressed={isChecked}
+                >
+                  {isChecked && <Check size={12} aria-hidden="true" />}
+                </button>
               </span>
 
               {/* Name & Title */}

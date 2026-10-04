@@ -158,11 +158,12 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
     await reg.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByTestId('recovery-codes').locator('li')).toHaveCount(10);
     await page.getByRole('button', { name: 'I saved them' }).click();
-    await page.goto('/applications');
+    await page.evaluate(() => { window.location.hash = '#/applications'; });
+    await expect(page).toHaveURL(/#\/applications$/);
     await expect(page.getByTestId('new-application-btn')).toBeVisible();
   }
 
-  test('Calendar shows a Future Feature page; Workflow stays absent and redirects', async ({ page }) => {
+  test('Calendar opens the real planning view; Workflow stays absent and redirects', async ({ page }) => {
     await registerSyntheticUser(page, 'nav');
 
     const nav = page.getByRole('navigation', { name: 'Primary navigation' });
@@ -173,7 +174,9 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
     await expect(page).toHaveURL(/#\/calendar$/);
     await expect(page).not.toHaveURL(/#\/interviews$/);
     await expect(page.getByRole('heading', { name: 'Calendar', exact: true, level: 1 })).toBeVisible();
-    await expect(page.getByText(/planned for a future JobQuest release/i)).toBeVisible();
+    await expect(page.getByTestId('calendar-view')).toBeVisible();
+    await expect(page.getByText(/planned for a future JobQuest release/i)).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Application planning views' })).toBeVisible();
 
     await page.goto('/workspace/workflow');
     await expect(page).toHaveURL(/#\/workspace\/settings$/);
@@ -181,7 +184,8 @@ test.describe('M2 Responsive Application Shell & Design System', () => {
 
   test('Select controls stay theme-synced across light, dark, and back to light', async ({ page }) => {
     await registerSyntheticUser(page, 'theme');
-    await page.goto('/contacts');
+    await page.evaluate(() => { window.location.hash = '#/contacts'; });
+    await expect(page).toHaveURL(/#\/contacts$/);
 
     const select = page.locator('select').first();
     await expect(select).toBeVisible();

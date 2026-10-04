@@ -1,5 +1,7 @@
 # Milestone 13 — Post-Launch Deferred Register
 
+> Historical register: this document remains launch-era evidence. The active canonical post-launch register is [../post-launch/DEFERRED_BACKLOG.md](../post-launch/DEFERRED_BACKLOG.md). Do not maintain a second evolving backlog here.
+
 ## 1. Overview & Policy
 
 This register documents features, enhancements, and technical components that are **intentionally and authoritatively deferred beyond the initial JobQuest 2.0 release**.

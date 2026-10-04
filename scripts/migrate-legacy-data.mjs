@@ -963,17 +963,41 @@ export async function runMigration({
       } else {
         targetId = (await client.query('SELECT gen_random_uuid() AS id')).rows[0].id;
         if (!dryRun) {
+          const applicationsTarget = Math.max(1, dg.applications_target || 0);
+          const networkingTarget = Math.max(1, (dg.recruiter_messages_target || 0) + (dg.connections_target || 0));
           await client.query(
             `INSERT INTO public.goals (
-              id, workspace_id, user_id, period_type, target_applications, target_outreach,
+              id, workspace_id, user_id, goal_type, target_value, is_enabled,
+              period_type, target_applications, target_outreach,
               effective_date, legacy_id, created_at, updated_at
-             ) VALUES ($1, $2, $3, 'DAILY', $4, $5, $6, $7, COALESCE($8::timestamptz, NOW()), COALESCE($9::timestamptz, NOW()))
-             ON CONFLICT (workspace_id, user_id, period_type, effective_date) DO UPDATE
-             SET target_applications = EXCLUDED.target_applications`,
+             ) VALUES ($1, $2, $3, 'APPLICATIONS', $4, $10, 'DAILY', $4, $5, $6, $7, COALESCE($8::timestamptz, NOW()), COALESCE($9::timestamptz, NOW()))
+             ON CONFLICT (workspace_id, user_id, goal_type, effective_date) DO UPDATE
+             SET target_value = EXCLUDED.target_value,
+                 is_enabled = EXCLUDED.is_enabled,
+                 target_applications = EXCLUDED.target_applications,
+                 target_outreach = EXCLUDED.target_outreach`,
             [
-              targetId, workspaceId, ownerId, dg.applications_target || 0,
-              (dg.recruiter_messages_target || 0) + (dg.connections_target || 0),
-              dg.goal_date, dg.id, parseLegacyDate(dg.created_at), parseLegacyDate(dg.updated_at)
+              targetId, workspaceId, ownerId, applicationsTarget, networkingTarget,
+              dg.goal_date, dg.id, parseLegacyDate(dg.created_at), parseLegacyDate(dg.updated_at),
+              (dg.applications_target || 0) > 0
+            ]
+          );
+          await client.query(
+            `INSERT INTO public.goals (
+              workspace_id, user_id, goal_type, target_value, is_enabled,
+              period_type, target_applications, target_outreach, effective_date,
+              created_at, updated_at
+             ) VALUES ($1, $2, 'NETWORKING', $3, $4, 'DAILY', $5, $3, $6,
+               COALESCE($7::timestamptz, NOW()), COALESCE($8::timestamptz, NOW()))
+             ON CONFLICT (workspace_id, user_id, goal_type, effective_date) DO UPDATE
+             SET target_value = EXCLUDED.target_value,
+                 is_enabled = EXCLUDED.is_enabled,
+                 target_applications = EXCLUDED.target_applications,
+                 target_outreach = EXCLUDED.target_outreach`,
+            [
+              workspaceId, ownerId, networkingTarget,
+              ((dg.recruiter_messages_target || 0) + (dg.connections_target || 0)) > 0,
+              applicationsTarget, dg.goal_date, parseLegacyDate(dg.created_at), parseLegacyDate(dg.updated_at)
             ]
           );
         }
@@ -1132,10 +1156,11 @@ export async function runProductionPreflight({ targetUrl }) {
     const appliedVersions = migCheck.rows.map(r => r.version);
     const hasM14 = appliedVersions.includes('20261020100000');
     const hasM15Claim = appliedVersions.includes('20261021100000');
+    const hasPl4c = appliedVersions.includes('20261022100000');
     checks.push({
       name: 'migrations',
-      status: appliedVersions.length === 19 && hasM14 && hasM15Claim ? 'PASS' : 'WARN',
-      detail: `${appliedVersions.length}/19 migrations applied (latest: ${appliedVersions[appliedVersions.length - 1]})`
+      status: appliedVersions.length >= 20 && hasM14 && hasM15Claim && hasPl4c ? 'PASS' : 'WARN',
+      detail: `${appliedVersions.length}/20 required migrations applied (latest: ${appliedVersions[appliedVersions.length - 1]})`
     });
 
     // 3. Required legacy migration columns

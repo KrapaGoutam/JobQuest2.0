@@ -31,6 +31,10 @@ export interface ApplicationFilters {
   archiveState?: 'active' | 'archived' | 'all';
   ownerId?: string;
   search?: string;
+  /** Inclusive lower bound for applications.created_at, as an ISO instant. */
+  dateAddedFrom?: string;
+  /** Exclusive upper bound for applications.created_at, as an ISO instant. */
+  dateAddedToExclusive?: string;
 }
 
 export type { ApplicationSort } from '../types/applications';
@@ -67,6 +71,8 @@ export async function fetchApplications(
   if (filters.outcome && filters.outcome !== 'ALL') query = query.eq('outcome', filters.outcome);
   if (filters.priority && filters.priority !== 'ALL') query = query.eq('priority', filters.priority);
   if (filters.ownerId && filters.ownerId !== 'ALL') query = query.eq('user_id', filters.ownerId);
+  if (filters.dateAddedFrom) query = query.gte('created_at', filters.dateAddedFrom);
+  if (filters.dateAddedToExclusive) query = query.lt('created_at', filters.dateAddedToExclusive);
 
   if (filters.aging && filters.aging !== 'ALL') {
     // Aging bands apply to OPEN applications only (Gate 02B §4.5).
@@ -117,6 +123,8 @@ export async function fetchStageCounts(
       if (filters.outcome && filters.outcome !== 'ALL') q = q.eq('outcome', filters.outcome);
       if (filters.priority && filters.priority !== 'ALL') q = q.eq('priority', filters.priority);
       if (filters.ownerId && filters.ownerId !== 'ALL') q = q.eq('user_id', filters.ownerId);
+      if (filters.dateAddedFrom) q = q.gte('created_at', filters.dateAddedFrom);
+      if (filters.dateAddedToExclusive) q = q.lt('created_at', filters.dateAddedToExclusive);
       if (filters.aging && filters.aging !== 'ALL') {
         const range = agingRange(filters.aging, new Date());
         q = q.eq('status', 'OPEN').lte('last_activity_at', range.to);

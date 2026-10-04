@@ -75,6 +75,19 @@ fix/feature branch
 
 Do not skip a gate.
 
+Development is the integration branch. Main and Production remain frozen until
+the separately authorized M15-F gate; never merge development to main before it.
+
+While an exact development application SHA is still being certified, do not push
+a docs/checkpoint-only commit to development. Report temporary handoff state in
+the agent response, and record application/CI-tested SHA separately from any
+later docs HEAD.
+
+Use one GitHub Actions observer per phase (the primary agent). Once known, query
+the exact run ID; active watching must use an interval of at least 60 seconds. On
+HTTP 403/429, stop polling, check local primary quota once, honor Retry-After or
+reset, and back off 1/2/5/10 minutes. Do not evade limits with other credentials.
+
 ## Production
 
 JobQuest1 is read-only standby until separate retirement approval.
@@ -170,3 +183,6 @@ Preview
 manual QA
 remaining blockers
 next exact action
+
+Always include whether development, main, Production, and the production data
+services were changed.

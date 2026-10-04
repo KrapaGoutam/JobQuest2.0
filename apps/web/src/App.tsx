@@ -23,11 +23,13 @@ import { ExtensionSettingsView } from './views/ExtensionSettingsView';
 import { MembersView } from './views/MembersView';
 import { WorkspaceSettingsView } from './views/WorkspaceSettingsView';
 import { AuditHistoryView } from './views/AuditHistoryView';
+import { CalendarView } from './views/CalendarView';
+import { TimelineView } from './views/TimelineView';
+import { ArchiveView } from './views/ArchiveView';
 import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import { JournalView } from './views/JournalView';
 import {
-  Calendar,
   UserPlus,
   AlertCircle,
 } from 'lucide-react';
@@ -82,7 +84,7 @@ function AppContent() {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace(/^#/, '');
       if (hash) return hash.startsWith('/') ? hash : `/${hash}`;
-      return window.location.pathname || '/';
+      return `${window.location.pathname || '/'}${window.location.search || ''}`;
     }
     return '/';
   });
@@ -365,10 +367,15 @@ function AppContent() {
     );
   }
 
+  const [routePath = '/', routeSearch = ''] = currentPath.split('?');
+  const routeParams = new URLSearchParams(routeSearch);
+
   // Route title resolver
   const getPageTitle = (path: string): string => {
-    if (/^\/w\/[^/]+\/applications\/[^/]+$/.test(path)) return 'Application';
-    switch (path) {
+    const cleanPath = path.split('?')[0] ?? '/';
+    if (/^\/w\/[^/]+\/applications\/[^/]+$/.test(cleanPath)) return 'Application';
+    if (/^\/w\/[^/]+\/contacts\/[^/]+$/.test(cleanPath)) return 'Contact';
+    switch (cleanPath) {
       case '/':
       case '/applications':
         return 'Applications';
@@ -380,6 +387,10 @@ function AppContent() {
         return 'Contacts';
       case '/calendar':
         return 'Calendar';
+      case '/timeline':
+        return 'Timeline';
+      case '/archive':
+        return 'Archive';
       case '/interviews':
         return 'Interviews';
       case '/habits':
@@ -418,6 +429,7 @@ function AppContent() {
   // Render active view
   const renderRouteView = () => {
     const applicationDeepLink = currentPath.match(/^\/w\/([^/]+)\/applications\/([^/?#]+)$/);
+    const contactDeepLink = currentPath.match(/^\/w\/([^/]+)\/contacts\/([^/?#]+)$/);
     if (currentPath === '/' || currentPath === '/applications' || applicationDeepLink) {
       let routeWorkspaceId = applicationDeepLink?.[1] ? decodeURIComponent(applicationDeepLink[1]) : activeWs;
       // Foreign workspace check: if routeWorkspaceId is not in user's active memberships, deny foreign access safely
@@ -434,6 +446,7 @@ function AppContent() {
           initialApplicationId={routeApplicationId}
           onDeepLinkMissing={handleDeepLinkMissing}
           userRole={memberships.find((m) => m.workspace_id === routeWorkspaceId)?.role ?? 'USER'}
+          onNavigateToContact={(contactId) => navigate(`/w/${routeWorkspaceId}/contacts/${contactId}`)}
           onRefresh={refresh}
           onLogout={onLogout}
           onCreateApp={onCreateApp}
@@ -469,23 +482,60 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/contacts') {
+    if (currentPath === '/contacts' || contactDeepLink) {
+      let routeWorkspaceId = contactDeepLink?.[1] ? decodeURIComponent(contactDeepLink[1]) : activeWs;
+      if (routeWorkspaceId && !memberships.some((membership) => membership.workspace_id === routeWorkspaceId)) {
+        routeWorkspaceId = activeWs;
+      }
+      const routeContactId = contactDeepLink?.[2] ? decodeURIComponent(contactDeepLink[2]) : null;
       return (
         <ContactsView
-          activeWorkspaceId={activeWs}
-          isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
+          activeWorkspaceId={routeWorkspaceId}
+          isManager={memberships.find((m) => m.workspace_id === routeWorkspaceId)?.role === 'MANAGER'}
+          initialContactId={routeContactId}
+          onDeepLinkClose={() => navigate('/contacts')}
+          onDeepLinkMissing={() => navigate('/contacts')}
         />
       );
     }
 
 
-    if (currentPath === '/calendar') {
+    if (routePath === '/calendar') {
       return (
-        <PlaceholderView
-          title="Calendar"
-          subtitle="A consolidated calendar view for interviews, tasks, follow-ups and job-search milestones is planned for a future JobQuest release."
-          icon={<Calendar size={24} />}
-          milestoneOwner="Future release"
+        <CalendarView
+          activeWorkspaceId={activeWs}
+          currentUserId={user?.id ?? null}
+          isManager={memberships.find((membership) => membership.workspace_id === activeWs)?.role === 'MANAGER'}
+          initialDate={routeParams.get('date')}
+          onSelectDate={(date) => navigate(date ? `/calendar?date=${encodeURIComponent(date)}` : '/calendar')}
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (routePath === '/timeline') {
+      return (
+        <TimelineView
+          activeWorkspaceId={activeWs}
+          currentUserId={user?.id ?? null}
+          isManager={memberships.find((membership) => membership.workspace_id === activeWs)?.role === 'MANAGER'}
+          initialRange={routeParams.get('range')}
+          initialMode={routeParams.get('mode')}
+          onStateChange={(range, mode) => navigate(`/timeline?range=${range}&mode=${mode}`)}
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (routePath === '/archive') {
+      return (
+        <ArchiveView
+          activeWorkspaceId={activeWs}
+          currentUserId={user?.id ?? null}
+          isManager={memberships.find((membership) => membership.workspace_id === activeWs)?.role === 'MANAGER'}
+          initialDomain={routeParams.get('domain')}
+          onDomainChange={(domain) => navigate(domain === 'all' ? '/archive' : `/archive?domain=${domain}`)}
+          onNavigate={navigate}
         />
       );
     }
@@ -605,6 +655,7 @@ function AppContent() {
           activeWorkspaceId={activeWs}
           activeWorkspaceName={memberships.find((membership) => membership.workspace_id === activeWs)?.workspaces?.name ?? 'Current workspace'}
           session={session}
+          currentUserId={user?.id ?? ''}
           onPasswordChange={onPassword}
           onRegenerateCodes={onRegenerate}
           onLeakCheck={leakCheck}
@@ -642,7 +693,7 @@ function AppContent() {
       onSelectWorkspace={(id) => loadData(id)}
     >
       <AppShell
-        currentPath={currentPath}
+        currentPath={routePath}
         onNavigate={navigate}
         user={user}
         session={session}

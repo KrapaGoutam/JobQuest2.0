@@ -27,6 +27,7 @@ import { ApplicationTasksSection } from '../tasks/ApplicationTasksSection';
 import { ApplicationDocumentsSection } from '../documents/ApplicationDocumentsSection';
 import { DoneSetNextDialog } from '../tasks/DoneSetNextDialog';
 import { useProfileTimeZone } from '../../hooks/useProfileTimeZone';
+import { ApplicationContactsSection } from './ApplicationContactsSection';
 
 export interface ApplicationDetailDrawerProps {
   isOpen: boolean;
@@ -45,6 +46,7 @@ export interface ApplicationDetailDrawerProps {
   currentUserId: string | null;
   /** M5: called after an interview is scheduled or debriefed from the drawer. */
   onApplicationChanged?: () => void;
+  onNavigateToContact?: (contactId: string) => void;
 }
 
 export function ApplicationDetailDrawer({
@@ -62,6 +64,7 @@ export function ApplicationDetailDrawer({
   members,
   currentUserId,
   onApplicationChanged,
+  onNavigateToContact,
 }: ApplicationDetailDrawerProps) {
   const { timeZone, setTimeZone } = useProfileTimeZone(currentUserId);
   const [doneSetNext, setDoneSetNext] = useState(false);
@@ -270,6 +273,12 @@ export function ApplicationDetailDrawer({
             </Button>
           </div>
         )}
+
+        <ApplicationContactsSection
+          application={application}
+          onChanged={() => onApplicationChanged?.()}
+          onNavigateToContact={onNavigateToContact}
+        />
 
         {/* M5: interviews for this application */}
         <ApplicationInterviewsSection

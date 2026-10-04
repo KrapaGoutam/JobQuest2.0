@@ -50,6 +50,9 @@ import { ApplicationPreviewRail } from '../components/applications/ApplicationPr
 import { Dialog } from '../components/ui/Dialog';
 import { downloadExport } from '../api/importExport';
 import { consumeNewApplicationRequest, onNewApplicationRequest } from '../lib/newApplicationIntent';
+import { dateAddedBounds } from '../lib/applicationProductivity';
+import { remainingBulkSelection, runSequentialBulk, type BulkOperationResult } from '../lib/applicationBulk';
+import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
 
 export interface ApplicationRecord {
   id: string;
@@ -80,6 +83,7 @@ export interface ApplicationsViewProps {
   initialApplicationId?: string | null;
   onDeepLinkMissing?: () => void;
   userRole?: 'USER' | 'MANAGER';
+  onNavigateToContact?: (contactId: string) => void;
   onRefresh: () => Promise<unknown>;
   onLogout: (scope: 'local' | 'global') => Promise<void>;
   onCreateApp?: (e: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -129,6 +133,7 @@ export function ApplicationsView({
   initialApplicationId = null,
   onDeepLinkMissing,
   userRole = 'USER',
+  onNavigateToContact,
   onRefresh,
   onLogout,
   onCreateApp,
@@ -140,6 +145,7 @@ export function ApplicationsView({
   onDismissCodes,
 }: ApplicationsViewProps) {
   const { addToast } = useToast();
+  const { timeZone } = useProfileTimeZone(user?.id ?? null);
 
   const wsId = activeWorkspaceId || user?.active_workspace_id || '';
   // UX only: MANAGER sees owner columns/filters. Authorization is enforced by RLS.
@@ -173,6 +179,9 @@ export function ApplicationsView({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOwner, setSelectedOwner] = useState('ALL');
   const [sort, setSort] = useState<ApplicationSort>({ field: 'last_activity_at', direction: 'desc' });
+  const [dateAddedFrom, setDateAddedFrom] = useState('');
+  const [dateAddedTo, setDateAddedTo] = useState('');
+  const [groupByMonth, setGroupByMonth] = useState(false);
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -186,6 +195,8 @@ export function ApplicationsView({
   const [stageMoveTarget, setStageMoveTarget] = useState<Application | null>(null);
   const [isStageMoveOpen, setIsStageMoveOpen] = useState(false);
   const [outcomeTarget, setOutcomeTarget] = useState<Application | null>(null);
+  const [bulkConfirmation, setBulkConfirmation] = useState<'GHOSTED' | 'ARCHIVE' | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
 
   // Responsive layout & wide-desktop preview rail (Gate 02B D4 / ADR-029)
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(readPreviewPref);
@@ -214,8 +225,9 @@ export function ApplicationsView({
   // ---------------------------------------------------------------------------
   // Loading
   // ---------------------------------------------------------------------------
-  const filters: ApplicationFilters = useMemo(
-    () => ({
+  const filters: ApplicationFilters = useMemo(() => {
+    const added = dateAddedBounds({ from: dateAddedFrom, to: dateAddedTo }, timeZone);
+    return {
       stage: activeStage,
       status: outcomeFilter === 'OPEN' || outcomeFilter === 'CLOSED' ? outcomeFilter : undefined,
       outcome: outcomeFilter !== 'ALL' && outcomeFilter !== 'OPEN' && outcomeFilter !== 'CLOSED' ? outcomeFilter : undefined,
@@ -224,15 +236,23 @@ export function ApplicationsView({
       archiveState,
       search: searchQuery,
       ownerId: selectedOwner,
-    }),
-    [activeStage, outcomeFilter, priorityFilter, agingFilter, archiveState, searchQuery, selectedOwner]
-  );
+      dateAddedFrom: added.from,
+      dateAddedToExclusive: added.toExclusive,
+    };
+  }, [activeStage, outcomeFilter, priorityFilter, agingFilter, archiveState, searchQuery, selectedOwner, dateAddedFrom, dateAddedTo, timeZone]);
 
   // Any filter or sort change returns to the first page and clears the selection.
   useEffect(() => {
     setPage(0);
     setSelectedIds([]);
   }, [filters, sort, wsId]);
+
+  // Selection is intentionally page-scoped. Never leave hidden IDs selected
+  // when the user pages to a different bounded result set.
+  const goToPage = useCallback((nextPage: number) => {
+    setSelectedIds([]);
+    setPage(nextPage);
+  }, []);
 
   useEffect(() => {
     if (!wsId) return;
@@ -443,9 +463,16 @@ export function ApplicationsView({
       await moveApplicationStage(stageMoveTarget.id, newStage, notes);
       addToast({ title: 'Stage updated', description: `Moved to ${stageName(newStage)}.`, type: 'success' });
     } else {
-      const results = await runBulk(selectedIds, (id) => moveApplicationStage(id, newStage, notes));
-      reportBulk(`Moved to ${stageName(newStage)}`, results);
-      setSelectedIds([]);
+      const eligibleIds = selectedApps.filter((app) => !app.archived_at).map((app) => app.id);
+      const skippedIds = selectedIds.filter((id) => !eligibleIds.includes(id));
+      setBulkPending(true);
+      try {
+        const results = await runSequentialBulk(eligibleIds, (id) => moveApplicationStage(id, newStage, notes));
+        reportBulk(`Moved to ${stageName(newStage)}`, results, skippedIds.length);
+        setSelectedIds(remainingBulkSelection(results, skippedIds));
+      } finally {
+        setBulkPending(false);
+      }
     }
     await afterMutation();
   };
@@ -496,28 +523,21 @@ export function ApplicationsView({
     await afterMutation();
   };
 
-  // Bulk actions: sequential atomic RPCs; failures are counted and reported, never hidden.
-  async function runBulk(ids: string[], op: (id: string) => Promise<unknown>) {
-    let ok = 0;
-    const failed: string[] = [];
-    for (const id of ids) {
-      try {
-        await op(id);
-        ok++;
-      } catch (err: unknown) {
-        failed.push(errorMessage(err, 'failed'));
-      }
-    }
-    return { ok, failed };
-  }
-
-  function reportBulk(what: string, r: { ok: number; failed: string[] }) {
-    if (r.failed.length === 0) {
-      addToast({ title: 'Bulk update complete', description: `${what}: ${r.ok} application${r.ok === 1 ? '' : 's'}.`, type: 'success' });
+  // Bulk actions reuse the per-record atomic RPCs. The batch itself is not atomic.
+  function reportBulk(what: string, result: BulkOperationResult, skipped = 0) {
+    const succeeded = result.succeededIds.length;
+    if (result.failures.length === 0) {
+      const skippedText = skipped ? ` ${skipped} ineligible selection${skipped === 1 ? ' was' : 's were'} left selected.` : '';
+      addToast({
+        title: succeeded > 0 ? 'Bulk update complete' : 'No eligible applications',
+        description: `${what}: ${succeeded} application${succeeded === 1 ? '' : 's'}.${skippedText}`,
+        type: succeeded > 0 ? 'success' : 'warning',
+      });
     } else {
+      const messages = [...new Set(result.failures.map((failure) => failure.message))].join('; ');
       addToast({
         title: 'Bulk update partly failed',
-        description: `${what}: ${r.ok} succeeded, ${r.failed.length} failed (${[...new Set(r.failed)].join('; ')}).`,
+        description: `${what}: ${succeeded} succeeded, ${result.failures.length} failed and remain selected${skipped ? `, ${skipped} ineligible left selected` : ''}. ${messages}`,
         type: 'warning',
         duration: 8000,
       });
@@ -525,29 +545,50 @@ export function ApplicationsView({
   }
 
   const selectedApps = applications.filter((a) => selectedIds.includes(a.id));
+  const selectedActiveApps = selectedApps.filter((app) => !app.archived_at);
+  const selectedArchivedApps = selectedApps.filter((app) => !!app.archived_at);
+  const selectedOpenApps = selectedActiveApps.filter((app) => app.status === 'OPEN');
 
   const handleBulkGhosted = async () => {
-    // Explicit user action only (never automatic); already-closed records are skipped.
-    const open = selectedApps.filter((a) => a.status === 'OPEN').map((a) => a.id);
-    const r = await runBulk(open, (id) => setApplicationOutcome(id, 'GHOSTED', null, 'Bulk marked as ghosted'));
-    const skipped = selectedIds.length - open.length;
-    reportBulk(`Marked Ghosted${skipped ? ` (${skipped} already closed, skipped)` : ''}`, r);
-    setSelectedIds([]);
-    await afterMutation();
+    const eligibleIds = selectedOpenApps.map((app) => app.id);
+    const skippedIds = selectedIds.filter((id) => !eligibleIds.includes(id));
+    setBulkPending(true);
+    try {
+      const result = await runSequentialBulk(eligibleIds, (id) => setApplicationOutcome(id, 'GHOSTED', null, 'Bulk marked as ghosted'));
+      reportBulk('Marked Ghosted', result, skippedIds.length);
+      setSelectedIds(remainingBulkSelection(result, skippedIds));
+      await afterMutation();
+    } finally {
+      setBulkPending(false);
+    }
   };
 
   const handleBulkArchive = async () => {
-    const ids = selectedApps.filter((a) => !a.archived_at).map((a) => a.id);
-    reportBulk('Archived', await runBulk(ids, archiveApplication));
-    setSelectedIds([]);
-    await afterMutation();
+    const eligibleIds = selectedActiveApps.map((app) => app.id);
+    const skippedIds = selectedIds.filter((id) => !eligibleIds.includes(id));
+    setBulkPending(true);
+    try {
+      const result = await runSequentialBulk(eligibleIds, archiveApplication);
+      reportBulk('Archived', result, skippedIds.length);
+      setSelectedIds(remainingBulkSelection(result, skippedIds));
+      await afterMutation();
+    } finally {
+      setBulkPending(false);
+    }
   };
 
   const handleBulkRestore = async () => {
-    const ids = selectedApps.filter((a) => a.archived_at).map((a) => a.id);
-    reportBulk('Restored', await runBulk(ids, restoreApplication));
-    setSelectedIds([]);
-    await afterMutation();
+    const eligibleIds = selectedArchivedApps.map((app) => app.id);
+    const skippedIds = selectedIds.filter((id) => !eligibleIds.includes(id));
+    setBulkPending(true);
+    try {
+      const result = await runSequentialBulk(eligibleIds, restoreApplication);
+      reportBulk('Restored', result, skippedIds.length);
+      setSelectedIds(remainingBulkSelection(result, skippedIds));
+      await afterMutation();
+    } finally {
+      setBulkPending(false);
+    }
   };
 
   const clearFilters = () => {
@@ -558,6 +599,8 @@ export function ApplicationsView({
     setArchiveState('active');
     setSearchQuery('');
     setSelectedOwner('ALL');
+    setDateAddedFrom('');
+    setDateAddedTo('');
   };
 
   const pageStart = totalCount === 0 ? 0 : page * PAGE_SIZE + 1;
@@ -674,6 +717,24 @@ export function ApplicationsView({
           isPreviewOpen={isPreviewOpen}
           onTogglePreview={togglePreview}
           onOpenExport={() => setIsExportOpen(true)}
+          dateAddedFrom={dateAddedFrom}
+          dateAddedTo={dateAddedTo}
+          onDateAddedFromChange={(date) => {
+            setDateAddedFrom(date);
+            if (date && dateAddedTo && date > dateAddedTo) setDateAddedTo(date);
+          }}
+          onDateAddedToChange={(date) => {
+            setDateAddedTo(date);
+            if (date && dateAddedFrom && date < dateAddedFrom) setDateAddedFrom(date);
+          }}
+          onClearDateAdded={() => {
+            setDateAddedFrom('');
+            setDateAddedTo('');
+          }}
+          sort={sort}
+          onSortChange={setSort}
+          groupByMonth={groupByMonth}
+          onGroupByMonthChange={setGroupByMonth}
         />
 
         {loadError && (
@@ -698,6 +759,8 @@ export function ApplicationsView({
               isMobile={isMobile}
               members={members}
               workflow={workflow}
+              groupByMonth={groupByMonth}
+              timeZone={timeZone}
               onSelectRow={(id, selected) =>
                 setSelectedIds((prev) => (selected ? [...new Set([...prev, id])] : prev.filter((i) => i !== id)))
               }
@@ -725,10 +788,10 @@ export function ApplicationsView({
                   Showing {pageStart}–{pageEnd} of {totalCount}
                 </span>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <Button size="sm" variant="outline" disabled={page === 0 || loading} onClick={() => setPage((p) => Math.max(0, p - 1))} aria-label="Previous page">
+                  <Button size="sm" variant="outline" disabled={page === 0 || loading} onClick={() => goToPage(Math.max(0, page - 1))} aria-label="Previous page">
                     <ChevronLeft size={14} aria-hidden="true" />
                   </Button>
-                  <Button size="sm" variant="outline" disabled={page >= lastPage || loading} onClick={() => setPage((p) => Math.min(lastPage, p + 1))} aria-label="Next page">
+                  <Button size="sm" variant="outline" disabled={page >= lastPage || loading} onClick={() => goToPage(Math.min(lastPage, page + 1))} aria-label="Next page">
                     <ChevronRight size={14} aria-hidden="true" />
                   </Button>
                 </div>
@@ -756,16 +819,44 @@ export function ApplicationsView({
 
       <BulkActionBar
         selectedCount={selectedIds.length}
-        isArchivedView={archiveState === 'archived'}
+        selectedActiveCount={selectedActiveApps.length}
+        selectedArchivedCount={selectedArchivedApps.length}
+        selectedOpenCount={selectedOpenApps.length}
+        isPending={bulkPending}
         onMoveStage={() => {
           setStageMoveTarget(null);
           setIsStageMoveOpen(true);
         }}
-        onMarkGhosted={() => void handleBulkGhosted()}
-        onArchive={() => void handleBulkArchive()}
+        onMarkGhosted={() => setBulkConfirmation('GHOSTED')}
+        onArchive={() => setBulkConfirmation('ARCHIVE')}
         onRestore={() => void handleBulkRestore()}
         onClearSelection={() => setSelectedIds([])}
       />
+
+      <Dialog
+        isOpen={bulkConfirmation !== null}
+        onClose={() => {
+          if (!bulkPending) setBulkConfirmation(null);
+        }}
+        title={bulkConfirmation === 'GHOSTED' ? 'Mark applications as Ghosted?' : 'Archive applications?'}
+        description={bulkConfirmation === 'GHOSTED'
+          ? `${selectedOpenApps.length} open application${selectedOpenApps.length === 1 ? '' : 's'} on the current page will be closed as Ghosted.`
+          : `${selectedActiveApps.length} active application${selectedActiveApps.length === 1 ? '' : 's'} on the current page will move to the archive.`}
+        footer={<>
+          <Button variant="secondary" onClick={() => setBulkConfirmation(null)} disabled={bulkPending}>Cancel</Button>
+          <Button variant="danger" disabled={bulkPending} onClick={() => void (async () => {
+            if (bulkConfirmation === 'GHOSTED') await handleBulkGhosted();
+            else await handleBulkArchive();
+            setBulkConfirmation(null);
+          })()}>{bulkPending ? 'Updating...' : bulkConfirmation === 'GHOSTED' ? `Mark ${selectedOpenApps.length} Ghosted` : `Archive ${selectedActiveApps.length}`}</Button>
+        </>}
+      >
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+          {bulkConfirmation === 'GHOSTED'
+            ? 'This records a terminal Ghosted outcome. The pipeline stage is preserved, and already closed or archived selections are left unchanged.'
+            : 'Archive is reversible from the Archived applications view. Already archived selections are left unchanged.'}
+        </p>
+      </Dialog>
 
       <Dialog
         isOpen={isExportOpen}
@@ -848,6 +939,7 @@ export function ApplicationsView({
         members={members}
         currentUserId={user?.id ?? null}
         onApplicationChanged={() => void afterMutation()}
+        onNavigateToContact={onNavigateToContact}
         onOpenStageMove={(app) => {
           setStageMoveTarget(app);
           setIsStageMoveOpen(true);

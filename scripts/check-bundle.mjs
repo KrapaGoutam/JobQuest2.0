@@ -44,7 +44,13 @@ for (const p of tracked ? trackedFiles() : bundleFiles(bundleRoot)) {
   if (!existsSync(p)) continue;
   const text = readFileSync(p, 'utf8');
   files++;
-  for (const f of scanText(text, { knownSecrets, allowlist, mode: tracked ? 'source' : 'bundle' })) {
+  const scanDocumentationPasswords = tracked && /\.(?:md|mdx|rst|txt)$/i.test(p);
+  for (const f of scanText(text, {
+    knownSecrets,
+    allowlist,
+    mode: tracked ? 'source' : 'bundle',
+    scanDocumentationPasswords,
+  })) {
     console.error(`SECRET ${f.rule} in ${p} @${f.index}`);
     bad++;
   }

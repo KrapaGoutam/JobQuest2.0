@@ -2,46 +2,119 @@ name: M1B CI
 
 on:
   push:
-    branches: [feature/**, development, main]
+    branches: [feature/**, fix/**, development, main]
   pull_request:
     branches: [development, main]
   workflow_dispatch:
 
 concurrency:
-  group: m1b-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/development' && github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
 
 jobs:
+  classify:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      full_ci: ${{ steps.changes.outputs.full_ci }}
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Deny-by-default change classification
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          echo "full_ci=true" >> "$GITHUB_OUTPUT"
+          echo "docs_only=false" >> "$GITHUB_OUTPUT"
+
+          case "$EVENT_NAME" in
+            push)
+              base="$BEFORE_SHA"
+              head="$HEAD_SHA"
+              ;;
+            pull_request)
+              base="$PR_BASE_SHA"
+              head="$HEAD_SHA"
+              ;;
+            *)
+              echo "Manual or unknown event: defaulting to FULL_CI"
+              exit 0
+              ;;
+          esac
+
+          if [[ -z "$base" || -z "$head" || "$base" =~ ^0+$ ]]; then
+            echo "Ambiguous comparison range: defaulting to FULL_CI"
+            exit 0
+          fi
+          if ! git cat-file -e "${base}^{commit}" || ! git cat-file -e "${head}^{commit}"; then
+            echo "Comparison commit unavailable: defaulting to FULL_CI"
+            exit 0
+          fi
+
+          changed_paths="$(mktemp)"
+          if ! git diff --name-only -z "$base" "$head" > "$changed_paths"; then
+            echo "Path detection failed: defaulting to FULL_CI"
+            exit 0
+          fi
+          if ! classification="$(node scripts/classify-ci-changes.mjs < "$changed_paths")"; then
+            echo "Path classification failed: defaulting to FULL_CI"
+            exit 0
+          fi
+          if [[ "$classification" == "DOCS_ONLY" ]]; then
+            echo "full_ci=false" >> "$GITHUB_OUTPUT"
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            echo "Documentation-only change: lightweight security CI"
+          else
+            echo "Code, configuration, mixed, empty, or unknown change: FULL_CI"
+          fi
+
   static:
     name: Lint · typecheck · unit · build · secret scans
+    needs: classify
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: corepack enable && pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test:unit
-      - run: pnpm build
+      - name: Secret scan · every tracked file
+        run: node scripts/check-bundle.mjs --tracked
+      - name: No committed env or key files
+        shell: bash
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then echo "committed .env file"; exit 1; fi
+          if git ls-files | grep -E '(^|/)signing_keys\.json$|\.(pem|jwk|key)$'; then echo "committed key file"; exit 1; fi
+      - if: needs.classify.outputs.full_ci == 'true'
+        run: corepack enable && pnpm install --frozen-lockfile
+      - if: needs.classify.outputs.full_ci == 'true'
+        run: pnpm lint
+      - if: needs.classify.outputs.full_ci == 'true'
+        run: pnpm typecheck
+      - if: needs.classify.outputs.full_ci == 'true'
+        run: pnpm test:unit
+      - if: needs.classify.outputs.full_ci == 'true'
+        run: pnpm build
         env:
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
       - name: Secret scan · browser bundle (B24)
+        if: needs.classify.outputs.full_ci == 'true'
         run: pnpm check:bundle
-      - name: Secret scan · every tracked file
-        run: pnpm check:secrets
-      - name: No committed env or key files
-        run: |
-          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then echo "committed .env file"; exit 1; fi
-          if git ls-files | grep -E '(^|/)signing_keys\.json$|\.(pem|jwk|key)$'; then echo "committed key file"; exit 1; fi
 
   database:
     name: Migrations · Option B auth · RLS · browser (local Supabase)
+    needs: [classify, static]
+    if: needs.classify.outputs.full_ci == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

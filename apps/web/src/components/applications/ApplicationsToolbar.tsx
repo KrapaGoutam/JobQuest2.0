@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Plus, Archive, PanelRight, Download } from 'lucide-react';
+import { Search, X, Plus, Archive, PanelRight, Download, ArrowUpDown, CalendarDays, Layers3 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import type { AgingFilter, ApplicationStage, CanonicalWorkflow } from '../../types/applications';
+import type { AgingFilter, ApplicationSort, ApplicationStage, CanonicalWorkflow } from '../../types/applications';
 import type { WorkspaceMemberInfo } from '../../api/applications';
+import { sortDirectionLabel } from '../../lib/applicationProductivity';
 
 export interface ApplicationsToolbarProps {
   workflow: CanonicalWorkflow | null;
@@ -31,6 +33,15 @@ export interface ApplicationsToolbarProps {
   isPreviewOpen?: boolean;
   onTogglePreview?: () => void;
   onOpenExport?: () => void;
+  dateAddedFrom: string;
+  dateAddedTo: string;
+  onDateAddedFromChange: (date: string) => void;
+  onDateAddedToChange: (date: string) => void;
+  onClearDateAdded: () => void;
+  sort: ApplicationSort;
+  onSortChange: (sort: ApplicationSort) => void;
+  groupByMonth: boolean;
+  onGroupByMonthChange: (enabled: boolean) => void;
 }
 
 export function ApplicationsToolbar({
@@ -58,6 +69,15 @@ export function ApplicationsToolbar({
   isPreviewOpen = false,
   onTogglePreview,
   onOpenExport,
+  dateAddedFrom,
+  dateAddedTo,
+  onDateAddedFromChange,
+  onDateAddedToChange,
+  onClearDateAdded,
+  sort,
+  onSortChange,
+  groupByMonth,
+  onGroupByMonthChange,
 }: ApplicationsToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -306,6 +326,88 @@ export function ApplicationsToolbar({
             </span>
           </Button>
         </div>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'end',
+          gap: '8px',
+          flexWrap: 'wrap',
+          padding: '10px 12px',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--color-surface-2)',
+        }}
+        role="group"
+        aria-label="Application view controls"
+      >
+        <CalendarDays size={16} aria-hidden="true" style={{ alignSelf: 'center', color: 'var(--color-text-muted)' }} />
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+          Date Added from
+          <Input
+            type="date"
+            value={dateAddedFrom}
+            max={dateAddedTo || undefined}
+            onChange={(event) => onDateAddedFromChange(event.target.value)}
+            aria-label="Date Added from"
+            style={{ width: '150px', minHeight: '32px' }}
+          />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+          Date Added through
+          <Input
+            type="date"
+            value={dateAddedTo}
+            min={dateAddedFrom || undefined}
+            onChange={(event) => onDateAddedToChange(event.target.value)}
+            aria-label="Date Added through"
+            style={{ width: '150px', minHeight: '32px' }}
+          />
+        </label>
+        {(dateAddedFrom || dateAddedTo) && (
+          <Button size="sm" variant="ghost" onClick={onClearDateAdded} aria-label="Clear Date Added filter">
+            Clear dates
+          </Button>
+        )}
+        <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--color-border)' }} aria-hidden="true" />
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+          Sort by
+          <Select
+            value={sort.field}
+            onChange={(event) => onSortChange({ ...sort, field: event.target.value as ApplicationSort['field'] })}
+            aria-label="Sort applications by"
+            style={{ width: '170px', minHeight: '32px' }}
+          >
+            <option value="last_activity_at">Last activity</option>
+            <option value="created_at">Date Added</option>
+            <option value="applied_at">Application date</option>
+            <option value="company_name">Company</option>
+            <option value="role_title">Role</option>
+            <option value="stage">Stage</option>
+            <option value="priority">Priority</option>
+          </Select>
+        </label>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onSortChange({ ...sort, direction: sort.direction === 'asc' ? 'desc' : 'asc' })}
+          aria-label={`Sort direction: ${sortDirectionLabel(sort)}`}
+          title={`Sort direction: ${sortDirectionLabel(sort)}`}
+        >
+          <ArrowUpDown size={14} aria-hidden="true" style={{ marginRight: '6px' }} />
+          {sortDirectionLabel(sort)}
+        </Button>
+        <Button
+          size="sm"
+          variant={groupByMonth ? 'primary' : 'outline'}
+          onClick={() => onGroupByMonthChange(!groupByMonth)}
+          aria-pressed={groupByMonth}
+          title="Group the current results page by Date Added month"
+        >
+          <Layers3 size={14} aria-hidden="true" style={{ marginRight: '6px' }} />
+          Group by month
+        </Button>
       </div>
 
       {/* Stage Pills Row */}

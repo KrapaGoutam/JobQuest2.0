@@ -40,28 +40,48 @@ export function ReviewActions({
     }
   };
   const size = compact ? 'sm' : 'sm';
+  const ghostAction = include.includes('ghost') && (
+    <Button size={size} variant="secondary" disabled={busy} aria-label={`Mark ${application.company_name} ghosted`} onClick={() => setConfirmGhost(true)}>
+      Mark Ghosted
+    </Button>
+  );
+  const archiveAction = include.includes('archive') && (
+    <Button
+      size={size}
+      variant="secondary"
+      disabled={busy}
+      aria-label={`Archive ${application.company_name}`}
+      onClick={() => void run(() => archiveApplication(application.id), `Archived: ${application.company_name}`, () => restoreApplication(application.id))}
+    >
+      Archive
+    </Button>
+  );
   return (
-    <span className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+    <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
       {include.includes('keep') && (
         <Button size={size} variant="secondary" disabled={busy} aria-label={`Keep ${application.company_name} active`} onClick={() => void run(() => keepApplicationActive(application.id), `Kept active: ${application.company_name}`)}>
           Keep
         </Button>
       )}
-      {include.includes('ghost') && (
-        <Button size={size} variant="secondary" disabled={busy} aria-label={`Mark ${application.company_name} ghosted`} onClick={() => setConfirmGhost(true)}>
-          Mark Ghosted
-        </Button>
-      )}
-      {include.includes('archive') && (
-        <Button
-          size={size}
-          variant="secondary"
-          disabled={busy}
-          aria-label={`Archive ${application.company_name}`}
-          onClick={() => void run(() => archiveApplication(application.id), `Archived: ${application.company_name}`, () => restoreApplication(application.id))}
-        >
-          Archive
-        </Button>
+      {compact && (ghostAction || archiveAction) ? (
+        <details>
+          <summary
+            className="small"
+            style={{ cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '6px 4px' }}
+            aria-label={`More review actions for ${application.company_name}`}
+          >
+            More
+          </summary>
+          <span className="row" style={{ gap: 6, marginTop: 6, justifyContent: 'flex-end' }}>
+            {ghostAction}
+            {archiveAction}
+          </span>
+        </details>
+      ) : (
+        <>
+          {ghostAction}
+          {archiveAction}
+        </>
       )}
       <Dialog
         isOpen={confirmGhost}
@@ -87,6 +107,6 @@ export function ReviewActions({
       >
         <p className="small muted" style={{ margin: 0 }}>Pending tasks linked to it stay in your queue until you complete or cancel them.</p>
       </Dialog>
-    </span>
+    </div>
   );
 }

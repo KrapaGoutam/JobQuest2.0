@@ -3,7 +3,10 @@ import { Button } from '../ui/Button';
 
 export interface BulkActionBarProps {
   selectedCount: number;
-  isArchivedView: boolean;
+  selectedActiveCount: number;
+  selectedArchivedCount: number;
+  selectedOpenCount: number;
+  isPending: boolean;
   onMoveStage: () => void;
   onMarkGhosted: () => void;
   onArchive: () => void;
@@ -13,7 +16,10 @@ export interface BulkActionBarProps {
 
 export function BulkActionBar({
   selectedCount,
-  isArchivedView,
+  selectedActiveCount,
+  selectedArchivedCount,
+  selectedOpenCount,
+  isPending,
   onMoveStage,
   onMarkGhosted,
   onArchive,
@@ -24,24 +30,10 @@ export function BulkActionBar({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        bottom: '24px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 100,
-        background: 'var(--color-surface-1)',
-        border: '1px solid var(--color-border)',
-        boxShadow: 'var(--shadow-lg)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '10px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        animation: 'slideUp 0.2s ease-out',
-      }}
+      className="application-bulk-bar"
       role="region"
       aria-label="Bulk actions toolbar"
+      aria-busy={isPending}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span
@@ -66,28 +58,35 @@ export function BulkActionBar({
         </span>
       </div>
 
-      <div style={{ height: '20px', width: '1px', background: 'var(--color-border)' }} />
+      <div className="application-bulk-divider" />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {!isArchivedView ? (
+      <div className="application-bulk-actions">
+        {selectedActiveCount > 0 && (
           <>
-            <Button size="sm" variant="outline" onClick={onMoveStage}>
-              <ArrowRight size={14} style={{ marginRight: '6px' }} />
-              Move Stage
+            <Button size="sm" variant="outline" onClick={onMoveStage} disabled={isPending}>
+              <ArrowRight size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
+              Move Stage ({selectedActiveCount})
             </Button>
-            <Button size="sm" variant="outline" onClick={onMarkGhosted}>
-              <Ghost size={14} style={{ marginRight: '6px' }} />
-              Mark Ghosted
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onMarkGhosted}
+              disabled={isPending || selectedOpenCount === 0}
+              title={selectedOpenCount === 0 ? 'Only open, active applications can be marked Ghosted.' : undefined}
+            >
+              <Ghost size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
+              Mark Ghosted ({selectedOpenCount})
             </Button>
-            <Button size="sm" variant="outline" onClick={onArchive}>
-              <Archive size={14} style={{ marginRight: '6px' }} />
-              Archive
+            <Button size="sm" variant="outline" onClick={onArchive} disabled={isPending}>
+              <Archive size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
+              Archive ({selectedActiveCount})
             </Button>
           </>
-        ) : (
-          <Button size="sm" variant="outline" onClick={onRestore}>
-            <Undo2 size={14} style={{ marginRight: '6px' }} />
-            Restore to Active
+        )}
+        {selectedArchivedCount > 0 && (
+          <Button size="sm" variant="outline" onClick={onRestore} disabled={isPending}>
+            <Undo2 size={14} style={{ marginRight: '6px' }} aria-hidden="true" />
+            Restore ({selectedArchivedCount})
           </Button>
         )}
 
@@ -95,6 +94,7 @@ export function BulkActionBar({
           size="sm"
           variant="ghost"
           onClick={onClearSelection}
+          disabled={isPending}
           aria-label="Clear selection"
           style={{ color: 'var(--color-text-muted)' }}
         >

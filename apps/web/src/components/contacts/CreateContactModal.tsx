@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import type {
   Contact,
@@ -8,6 +8,7 @@ import type {
 import type { Application } from '../../types/applications';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
+import { useOverlay } from '../ui/useOverlay';
 
 export interface CreateContactModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export interface CreateContactModalProps {
   companies: Company[];
   applications: Application[];
   initialApplicationId?: string;
+  initialCompanyName?: string;
   onClose: () => void;
   onSubmit: (data: {
     full_name: string;
@@ -37,9 +39,12 @@ export function CreateContactModal({
   companies,
   applications,
   initialApplicationId,
+  initialCompanyName,
   onClose,
   onSubmit,
 }: CreateContactModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useOverlay(isOpen, onClose, dialogRef);
   const [fullName, setFullName] = useState('');
   const [relationshipType, setRelationshipType] = useState<ContactRelationshipType>('RECRUITER');
   const [companyName, setCompanyName] = useState('');
@@ -70,7 +75,7 @@ export function CreateContactModal({
     } else {
       setFullName('');
       setRelationshipType('RECRUITER');
-      setCompanyName('');
+      setCompanyName(initialCompanyName || '');
       setJobTitle('');
       setEmail('');
       setPhone('');
@@ -81,7 +86,7 @@ export function CreateContactModal({
       setRoleInProcess('RECRUITER');
     }
     setErrors({});
-  }, [contactToEdit, initialApplicationId, isOpen]);
+  }, [contactToEdit, initialApplicationId, initialCompanyName, isOpen]);
 
   if (!isOpen) return null;
 
@@ -136,10 +141,12 @@ export function CreateContactModal({
     <>
       <div className="scrim" onClick={onClose} aria-hidden="true" />
       <div
+        ref={dialogRef}
         className="dialog"
         role="dialog"
         aria-modal="true"
         aria-label={contactToEdit ? 'Edit contact' : 'New contact'}
+        tabIndex={-1}
         style={{
           width: '640px',
           maxWidth: '95vw',

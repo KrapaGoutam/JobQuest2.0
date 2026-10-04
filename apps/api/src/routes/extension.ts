@@ -486,11 +486,12 @@ extensionV1.get('/stats', async (c) => {
     admin().from('applications').select('id', { count: 'exact', head: true })
       .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
       .gte('applied_at', lastWeekStartIso).lt('applied_at', weekStartIso),
-    admin().from('goals').select('period_type, target_applications, target_outreach, effective_date')
+    admin().from('goals').select('goal_type, period_type, target_value, effective_date')
       .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
-      .eq('period_type', 'WEEKLY').lte('effective_date', currentWeekKey)
+      .eq('period_type', 'WEEKLY').eq('is_enabled', true)
+      .in('goal_type', ['APPLICATIONS', 'NETWORKING']).lte('effective_date', currentWeekKey)
       .order('effective_date', { ascending: false }).order('created_at', { ascending: false })
-      .limit(1).maybeSingle(),
+      .limit(20),
     admin().from('interviews').select('id', { count: 'exact', head: true })
       .eq('workspace_id', auth.actor.workspaceId).eq('user_id', auth.actor.userId)
       .is('outcome', null).gte('scheduled_at', nowIso),
@@ -511,12 +512,14 @@ extensionV1.get('/stats', async (c) => {
   const applicationsYesterday = yesterdayCount.count ?? 0;
   const applicationsLastWeek = lastWeekCount.count ?? 0;
 
-  const goal = goalRow.data as { period_type: string; target_applications: number; target_outreach: number; effective_date: string } | null;
-  const activeGoal = goal ? {
-    period_type: goal.period_type,
-    target_applications: goal.target_applications,
-    target_outreach: goal.target_outreach,
-    progress_pct: goal.target_applications > 0 ? Math.round((applicationsThisWeek / goal.target_applications) * 100) : null,
+  const goals = (goalRow.data ?? []) as Array<{ goal_type: 'APPLICATIONS' | 'NETWORKING'; period_type: string; target_value: number; effective_date: string }>;
+  const applicationGoal = goals.find((goal) => goal.goal_type === 'APPLICATIONS');
+  const networkingGoal = goals.find((goal) => goal.goal_type === 'NETWORKING');
+  const activeGoal = applicationGoal ? {
+    period_type: applicationGoal.period_type,
+    target_applications: applicationGoal.target_value,
+    target_outreach: networkingGoal?.target_value ?? 0,
+    progress_pct: applicationGoal.target_value > 0 ? Math.round((applicationsThisWeek / applicationGoal.target_value) * 100) : null,
   } : null;
 
   let followUpsDue = 0;

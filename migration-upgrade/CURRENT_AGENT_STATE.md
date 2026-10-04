@@ -1,14 +1,20 @@
-## >>> M15-F PREFLIGHT AUTHORIZED / PRODUCTION MUTATION NOT AUTHORIZED (2026-10-04) <<<
+## >>> M15-F PREFLIGHT BLOCKED — PRODUCTION BACKUP/RESTORE NOT READY (2026-10-04) <<<
 
-PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FORMALLY CLOSED | M15-F: PREFLIGHT IN PROGRESS | PL-5: DEFERRED UNTIL AFTER M15-F | PL-1D: DEFERRED / TBD.
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FORMALLY CLOSED | M15-F: BLOCKED AT BACKUP/RESTORE GATE | PL-5: DEFERRED UNTIL AFTER M15-F | PL-1D: DEFERRED / TBD.
 
 CURRENT BRANCH: `feature/m15f-production-stabilization` | RELEASE BASE / DEVELOPMENT: `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` | DEVELOPMENT CI: `37182554528 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
 
-AUTHORIZATION BOUNDARY: read-only M15-F pre-cutover audit, governance documentation, feature-branch certification, and feature-branch push are authorized. Merging or pushing `main`, Production database migration/data/auth/config mutation, Production deployment/alias changes, Production smoke-user creation, and legacy retirement are not authorized before the mandatory cutover approval gate.
+AUDIT RESULT: Git baseline and release delta passed. jobquest-prod `kqsxdothjxtcktyirpux` is ACTIVE_HEALTHY on PostgreSQL 17.6. Production has 19 migrations through `20261021100000`; jobquest-dev/repository have 20, leaving exactly `20261022100000_pl4c_goals_task_templates_recurrence.sql` pending. Compatibility review passed against Production cardinality `goals=0`, `tasks=0`, `applications=223`.
+
+BLOCKER: the current Production project is on Supabase Free, no current managed or logical backup is verified, the only secure local prod dump is from the superseded 2026-09-28 target, current-project restore has not been rehearsed, and operator restore access is not verified. Production has no credible current recovery point. Stop at Stage 7.
+
+AUTHORIZATION BOUNDARY: Merging or pushing `main`, Production database migration/data/auth/config mutation, Production deployment/alias changes, Production smoke-user creation, and legacy retirement remain unauthorized.
 
 SCHEDULING DECISION: the operator changed the order to PL-4C -> M15-F -> PL-5. PL-5 is deferred, not cancelled or started. Legacy retirement still requires separate approval after stabilization.
 
-NEXT EXACT ACTION: complete the M15-F read-only preflight, certify the release-candidate documentation on the feature branch, and stop for explicit Production cutover approval.
+NEXT EXACT ACTION: create and verify a fresh supported logical backup of current `kqsxdothjxtcktyirpux` outside Git, rehearse restore in a disposable non-Production database, document operator restore access, then resume the read-only M15-F audit at Stage 7. Do not request or execute cutover approval yet.
+
+Report: `migration-upgrade/post-launch/M15F_PRODUCTION_RELEASE_STABILIZATION_REPORT.md`.
 
 ## >>> PL-4C FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-04) <<<
 

@@ -22,15 +22,15 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `M15-F` / `PREFLIGHT IN PROGRESS — PRODUCTION MUTATION NOT AUTHORIZED` |
-| Branch / base SHA / current HEAD / remote HEAD | `feature/m15f-production-stabilization` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / docs-preparation pending / not yet pushed |
+| TASK ID / STATUS | `M15-F` / `BLOCKED — PRODUCTION BACKUP/RESTORE NOT READY` |
+| Branch / base SHA / current HEAD / remote HEAD | `feature/m15f-production-stabilization` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `9cee870b2e1cfeecd04fecbee28266ec3e2ea636` before blocker report / same initial governance commit pushed |
 | Last tested application SHA | `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` |
 | CI run / CI SHA / CI result | Development `37182554528` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `PASS`; M15-F feature run pending |
-| Preview / database target / migrations | Read-only audit pending; primary repo remains linked to jobquest-dev `xpnkasclquplmrcmhsif`; Production target must be independently verified |
+| Preview / database target / migrations | Primary repo remains linked to jobquest-dev `xpnkasclquplmrcmhsif`; Production verified as jobquest-prod `kqsxdothjxtcktyirpux`, 19 migrations through `20261021100000`; exactly `20261022100000` pending |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Verified branch baselines, PL-4C merge parents, exact development CI, expected five documentation changes, preserved unrelated `.gitignore`, and created the M15-F feature branch. |
-| Next exact action | Commit the approved governance carry-forward, complete the read-only preflight, certify the feature head, and stop for explicit Production cutover approval. |
-| Blockers / open questions | Backup/restore, Production migration delta, Vercel auto-deploy behavior, current deployment, and Production configuration remain to be audited. |
+| Last completed action | Release delta and Production migration/compatibility audits passed; audit stopped at mandatory backup/restore gate with no Production mutation. |
+| Next exact action | Create a fresh supported logical backup of current jobquest-prod, verify archive integrity and disposable restore, document operator restore access, then resume at Stage 7. |
+| Blockers / open questions | Supabase Free has no verified managed backup; only local prod dump is from the superseded target; current-project backup/restore and operator restore access are not ready. Vercel/config/auth/extension/final-security stages were not reached. |
 | Operator approval status | `PREFLIGHT AUTHORIZED`; Production cutover/mutation `NOT AUTHORIZED` |
 | Report document | `migration-upgrade/post-launch/M15F_PRODUCTION_RELEASE_STABILIZATION_REPORT.md` |
 
@@ -118,7 +118,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-4A | CLOSED | Final feature CI `37034644123` passed; operator-approved development merge `80076446a120388fe2b05f7d36ccc131bb72d538` passed exact development CI `37050583184`. |
 | PL-4B | CLOSED | Final feature CI `37128248294` passed; operator-approved development merge `dfa5a59b6619d12e319fe82b316be2339280f673` passed exact development CI `37128826840`. |
 | PL-4C | CLOSED | Final feature CI `37181949107` passed; operator-approved development merge `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` passed exact development CI `37182554528`. |
-| M15-F | PREFLIGHT IN PROGRESS | Read-only audit and feature-branch certification authorized; Production mutation requires a later explicit cutover approval. |
+| M15-F | BLOCKED — BACKUP/RESTORE NOT READY | Git/delta/migration/compatibility audit completed; no current recoverable jobquest-prod backup or verified restore path. Production mutation remains unauthorized. |
 | PL-5 | DEFERRED / NOT STARTED | Begins only after successful M15-F so it can use final Production evidence. |
 | Legacy retirement | RESERVED | Requires separate authorization after M15-F; never automatic. |
 

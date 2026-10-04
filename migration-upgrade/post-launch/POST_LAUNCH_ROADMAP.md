@@ -31,7 +31,7 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | PL-4A | `CLOSED` — final feature CI `37034644123` and development merge `80076446a120388fe2b05f7d36ccc131bb72d538` / CI `37050583184` PASS |
 | PL-4B | `CLOSED` — final feature CI `37128248294` and development merge `dfa5a59b6619d12e319fe82b316be2339280f673` / CI `37128826840` PASS |
 | PL-4C | `CLOSED` — final feature CI `37181949107` and development merge `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / CI `37182554528` PASS |
-| M15-F | `PREFLIGHT IN PROGRESS — PRODUCTION MUTATION NOT AUTHORIZED` |
+| M15-F | `BLOCKED AT PREFLIGHT BACKUP/RESTORE GATE — PRODUCTION MUTATION NOT AUTHORIZED` |
 | PL-5 | `DEFERRED UNTIL AFTER M15-F / NOT STARTED` — becomes next only after successful M15-F closeout |
 
 ## Phase intent
@@ -68,9 +68,9 @@ Implementation result (2026-10-04): goals now support four independently configu
 
 Create the migration case study, architecture/security/CI documentation, setup/deployment/disaster-recovery guides, testing and migration statistics, and portfolio story using the actual final Production system, cutover, and stabilization evidence. This phase is deferred until after M15-F and has not started.
 
-### M15-F — final production release + stabilization (PREFLIGHT IN PROGRESS)
+### M15-F — final production release + stabilization (BLOCKED AT BACKUP/RESTORE GATE)
 
-The read-only pre-cutover audit is authorized. It includes feature freeze, full regression/security/migration review, backup and restore readiness, release-candidate certification, rollback planning, and an exact cutover plan. Production and `main` remain frozen until the mandatory explicit Production cutover approval gate. After approval, M15-F includes exact main CI, controlled Production migration/deployment, smoke and reconciliation, auth/RLS/extension checks, accessibility/performance/observability review, stabilization observation, and final PASS/FAIL.
+The read-only pre-cutover audit is authorized. Git/delta/migration/compatibility review found exactly PL-4C migration `20261022100000` pending and compatible, but the audit stopped because the current Free-tier jobquest-prod project has no verified current logical backup or rehearsed restore path. Production and `main` remain frozen. Resume only after a fresh supported logical backup, archive verification, disposable restore rehearsal, and operator restore-access verification. A later mandatory explicit Production cutover approval is still required.
 
 ## Default execution profiles
 

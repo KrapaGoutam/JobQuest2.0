@@ -10,7 +10,7 @@ Main baseline: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`
 
 ## Status
 
-PL-4C implementation, development-database migration, focused remote verification, exact application CI, and matching Preview acceptance are complete. Application/test SHA `eff714e2564391953638e7a7fa2cf7ed729ed71a` passed CI run `37181003327`. The feature is ready for operator approval; no merge to `development`, `main`, or Production is authorized or performed.
+PL-4C is formally closed. Implementation, jobquest-dev migration and verification, exact feature certification, matching Preview acceptance, operator-approved no-ff development integration, and exact development CI all passed. Main and Production remain unchanged.
 
 ## Implementation
 
@@ -55,7 +55,7 @@ The only post-authorization database test was the focused `5/5` jobquest-dev int
 - Run: `37181003327` — **PASS**
 - Result: change classification; lint; typecheck; `179/179` unit tests; build; secret scans; disposable migrations; `192/192` integration tests; `97/97` extension tests; `23/23` browser E2E plus axe; sanitized evidence upload; cleanup — all passed.
 
-The documentation-only commit containing this report becomes the final feature tip. Its exact SHA and exact-SHA CI run are recorded in the final operator handoff because a Git commit cannot embed its own hash.
+Final feature SHA `5e49b966561cdced327d33a6dd6b936bd5cec1e8` passed exact feature CI run `37181949107`. That documentation-only tip directly follows the application-certified SHA.
 
 ## Preview evidence
 
@@ -78,7 +78,15 @@ Application-certified SHA: `eff714e2564391953638e7a7fa2cf7ed729ed71a`
 
 Application CI: `37181003327` — PASS
 
-Development: `dfa5a59b6619d12e319fe82b316be2339280f673` — UNCHANGED
+Final feature SHA: `5e49b966561cdced327d33a6dd6b936bd5cec1e8`
+
+Feature CI: `37181949107` — PASS
+
+Development merge: `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` — operator-approved no-ff merge with parents `dfa5a59b6619d12e319fe82b316be2339280f673` and `5e49b966561cdced327d33a6dd6b936bd5cec1e8`
+
+Development CI: `37182554528` — PASS
+
+Development: `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` — PL-4C INTEGRATED AND CERTIFIED
 
 Main: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313` — UNCHANGED
 
@@ -86,4 +94,6 @@ Production/jobquest-prod: UNCHANGED; Production migration/deployment: NO
 
 PL-1D: DEFERRED / TBD — UNCHANGED
 
-Next action: stop for explicit operator approval before PL-4C → `development`. Do not start PL-5, merge to `main`, or touch Production.
+Status: PL-4C formally closed. This post-development-CI closeout metadata remains intentionally unstaged so it does not create a new untested development SHA.
+
+Next action (updated by the operator's scheduling decision): M15-F preflight and controlled Production release precede PL-5. PL-5 is deferred, not cancelled or started. Legacy retirement remains separately authorized.

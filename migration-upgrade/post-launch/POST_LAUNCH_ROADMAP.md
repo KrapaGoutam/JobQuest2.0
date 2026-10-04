@@ -2,9 +2,9 @@
 
 ## Program sequence
 
-`M15-E CLOSED` → `PL-0 BASELINE + GOVERNANCE` → `PL-1 CRITICAL SECURITY + EXTENSION RELIABILITY` → `PL-2 CORE APPLICATION PRODUCTIVITY` → `PL-3 DASHBOARD + ANALYTICS UX` → `PL-4A DUPLICATE UX + BULK OPERATIONS + RECRUITER TRACKING` → `PL-4B CALENDAR + TIMELINE/GANTT + ARCHIVE` → `PL-4C GOALS + TASK TEMPLATES + RECURRENCE ENHANCEMENTS` → `PL-5 PORTFOLIO / DEVELOPER DOCUMENTATION` → `M15-F FINAL PRODUCTION RELEASE + STABILIZATION` → `LEGACY RETIREMENT (separately authorized)`.
+`M15-E CLOSED` → `PL-0 BASELINE + GOVERNANCE` → `PL-1 CRITICAL SECURITY + EXTENSION RELIABILITY` → `PL-2 CORE APPLICATION PRODUCTIVITY` → `PL-3 DASHBOARD + ANALYTICS UX` → `PL-4A DUPLICATE UX + BULK OPERATIONS + RECRUITER TRACKING` → `PL-4B CALENDAR + TIMELINE/GANTT + ARCHIVE` → `PL-4C GOALS + TASK TEMPLATES + RECURRENCE ENHANCEMENTS` → `M15-F FINAL PRODUCTION RELEASE + STABILIZATION` → `PL-5 PORTFOLIO / DEVELOPER DOCUMENTATION` → `LEGACY RETIREMENT (separately authorized)`.
 
-M15-F is reserved and last. It cannot begin until PL-1 through PL-5 are completed, explicitly deferred, or otherwise decided by the operator. Legacy retirement never follows automatically.
+The operator explicitly moved M15-F ahead of PL-5 so PL-5 can document the actual final Production system and release evidence. PL-5 is deferred, not cancelled or started. Legacy retirement never follows automatically and requires separate approval.
 
 ## PL-0 — baseline and governance
 
@@ -30,9 +30,9 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | PL-3 | `CLOSED` — feature certification, matching Preview, and development integration CI `37012301480` PASS |
 | PL-4A | `CLOSED` — final feature CI `37034644123` and development merge `80076446a120388fe2b05f7d36ccc131bb72d538` / CI `37050583184` PASS |
 | PL-4B | `CLOSED` — final feature CI `37128248294` and development merge `dfa5a59b6619d12e319fe82b316be2339280f673` / CI `37128826840` PASS |
-| PL-4C | `FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED` — application CI `37181003327`, jobquest-dev migrations/verification, and matching Preview acceptance PASS; development unchanged |
-| PL-5 | `PENDING` |
-| M15-F | `RESERVED — FINAL PRODUCTION RELEASE + STABILIZATION — LAST` |
+| PL-4C | `CLOSED` — final feature CI `37181949107` and development merge `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / CI `37182554528` PASS |
+| M15-F | `PREFLIGHT IN PROGRESS — PRODUCTION MUTATION NOT AUTHORIZED` |
+| PL-5 | `DEFERRED UNTIL AFTER M15-F / NOT STARTED` — becomes next only after successful M15-F closeout |
 
 ## Phase intent
 
@@ -62,15 +62,15 @@ Implementation result (2026-10-03): the placeholder was replaced by a timezone-a
 
 Verify goals first; extend semantics/analytics only where needed. Global templates are definitions: applying one creates independent task/checklist state per application through canonical tasks. Do not rebuild the existing recurrence engine; extend configurability around it.
 
-Implementation result (2026-10-04): goals now support four independently configured, effective-dated metrics and exact canonical progress; owner-scoped templates create independent canonical tasks; and the existing recurrence engine now supports intervals, weekdays, end dates, and occurrence limits. The authorized M15 predecessor and PL-4C migrations are applied only to jobquest-dev. Application CI `37181003327` and focused matching Preview acceptance passed. Development, main, Production, PL-1D, and PL-5 remain unchanged; operator approval is required before promotion to development.
+Implementation result (2026-10-04): goals now support four independently configured, effective-dated metrics and exact canonical progress; owner-scoped templates create independent canonical tasks; and the existing recurrence engine now supports intervals, weekdays, end dates, and occurrence limits. The authorized M15 predecessor and PL-4C migrations are applied only to jobquest-dev. Application CI `37181003327`, final feature CI `37181949107`, and exact development integration CI `37182554528` passed. PL-4C is formally closed; main, Production, PL-1D, and PL-5 remain unchanged.
 
 ### PL-5 — Portfolio and developer documentation (P3)
 
-Create the migration case study, architecture/security/CI documentation, setup/deployment/disaster-recovery guides, testing and migration statistics, and portfolio story. Production screenshots and final metrics may wait for M15-F.
+Create the migration case study, architecture/security/CI documentation, setup/deployment/disaster-recovery guides, testing and migration statistics, and portfolio story using the actual final Production system, cutover, and stabilization evidence. This phase is deferred until after M15-F and has not started.
 
-### M15-F — final production release + stabilization (RESERVED)
+### M15-F — final production release + stabilization (PREFLIGHT IN PROGRESS)
 
-Requires a fresh explicit authorization. It includes feature freeze, full regression/security/migration review, backup and restore rehearsal, exact development/main CI, controlled development→main promotion, production deployment/smoke, reconciliation, auth/RLS/extension checks, performance/observability/accessibility review, an observation period, and final PASS/FAIL. Production and main remain frozen until then.
+The read-only pre-cutover audit is authorized. It includes feature freeze, full regression/security/migration review, backup and restore readiness, release-candidate certification, rollback planning, and an exact cutover plan. Production and `main` remain frozen until the mandatory explicit Production cutover approval gate. After approval, M15-F includes exact main CI, controlled Production migration/deployment, smoke and reconciliation, auth/RLS/extension checks, accessibility/performance/observability review, stabilization observation, and final PASS/FAIL.
 
 ## Default execution profiles
 

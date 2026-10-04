@@ -1,3 +1,33 @@
+## >>> M15-F PREFLIGHT AUTHORIZED / PRODUCTION MUTATION NOT AUTHORIZED (2026-10-04) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FORMALLY CLOSED | M15-F: PREFLIGHT IN PROGRESS | PL-5: DEFERRED UNTIL AFTER M15-F | PL-1D: DEFERRED / TBD.
+
+CURRENT BRANCH: `feature/m15f-production-stabilization` | RELEASE BASE / DEVELOPMENT: `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` | DEVELOPMENT CI: `37182554528 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+AUTHORIZATION BOUNDARY: read-only M15-F pre-cutover audit, governance documentation, feature-branch certification, and feature-branch push are authorized. Merging or pushing `main`, Production database migration/data/auth/config mutation, Production deployment/alias changes, Production smoke-user creation, and legacy retirement are not authorized before the mandatory cutover approval gate.
+
+SCHEDULING DECISION: the operator changed the order to PL-4C -> M15-F -> PL-5. PL-5 is deferred, not cancelled or started. Legacy retirement still requires separate approval after stabilization.
+
+NEXT EXACT ACTION: complete the M15-F read-only preflight, certify the release-candidate documentation on the feature branch, and stop for explicit Production cutover approval.
+
+## >>> PL-4C FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-04) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FORMALLY CLOSED | PL-5: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.
+
+CURRENT BRANCH: `development` | FINAL FEATURE SHA / CI: `5e49b966561cdced327d33a6dd6b936bd5cec1e8` / `37181949107 PASS` | APPLICATION SHA / CI: `eff714e2564391953638e7a7fa2cf7ed729ed71a` / `37181003327 PASS` | DEVELOPMENT MERGE SHA / CI: `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `37182554528 PASS` | MAIN BASELINE: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+DEVELOPMENT INTEGRATION: operator-approved no-ff merge `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` has parents `dfa5a59b6619d12e319fe82b316be2339280f673` and `5e49b966561cdced327d33a6dd6b936bd5cec1e8`. Exact development CI `37182554528` passed classification, lint, typecheck, unit, build, secret scans, migrations, integration, extension validation, browser E2E, axe, evidence upload, and disposable-stack cleanup.
+
+JOBQUEST-DEV: M15 predecessor `20261021100000` and PL-4C `20261022100000` remain applied and verified on `xpnkasclquplmrcmhsif`. No migration was reapplied during merge certification.
+
+PROTECTION STATE: `main` remains `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`; Production/jobquest-prod, auth, PL-1D, and legacy systems are unchanged. The operator's `.gitignore` modification remains unstaged and untouched; `FeatureUpgrade1` remains locally excluded.
+
+POST-DEVELOPMENT-CI DOCUMENTATION: this formal closeout metadata is intentionally unstaged so no new untested development SHA is created.
+
+NEXT EXACT ACTION (SUPERSEDED BY THE M15-F SCHEDULING DECISION ABOVE): M15-F preflight precedes PL-5. PL-5 remains deferred until after M15-F; legacy retirement remains separately authorized.
+
+Report: `migration-upgrade/post-launch/PL4C_GOALS_TASK_TEMPLATES_RECURRENCE_REPORT.md`.
+
 ## >>> PL-4C FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-04) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / TBD.

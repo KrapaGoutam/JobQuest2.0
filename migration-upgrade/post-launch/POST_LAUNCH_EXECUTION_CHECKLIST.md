@@ -18,6 +18,24 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | Operator approval status | `Required before work` |
 | Report document | `TBD` |
 
+## Current task record — PL-4C Goals + Task Templates + Recurrence Enhancements
+
+| Field | Record |
+| --- | --- |
+| TASK ID / STATUS | `PL-4C` / `FEATURE CERTIFIED — OPERATOR APPROVAL REQUIRED` |
+| Branch / base SHA / application-certified SHA | `feature/pl4c-goals-task-templates-recurrence` / `dfa5a59b6619d12e319fe82b316be2339280f673` / `eff714e2564391953638e7a7fa2cf7ed729ed71a` |
+| Local certification | Reused: lint/typecheck/build PASS; unit `179/179`; integration `192/192`; extension `97/97`; Playwright/axe `23/23`; migration/RLS/concurrency/responsive/secret gates PASS. |
+| Remote migration verification | jobquest-dev `xpnkasclquplmrcmhsif`; M15 `20261021100000` then PL-4C `20261022100000` applied; history aligned; catalog/RLS/grants and focused integration `5/5` PASS. |
+| CI run / CI SHA / CI result | Application `37181003327` / `eff714e2564391953638e7a7fa2cf7ed729ed71a` / `PASS`; documentation-tip run recorded in final operator handoff. |
+| Preview / database target / migrations | `https://jobquest2-gnmajdb53-one-piece-5779.vercel.app` (`dpl_4oRca2xD5zSdq5TccycvD71gxTNp`, READY, application SHA) / `jobquest-dev` / M15 predecessor + PL-4C applied |
+| Focused Preview acceptance | `2/2 PASS`: representative configurable goals, task-template application/independence, recurrence, mobile, and axe. Bundle contains dev ref and excludes Production ref. |
+| Production touched / development merged / main merged | `NO / NO / NO` |
+| Last completed action | Exact application CI and matching focused Preview acceptance passed; final evidence documentation prepared. |
+| Next exact action | Certify the docs-only feature tip, then stop for explicit operator approval before PL-4C → development. |
+| Blockers / open questions | None known. |
+| Operator approval status | `REQUIRED` before PL-4C → development |
+| Report document | `migration-upgrade/post-launch/PL4C_GOALS_TASK_TEMPLATES_RECURRENCE_REPORT.md` |
+
 ## Current task record — PL-4B Calendar + Timeline/Gantt + Archive
 
 | Field | Record |
@@ -83,7 +101,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-3 | CLOSED | Feature certification and matching Preview passed; development merge `11116ca2a577c70e18b4bcfac796dfa6260bda15` passed CI `37012301480`. |
 | PL-4A | CLOSED | Final feature CI `37034644123` passed; operator-approved development merge `80076446a120388fe2b05f7d36ccc131bb72d538` passed exact development CI `37050583184`. |
 | PL-4B | CLOSED | Final feature CI `37128248294` passed; operator-approved development merge `dfa5a59b6619d12e319fe82b316be2339280f673` passed exact development CI `37128826840`. |
-| PL-4C | NEXT / NOT STARTED | Verify existing goals/recurrence; scope templates as independent canonical tasks after explicit authorization. |
+| PL-4C | FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED | Application CI `37181003327`, jobquest-dev migrations/verification, and focused matching Preview acceptance passed; no development merge. |
 | PL-5 | PENDING | Gather evidence after implementation phases; leave production metrics for M15-F when needed. |
 | M15-F | RESERVED — LAST | Final Production release and stabilization; requires explicit authorization after prior work is completed, deferred, or otherwise decided. |
 | Legacy retirement | RESERVED | Requires separate authorization after M15-F; never automatic. |

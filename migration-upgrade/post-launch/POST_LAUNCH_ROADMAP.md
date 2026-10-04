@@ -30,7 +30,7 @@ Known outcome: concurrency is hardened; `fix/**` CI and docs-only classification
 | PL-3 | `CLOSED` — feature certification, matching Preview, and development integration CI `37012301480` PASS |
 | PL-4A | `CLOSED` — final feature CI `37034644123` and development merge `80076446a120388fe2b05f7d36ccc131bb72d538` / CI `37050583184` PASS |
 | PL-4B | `CLOSED` — final feature CI `37128248294` and development merge `dfa5a59b6619d12e319fe82b316be2339280f673` / CI `37128826840` PASS |
-| PL-4C | `NEXT / NOT STARTED` — requires a separate controlled task and explicit authorization |
+| PL-4C | `FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED` — application CI `37181003327`, jobquest-dev migrations/verification, and matching Preview acceptance PASS; development unchanged |
 | PL-5 | `PENDING` |
 | M15-F | `RESERVED — FINAL PRODUCTION RELEASE + STABILIZATION — LAST` |
 
@@ -61,6 +61,8 @@ Implementation result (2026-10-03): the placeholder was replaced by a timezone-a
 ### PL-4C — Goals, task templates, recurrence (P2)
 
 Verify goals first; extend semantics/analytics only where needed. Global templates are definitions: applying one creates independent task/checklist state per application through canonical tasks. Do not rebuild the existing recurrence engine; extend configurability around it.
+
+Implementation result (2026-10-04): goals now support four independently configured, effective-dated metrics and exact canonical progress; owner-scoped templates create independent canonical tasks; and the existing recurrence engine now supports intervals, weekdays, end dates, and occurrence limits. The authorized M15 predecessor and PL-4C migrations are applied only to jobquest-dev. Application CI `37181003327` and focused matching Preview acceptance passed. Development, main, Production, PL-1D, and PL-5 remain unchanged; operator approval is required before promotion to development.
 
 ### PL-5 — Portfolio and developer documentation (P3)
 

@@ -1,3 +1,23 @@
+## >>> PL-4C FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-04) <<<
+
+PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / TBD.
+
+CURRENT BRANCH: `feature/pl4c-goals-task-templates-recurrence` | DEVELOPMENT BASE/UNCHANGED: `dfa5a59b6619d12e319fe82b316be2339280f673` | MAIN BASELINE/UNCHANGED: `bfa82eb557c5e748ba5d7c91fe122fb8294d2313`.
+
+IMPLEMENTATION: independently configurable/effective-dated goal metrics; owner-scoped global task templates that produce independent canonical tasks; configurable recurrence intervals, ISO weekdays, end dates, and occurrence limits. Legacy goal/RPC compatibility, existing recurrence presets, parent uniqueness, concurrency/undo safety, and canonical tasks remain intact.
+
+LOCAL EVIDENCE REUSED: lint PASS; typecheck PASS; unit `179/179`; integration `192/192`; extension `97/97`; full browser E2E + axe `23/23`; build, fresh/upgrade migrations, RLS/grants, concurrency, responsive/accessibility, compatibility, and secret scans PASS. No source/test/migration change followed authorization, so these were not redundantly rerun.
+
+JOBQUEST-DEV: authorized M15 predecessor `20261021100000` and PL-4C `20261022100000` applied in order to `xpnkasclquplmrcmhsif`; migration history aligned. Focused remote integration `5/5` and read-only RLS/grant/catalog verification PASS. Production/jobquest-prod untouched.
+
+APPLICATION/TEST CANDIDATE: `eff714e2564391953638e7a7fa2cf7ed729ed71a` | CI `37181003327` PASS. Matching Preview `dpl_4oRca2xD5zSdq5TccycvD71gxTNp` at `https://jobquest2-gnmajdb53-one-piece-5779.vercel.app` is READY, healthy, and bound only to jobquest-dev. Focused authenticated goals/templates/recurrence acceptance `2/2` PASS, including mobile and axe coverage.
+
+PROTECTION STATE: no development/main merge and no Production migration, auth, environment, or deployment change. The operator's `.gitignore` modification remains unstaged and untouched. PL-1D remains deferred; PL-5 was not started.
+
+NEXT EXACT ACTION: certify the documentation-only feature tip, then stop for explicit operator approval before PL-4C → development. Do not merge development to main or touch Production.
+
+Report: `migration-upgrade/post-launch/PL4C_GOALS_TASK_TEMPLATES_RECURRENCE_REPORT.md`.
+
 ## >>> PL-4B FORMALLY CLOSED / DEVELOPMENT CI PASS (2026-10-03) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: NEXT / NOT STARTED | PL-1D: DEFERRED / TBD.

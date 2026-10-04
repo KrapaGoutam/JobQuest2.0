@@ -6,11 +6,13 @@ import { Input } from '../components/ui/Input';
 import { KeyRound, ShieldCheck, Activity, Bug } from 'lucide-react';
 import { ExtensionSettingsView } from './ExtensionSettingsView';
 import type { PublicSession } from '../api';
+import { TaskTemplateManager } from '../components/tasks/TaskTemplateManager';
 
 export interface SettingsViewProps {
   activeWorkspaceId: string | null;
   activeWorkspaceName: string;
   session: PublicSession;
+  currentUserId: string;
   onPasswordChange: (e: FormEvent<HTMLFormElement>) => Promise<void>;
   onRegenerateCodes: (e: FormEvent<HTMLFormElement>) => Promise<void>;
   onLeakCheck: () => Promise<void>;
@@ -24,13 +26,14 @@ export interface SettingsViewProps {
   onDismissCodes: () => void;
   onRefreshSession: () => Promise<unknown>;
   onLogout: (scope: 'local' | 'global') => Promise<void>;
-  initialTab?: 'account' | 'extension' | 'diagnostics';
+  initialTab?: 'account' | 'templates' | 'extension' | 'diagnostics';
 }
 
 export function SettingsView({
   activeWorkspaceId,
   activeWorkspaceName,
   session,
+  currentUserId,
   onPasswordChange,
   onRegenerateCodes,
   onLeakCheck,
@@ -46,7 +49,7 @@ export function SettingsView({
   onLogout,
   initialTab,
 }: SettingsViewProps) {
-  const [tab, setTab] = useState<'account' | 'extension' | 'diagnostics'>(initialTab ?? 'account');
+  const [tab, setTab] = useState<'account' | 'templates' | 'extension' | 'diagnostics'>(initialTab ?? 'account');
 
   useEffect(() => setTab(initialTab ?? 'account'), [initialTab]);
 
@@ -60,6 +63,12 @@ export function SettingsView({
             style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', fontWeight: tab === 'account' ? 700 : 400, color: tab === 'account' ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
           >
             Account & Security
+          </button>
+          <button
+            onClick={() => setTab('templates')}
+            style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', fontWeight: tab === 'templates' ? 700 : 400, color: tab === 'templates' ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
+          >
+            Task Templates
           </button>
           <button
             onClick={() => setTab('extension')}
@@ -159,6 +168,10 @@ export function SettingsView({
             </Card>
           </section>
         </div>
+      )}
+
+      {tab === 'templates' && activeWorkspaceId && currentUserId && (
+        <TaskTemplateManager workspaceId={activeWorkspaceId} ownerId={currentUserId} />
       )}
 
       {tab === 'extension' && (

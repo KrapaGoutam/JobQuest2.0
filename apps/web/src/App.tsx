@@ -655,6 +655,7 @@ function AppContent() {
           activeWorkspaceId={activeWs}
           activeWorkspaceName={memberships.find((membership) => membership.workspace_id === activeWs)?.workspaces?.name ?? 'Current workspace'}
           session={session}
+          currentUserId={user?.id ?? ''}
           onPasswordChange={onPassword}
           onRegenerateCodes={onRegenerate}
           onLeakCheck={leakCheck}

@@ -14,6 +14,9 @@ import { Actor, loadEnv, serviceDb, anonDb, makeRecorder } from './harness';
 
 const record = makeRecorder('test-results/evidence', 'integration');
 const ready = loadEnv();
+const todayKey = new Date().toISOString().slice(0, 10);
+const todayUtc = new Date(`${todayKey}T00:00:00Z`);
+const weeklyEffective = new Date(todayUtc.getTime() - ((todayUtc.getUTCDay() + 6) % 7) * 86_400_000).toISOString().slice(0, 10);
 
 describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
   const run = randomBytes(3).toString('hex');
@@ -100,12 +103,12 @@ describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
       p_period_type: 'WEEKLY',
       p_target_applications: 20,
       p_target_outreach: 8,
-      p_effective_date: '2026-09-21',
+      p_effective_date: todayKey,
     });
     expect(res.error).toBeNull();
     expect(res.data.target_applications).toBe(20);
     expect(res.data.target_outreach).toBe(8);
-    expect(res.data.effective_date).toBe('2026-09-21');
+    expect(res.data.effective_date).toBe(weeklyEffective);
 
     // Upserting again updates the existing record
     const updateRes = await alice.db().rpc('rpc_upsert_goal', {
@@ -113,7 +116,7 @@ describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
       p_period_type: 'WEEKLY',
       p_target_applications: 25,
       p_target_outreach: 10,
-      p_effective_date: '2026-09-21',
+      p_effective_date: todayKey,
     });
     expect(updateRes.error).toBeNull();
     expect(updateRes.data.id).toBe(res.data.id);
@@ -140,7 +143,7 @@ describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
     expect(bobUpdate).toBeDefined(); // direct goal mutations are RPC-only
 
     // Verify Alice's target remains unchanged
-    const { data: aliceGoal } = await alice.db().from('goals').select('target_applications').eq('user_id', alice.userId).single();
+    const { data: aliceGoal } = await alice.db().from('goals').select('target_applications').eq('user_id', alice.userId).eq('goal_type', 'APPLICATIONS').single();
     expect(aliceGoal?.target_applications).toBe(25);
 
     const { error: aliceDelete } = await alice.db().from('goals').delete().eq('user_id', alice.userId);
@@ -153,8 +156,9 @@ describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
   it('M8-03 · goals: manager can view member goals; mutation triggers audit log', async () => {
     // Charlie (MANAGER) can view Alice's goal
     const { data: mgrView } = await charlie.db().from('goals').select('*').eq('user_id', alice.userId);
-    expect(mgrView).toHaveLength(1);
-    expect(mgrView?.[0].target_applications).toBe(25);
+    expect(mgrView).toHaveLength(2);
+    const applicationGoal = mgrView?.find((goal) => goal.goal_type === 'APPLICATIONS');
+    expect(applicationGoal?.target_applications).toBe(25);
 
     // Charlie updates Alice's goal
     const mgrUpdate = await charlie.db().rpc('rpc_upsert_goal_for_user', {
@@ -162,7 +166,7 @@ describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
       p_period_type: 'WEEKLY',
       p_target_applications: 30,
       p_target_outreach: 10,
-      p_effective_date: '2026-09-21',
+      p_effective_date: todayKey,
       p_user_id: alice.userId,
     });
     expect(mgrUpdate.error).toBeNull();
@@ -171,7 +175,7 @@ describe.skipIf(!ready)('Milestone 8 — Analytics, Reports & Goals', () => {
     // Verify manager audit log recorded the mutation
     const { data: audits } = await admin.from('audit_events')
       .select('action, actor_id, target_user_id, target_entity_type')
-      .eq('target_entity_id', mgrView?.[0].id);
+      .eq('target_entity_id', applicationGoal?.id);
     expect(audits?.length).toBeGreaterThanOrEqual(1);
     expect(audits![0]!.actor_id).toBe(charlie.userId);
     expect(audits![0]!.target_user_id).toBe(alice.userId);

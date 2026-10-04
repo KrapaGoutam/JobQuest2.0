@@ -1,158 +1,146 @@
-import { useState } from "react";
-import { Check, Target } from "lucide-react";
-import type { AnalyticsOverview } from "../../types/analytics";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import {
-  AttainmentStrip,
-  GoalRing,
-  ProgressTrack,
-  ScopeTag,
-} from "./AnalyticsCharts";
-import { EditGoalModal } from "./EditGoalModal";
+import { useState } from 'react';
+import { Check, Target } from 'lucide-react';
+import type {
+  AnalyticsOverview,
+  GoalProgressResponse,
+  GoalType,
+} from '../../types/analytics';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { GoalRing, ProgressTrack, ScopeTag } from './AnalyticsCharts';
+import { EditGoalModal } from './EditGoalModal';
 
 interface GoalsTabProps {
   overview: AnalyticsOverview;
+  progress: GoalProgressResponse | null;
   workspaceId: string;
   onRefresh: () => void;
   targetUserId?: string | null;
   isManagerAggregate?: boolean;
 }
 
+const GOAL_LABEL: Record<GoalType, string> = {
+  APPLICATIONS: 'Applications',
+  NETWORKING: 'Networking interactions',
+  FOLLOW_UPS: 'Completed follow-ups',
+  INTERVIEW_PREP: 'Interview prep sessions',
+};
+
 export function GoalsTab({
-  overview,
+  progress,
   workspaceId,
   onRefresh,
   targetUserId,
   isManagerAggregate,
 }: GoalsTabProps) {
-  const [editing, setEditing] = useState(false);
-  const pacing = [...(overview.weekly_pacing || [])].sort((a, b) =>
-    a.week_start.localeCompare(b.week_start),
-  );
-  const current = pacing.at(-1) ?? {
-    week_start: "",
-    week_label: "This week",
-    applied: 0,
-    responses: 0,
-    interviews: 0,
-    outreach: 0,
-    target: 15,
-  };
-  const goal = overview.active_goal;
-  const applicationsTarget = goal?.target_applications ?? current.target ?? 15;
-  const outreachTarget = goal?.target_outreach ?? 5;
-  const met = pacing
-    .slice(-12)
-    .filter((week) => week.applied >= week.target).length;
+  const [editing, setEditing] = useState<GoalType | 'new' | null>(null);
 
-  if (isManagerAggregate)
+  if (isManagerAggregate) {
     return (
       <Card className="analytics-card manager-goal-message">
         <Target aria-hidden="true" />
         <div>
           <h2>Workspace goal pacing</h2>
           <p>
-            The Overview pace chart uses the sum of each member’s effective
-            weekly target. Select a member above to inspect or edit an
-            individual goal.
+            The Overview pace chart uses the sum of each member's effective target.
+            Select a member above to inspect or edit their individual goals.
           </p>
         </div>
       </Card>
     );
+  }
+
+  const active = progress?.active_goals ?? [];
+  const history = progress?.history ?? [];
+  const met = history.filter((point) => point.status === 'MET').length;
 
   return (
     <div className="analytics-stack goals-view">
       <div className="goals-heading">
         <div>
-          <h2>Weekly activity targets</h2>
-          <p>
-            Week of {current.week_label} · actuals are counted automatically
-          </p>
+          <h2>Activity goals</h2>
+          <p>Independent daily, weekly, or monthly targets; actuals are counted automatically.</p>
         </div>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setEditing(true)}
+          onClick={() => setEditing('new')}
           leftIcon={<Target size={14} />}
         >
-          Edit targets
+          Add goal
         </Button>
       </div>
-      <section className="goals-grid">
-        <Card className="analytics-card goal-current-card">
-          <header className="analytics-card-head">
-            <div>
-              <h2>This week</h2>
-              <p>
-                {goal?.id ? "Active weekly goal" : "Using the default target"}
-              </p>
-            </div>
-            <ScopeTag tone="fixed">Weekly</ScopeTag>
-          </header>
-          <div className="goal-current-content">
-            <GoalRing value={current.applied} target={applicationsTarget} />
-            <div className="goal-progress-list">
+
+      <section className="goals-grid" aria-label="Active goals">
+        {active.map((item) => (
+          <Card className="analytics-card goal-current-card" key={item.id ?? item.goal_id}>
+            <header className="analytics-card-head">
               <div>
-                <span>
-                  <strong>Applications</strong>
-                  <b>
-                    {current.applied} / {applicationsTarget}
-                  </b>
-                </span>
-                <ProgressTrack
-                  value={current.applied}
-                  max={applicationsTarget}
-                  tone={
-                    current.applied >= applicationsTarget
-                      ? "positive"
-                      : "primary"
-                  }
-                />
+                <h2>{GOAL_LABEL[item.goal_type]}</h2>
+                <p>{item.period_type.toLowerCase()} · effective {item.effective_date}</p>
               </div>
-              <div>
-                <span>
-                  <strong>Outreach &amp; follow-ups</strong>
-                  <b>
-                    {current.outreach} / {outreachTarget}
-                  </b>
-                </span>
-                <ProgressTrack
-                  value={current.outreach}
-                  max={outreachTarget}
-                  tone={
-                    current.outreach >= outreachTarget ? "positive" : "primary"
-                  }
-                />
+              <Button variant="ghost" size="sm" onClick={() => setEditing(item.goal_type)}>
+                Edit
+              </Button>
+            </header>
+            <div className="goal-current-content">
+              <GoalRing value={item.actual} target={item.target_value} />
+              <div className="goal-progress-list">
+                <div>
+                  <span>
+                    <strong>{GOAL_LABEL[item.goal_type]}</strong>
+                    <b>{item.actual} / {item.target_value}</b>
+                  </span>
+                  <ProgressTrack
+                    value={item.actual}
+                    max={item.target_value}
+                    tone={item.actual >= item.target_value ? 'positive' : 'primary'}
+                  />
+                </div>
+                {item.goal_type === 'INTERVIEW_PREP' && (
+                  <p>One interview-prep journal entry counts as one completed session.</p>
+                )}
               </div>
             </div>
-          </div>
-        </Card>
-        <Card className="analytics-card goal-history-card">
-          <header className="analytics-card-head">
-            <div>
-              <h2>
-                Target met in {met} of {Math.min(12, pacing.length)} weeks
-              </h2>
-              <p>Latest 12 weeks · each period keeps its effective target</p>
-            </div>
-            <ScopeTag tone="fixed">12 weeks</ScopeTag>
-          </header>
-          <AttainmentStrip points={pacing} />
-          <div className="attainment-legend">
-            <span>
-              <Check size={13} /> Target met
-            </span>
-            <span>— Below target</span>
-          </div>
-        </Card>
+          </Card>
+        ))}
+        {active.length === 0 && (
+          <Card className="analytics-card">
+            <p>No active goals yet. Add one to begin tracking progress.</p>
+          </Card>
+        )}
       </section>
+
+      <Card className="analytics-card goal-history-card">
+        <header className="analytics-card-head">
+          <div>
+            <h2>Target met in {met} of {history.length} periods</h2>
+            <p>Latest periods retain the target version that was effective at the time.</p>
+          </div>
+          <ScopeTag tone="fixed">History</ScopeTag>
+        </header>
+        <div className="goal-progress-list">
+          {history.slice(0, 12).map((point) => (
+            <div key={`${point.goal_id}-${point.period_start}`}>
+              <span>
+                <strong>{GOAL_LABEL[point.goal_type]} · {point.period_start}</strong>
+                <b>{point.actual} / {point.target_value} {point.status === 'MET' ? <Check size={13} /> : null}</b>
+              </span>
+              <ProgressTrack value={point.actual} max={point.target_value} tone={point.status === 'MET' ? 'positive' : 'primary'} />
+            </div>
+          ))}
+          {history.length === 0 && <p>Completed periods will appear here.</p>}
+        </div>
+      </Card>
+
       <EditGoalModal
-        key={`${targetUserId ?? "self"}-${goal?.id ?? "default"}`}
-        isOpen={editing}
-        onClose={() => setEditing(false)}
+        key={`${targetUserId ?? 'self'}-${editing ?? 'closed'}`}
+        isOpen={editing !== null}
+        onClose={() => setEditing(null)}
         workspaceId={workspaceId}
-        currentGoal={goal}
+        currentGoal={editing && editing !== 'new'
+          ? active.find((item) => item.goal_type === editing) ?? null
+          : null}
         targetUserId={targetUserId}
         onGoalUpdated={onRefresh}
       />

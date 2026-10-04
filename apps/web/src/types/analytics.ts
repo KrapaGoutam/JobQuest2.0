@@ -124,3 +124,41 @@ export interface GoalRecord {
   created_at: string;
   updated_at: string;
 }
+
+export type GoalType = 'APPLICATIONS' | 'NETWORKING' | 'FOLLOW_UPS' | 'INTERVIEW_PREP';
+export type GoalPeriod = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export interface GoalProgressPoint {
+  goal_id?: string;
+  id?: string;
+  goal_type: GoalType;
+  period_type: GoalPeriod;
+  target_value: number;
+  effective_date: string;
+  period_start: string;
+  period_end: string;
+  actual: number;
+  percentage: number;
+  status?: 'CURRENT' | 'MET' | 'MISSED';
+  is_enabled?: boolean;
+}
+
+export interface GoalVersion {
+  id: string;
+  goal_type: GoalType;
+  period_type: GoalPeriod;
+  target_value: number;
+  effective_date: string;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoalProgressResponse {
+  user_id: string;
+  timezone: string;
+  week_start: number;
+  active_goals: GoalProgressPoint[];
+  history: GoalProgressPoint[];
+  versions: GoalVersion[];
+}

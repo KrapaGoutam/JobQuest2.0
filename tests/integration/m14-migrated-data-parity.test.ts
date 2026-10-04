@@ -185,15 +185,17 @@ describe('M14 Migrated Data Parity & Global Search Integration Test', () => {
 
     it('retains daily goals configuration for target tracking', async () => {
       const goals = await db.query(
-        `SELECT period_type, target_applications, target_outreach 
-         FROM public.goals 
-         WHERE workspace_id = $1`,
+        `SELECT goal_type, period_type, target_value, target_applications, target_outreach
+         FROM public.goals
+         WHERE workspace_id = $1
+         ORDER BY goal_type`,
         [parityWorkspaceId]
       );
-      expect(goals.rowCount).toBe(1);
-      expect(goals.rows[0].period_type).toBe('DAILY');
-      expect(goals.rows[0].target_applications).toBe(3);
-      expect(goals.rows[0].target_outreach).toBe(5);
+      expect(goals.rowCount).toBe(2);
+      expect(goals.rows).toEqual(expect.arrayContaining([
+        expect.objectContaining({ goal_type: 'APPLICATIONS', period_type: 'DAILY', target_value: 3, target_applications: 3, target_outreach: 5 }),
+        expect.objectContaining({ goal_type: 'NETWORKING', period_type: 'DAILY', target_value: 5, target_applications: 3, target_outreach: 5 }),
+      ]));
     });
   });
 

@@ -22,16 +22,16 @@ Use one copy of this task record for every approved phase task. It is the exact-
 
 | Field | Record |
 | --- | --- |
-| TASK ID / STATUS | `M15-F` / `BLOCKED — PRODUCTION BACKUP/RESTORE NOT READY` |
-| Branch / base SHA / current HEAD / remote HEAD | `feature/m15f-production-stabilization` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `9cee870b2e1cfeecd04fecbee28266ec3e2ea636` before blocker report / same initial governance commit pushed |
+| TASK ID / STATUS | `M15-F` / `READY FOR PRODUCTION CUTOVER APPROVAL` |
+| Branch / base SHA / current HEAD / remote HEAD | `feature/m15f-production-stabilization` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `d7c593388c896512f4b689c814c50a35763c49ed` / same blocker-report commit pushed |
 | Last tested application SHA | `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` |
-| CI run / CI SHA / CI result | Development `37182554528` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `PASS`; M15-F feature run pending |
-| Preview / database target / migrations | Primary repo remains linked to jobquest-dev `xpnkasclquplmrcmhsif`; Production verified as jobquest-prod `kqsxdothjxtcktyirpux`, 19 migrations through `20261021100000`; exactly `20261022100000` pending |
+| CI run / CI SHA / CI result | Development `37182554528` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` / `PASS`; blocker-report docs-only `37206201108` / `d7c593388c896512f4b689c814c50a35763c49ed` / `PASS`; exact release Preview `dpl_EohU8BbxzuYLKUFSn6EUppPghpqS` / `READY` |
+| Preview / database target / migrations | Primary repo remains linked to jobquest-dev `xpnkasclquplmrcmhsif`; Production jobquest-prod `kqsxdothjxtcktyirpux` remains at 19 migrations through `20261021100000`; exactly `20261022100000` pending; current Production and rollback deployments READY |
 | Production touched / development merged / main merged | `NO / NO / NO` |
-| Last completed action | Release delta and Production migration/compatibility audits passed; audit stopped at mandatory backup/restore gate with no Production mutation. |
-| Next exact action | Create a fresh supported logical backup of current jobquest-prod, verify archive integrity and disposable restore, document operator restore access, then resume at Stage 7. |
-| Blockers / open questions | Supabase Free has no verified managed backup; only local prod dump is from the superseded target; current-project backup/restore and operator restore access are not ready. Vercel/config/auth/extension/final-security stages were not reached. |
-| Operator approval status | `PREFLIGHT AUTHORIZED`; Production cutover/mutation `NOT AUTHORIZED` |
+| Last completed action | Fresh current-project logical backup/checksum/catalog PASS; disposable PostgreSQL 17/Supabase restore VERIFIED; 37/37 table counts and structural/RLS/function/migration checks PASS; Vercel/config/auth/extension/security/readiness audit PASS. Disposable target and credential cleaned; backup retained outside Git. |
+| Next exact action | Stop for explicit Production cutover approval. After approval: revalidate backup/state, apply only `20261022100000`, merge certified development to main, allow verified Git auto-deploy, then focused smoke/stabilization. |
+| Blockers / open questions | No unresolved preflight blocker. Production cutover/mutation is not yet authorized. PL-5 remains deferred; legacy retirement remains separately authorized. |
+| Operator approval status | `PREFLIGHT COMPLETE`; Production cutover/mutation `NOT AUTHORIZED` |
 | Report document | `migration-upgrade/post-launch/M15F_PRODUCTION_RELEASE_STABILIZATION_REPORT.md` |
 
 ## Current task record — PL-4C Goals + Task Templates + Recurrence Enhancements
@@ -118,7 +118,7 @@ Use one copy of this task record for every approved phase task. It is the exact-
 | PL-4A | CLOSED | Final feature CI `37034644123` passed; operator-approved development merge `80076446a120388fe2b05f7d36ccc131bb72d538` passed exact development CI `37050583184`. |
 | PL-4B | CLOSED | Final feature CI `37128248294` passed; operator-approved development merge `dfa5a59b6619d12e319fe82b316be2339280f673` passed exact development CI `37128826840`. |
 | PL-4C | CLOSED | Final feature CI `37181949107` passed; operator-approved development merge `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` passed exact development CI `37182554528`. |
-| M15-F | BLOCKED — BACKUP/RESTORE NOT READY | Git/delta/migration/compatibility audit completed; no current recoverable jobquest-prod backup or verified restore path. Production mutation remains unauthorized. |
+| M15-F | READY FOR PRODUCTION CUTOVER APPROVAL | Fresh current-project backup READY; disposable restore VERIFIED; Vercel/config/auth/RLS/extension/security/release-candidate audit PASS. Production mutation remains unauthorized pending explicit cutover approval. |
 | PL-5 | DEFERRED / NOT STARTED | Begins only after successful M15-F so it can use final Production evidence. |
 | Legacy retirement | RESERVED | Requires separate authorization after M15-F; never automatic. |
 

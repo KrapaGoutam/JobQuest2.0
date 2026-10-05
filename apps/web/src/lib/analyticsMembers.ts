@@ -1,5 +1,3 @@
-import type { WorkspaceMemberDetailed } from '../api/workspace';
-
 export interface AnalyticsMember {
   user_id: string;
   role: string;
@@ -7,9 +5,13 @@ export interface AnalyticsMember {
   display_name: string | null;
 }
 
+export interface AnalyticsRosterMember extends AnalyticsMember {
+  status: 'ACTIVE' | 'SUSPENDED';
+}
+
 /** Keep the manager owner picker limited to unique, active workspace members. */
 export function activeAnalyticsMembers(
-  members: WorkspaceMemberDetailed[],
+  members: AnalyticsRosterMember[],
 ): AnalyticsMember[] {
   const seen = new Set<string>();
 

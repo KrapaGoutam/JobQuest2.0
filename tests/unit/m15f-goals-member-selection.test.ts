@@ -2,23 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   activeAnalyticsMembers,
   resolveAnalyticsMember,
+  type AnalyticsRosterMember,
 } from '../../apps/web/src/lib/analyticsMembers';
-import type { WorkspaceMemberDetailed } from '../../apps/web/src/api/workspace';
 
 const member = (
   userId: string,
-  status: WorkspaceMemberDetailed['status'] = 'ACTIVE',
-  role: WorkspaceMemberDetailed['role'] = 'USER',
-): WorkspaceMemberDetailed => ({
-  member_id: `membership-${userId}`,
+  status: AnalyticsRosterMember['status'] = 'ACTIVE',
+  role = 'USER',
+): AnalyticsRosterMember => ({
   user_id: userId,
   role,
   status,
-  joined_at: '2026-01-01T00:00:00.000Z',
-  last_active_at: null,
   username: `user-${userId}`,
   display_name: `User ${userId}`,
-  applications_count: 0,
 });
 
 describe('M15-F goals member selection', () => {

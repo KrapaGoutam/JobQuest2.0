@@ -300,7 +300,7 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
       name: "Add goal",
     });
     await expect(goalModal).toBeVisible();
-    await expect(goalModal.getByLabel("Goal")).toBeVisible();
+    await expect(goalModal.getByLabel("Goal", { exact: true })).toBeVisible();
     await expect(goalModal.getByLabel("Target")).toHaveAttribute("min", "1");
     await expect(goalModal.getByLabel("Period").locator("option")).toHaveText([
       "Daily",

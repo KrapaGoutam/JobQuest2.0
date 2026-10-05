@@ -1,5 +1,22 @@
 # Post-Launch Execution Checklist
 
+## Current task record — M15-F Applications Suggestion Density Hotfix
+
+| Field | Record |
+| --- | --- |
+| TASK ID / STATUS | `M15-F-UX-DENSITY` / `IMPLEMENTATION IN PROGRESS — M15-F NOT CLOSED` |
+| Branch / base SHA | `fix/m15f-applications-suggestion-density` / `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` |
+| Current Production | Main `8c06353ba373efe3306dd34ca126d5360994b6f1`; CI `37212272157` PASS; deployment `dpl_6aAYeZrJCoHDKj8QJGqonZ4tS6rG` READY |
+| Change | Collapse the existing ordered application quick-action suggestions to 3 desktop / 2 mobile by default, with accessible expand/collapse; preserve content and handlers. |
+| Local focused verification | Unit `4/4` PASS; web typecheck PASS; focused lint PASS. Focused Playwright desktop/mobile/action/a11y coverage added for CI. |
+| CI / development / main / Production hotfix | `TBD` — each exact-SHA gate is required in sequence. |
+| Database / migrations / auth / RLS | `NONE` — completed M15-F database certification is reused and not rerun. |
+| Backup / restore | `READY / VERIFIED` from M15-F cutover; not rerun for this frontend-only fix. |
+| Last completed action | Minimal implementation and focused local static/unit verification completed on the fix branch. |
+| Next exact action | Review diff and secret scan, commit/push exact paths, then require exact fix-branch CI PASS. |
+| Operator approval status | Fix, development merge, main promotion, and Production deployment explicitly authorized; formal M15-F closeout still requires manual Production acceptance. |
+| Report document | `migration-upgrade/post-launch/M15F_PRODUCTION_RELEASE_STABILIZATION_REPORT.md` |
+
 Use one copy of this task record for every approved phase task. It is the exact-resume contract; unknown values remain `TBD`, never inferred.
 
 ## Required task record

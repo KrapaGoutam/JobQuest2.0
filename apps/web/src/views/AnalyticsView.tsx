@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Download, RefreshCw } from "lucide-react";
 import {
   fetchAnalyticsOverview,
@@ -8,10 +8,7 @@ import {
   exportAnalyticsToJson,
   fetchGoalProgress,
 } from "../api/analytics";
-import {
-  fetchWorkspaceMembers,
-  type WorkspaceMemberInfo,
-} from "../api/applications";
+import { listWorkspaceMembers } from "../api/workspace";
 import type {
   AgingApplication,
   AnalyticsOverview,
@@ -26,6 +23,11 @@ import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
 import { Tab, TabList, TabPanel, Tabs } from "../components/ui/Tabs";
 import { useToast } from "../context/ToastContext";
+import {
+  activeAnalyticsMembers,
+  resolveAnalyticsMember,
+  type AnalyticsMember,
+} from "../lib/analyticsMembers";
 
 export interface AnalyticsViewProps {
   activeWorkspaceId: string | null;
@@ -51,21 +53,63 @@ export function AnalyticsView({
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
   const [dateRange, setDateRange] = useState<DateRangePreset>("90d");
   const [selectedMemberId, setSelectedMemberId] = useState("");
-  const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
+  const [members, setMembers] = useState<AnalyticsMember[]>([]);
+  const [rosterWorkspaceId, setRosterWorkspaceId] = useState<string | null>(null);
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [timing, setTiming] = useState<StageTiming | null>(null);
   const [aging, setAging] = useState<AgingApplication[]>([]);
   const [goalProgress, setGoalProgress] = useState<GoalProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadRequestId = useRef(0);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
   useEffect(() => {
-    if (!activeWorkspaceId || !isManager) return;
-    fetchWorkspaceMembers(activeWorkspaceId)
-      .then(setMembers)
-      .catch(() => setMembers([]));
+    let cancelled = false;
+    setRosterWorkspaceId(null);
+    setMembers([]);
+
+    if (!activeWorkspaceId || !isManager) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    listWorkspaceMembers(activeWorkspaceId)
+      .then((nextMembers) => {
+        if (cancelled) return;
+        setMembers(activeAnalyticsMembers(nextMembers));
+        setRosterWorkspaceId(activeWorkspaceId);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMembers([]);
+        setRosterWorkspaceId(activeWorkspaceId);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeWorkspaceId, isManager]);
+
+  const selectedMember = resolveAnalyticsMember(
+    members,
+    selectedMemberId,
+    rosterWorkspaceId,
+    activeWorkspaceId,
+  );
+  const targetUserId = isManager ? selectedMember?.user_id ?? null : null;
+  const isManagerAggregate = isManager && !targetUserId;
+
+  useEffect(() => {
+    if (
+      selectedMemberId
+      && rosterWorkspaceId === activeWorkspaceId
+      && !selectedMember
+    ) {
+      setSelectedMemberId("");
+    }
+  }, [activeWorkspaceId, rosterWorkspaceId, selectedMember, selectedMemberId]);
 
   const getDateBounds = useCallback((range: DateRangePreset) => {
     const end = new Date();
@@ -87,31 +131,33 @@ export function AnalyticsView({
   }, []);
 
   const loadData = useCallback(async () => {
+    const requestId = ++loadRequestId.current;
     if (!activeWorkspaceId) return;
     setLoading(true);
     setError(null);
     const bounds = getDateBounds(dateRange);
-    const userId = isManager && selectedMemberId ? selectedMemberId : null;
     try {
       const [overviewResult, timingResult, agingResult, goalResult] = await Promise.all([
         fetchAnalyticsOverview(activeWorkspaceId, {
           startDate: bounds.startDate,
           endDate: bounds.endDate,
-          userId,
+          userId: targetUserId,
         }),
         fetchStageTiming(activeWorkspaceId, {
           startDate: bounds.startDate,
           endDate: bounds.endDate,
-          userId,
+          userId: targetUserId,
         }),
-        fetchAgingApplications(activeWorkspaceId, { userId }),
-        fetchGoalProgress(activeWorkspaceId, { userId }),
+        fetchAgingApplications(activeWorkspaceId, { userId: targetUserId }),
+        fetchGoalProgress(activeWorkspaceId, { userId: targetUserId }),
       ]);
+      if (requestId !== loadRequestId.current) return;
       setOverview(overviewResult);
       setTiming(timingResult);
       setAging(agingResult);
       setGoalProgress(goalResult);
     } catch (cause) {
+      if (requestId !== loadRequestId.current) return;
       console.error("Failed to load analytics:", cause);
       setError("Failed to load analytics");
       addToast({
@@ -119,25 +165,23 @@ export function AnalyticsView({
         title: "Unable to retrieve search analytics data",
       });
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   }, [
     activeWorkspaceId,
     addToast,
     dateRange,
     getDateBounds,
-    isManager,
-    selectedMemberId,
+    targetUserId,
   ]);
 
   useEffect(() => {
     void loadData();
+    return () => {
+      loadRequestId.current += 1;
+    };
   }, [loadData]);
   const bounds = getDateBounds(dateRange);
-  const selectedMember = useMemo(
-    () => members.find((member) => member.user_id === selectedMemberId),
-    [members, selectedMemberId],
-  );
   const memberName = selectedMember
     ? selectedMember.display_name || selectedMember.username
     : null;
@@ -279,7 +323,7 @@ export function AnalyticsView({
               {overview && (
                 <AnalyticsOverviewTab
                   data={overview}
-                  isManager={isManager && !selectedMemberId}
+                  isManager={isManagerAggregate}
                 />
               )}
             </TabPanel>
@@ -296,8 +340,10 @@ export function AnalyticsView({
                   progress={goalProgress}
                   workspaceId={activeWorkspaceId!}
                   onRefresh={loadData}
-                  targetUserId={selectedMemberId || null}
-                  isManagerAggregate={isManager && !selectedMemberId}
+                  targetUserId={targetUserId}
+                  isManagerAggregate={isManagerAggregate}
+                  singleMember={members.length === 1 ? members[0] : null}
+                  onSelectMember={setSelectedMemberId}
                 />
               )}
             </TabPanel>

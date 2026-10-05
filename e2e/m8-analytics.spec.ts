@@ -262,13 +262,33 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
     // A manager can scope analytics and goals to an individual workspace member.
     const memberFilter = page.getByLabel("Filter by workspace member");
     await expect(memberFilter.locator("option")).toHaveCount(2);
-    await memberFilter.selectOption({ index: 1 });
+    await expect(memberFilter.locator("option").nth(1)).toContainText(username);
     await page.getByRole("tab", { name: "Goals" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Workspace goal pacing" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add goal" })).toHaveCount(0);
+
+    const memberValue = await memberFilter.locator("option").nth(1).getAttribute("value");
+    expect(memberValue).toBeTruthy();
+    await page.getByRole("button", { name: new RegExp(`Manage ${username}.* goals`) }).click();
+    await expect(memberFilter).toHaveValue(memberValue!);
     await settle(page);
 
     await expect(
       page.getByRole("heading", { name: "Activity goals" }),
     ).toBeVisible();
+    await page.getByRole("button", { name: "90 days" }).click();
+    await settle(page);
+    await expect(memberFilter).toHaveValue(memberValue!);
+
+    await memberFilter.selectOption("");
+    await expect(
+      page.getByRole("heading", { name: "Workspace goal pacing" }),
+    ).toBeVisible();
+    await memberFilter.selectOption(memberValue!);
+    await settle(page);
+
     await expect(page.getByText("No active goals yet.")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Target met in/ }),
@@ -280,6 +300,15 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
       name: "Add goal",
     });
     await expect(goalModal).toBeVisible();
+    await expect(goalModal.getByLabel("Goal", { exact: true })).toBeVisible();
+    await expect(goalModal.getByLabel("Target")).toHaveAttribute("min", "1");
+    await expect(goalModal.getByLabel("Period").locator("option")).toHaveText([
+      "Daily",
+      "Weekly",
+      "Monthly",
+    ]);
+    await expect(goalModal.getByLabel("Effective from")).toBeVisible();
+    await expect(goalModal.getByLabel("Active goal")).toBeChecked();
 
     await goalModal.getByLabel("Target").fill("18");
     await goalModal.getByLabel("Period").selectOption("MONTHLY");
@@ -287,6 +316,9 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
     await settle(page);
     await dismissToasts(page);
     await expect(page.getByRole("heading", { name: "Applications" })).toBeVisible();
+    await page.getByRole("button", { name: "Edit" }).click();
+    await expect(page.getByRole("dialog", { name: "Edit goal" })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByText("monthly · effective")).toBeVisible();
 
     // Screenshot R3 · Goals (light mode)

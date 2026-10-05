@@ -9,6 +9,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { GoalRing, ProgressTrack, ScopeTag } from './AnalyticsCharts';
 import { EditGoalModal } from './EditGoalModal';
+import type { AnalyticsMember } from '../../lib/analyticsMembers';
 
 interface GoalsTabProps {
   overview: AnalyticsOverview;
@@ -17,6 +18,8 @@ interface GoalsTabProps {
   onRefresh: () => void;
   targetUserId?: string | null;
   isManagerAggregate?: boolean;
+  singleMember?: AnalyticsMember | null;
+  onSelectMember?: (userId: string) => void;
 }
 
 const GOAL_LABEL: Record<GoalType, string> = {
@@ -32,6 +35,8 @@ export function GoalsTab({
   onRefresh,
   targetUserId,
   isManagerAggregate,
+  singleMember,
+  onSelectMember,
 }: GoalsTabProps) {
   const [editing, setEditing] = useState<GoalType | 'new' | null>(null);
 
@@ -45,6 +50,16 @@ export function GoalsTab({
             The Overview pace chart uses the sum of each member's effective target.
             Select a member above to inspect or edit their individual goals.
           </p>
+          {singleMember && onSelectMember && (
+            <Button
+              variant="outline"
+              size="sm"
+              style={{ marginTop: 12 }}
+              onClick={() => onSelectMember(singleMember.user_id)}
+            >
+              Manage {singleMember.display_name || singleMember.username}'s goals
+            </Button>
+          )}
         </div>
       </Card>
     );

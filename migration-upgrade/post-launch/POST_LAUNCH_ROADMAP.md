@@ -1,5 +1,13 @@
 # Post-Launch Roadmap
 
+## Current authoritative sequence — 2026-10-04
+
+`M15-F PRODUCTION CUTOVER COMPLETE / LIVE` → `M15-F APPLICATIONS SUGGESTION DENSITY HOTFIX` → `OPERATOR MANUAL PRODUCTION ACCEPTANCE` → `M15-F FORMAL CLOSEOUT` → `PL-5 PORTFOLIO / DEVELOPER DOCUMENTATION` → `LEGACY RETIREMENT ONLY WITH SEPARATE APPROVAL`.
+
+The narrow hotfix is frontend-only and does not change the completed Production database migration, auth, RLS, grants, API contracts, or Production data. M15-F remains open until operator manual acceptance. PL-5 remains deferred until that closeout; PL-1D remains deferred/TBD; legacy retirement remains unauthorized.
+
+The planning sequence and phase snapshots below are retained as historical program context. This current authoritative sequence supersedes their older pre-cutover status language.
+
 ## Program sequence
 
 `M15-E CLOSED` → `PL-0 BASELINE + GOVERNANCE` → `PL-1 CRITICAL SECURITY + EXTENSION RELIABILITY` → `PL-2 CORE APPLICATION PRODUCTIVITY` → `PL-3 DASHBOARD + ANALYTICS UX` → `PL-4A DUPLICATE UX + BULK OPERATIONS + RECRUITER TRACKING` → `PL-4B CALENDAR + TIMELINE/GANTT + ARCHIVE` → `PL-4C GOALS + TASK TEMPLATES + RECURRENCE ENHANCEMENTS` → `PL-5 PORTFOLIO / DEVELOPER DOCUMENTATION` → `M15-F FINAL PRODUCTION RELEASE + STABILIZATION` → `LEGACY RETIREMENT (separately authorized)`.

@@ -57,6 +57,8 @@ describe.skipIf(!ready)('Milestone 15E — extension stats endpoint', () => {
   // "Old Co" (now - 8 days) lands in last week's window whenever today is NOT Monday
   // (same condition, inverted, as `withinWeekIsAlsoToday`): see route comment math.
   const oldCoInLastWeek = !withinWeekIsAlsoToday;
+  // "Yesterday Co" lands in last week's window only when today is Monday.
+  const yesterdayCoInLastWeek = withinWeekIsAlsoToday;
 
   beforeAll(async () => {
     const { resetEnvCache } = await import('../../apps/api/src/env');
@@ -134,9 +136,9 @@ describe.skipIf(!ready)('Milestone 15E — extension stats endpoint', () => {
     // "Yesterday Co" always lands in [yesterdayStart, todayStart); "Week Co" also lands there
     // iff yesterday IS the current week's Monday (today is Tuesday).
     const expectedYesterday = 1 + (weekCoIsYesterday ? 1 : 0);
-    // "Last Week Co" always lands in [lastWeekStart, weekStart); "Old Co" also lands there
-    // whenever today isn't Monday (same condition that puts "Old Co" outside "this week").
-    const expectedLastWeek = 1 + (oldCoInLastWeek ? 1 : 0);
+    // "Last Week Co" always lands in [lastWeekStart, weekStart). On Monday, "Yesterday Co"
+    // is also in that window; on every other day, "Old Co" is there instead.
+    const expectedLastWeek = 1 + (oldCoInLastWeek ? 1 : 0) + (yesterdayCoInLastWeek ? 1 : 0);
 
     const res = await extensionCall(alice, mainToken, '/ext/v1/stats');
     expect(res.status).toBe(200);

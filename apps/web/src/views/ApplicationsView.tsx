@@ -52,6 +52,7 @@ import { downloadExport } from '../api/importExport';
 import { consumeNewApplicationRequest, onNewApplicationRequest } from '../lib/newApplicationIntent';
 import { dateAddedBounds } from '../lib/applicationProductivity';
 import { remainingBulkSelection, runSequentialBulk, type BulkOperationResult } from '../lib/applicationBulk';
+import { applicationSuggestionToggleLabel, applicationSuggestionView } from '../lib/applicationSuggestions';
 import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
 
 export interface ApplicationRecord {
@@ -200,9 +201,11 @@ export function ApplicationsView({
 
   // Responsive layout & wide-desktop preview rail (Gate 02B D4 / ADR-029)
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(readPreviewPref);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1440);
   const isWide = windowWidth >= 1680;
   const isMobile = windowWidth < 768;
+  const suggestionView = applicationSuggestionView(legacyApps, isMobile, showAllSuggestions);
 
   useEffect(() => {
     const onResize = () => setWindowWidth(window.innerWidth);
@@ -662,7 +665,7 @@ export function ApplicationsView({
         {/* Direct PostgREST Quick Insert Form (M1B harness; kept for the leak test) */}
         {onCreateApp && (
           <Card style={{ padding: '8px 12px', background: 'var(--color-surface-2)' }}>
-            <form onSubmit={onCreateApp} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+            <form aria-label="Quick insert application" onSubmit={onCreateApp} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Quick Insert:</span>
               <Input name="company" placeholder="Company" required aria-label="Company" style={{ minWidth: '150px', height: '32px', fontSize: '13px' }} />
               <Input name="role" placeholder="Role" required aria-label="Role" style={{ minWidth: '150px', height: '32px', fontSize: '13px' }} />
@@ -677,16 +680,31 @@ export function ApplicationsView({
               </Button>
             </form>
             {legacyApps.length > 0 && onStageChange && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                {legacyApps.map((a) => (
-                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', padding: '4px 8px', borderRadius: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600 }}>{a.company_name} · {a.role_title}</span>
-                    <StatusBadge stage={a.stage} />
-                    <Button size="sm" variant="secondary" onClick={() => void onStageChange(a.id, 'INTERVIEW')}>
-                      → Interview
-                    </Button>
-                  </div>
-                ))}
+              <div role="region" aria-label="Application quick actions" style={{ marginTop: '8px' }}>
+                <div id="application-quick-action-suggestions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {suggestionView.visible.map((a) => (
+                    <div data-testid="application-suggestion" key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-surface-1)', border: '1px solid var(--color-border)', padding: '4px 8px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600 }}>{a.company_name} · {a.role_title}</span>
+                      <StatusBadge stage={a.stage} />
+                      <Button size="sm" variant="secondary" onClick={() => void onStageChange(a.id, 'INTERVIEW')}>
+                        → Interview
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {suggestionView.hasOverflow && (
+                  <Button
+                    data-testid="application-suggestions-toggle"
+                    size="sm"
+                    variant="ghost"
+                    aria-expanded={showAllSuggestions}
+                    aria-controls="application-quick-action-suggestions"
+                    onClick={() => setShowAllSuggestions((expanded) => !expanded)}
+                    style={{ marginTop: '6px' }}
+                  >
+                    {applicationSuggestionToggleLabel(suggestionView.hiddenCount, showAllSuggestions)}
+                  </Button>
+                )}
               </div>
             )}
           </Card>

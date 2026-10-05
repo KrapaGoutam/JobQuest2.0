@@ -1,3 +1,15 @@
+## >>> M15-F PRODUCTION LIVE / APPLICATIONS DENSITY HOTFIX IN PROGRESS (2026-10-04) <<<
+
+M15-F Production cutover is live but **not formally closed**. Main is `8c06353ba373efe3306dd34ca126d5360994b6f1`; exact main CI `37212272157` passed; Vercel deployment `dpl_6aAYeZrJCoHDKj8QJGqonZ4tS6rG` is READY at `https://jobquest2.vercel.app`. The Production database has 20 migrations through `20261022100000_pl4c_goals_task_templates_recurrence.sql`; post-migration catalog, RLS, grants, constraints, and representative data reconciliation passed.
+
+Before formal operator acceptance, the operator identified one narrow Applications-page density issue: the direct quick-action/suggestion surface renders every application above the canonical table. Authorized branch `fix/m15f-applications-suggestion-density` starts from certified development `50a1a13d291da20ada18e4b4bbaaadc9fd54401b` and changes only frontend display state, accessibility semantics, and focused tests. Default target is 3 suggestions on desktop and 2 on mobile, with one accessible expand/collapse control. Existing order, content, handlers, and business logic remain unchanged.
+
+NON-CHANGES: no database, migration, Supabase config, RLS, grant, auth, API, environment, dependency, Production data, PL-1D, PL-5, or legacy-retirement change. The pre-cutover backup remains READY and restore VERIFIED; neither is rerun. The operator-owned `.gitignore` edit remains unstaged and untouched.
+
+NEXT EXACT ACTION: finish the narrow fix, targeted tests, fix-branch CI, authorized no-ff development/main promotion, exact CI gates, Git-triggered Vercel deployment, and focused Applications desktop/mobile Production verification. Then stop for operator manual acceptance; do not mark M15-F formally closed.
+
+Report: `migration-upgrade/post-launch/M15F_PRODUCTION_RELEASE_STABILIZATION_REPORT.md`.
+
 ## >>> PL-4C FEATURE CERTIFIED / OPERATOR APPROVAL REQUIRED (2026-10-04) <<<
 
 PL-0: FORMALLY CLOSED | PL-1: FORMALLY CLOSED | PL-2: FORMALLY CLOSED | PL-3: FORMALLY CLOSED | PL-4A: FORMALLY CLOSED | PL-4B: FORMALLY CLOSED | PL-4C: FEATURE CERTIFIED / DEVELOPMENT PROMOTION NOT AUTHORIZED | PL-1D: DEFERRED / TBD.

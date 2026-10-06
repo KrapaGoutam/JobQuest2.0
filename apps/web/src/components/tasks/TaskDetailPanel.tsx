@@ -95,7 +95,7 @@ export function TaskDetailPanel({
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
               <Button variant="primary" leftIcon={<Check size={14} />} onClick={() => onComplete(item)}>Complete</Button>
               <Button variant="secondary" leftIcon={<Pencil size={13} />} onClick={() => onEdit(item)}>Edit</Button>
-              <Button variant="ghost" onClick={() => onCancel(item)}>Dismiss task</Button>
+              <Button variant="ghost" onClick={() => onCancel(item)}>Dismiss</Button>
             </div>
           )}
         </div>

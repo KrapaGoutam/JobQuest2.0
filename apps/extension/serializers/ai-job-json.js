@@ -43,7 +43,7 @@ export function generateAIJobJson(jobData) {
   const confidence = rawPayload.confidence || null;
 
   const aiJson = {
-    schema_version: "1.0",
+    schema_version: "1.1",
     job: {
       title,
     },
@@ -67,6 +67,7 @@ export function generateAIJobJson(jobData) {
     responsibilities: responsibilities.length > 0 ? responsibilities : null,
     requirements: requirements.length > 0 ? requirements : null,
     skills: skills.length > 0 ? skills : null,
+    extras: rawPayload.extras && Object.keys(rawPayload.extras).length > 0 ? rawPayload.extras : null,
     source: {
       platform: sourcePlatform,
       url: jobUrl,

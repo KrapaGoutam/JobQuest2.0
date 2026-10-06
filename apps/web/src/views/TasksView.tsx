@@ -251,10 +251,10 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
     const results = await Promise.allSettled(targets.map(t => cancelTask(t.task!.id)));
     const succeeded = results.filter(r => r.status === 'fulfilled').length;
     if (succeeded === targets.length) {
-      addToast({ title: `Dismissed ${succeeded} item(s)`, type: 'info' });
+      addToast({ title: `${succeeded} dismissed`, type: 'info' });
       setSelectedKeys(new Set());
     } else {
-      addToast({ title: `Dismissed ${succeeded} item(s). ${targets.length - succeeded} failed.`, type: 'danger' });
+      addToast({ title: `${succeeded} dismissed • ${targets.length - succeeded} failed`, type: 'danger' });
       setSelectedKeys(new Set(targets.filter((_, i) => results[i]?.status === 'rejected').map(t => t.key)));
     }
     setBulkSaving(false);

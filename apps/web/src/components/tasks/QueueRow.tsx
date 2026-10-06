@@ -110,8 +110,8 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
       <Dialog
         isOpen={cancelFor !== null}
         onClose={() => setCancelFor(null)}
-        title="Dismiss this task?"
-        description={cancelFor?.task?.recurrence_rule ? 'It moves out of your active queue and stays in history. This follow-up will be dismissed and will not recur again.' : 'It moves out of your active queue and stays in history. Nothing is deleted.'}
+        title={cancelFor?.task?.recurrence_rule ? 'Dismiss recurring follow-up?' : 'Dismiss this task?'}
+        description={cancelFor?.task?.recurrence_rule ? 'This follow-up will be dismissed and will not recur again.' : 'It moves out of your active queue and stays in history. Nothing is deleted.'}
         maxWidth={440}
         footer={
           <>
@@ -130,7 +130,7 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
                 setCancelFor(null);
               }}
             >
-              Dismiss task
+              Dismiss
             </Button>
           </>
         }

@@ -203,7 +203,7 @@ export function QueueRow({
   const tone = item.state === 'overdue' ? 'danger-t b' : item.state === 'today' ? 'warning-t b' : 'muted';
   const doneLabel = item.kind === 'NEXT_ACTION' ? `Done, set next: ${item.title}` : item.kind === 'INTERVIEW_OUTCOME' ? item.title : `Complete ${item.title}`;
   return (
-    <div className={`trow ${selected ? 'sel' : ''} ${checked ? 'chk-sel' : ''} ${compact ? 'compact' : ''}`} data-testid="queue-row" data-kind={item.kind} data-state={item.state}>
+    <div className={`trow ${selected ? 'sel' : ''} ${checked ? 'chk-sel' : ''} ${onCheckChange ? 'has-chk' : ''} ${compact ? 'compact' : ''}`} data-testid="queue-row" data-kind={item.kind} data-state={item.state}>
       {onCheckChange && (
         <span className="trow-chk">
           <input type="checkbox" checked={!!checked} onChange={(e) => onCheckChange(e.target.checked)} aria-label={`Select ${item.title}`} />
@@ -236,7 +236,7 @@ export function QueueRow({
         {item.state === 'today' && <Clock size={12} aria-hidden="true" />}
         {label}
       </span>
-      <span className="trow-act row" style={{ gap: 4 }}>
+      <span className="trow-act" style={{ gap: 4 }}>
         {item.kind === 'INTERVIEW_OUTCOME' ? (
           <Button size="sm" variant="primary" onClick={() => onComplete(item)}>Record outcome</Button>
         ) : (

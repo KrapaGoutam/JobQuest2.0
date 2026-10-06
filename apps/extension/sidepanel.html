@@ -173,11 +173,11 @@
               <label>Tailored Resume</label>
               <div class="resume-mode-selector">
                 <label class="resume-mode-option">
-                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-existing" value="existing" checked>
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-existing" value="existing">
                   <span>Select existing</span>
                 </label>
                 <label class="resume-mode-option">
-                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-manual" value="manual">
+                  <input type="radio" name="sidepanel-resume-mode" id="sidepanel-mode-resume-manual" value="manual" checked>
                   <span>Enter manually</span>
                 </label>
                 <label class="resume-mode-option">
@@ -186,13 +186,13 @@
                 </label>
               </div>
 
-              <div id="sidepanel-group-resume-existing">
+              <div id="sidepanel-group-resume-existing" hidden>
                 <select id="edit-resume" class="select" aria-label="Select existing resume">
                   <option value="">None selected</option>
                 </select>
               </div>
 
-              <div id="sidepanel-group-resume-manual" hidden>
+              <div id="sidepanel-group-resume-manual">
                 <input type="text" id="edit-resume-manual" class="text-input" placeholder="e.g. QA Automation v96" maxlength="100" aria-label="Enter resume version manually" autocomplete="off">
               </div>
             </div>

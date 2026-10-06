@@ -306,8 +306,47 @@ export function DashboardProgress({
   const [pipelineMode, setPipelineMode] = useState<"historical" | "current">(
     "historical",
   );
-  const applicationGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS');
-  const networkingGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'NETWORKING');
+  const [activityMode, setActivityMode] = useState<"daily" | "weekly">("weekly");
+
+  const dailyActivity = useMemo(() => {
+    const days = 14;
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(end);
+    start.setDate(start.getDate() - days + 1);
+    start.setHours(0, 0, 0, 0);
+
+    const counts: Record<string, number> = {};
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+      counts[iso] = 0;
+    }
+
+    for (const app of data.applications) {
+      if (!app.applied_at) continue;
+      const iso = app.applied_at.slice(0, 10);
+      if (counts[iso] !== undefined) {
+        counts[iso]++;
+      }
+    }
+
+    return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0])).map(([iso, count]) => {
+      const d = new Date(iso + 'T12:00:00Z');
+      return {
+        week_start: iso,
+        week_label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' }),
+        applied: count,
+        responses: 0,
+        interviews: 0,
+        outreach: 0,
+        target: 0
+      };
+    });
+  }, [data.applications]);
+  const applicationGoal = isManagerAggregate ? null : data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS');
+  const networkingGoal = isManagerAggregate ? null : data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'NETWORKING');
   const aggregateTarget = data.week.active_goal?.target_applications;
   const target = applicationGoal?.target_value ?? aggregateTarget ?? 0;
   const actual = applicationGoal?.actual ?? (isManagerAggregate ? data.week.total_applications : 0);
@@ -336,11 +375,30 @@ export function DashboardProgress({
             <header className="analytics-card-head">
               <div>
                 <h3>Application activity</h3>
-                <p>Latest 12 weeks</p>
+                <p>{activityMode === "daily" ? "Latest 14 days" : "Latest 12 weeks"}</p>
               </div>
-              <ScopeTag tone="fixed">12 weeks</ScopeTag>
+              <div
+                className="mini-switch"
+                role="group"
+                aria-label="Activity view"
+              >
+                <button
+                  type="button"
+                  aria-pressed={activityMode === "daily"}
+                  onClick={() => setActivityMode("daily")}
+                >
+                  Daily
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={activityMode === "weekly"}
+                  onClick={() => setActivityMode("weekly")}
+                >
+                  Weekly
+                </button>
+              </div>
             </header>
-            <PaceChart points={data.all.weekly_pacing} compact />
+            <PaceChart points={activityMode === "daily" ? dailyActivity : data.all.weekly_pacing} compact />
           </Card>
         )}
         {showPipeline && (
@@ -437,3 +495,8 @@ export function DashboardProgress({
     </section>
   );
 }
+
+
+
+
+

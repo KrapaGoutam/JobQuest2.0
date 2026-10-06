@@ -109,11 +109,11 @@
           <label>Tailored Resume</label>
           <div class="resume-mode-selector">
             <label class="resume-mode-option">
-              <input type="radio" name="resume-mode" id="mode-resume-existing" value="existing" checked>
+              <input type="radio" name="resume-mode" id="mode-resume-existing" value="existing">
               <span>Select existing</span>
             </label>
             <label class="resume-mode-option">
-              <input type="radio" name="resume-mode" id="mode-resume-manual" value="manual">
+              <input type="radio" name="resume-mode" id="mode-resume-manual" value="manual" checked>
               <span>Enter manually</span>
             </label>
             <label class="resume-mode-option">
@@ -122,13 +122,13 @@
             </label>
           </div>
 
-          <div id="group-resume-existing">
+          <div id="group-resume-existing" hidden>
             <select id="input-resume" class="select" aria-label="Select existing resume">
               <option value="">None selected</option>
             </select>
           </div>
 
-          <div id="group-resume-manual" hidden>
+          <div id="group-resume-manual">
             <input type="text" id="input-resume-manual" class="input" placeholder="e.g. QA Automation v96" maxlength="100" aria-label="Enter resume version manually">
           </div>
         </div>

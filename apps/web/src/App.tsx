@@ -586,6 +586,7 @@ function AppContent() {
           activeWorkspaceId={activeWs}
           isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
           initialTab={currentPath === '/analytics/aging' ? 'aging' : 'overview'}
+          currentUserId={user?.id ?? null}
         />
       );
     }
@@ -708,3 +709,4 @@ function AppContent() {
     </WorkspaceProvider>
   );
 }
+

@@ -33,6 +33,7 @@ export interface AnalyticsViewProps {
   activeWorkspaceId: string | null;
   isManager: boolean;
   initialTab?: AnalyticsTab;
+  currentUserId: string | null;
 }
 export type AnalyticsTab = "overview" | "timing" | "aging" | "goals";
 export type DateRangePreset = "30d" | "90d" | "180d" | "1y";
@@ -48,6 +49,7 @@ export function AnalyticsView({
   activeWorkspaceId,
   isManager,
   initialTab = "overview",
+  currentUserId,
 }: AnalyticsViewProps) {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
@@ -64,6 +66,11 @@ export function AnalyticsView({
   const loadRequestId = useRef(0);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
+  useEffect(() => {
+    if (activeTab === 'goals' && selectedMemberId === '' && currentUserId) {
+      setSelectedMemberId(currentUserId);
+    }
+  }, [activeTab, selectedMemberId, currentUserId]);
   useEffect(() => {
     let cancelled = false;
     setRosterWorkspaceId(null);
@@ -359,3 +366,8 @@ export function AnalyticsView({
     </div>
   );
 }
+
+
+
+
+

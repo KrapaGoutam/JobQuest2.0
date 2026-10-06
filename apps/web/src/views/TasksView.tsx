@@ -489,6 +489,7 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
           ))}
         </div>
         <span style={{ flex: 1 }} />
+        {items.length > 0 && tab !== "completed" && (<Button size="sm" variant="outline" onClick={() => { if (selectedKeys.size === items.length) setSelectedKeys(new Set()); else setSelectedKeys(new Set(items.map(i => i.key))); }}>{selectedKeys.size === items.length ? "Deselect all" : "Select all"}</Button>)}
         {isManager && (
           <>
             <label className="sr-only" htmlFor="task-owner-filter">Owner</label>
@@ -549,3 +550,6 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
     </div>
   );
 }
+
+
+

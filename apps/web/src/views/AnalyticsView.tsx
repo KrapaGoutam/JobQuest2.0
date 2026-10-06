@@ -149,7 +149,10 @@ export function AnalyticsView({
           userId: targetUserId,
         }),
         fetchAgingApplications(activeWorkspaceId, { userId: targetUserId }),
-        fetchGoalProgress(activeWorkspaceId, { userId: targetUserId }),
+        fetchGoalProgress(activeWorkspaceId, {
+          userId: targetUserId,
+          periodCount: 36,
+        }),
       ]);
       if (requestId !== loadRequestId.current) return;
       setOverview(overviewResult);
@@ -343,6 +346,9 @@ export function AnalyticsView({
                   targetUserId={targetUserId}
                   isManagerAggregate={isManagerAggregate}
                   singleMember={members.length === 1 ? members[0] : null}
+                  dateRange={RANGE_LABEL[dateRange]}
+                  startDate={bounds.startDate}
+                  endDate={bounds.endDate}
                   onSelectMember={setSelectedMemberId}
                 />
               )}

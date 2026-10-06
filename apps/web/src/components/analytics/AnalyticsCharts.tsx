@@ -1,5 +1,6 @@
 import { useId, type CSSProperties, type ReactNode } from "react";
 import type { StageCount, WeeklyPacingPoint } from "../../types/analytics";
+import type { GoalTrendPoint } from "../../lib/goalAnalytics";
 
 export function ScopeTag({
   children,
@@ -371,3 +372,204 @@ export function AttainmentStrip({ points }: { points: WeeklyPacingPoint[] }) {
     </>
   );
 }
+
+export function GoalTrendChart({
+  points,
+  compact = false,
+}: {
+  points: GoalTrendPoint[];
+  compact?: boolean;
+}) {
+  const chartId = useId().replace(/:/g, "");
+  const titleId = `${chartId}-title`;
+  const descriptionId = `${chartId}-description`;
+
+  const width = 660;
+  const height = compact ? 140 : 190;
+  const plotTop = 20;
+  const plotBottom = height - 32;
+  const plotHeight = plotBottom - plotTop;
+
+  const maxValue = Math.max(
+    5,
+    ...points.flatMap((p) => [p.actual, p.target ?? 0]),
+  );
+  const barBand = points.length ? (width - 56) / points.length : width - 56;
+  const y = (val: number) => plotBottom - (val / maxValue) * plotHeight;
+
+  // Horizontal grid steps
+  const gridSteps = [0, 0.5, 1];
+
+  // Target line segments connecting consecutive days with configured goals
+  const targetSegments: Array<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  }> = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const current = points[i]!;
+    const next = points[i + 1]!;
+    if (current.target !== null && next.target !== null) {
+      const cx1 = 44 + i * barBand + barBand / 2;
+      const cx2 = 44 + (i + 1) * barBand + barBand / 2;
+      targetSegments.push({
+        x1: cx1,
+        y1: y(current.target),
+        x2: cx2,
+        y2: y(next.target),
+      });
+    }
+  }
+
+  // Thin out x-axis labels if many points
+  const labelInterval = points.length > 20 ? 3 : points.length > 12 ? 2 : 1;
+
+  return (
+    <div className="goal-trend-wrap">
+      <svg
+        className="goal-trend-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-labelledby={`${titleId} ${descriptionId}`}
+      >
+        <title id={titleId}>Daily goal performance trend</title>
+        <desc id={descriptionId}>
+          Actual submitted applications compared against configured daily application goals over time.
+        </desc>
+        {gridSteps.map((step) => {
+          const lineY = plotTop + step * plotHeight;
+          const valLabel = Math.round(maxValue * (1 - step));
+          return (
+            <g key={step}>
+              <line
+                x1="36"
+                x2={width - 8}
+                y1={lineY}
+                y2={lineY}
+                className="analytics-gridline"
+              />
+              <text
+                x="30"
+                y={lineY + 3}
+                textAnchor="end"
+                className="analytics-axis-label"
+              >
+                {valLabel}
+              </text>
+            </g>
+          );
+        })}
+        {points.map((point, index) => {
+          const center = 44 + index * barBand + barBand / 2;
+          const barWidth = Math.max(6, Math.min(24, barBand * 0.5));
+          const appY = y(point.actual);
+          const barHeight = Math.max(point.actual > 0 ? 3 : 1, plotBottom - appY);
+          const showLabel =
+            index % labelInterval === 0 || index === points.length - 1;
+
+          const tooltip = `${point.label}: ${point.actual} submitted${
+            point.target !== null
+              ? ` · Target ${point.target} (${point.percentage}%${
+                  point.status === "MET"
+                    ? " · Met"
+                    : point.status === "CURRENT"
+                    ? " · In progress"
+                    : " · Missed"
+                })`
+              : " · No goal configured"
+          }`;
+
+          const isMet = point.target !== null && point.actual >= point.target;
+          const isNoGoal = point.target === null;
+
+          return (
+            <g key={point.date} tabIndex={0} aria-label={tooltip}>
+              <title>{tooltip}</title>
+              <rect
+                x={center - barWidth / 2}
+                y={appY}
+                width={barWidth}
+                height={barHeight}
+                rx="3"
+                className={`goal-trend-bar ${isMet ? "met" : ""} ${
+                  isNoGoal ? "no-goal" : ""
+                }`}
+              />
+              {point.target !== null && (
+                <circle
+                  cx={center}
+                  cy={y(point.target)}
+                  r="3.5"
+                  className="goal-trend-target-dot"
+                />
+              )}
+              {showLabel && (
+                <text
+                  x={center}
+                  y={height - 8}
+                  textAnchor="middle"
+                  className="analytics-axis-label"
+                >
+                  {point.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+        {targetSegments.map((seg, i) => (
+          <line
+            key={i}
+            x1={seg.x1}
+            y1={seg.y1}
+            x2={seg.x2}
+            y2={seg.y2}
+            className="pace-goal-line"
+          />
+        ))}
+      </svg>
+      <div className="analytics-legend" aria-hidden="true">
+        <span>
+          <i className="legend-swatch legend-app" />
+          Actual Applications
+        </span>
+        <span>
+          <i className="legend-line" />
+          Daily Goal Target
+        </span>
+        <span>
+          <i className="legend-dot legend-met-dot" />
+          Target Met
+        </span>
+      </div>
+      <div className="sr-only">
+        <table>
+          <caption>Daily goal performance trend values</caption>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Applications</th>
+              <th>Target</th>
+              <th>Completion</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.date}>
+                <th>{point.label}</th>
+                <td>{point.actual}</td>
+                <td>{point.target !== null ? point.target : "No goal"}</td>
+                <td>
+                  {point.percentage !== null ? `${point.percentage}%` : "—"}
+                </td>
+                <td>{point.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+

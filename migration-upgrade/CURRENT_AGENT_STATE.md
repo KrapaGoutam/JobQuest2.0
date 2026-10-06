@@ -1,3 +1,19 @@
+## >>> JOBQUEST 2.1-F — ANALYTICS GOAL TRENDS (2026-10-06) <<<
+
+PHASE: 2.1-F | STATUS: IMPLEMENTED ON FEATURE BRANCH — READY FOR COMMIT & BRANCH CI
+
+FEATURE BRANCH: `feature/2.1f-analytics-goal-trends` | BASE DEVELOPMENT SHA: `cda70cf4e282856ae6028b484747f72eb2cc8f97`
+
+IMPLEMENTATION: Added Goal Trends capability to Analytics. Implemented `GoalTrendChart` vector visualization with Target vs Actual series, uncapped completion percentages, tooltips, accessible legend, and screen-reader data table. Added 4 high-value summary metrics (`Goal Reached`, `Success Rate`, `Average Daily`, `Current Streak`) powered by `calculateGoalTrends`. Connected date range toolbar controls (`30d`, `90d`, `180d`, `1y`) and profile timezone semantics. Backend audits confirmed `public.goals` and `rpc_get_goal_progress` already preserve historical targets per effective period window without rewriting prior targets.
+
+LOCAL EVIDENCE: Typecheck PASS; 25/25 test files PASS, 223/223 unit tests PASS (including 20 targeted unit tests in `tests/unit/m8-goal-trends.test.ts` covering scenarios A through H and Section 22 UI behavior); production build PASS (369ms).
+
+DATABASE / MIGRATION IMPACT: NONE. 100% reuse of existing backend tables (`public.goals`) and RPCs (`rpc_get_goal_progress`).
+
+NEXT EXACT ACTION: Stage exact paths, commit and push feature branch `feature/2.1f-analytics-goal-trends`, observe branch CI, merge to development, observe development CI, and stop.
+
+Report: `feature-upgrade-2.1/2.1-F_IMPLEMENTATION_REPORT.md`.
+
 ## >>> JOBQUEST 2.1-C — APPLICATION GROUPING (2026-10-06) <<<
 
 PHASE: 2.1-C | STATUS: IMPLEMENTED ON FEATURE BRANCH — PENDING COMMITS & CI VERIFICATION

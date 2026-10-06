@@ -1995,6 +1995,13 @@ button.chip:focus-visible,
   padding: 6px 16px;
   border-bottom: 1px solid var(--color-border);
 }
+.trow.has-chk {
+  grid-template-columns: 20px 26px minmax(0, 1fr) 110px 100px 120px 96px;
+}
+.trow-chk {
+  display: flex;
+  align-items: center;
+}
 .trow:last-child {
   border-bottom: 0;
 }
@@ -2007,6 +2014,9 @@ button.chip:focus-visible,
 }
 .trow.compact {
   grid-template-columns: 26px minmax(0, 1fr) auto auto;
+}
+.trow.compact.has-chk {
+  grid-template-columns: 20px 26px minmax(0, 1fr) auto auto;
 }
 .trow-main {
   all: unset;
@@ -2093,6 +2103,19 @@ button.chip:focus-visible,
 }
 .dash-queue {
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dash-queue .card-h {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-surface-1);
+}
+.dash-queue-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .dash-int,
 .dash-quiet {
@@ -2406,6 +2429,13 @@ button.chip:focus-visible,
     grid-template-columns: 26px minmax(0, 1fr) auto;
     grid-template-areas: "c main act" "c due due";
     row-gap: 2px;
+  }
+  .trow.has-chk {
+    grid-template-columns: 20px 26px minmax(0, 1fr) auto;
+    grid-template-areas: "chk c main act" "chk c due due";
+  }
+  .trow-chk {
+    grid-area: chk;
   }
   .trow > .circ-btn {
     grid-area: c;
@@ -2978,6 +3008,9 @@ button.chip:focus-visible,
   background: var(--color-surface-1);
   box-shadow: var(--shadow-card);
 }
+.analytics-kpis-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .analytics-kpi {
   min-width: 0;
   padding: 10px 14px;
@@ -3087,6 +3120,9 @@ button.chip:focus-visible,
   height: 8px;
   border-radius: 50%;
   background: var(--chart-4);
+}
+.legend-met-dot {
+  background: var(--color-success);
 }
 .legend-line {
   width: 13px;
@@ -3425,6 +3461,48 @@ button.chip:focus-visible,
   margin-bottom: 6px;
   font-size: var(--font-size-xs);
 }
+.goal-trend-card {
+  margin-top: 4px;
+}
+.goal-trend-wrap {
+  min-width: 0;
+  overflow: hidden;
+}
+.goal-trend-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.goal-trend-bar {
+  fill: color-mix(in oklch, var(--chart-1) 25%, var(--color-surface-1));
+  stroke: var(--chart-1);
+  stroke-width: 0.8;
+  transition: opacity 0.15s ease;
+}
+.goal-trend-bar.met {
+  fill: color-mix(in oklch, var(--color-success) 24%, var(--color-surface-1));
+  stroke: var(--color-success);
+}
+.goal-trend-bar.no-goal {
+  fill: var(--color-surface-3);
+  stroke: var(--color-border);
+}
+.goal-trend-target-dot {
+  fill: var(--chart-3);
+  stroke: var(--color-surface-1);
+  stroke-width: 1.2;
+}
+.goal-trend-empty {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: 24px;
+}
 .attainment-strip {
   height: 125px;
   display: grid;
@@ -3642,6 +3720,162 @@ button.chip:focus-visible,
 .pulse-goal .goal-ring-inner span {
   font-size: 8px;
 }
+
+/* Daily Goal & Metrics (Phase 2.1-B) */
+.dash-daily-goal-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-1);
+  box-shadow: var(--shadow-card);
+  padding: 14px 20px;
+}
+.dash-daily-goal-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.dash-daily-goal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.dash-daily-goal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dash-daily-goal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dash-daily-goal-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.dash-daily-goal-pill.met {
+  background: var(--color-success-bg, rgba(16, 185, 129, 0.12));
+  color: var(--color-success);
+}
+.dash-daily-goal-pill.in-progress {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+.dash-daily-goal-main {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.dash-daily-goal-counts {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.dash-daily-goal-today strong,
+.dash-daily-goal-target strong {
+  font-size: 24px;
+  color: var(--color-text);
+}
+.dash-daily-goal-today,
+.dash-daily-goal-target {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.dash-daily-goal-divider {
+  color: var(--color-border);
+  margin: 0 4px;
+}
+.dash-daily-goal-pct-badge {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+.dash-daily-goal-pct-badge strong {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+.dash-daily-goal-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  flex-wrap: wrap;
+}
+.dash-daily-goal-meta strong {
+  color: var(--color-text);
+}
+.dash-daily-goal-visual .goal-ring {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+}
+.dash-daily-goal-visual .goal-ring-inner {
+  width: 52px;
+  height: 52px;
+}
+.dash-daily-goal-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dash-daily-goal-empty-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-daily-goal-empty-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+.dash-daily-goal-empty-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.dash-daily-goal-empty-metrics strong {
+  color: var(--color-text);
+}
+.dot-sep {
+  color: var(--color-border);
+}
+.btn-linkish {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.btn-linkish:hover {
+  color: var(--color-primary-hover);
+}
+
 .dashboard-zone-loading {
   min-height: 105px;
   grid-template-columns: repeat(3, 1fr);
@@ -3973,6 +4207,16 @@ button.chip:focus-visible,
   }
   .dash .trow-act .btn svg {
     margin: 0;
+  }
+  .dash-daily-goal-body {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+  .dash-daily-goal-visual {
+    align-self: flex-start;
+  }
+  .dash-queue-scroll {
+    max-height: 400px;
   }
 }
 

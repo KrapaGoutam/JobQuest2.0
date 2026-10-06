@@ -22,6 +22,9 @@ function mergeCaptures(candidates, fallbackUrl = "") {
     salaryCurrency: "",
     salaryRange: "",
     description: "",
+    responsibilities: [],
+    requirements: [],
+    skills: [],
     jobUrl: fallbackUrl,
     source: "",
     confidence: "none",
@@ -49,6 +52,15 @@ function mergeCaptures(candidates, fallbackUrl = "") {
       result.salaryRange = item.salaryRange
     if (!result.description && item.description)
       result.description = item.description
+    
+    // Arrays
+    if (result.responsibilities.length === 0 && item.responsibilities?.length > 0)
+      result.responsibilities = item.responsibilities
+    if (result.requirements.length === 0 && item.requirements?.length > 0)
+      result.requirements = item.requirements
+    if (result.skills.length === 0 && item.skills?.length > 0)
+      result.skills = item.skills
+
     if ((!result.jobUrl || result.jobUrl === fallbackUrl) && item.jobUrl)
       result.jobUrl = item.jobUrl
     if (!result.source && item.source) result.source = item.source

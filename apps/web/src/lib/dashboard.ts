@@ -1,3 +1,6 @@
+import { dayKey, previousDayKey } from "./time";
+import type { GoalProgressResponse } from "../types/analytics";
+
 export type DashboardWidgetKind =
   "kpi" | "goal" | "chart" | "insight" | "activity" | "action";
 export type DashboardTierId = "actions" | "pipeline" | "context";
@@ -340,4 +343,96 @@ export function weeklyPulseDelta(
   return ordered.length < 2
     ? 0
     : ordered.at(-1)![metric] - ordered.at(-2)![metric];
+}
+
+export interface DailyGoalCalculationInput {
+  today?: { total_applications?: number } | null;
+  goalProgress?: GoalProgressResponse | null;
+  applications: Array<{ applied_at?: string | null }>;
+  timeZone: string;
+}
+
+export interface DailyGoalMetrics {
+  hasGoal: boolean;
+  todayCount: number;
+  yesterdayCount: number;
+  target: number | null;
+  remaining: number | null;
+  percentage: number | null;
+  isMet: boolean;
+  isExceeded: boolean;
+  yesterdayDelta: number;
+}
+
+export function calculateDailyGoalMetrics(
+  data: DailyGoalCalculationInput,
+  now: number = Date.now(),
+): DailyGoalMetrics {
+  const timeZone = data.timeZone || "UTC";
+  const todayKey = dayKey(now, timeZone);
+  const yesterdayKey = previousDayKey(todayKey);
+
+  const dailyGoal = data.goalProgress?.active_goals?.find(
+    (g) =>
+      g.goal_type === "APPLICATIONS" &&
+      g.period_type === "DAILY" &&
+      g.is_enabled !== false,
+  );
+
+  const hasGoal = Boolean(
+    dailyGoal &&
+      typeof dailyGoal.target_value === "number" &&
+      dailyGoal.target_value > 0,
+  );
+  const target = hasGoal && dailyGoal ? dailyGoal.target_value : null;
+
+  // Today's applications count: prefer daily goal's certified actual if goal is active,
+  // else fallback to today.total_applications or direct applications filter
+  const todayCount =
+    hasGoal && dailyGoal && typeof dailyGoal.actual === "number"
+      ? dailyGoal.actual
+      : (data.today?.total_applications ??
+        data.applications.filter(
+          (a) =>
+            Boolean(a.applied_at) &&
+            dayKey(a.applied_at!, timeZone) === todayKey,
+        ).length);
+
+  // Yesterday's applications count: prefer goal history if present, else filter applications
+  const yesterdayHistory = data.goalProgress?.history?.find(
+    (h) =>
+      h.goal_type === "APPLICATIONS" &&
+      h.period_type === "DAILY" &&
+      h.period_start === yesterdayKey,
+  );
+  const yesterdayCount =
+    yesterdayHistory !== undefined &&
+    typeof yesterdayHistory.actual === "number"
+      ? yesterdayHistory.actual
+      : data.applications.filter(
+          (a) =>
+            Boolean(a.applied_at) &&
+            dayKey(a.applied_at!, timeZone) === yesterdayKey,
+        ).length;
+
+  const remaining = target !== null ? Math.max(0, target - todayCount) : null;
+  const percentage =
+    target !== null && target > 0
+      ? Math.round((todayCount / target) * 100)
+      : null;
+  const isMet = target !== null ? todayCount >= target : false;
+  const isExceeded = target !== null ? todayCount > target : false;
+  const yesterdayDelta = todayCount - yesterdayCount;
+
+  return {
+    hasGoal,
+    todayCount,
+    yesterdayCount,
+    target,
+    remaining,
+    percentage,
+    isMet,
+    isExceeded,
+    yesterdayDelta,
+  };
 }

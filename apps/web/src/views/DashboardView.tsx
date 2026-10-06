@@ -427,7 +427,11 @@ export function DashboardView({
           <div className="skel" />
         </div>
       ) : (
-        <SearchPulse data={widgetData} enabled={enabledWidgets} />
+        <SearchPulse
+          data={widgetData}
+          enabled={enabledWidgets}
+          onNavigate={onNavigate}
+        />
       )}
 
       <div className="zone-heading">
@@ -470,7 +474,7 @@ export function DashboardView({
               description="Nothing is overdue or due today."
             />
           ) : (
-            <>
+            <div className="dash-queue-scroll">
               {s.overdue.length > 0 && (
                 <div role="group" aria-label="Overdue">
                   <div className="band danger">
@@ -509,7 +513,7 @@ export function DashboardView({
                   ))}
                 </div>
               )}
-            </>
+            </div>
           )}
         </section>
 

@@ -1,16 +1,65 @@
+## >>> JOBQUEST 2.1-F — ANALYTICS GOAL TRENDS (2026-10-06) <<<
+
+PHASE: 2.1-F | STATUS: IMPLEMENTED ON FEATURE BRANCH — READY FOR COMMIT & BRANCH CI
+
+FEATURE BRANCH: `feature/2.1f-analytics-goal-trends` | BASE DEVELOPMENT SHA: `cda70cf4e282856ae6028b484747f72eb2cc8f97`
+
+IMPLEMENTATION: Added Goal Trends capability to Analytics. Implemented `GoalTrendChart` vector visualization with Target vs Actual series, uncapped completion percentages, tooltips, accessible legend, and screen-reader data table. Added 4 high-value summary metrics (`Goal Reached`, `Success Rate`, `Average Daily`, `Current Streak`) powered by `calculateGoalTrends`. Connected date range toolbar controls (`30d`, `90d`, `180d`, `1y`) and profile timezone semantics. Backend audits confirmed `public.goals` and `rpc_get_goal_progress` already preserve historical targets per effective period window without rewriting prior targets.
+
+LOCAL EVIDENCE: Typecheck PASS; 25/25 test files PASS, 223/223 unit tests PASS (including 20 targeted unit tests in `tests/unit/m8-goal-trends.test.ts` covering scenarios A through H and Section 22 UI behavior); production build PASS (369ms).
+
+DATABASE / MIGRATION IMPACT: NONE. 100% reuse of existing backend tables (`public.goals`) and RPCs (`rpc_get_goal_progress`).
+
+NEXT EXACT ACTION: Stage exact paths, commit and push feature branch `feature/2.1f-analytics-goal-trends`, observe branch CI, merge to development, observe development CI, and stop.
+
+Report: `feature-upgrade-2.1/2.1-F_IMPLEMENTATION_REPORT.md`.
+
+## >>> JOBQUEST 2.1-C — APPLICATION GROUPING (2026-10-06) <<<
+
+PHASE: 2.1-C | STATUS: IMPLEMENTED ON FEATURE BRANCH — PENDING COMMITS & CI VERIFICATION
+
+FEATURE BRANCH: `feature/2.1c-application-date-grouping` | BASE DEVELOPMENT SHA: `75a80488841c657b6f6849bd160b136eb42f79c3`
+
+IMPLEMENTATION: Added Day-level grouping ("Group by Date") alongside "Group by Month". Extended toolbar controls with mutually exclusive grouping (None, Date, Month). Implemented `groupApplicationsByDate`, `getApplicationGroupingDate`, and hardened `groupApplicationsByMonth` with missing-date fallback ("No application date"). Preserved pagination, filters, active sort, and timezone semantics.
+
+LOCAL EVIDENCE: Typecheck PASS; unit tests 203/203 PASS (including targeted 10 new tests in `m3-applications.test.ts`); build PASS.
+
+DATABASE / MIGRATION IMPACT: NONE. 100% frontend reuse of existing application records and `created_at` / `applied_at` date semantics.
+
+NEXT EXACT ACTION: Stage exact paths, commit and push feature branch `feature/2.1c-application-date-grouping`, observe branch CI, merge to development, observe development CI, and stop.
+
+Report: `feature-upgrade-2.1/2.1-C_IMPLEMENTATION_REPORT.md`.
+
+## >>> JOBQUEST 2.1-B — DASHBOARD GOAL + DAILY METRICS (2026-10-06) <<<
+
+PHASE: 2.1-B | STATUS: IMPLEMENTED ON FEATURE BRANCH — PENDING COMMITS & CI VERIFICATION
+
+FEATURE BRANCH: `feature/2.1b-dashboard-goal-metrics` | BASE DEVELOPMENT SHA: `b4400f06acc34bc74ce71af3d7adf397ab32b2c9`
+
+IMPLEMENTATION: Added Daily Goal Card to SearchPulse zone, enhanced GoalProgress widget, wrapped Today's queue in a contained scroll container with sticky header, implemented timezone-safe date subtraction (`previousDayKey`) and goal metrics calculation (`calculateDailyGoalMetrics`).
+
+LOCAL EVIDENCE: Typecheck PASS; unit tests 193/193 PASS (including targeted 13/13 in `m9-dashboard.test.ts`); build PASS.
+
+DATABASE / MIGRATION IMPACT: NONE. 100% reuse of existing backend RPCs and queries (`rpc_get_goal_progress`, `rpc_get_analytics_overview`, `fetchDashboardApplications`).
+
+NEXT EXACT ACTION: Review diff, stage exact paths, commit and push feature branch `feature/2.1b-dashboard-goal-metrics`, observe branch CI, merge to development, observe development CI, and stop.
+
+Report: `feature-upgrade-2.1/2.1-B_IMPLEMENTATION_REPORT.md`.
+
 ## >>> JOBQUEST 2.1-A — RESUME VERSION / ATTACHED DOCUMENT FIX (2026-10-05) <<<
 
-PHASE: 2.1-A | STATUS: IMPLEMENTED ON FIX BRANCH — AWAITING OPERATOR APPROVAL
+PHASE: 2.1-A | STATUS: PROMOTED TO MAIN & DEPLOYED TO PRODUCTION — AWAITING OPERATOR MANUAL ACCEPTANCE
 
-CURRENT BRANCH: `fix/2.1a-resume-version-visibility` | BASE: `development`
+FIX BRANCH: `fix/2.1a-resume-version-visibility` (retained) | FIX SHA: `b3412bb9c964972b55bf970de6d9213548ae1d59` | FIX CI: `37408524474` (PASS)
+DEVELOPMENT SHA: `b4400f06acc34bc74ce71af3d7adf397ab32b2c9` | DEV CI: `37409345201` (rerun PASS)
+MAIN BEFORE: `74e9d225ebb739a9ddb5348f7548cca9fbe6f7ba` | MAIN SHA: `c5eaaafc98b70b36d83f64038338b73c464cfd3b` | MAIN CI: `37411431957` (PASS)
+PRODUCTION DEPLOYMENT: `dpl_6xU9HwNM58tM11nZdBaEx14XPTjo` (READY) | URL: `https://jobquest2.vercel.app`
 
 IMPLEMENTATION: Added `label` to `ApplicationDocumentRecord` in `types/documents.ts` and updated `ApplicationDocumentsSection.tsx` to display `item.label` (if present) over `resume.name`, defaulting to "Attached Document" as a final fallback.
 
-LOCAL EVIDENCE: `npx tsc --noEmit` PASS. No dedicated UI component test file was found to break. 
+VERIFICATION: Client bundle `/assets/index-BJxPZYzx.js` verified serving updated label logic. Production HTTP 200. No schema/migration changes.
 
-PROTECTION STATE: `development` and `main` remain unchanged. Production and database schema are untouched.
-
-NEXT EXACT ACTION: Operator manually validates 2.1-A and approves or rejects promotion to `development`.
+NEXT EXACT ACTION: Operator conducts manual acceptance in production. Upon acceptance, formally close Phase 2.1-A and begin Phase 2.1-B in a new session.
 
 Report: `feature-upgrade-2.1/2.1-A_IMPLEMENTATION_REPORT.md`.
 
@@ -644,3 +693,15 @@ Focused manual retest of the unpacked extension against the Step 13A Preview dep
 After operator confirms PASS on this focused duplicate retest:
 - **Step 13B:** Focused Claude Opus / High independent security review on the exact remediation delta to confirm closure of B1 and B2.
 - **Promotion & Cutover:** Merges to `development` and `main`, production deployment, and production verification remain strictly paused until separately authorized.
+
+## JobQuest 2.1-E Implementation
+**Branch:** `feature/2.1e-extension-ai-job-json`
+**Status:** Completed and ready for CI/merge
+
+Work accomplished:
+1. Enhanced extension extractor (`generic.js`) to capture `responsibilities`, `requirements`, and `skills` as structured lists natively parsed from standard headings.
+2. Verified database schema support: `rpc_extension_capture` and `job_snapshots` implicitly support the new fields in `raw_payload`.
+3. Created a canonical serializer `ai-job-json` across both the extension and web app to ensure consistent, non-leaky JSON output for AI tailoring.
+4. Added UI actions ("Copy Job JSON") to both the extension side panel and the web app's Application Detail Drawer.
+5. Added rigorous unit tests ensuring payload structure correctness and null-safety.
+6. Workspace typechecks cleanly. Ready for branch CI and merge to `development`.

@@ -10,9 +10,10 @@ import type { Interview } from "../../types/interviews";
 import type { QueueItem } from "../../lib/queue";
 import type { QuietApplication } from "../../api/tasks";
 import type { DashboardApplication } from "../../api/dashboard";
-import type {
-  DashboardWidgetDefinition,
-  DashboardWidgetLayout,
+import {
+  calculateDailyGoalMetrics,
+  type DashboardWidgetDefinition,
+  type DashboardWidgetLayout,
 } from "../../lib/dashboard";
 import { dayKey, formatInZone } from "../../lib/time";
 import { PaceChart } from "../analytics/AnalyticsCharts";
@@ -94,12 +95,82 @@ function Bars({ rows }: { rows: Array<{ label: string; value: number }> }) {
 function GoalProgress({
   data,
   period,
+  onNavigate,
 }: {
   data: DashboardWidgetData;
   period: "day" | "week";
+  onNavigate?: (path: string) => void;
 }) {
-  const goal = data.goalProgress?.active_goals.find((item) =>
-    item.goal_type === 'APPLICATIONS' && item.period_type === (period === 'day' ? 'DAILY' : 'WEEKLY'));
+  if (period === "day") {
+    const metrics = calculateDailyGoalMetrics(data);
+    if (!metrics.hasGoal) {
+      return (
+        <div className="col" style={{ gap: 6 }}>
+          <p className="small muted dash-widget-empty">
+            No daily application goal configured.
+          </p>
+          {onNavigate && (
+            <button
+              type="button"
+              className="linkish small"
+              onClick={() => onNavigate("/analytics")}
+            >
+              Configure in Analytics
+            </button>
+          )}
+        </div>
+      );
+    }
+    const deltaText =
+      metrics.yesterdayDelta > 0
+        ? `+${metrics.yesterdayDelta} vs yesterday`
+        : metrics.yesterdayDelta < 0
+          ? `${metrics.yesterdayDelta} vs yesterday`
+          : "Same as yesterday";
+
+    return (
+      <div className="dash-goal">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <div className="row" style={{ gap: 6 }}>
+            <Target size={16} aria-hidden="true" />
+            <strong>
+              Today: {metrics.todayCount} / {metrics.target}
+            </strong>
+          </div>
+          <span className="muted small font-medium">
+            {metrics.percentage}%
+          </span>
+        </div>
+        <div
+          className="dash-progress"
+          role="progressbar"
+          aria-label={`${metrics.todayCount} of ${metrics.target} applications`}
+          aria-valuemin={0}
+          aria-valuemax={metrics.target!}
+          aria-valuenow={Math.min(metrics.todayCount, metrics.target!)}
+        >
+          <i style={{ width: `${Math.min(100, metrics.percentage!)}%` }} />
+        </div>
+        <div
+          className="row small muted"
+          style={{ justifyContent: "space-between", marginTop: 2 }}
+        >
+          <span>
+            {metrics.isExceeded
+              ? `${metrics.todayCount - metrics.target!} over goal`
+              : `${metrics.remaining} remaining`}
+          </span>
+          <span>
+            Yesterday: {metrics.yesterdayCount} ({deltaText})
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const goal = data.goalProgress?.active_goals.find(
+    (item) => item.goal_type === "APPLICATIONS" && item.period_type === "WEEKLY",
+  );
   if (!goal)
     return (
       <p className="small muted dash-widget-empty">
@@ -128,7 +199,7 @@ function GoalProgress({
       >
         <i style={{ width: `${pct}%` }} />
       </div>
-      <span className="small muted">Applications this {period}</span>
+      <span className="small muted">Applications this week</span>
     </div>
   );
 }
@@ -184,7 +255,11 @@ function RecentApplications({
   );
 }
 
-function content(id: string, data: DashboardWidgetData) {
+function content(
+  id: string,
+  data: DashboardWidgetData,
+  onNavigate?: (path: string) => void,
+) {
   const activeCount = data.applications.filter(
     (application) => application.status === "OPEN",
   ).length;
@@ -259,13 +334,13 @@ function content(id: string, data: DashboardWidgetData) {
     case "acceptances":
       return <Metric value={data.all.accepted_count} label="accepted" />;
     case "daily-goals":
-      return <GoalProgress data={data} period="day" />;
+      return <GoalProgress data={data} period="day" onNavigate={onNavigate} />;
     case "daily-goal-chart":
-      return <GoalProgress data={data} period="day" />;
+      return <GoalProgress data={data} period="day" onNavigate={onNavigate} />;
     case "weekly-goals":
-      return <GoalProgress data={data} period="week" />;
+      return <GoalProgress data={data} period="week" onNavigate={onNavigate} />;
     case "goal-comparison":
-      return <GoalProgress data={data} period="week" />;
+      return <GoalProgress data={data} period="week" onNavigate={onNavigate} />;
     case "activity-chart":
       return <PaceChart points={data.all.weekly_pacing} compact />;
     case "job-funnel":
@@ -433,7 +508,9 @@ export function DashboardWidgetCard({
           </button>
         )}
       </header>
-      <div className="dash-widget-body">{content(definition.id, data)}</div>
+      <div className="dash-widget-body">
+        {content(definition.id, data, onNavigate)}
+      </div>
     </article>
   );
 }

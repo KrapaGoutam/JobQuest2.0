@@ -110,6 +110,13 @@ export function dayKey(iso: string | number, timeZone: string): string {
   return utcIsoToZonedWallTime(typeof iso === 'number' ? new Date(iso).toISOString() : iso, timeZone).date;
 }
 
+/** Calendar day key ('YYYY-MM-DD') of the previous day for a given day key ('YYYY-MM-DD'). */
+export function previousDayKey(key: string): string {
+  const [y, m, d] = key.split('-').map(Number);
+  const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
+  return prev.toISOString().slice(0, 10);
+}
+
 /** Whole calendar days from `fromKey` to `toKey` (both 'YYYY-MM-DD'). */
 export function daysBetweenKeys(fromKey: string, toKey: string): number {
   const p = (k: string) => {

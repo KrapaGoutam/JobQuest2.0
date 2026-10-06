@@ -1,4 +1,4 @@
-import { Fragment, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
 import { StatusBadge } from '../ui/StatusBadge';
 import { StagePips, PriorityBars } from '../ui/StagePips';
@@ -21,7 +21,7 @@ import { calculateDaysInactive, computeAgingBand } from '../../types/application
 import type { Application, ApplicationSort, CanonicalWorkflow } from '../../types/applications';
 import type { WorkspaceMemberInfo } from '../../api/applications';
 import { formatInZone } from '../../lib/time';
-import { groupApplicationsByMonth } from '../../lib/applicationProductivity';
+import { groupApplicationsByDate, groupApplicationsByMonth, type ApplicationGrouping } from '../../lib/applicationProductivity';
 
 export interface ApplicationsTableProps {
   applications: Application[];
@@ -45,6 +45,7 @@ export interface ApplicationsTableProps {
   onRestore: (appId: string) => Promise<void>;
   onOpenCreate: () => void;
   onClearFilters: () => void;
+  groupBy?: ApplicationGrouping;
   groupByMonth?: boolean;
   timeZone?: string;
 }
@@ -178,6 +179,7 @@ export function ApplicationsTable({
   onRestore,
   onOpenCreate,
   onClearFilters,
+  groupBy,
   groupByMonth = false,
   timeZone = 'UTC',
 }: ApplicationsTableProps) {
@@ -187,6 +189,19 @@ export function ApplicationsTable({
     const m = members.find((x) => x.user_id === userId);
     return m ? m.display_name || m.username : 'Member';
   };
+
+  const activeGrouping: ApplicationGrouping = groupBy ?? (groupByMonth ? 'month' : 'none');
+  const isGrouped = activeGrouping !== 'none';
+  const groupDirection = sort.field === 'created_at' || sort.field === 'applied_at' ? sort.direction : 'desc';
+  const groups = useMemo(() => {
+    if (activeGrouping === 'date') {
+      return groupApplicationsByDate(applications, timeZone, groupDirection);
+    }
+    if (activeGrouping === 'month') {
+      return groupApplicationsByMonth(applications, timeZone, groupDirection);
+    }
+    return [{ key: 'all', label: '', applications }];
+  }, [activeGrouping, applications, timeZone, groupDirection]);
 
   if (loading && applications.length === 0) {
     return (
@@ -220,9 +235,6 @@ export function ApplicationsTable({
 
   // Mobile (<768px): card list; tapping a card opens the full-screen detail sheet.
   if (isMobile) {
-    const groups = groupByMonth
-      ? groupApplicationsByMonth(applications, timeZone, sort.field === 'created_at' ? sort.direction : 'desc')
-      : [{ key: 'all', label: '', applications }];
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <label className="application-mobile-select-all">
@@ -238,13 +250,13 @@ export function ApplicationsTable({
           <span>{isAllSelected ? `All ${applications.length} applications on this page selected` : `Select all ${applications.length} applications on this page`}</span>
         </label>
         {groups.map((group) => (
-          <section key={group.key} aria-labelledby={groupByMonth ? `application-month-${group.key}` : undefined}>
-            {groupByMonth && (
-              <h2 id={`application-month-${group.key}`} style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+          <section key={group.key} aria-labelledby={isGrouped ? (activeGrouping === 'month' ? `application-month-${group.key}` : `application-date-${group.key}`) : undefined}>
+            {isGrouped && (
+              <h2 id={activeGrouping === 'month' ? `application-month-${group.key}` : `application-date-${group.key}`} style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
                 {group.label} <span className="muted">({group.applications.length})</span>
               </h2>
             )}
-            <ul aria-label={groupByMonth ? `Applications added in ${group.label}` : 'Applications list'} style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <ul aria-label={isGrouped ? (activeGrouping === 'month' ? `Applications added in ${group.label}` : `Applications on ${group.label}`) : 'Applications list'} style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {group.applications.map((app) => (
                 <li
                   key={app.id}
@@ -357,12 +369,9 @@ export function ApplicationsTable({
         </TableHeader>
 
         <TableBody>
-          {(groupByMonth
-            ? groupApplicationsByMonth(applications, timeZone, sort.field === 'created_at' ? sort.direction : 'desc')
-            : [{ key: 'all', label: '', applications }]
-          ).map((group) => (
+          {groups.map((group) => (
             <Fragment key={group.key}>
-              {groupByMonth && (
+              {isGrouped && (
                 <tr style={{ background: 'var(--color-surface-2)' }}>
                   <th colSpan={10} scope="colgroup" style={{ padding: '9px 12px', textAlign: 'left' }}>
                     <h2 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>

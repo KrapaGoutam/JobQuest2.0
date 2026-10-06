@@ -677,3 +677,15 @@ Focused manual retest of the unpacked extension against the Step 13A Preview dep
 After operator confirms PASS on this focused duplicate retest:
 - **Step 13B:** Focused Claude Opus / High independent security review on the exact remediation delta to confirm closure of B1 and B2.
 - **Promotion & Cutover:** Merges to `development` and `main`, production deployment, and production verification remain strictly paused until separately authorized.
+
+## JobQuest 2.1-E Implementation
+**Branch:** `feature/2.1e-extension-ai-job-json`
+**Status:** Completed and ready for CI/merge
+
+Work accomplished:
+1. Enhanced extension extractor (`generic.js`) to capture `responsibilities`, `requirements`, and `skills` as structured lists natively parsed from standard headings.
+2. Verified database schema support: `rpc_extension_capture` and `job_snapshots` implicitly support the new fields in `raw_payload`.
+3. Created a canonical serializer `ai-job-json` across both the extension and web app to ensure consistent, non-leaky JSON output for AI tailoring.
+4. Added UI actions ("Copy Job JSON") to both the extension side panel and the web app's Application Detail Drawer.
+5. Added rigorous unit tests ensuring payload structure correctness and null-safety.
+6. Workspace typechecks cleanly. Ready for branch CI and merge to `development`.

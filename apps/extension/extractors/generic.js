@@ -520,6 +520,81 @@ export function extractDescription(doc) {
 }
 
 /**
+ * Extracts structured lists from the job description area based on preceding headings.
+ */
+export function extractStructuredLists(doc) {
+  const result = {
+    responsibilities: [],
+    requirements: [],
+    skills: []
+  }
+
+  const containerSelectors = [
+    "[class*='job-description']",
+    "[class*='jobDescription']",
+    "[class*='description-body']",
+    "[data-testid*='description']",
+    "#job-description",
+    ".job-description",
+    "article.job-description-body",
+    "main section.job-description",
+    "main article",
+  ]
+
+  let descContainer = null;
+  for (const selector of containerSelectors) {
+    const el = doc.querySelector(selector)
+    if (el) {
+      descContainer = el;
+      break;
+    }
+  }
+
+  // If no specific container, fallback to the body but it's riskier. We'll stick to doc
+  const targetDoc = descContainer || doc;
+
+  const headings = targetDoc.querySelectorAll('h1, h2, h3, h4, h5, h6, b, strong, p > strong');
+  
+  for (const heading of headings) {
+    const text = cleanText(heading.textContent).toLowerCase();
+    
+    let targetList = null;
+    if (/responsibilit(?:y|ies)|what you'll do|role|duties|what we expect/.test(text)) {
+      targetList = result.responsibilities;
+    } else if (/requirement|qualification|what you need|who you are|what we're looking for|experience/.test(text)) {
+      targetList = result.requirements;
+    } else if (/skill|tech(?:nolog(?:y|ies))?|tool/.test(text)) {
+      targetList = result.skills;
+    }
+
+    if (targetList) {
+      let next = heading.nextElementSibling;
+      while (next && !['ul', 'ol'].includes(next.tagName.toLowerCase())) {
+        if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(next.tagName.toLowerCase())) {
+          // Stopped by another heading
+          break;
+        }
+        next = next.nextElementSibling;
+      }
+
+      if (next && ['ul', 'ol'].includes(next.tagName.toLowerCase())) {
+        const lis = next.querySelectorAll('li');
+        for (const li of lis) {
+          const liText = cleanText(li.textContent);
+          if (liText && liText.length > 2) {
+             if (!targetList.includes(liText)) {
+                targetList.push(liText);
+             }
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Main Generic Extractor entry point.
  */
 export function extractGeneric(doc, pageUrl = "") {
@@ -583,6 +658,9 @@ export function extractGeneric(doc, pageUrl = "") {
   const employmentType = extractEmploymentType(doc)
   const salary = extractSalary(doc)
   const description = extractDescription(doc)
+  
+  // Extract Structured Lists
+  const structuredLists = extractStructuredLists(doc)
 
   // 6. Source is the hostname / platform
   let source = hostname.replace(/^www\./i, "")
@@ -598,6 +676,9 @@ export function extractGeneric(doc, pageUrl = "") {
     salaryCurrency: salary.salaryCurrency,
     salaryRange: salary.salaryRange,
     description,
+    responsibilities: structuredLists.responsibilities,
+    requirements: structuredLists.requirements,
+    skills: structuredLists.skills,
     jobUrl: pageUrl,
     source,
     confidence: "generic",

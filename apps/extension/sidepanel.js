@@ -24,6 +24,7 @@ import {
   saveTheme,
   testConnection,
 } from './api/jobquest.js';
+import { generateAIJobJson } from './serializers/ai-job-json.js';
 import {
   buildCaptureDraft,
   classifyConnectionScreen,
@@ -1126,6 +1127,18 @@ function setupCaptureFallbackActions() {
     userManuallyToggledDetails = false;
     renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level));
   });
+
+  button('footer-copy-json').addEventListener('click', () => {
+    try {
+      const json = generateAIJobJson(captured);
+      navigator.clipboard.writeText(json).then(() => {
+        showToast('AI JSON copied to clipboard');
+      }).catch(() => showToast('Failed to copy JSON'));
+    } catch (err) {
+      showToast('Error generating AI JSON');
+    }
+  });
+
   button('offline-retry').addEventListener('click', () => void initialize());
   button('offline-open-settings').addEventListener('click', () => { viewBeforeSettings = 'capture'; void openSettings(); });
 }

@@ -28,6 +28,7 @@ import { ApplicationDocumentsSection } from '../documents/ApplicationDocumentsSe
 import { DoneSetNextDialog } from '../tasks/DoneSetNextDialog';
 import { useProfileTimeZone } from '../../hooks/useProfileTimeZone';
 import { ApplicationContactsSection } from './ApplicationContactsSection';
+import { generateAIJobJson } from '../../lib/aiJobJson';
 
 export interface ApplicationDetailDrawerProps {
   isOpen: boolean;
@@ -73,6 +74,7 @@ export function ApplicationDetailDrawer({
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('timeline');
   const [keepingActive, setKeepingActive] = useState(false);
+  const [copiedJSON, setCopiedJSON] = useState(false);
 
   const [eventsError, setEventsError] = useState<string | null>(null);
   const appId = application?.id ?? null;
@@ -368,6 +370,20 @@ export function ApplicationDetailDrawer({
             {/* Snapshot Tab */}
             <TabPanel id="snapshot">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const json = generateAIJobJson(application);
+                      navigator.clipboard.writeText(json).then(() => {
+                        setCopiedJSON(true);
+                        setTimeout(() => setCopiedJSON(false), 2000);
+                      }).catch(console.error);
+                    }}
+                  >
+                    {copiedJSON ? 'Copied!' : 'Copy for AI Tailoring'}
+                  </Button>
+                </div>
                 {application.job_snapshot ? (
                   <>
                     {application.job_snapshot.skills && (

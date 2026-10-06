@@ -12,6 +12,7 @@ import { validateApplicationFields } from '../../apps/web/src/components/applica
 import { describeEvent } from '../../apps/web/src/components/applications/eventText';
 import {
   dateAddedBounds,
+  groupApplicationsByDate,
   groupApplicationsByMonth,
   sortDirectionLabel,
 } from '../../apps/web/src/lib/applicationProductivity';
@@ -59,6 +60,155 @@ describe('PL-2 application productivity', () => {
     expect(sortDirectionLabel({ field: 'company_name', direction: 'desc' })).toBe('Z to A');
     expect(sortDirectionLabel({ field: 'created_at', direction: 'asc' })).toBe('Oldest to newest');
     expect(sortDirectionLabel({ field: 'created_at', direction: 'desc' })).toBe('Newest to oldest');
+  });
+});
+
+describe('2.1-C Application date grouping', () => {
+  const application = (id: string, createdAt?: string, appliedAt?: string): Application => ({
+    id,
+    created_at: createdAt,
+    applied_at: appliedAt,
+  } as unknown as Application);
+
+  const referenceNow = '2026-10-06T15:00:00Z'; // Today: 2026-10-06, Yesterday: 2026-10-05
+
+  it('Scenario A — groups applications from the same calendar date under one heading', () => {
+    const apps = [
+      application('app-1', '2026-10-04T09:00:00Z'),
+      application('app-2', '2026-10-04T18:30:00Z'),
+    ];
+    const groups = groupApplicationsByDate(apps, 'UTC', 'desc', referenceNow);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.key).toBe('2026-10-04');
+    expect(groups[0]?.label).toBe('October 4, 2026');
+    expect(groups[0]?.applications.map((a) => a.id)).toEqual(['app-1', 'app-2']);
+  });
+
+  it('Scenario B — separates applications from multiple calendar dates into distinct day groups', () => {
+    const apps = [
+      application('app-oct-4', '2026-10-04T12:00:00Z'),
+      application('app-oct-3', '2026-10-03T12:00:00Z'),
+      application('app-sep-28', '2026-09-28T12:00:00Z'),
+    ];
+    const groups = groupApplicationsByDate(apps, 'UTC', 'desc', referenceNow);
+    expect(groups.map((g) => g.label)).toEqual(['October 4, 2026', 'October 3, 2026', 'September 28, 2026']);
+    expect(groups.map((g) => g.key)).toEqual(['2026-10-04', '2026-10-03', '2026-09-28']);
+    expect(groups.map((g) => g.applications.map((a) => a.id))).toEqual([
+      ['app-oct-4'],
+      ['app-oct-3'],
+      ['app-sep-28'],
+    ]);
+  });
+
+  it('Scenario C — labels current-day applications as Today', () => {
+    const apps = [
+      application('app-today-1', '2026-10-06T08:00:00Z'),
+      application('app-today-2', '2026-10-06T14:30:00Z'),
+    ];
+    const groups = groupApplicationsByDate(apps, 'UTC', 'desc', referenceNow);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.key).toBe('2026-10-06');
+    expect(groups[0]?.label).toBe('Today');
+    expect(groups[0]?.applications.map((a) => a.id)).toEqual(['app-today-1', 'app-today-2']);
+  });
+
+  it('Scenario D — labels previous-day applications as Yesterday', () => {
+    const apps = [
+      application('app-yesterday', '2026-10-05T20:00:00Z'),
+    ];
+    const groups = groupApplicationsByDate(apps, 'UTC', 'desc', referenceNow);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.key).toBe('2026-10-05');
+    expect(groups[0]?.label).toBe('Yesterday');
+    expect(groups[0]?.applications.map((a) => a.id)).toEqual(['app-yesterday']);
+  });
+
+  it('Scenario E — preserves Month grouping functionality without regression', () => {
+    const apps = [
+      application('jan-2026', '2026-01-15T12:00:00Z'),
+      application('dec-2025', '2025-12-31T23:00:00Z'),
+      application('jan-2026-b', '2026-01-02T12:00:00Z'),
+    ];
+    const groups = groupApplicationsByMonth(apps, 'UTC', 'desc');
+    expect(groups.map((g) => [g.label, g.applications.map((a) => a.id)])).toEqual([
+      ['January 2026', ['jan-2026', 'jan-2026-b']],
+      ['December 2025', ['dec-2025']],
+    ]);
+  });
+
+  it('Scenario F — default / no grouping retains flat list of applications', () => {
+    const apps = [
+      application('app-1', '2026-10-04T12:00:00Z'),
+      application('app-2', '2026-10-03T12:00:00Z'),
+    ];
+    // Flat grouping convention
+    const noGrouping = [{ key: 'all', label: '', applications: apps }];
+    expect(noGrouping).toHaveLength(1);
+    expect(noGrouping[0]?.applications).toBe(apps);
+    expect(noGrouping[0]?.label).toBe('');
+  });
+
+  it('Scenario G — handles missing or invalid dates safely with fallback label', () => {
+    const apps = [
+      application('app-dated', '2026-10-04T12:00:00Z'),
+      application('app-no-date-1', undefined, undefined),
+      application('app-no-date-2', '', ''),
+      application('app-invalid-date', 'not-a-valid-date'),
+    ];
+    const groups = groupApplicationsByDate(apps, 'UTC', 'desc', referenceNow);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.label).toBe('October 4, 2026');
+    expect(groups[1]?.key).toBe('undated');
+    expect(groups[1]?.label).toBe('No application date');
+    expect(groups[1]?.applications.map((a) => a.id)).toEqual([
+      'app-no-date-1',
+      'app-no-date-2',
+      'app-invalid-date',
+    ]);
+
+    // Also verify groupApplicationsByMonth safely handles undated apps
+    const monthGroups = groupApplicationsByMonth(apps, 'UTC', 'desc');
+    expect(monthGroups[monthGroups.length - 1]?.label).toBe('No application date');
+  });
+
+  it('Scenario H — grouping operates strictly on active result set without resurrecting filtered items', () => {
+    const allApps = [
+      application('active-1', '2026-10-04T12:00:00Z'),
+      application('filtered-out', '2026-10-04T13:00:00Z'),
+      application('active-2', '2026-10-03T12:00:00Z'),
+    ];
+    // Filter applied before grouping
+    const filteredApps = allApps.filter((a) => a.id.startsWith('active-'));
+    const groups = groupApplicationsByDate(filteredApps, 'UTC', 'desc', referenceNow);
+    const resultIds = groups.flatMap((g) => g.applications.map((a) => a.id));
+    expect(resultIds).toEqual(['active-1', 'active-2']);
+    expect(resultIds).not.toContain('filtered-out');
+  });
+
+  it('supports ascending date order and preserves intra-group sort order', () => {
+    const apps = [
+      application('b-today', '2026-10-06T14:00:00Z'),
+      application('a-today', '2026-10-06T09:00:00Z'),
+      application('c-yesterday', '2026-10-05T12:00:00Z'),
+      application('undated-app', undefined),
+    ];
+    const ascGroups = groupApplicationsByDate(apps, 'UTC', 'asc', referenceNow);
+    expect(ascGroups.map((g) => g.label)).toEqual(['Yesterday', 'Today', 'No application date']);
+    // Intra-group ordering preserved exactly as provided
+    const todayGroup = ascGroups.find((g) => g.key === '2026-10-06');
+    expect(todayGroup?.applications.map((a) => a.id)).toEqual(['b-today', 'a-today']);
+  });
+
+  it('respects profile timezone when bucketing into calendar dates', () => {
+    // 2026-10-07T02:00:00Z is 2026-10-06 21:00 in America/Chicago (CDT)
+    const apps = [application('night-app', '2026-10-07T02:00:00Z')];
+    const chicagoGroups = groupApplicationsByDate(apps, 'America/Chicago', 'desc', '2026-10-06T15:00:00Z');
+    expect(chicagoGroups[0]?.key).toBe('2026-10-06');
+    expect(chicagoGroups[0]?.label).toBe('Today');
+
+    const utcGroups = groupApplicationsByDate(apps, 'UTC', 'desc', '2026-10-06T15:00:00Z');
+    expect(utcGroups[0]?.key).toBe('2026-10-07');
+    expect(utcGroups[0]?.label).toBe('October 7, 2026');
   });
 });
 

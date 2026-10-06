@@ -5,7 +5,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import type { AgingFilter, ApplicationSort, ApplicationStage, CanonicalWorkflow } from '../../types/applications';
 import type { WorkspaceMemberInfo } from '../../api/applications';
-import { sortDirectionLabel } from '../../lib/applicationProductivity';
+import { sortDirectionLabel, type ApplicationGrouping } from '../../lib/applicationProductivity';
 
 export interface ApplicationsToolbarProps {
   workflow: CanonicalWorkflow | null;
@@ -40,8 +40,10 @@ export interface ApplicationsToolbarProps {
   onClearDateAdded: () => void;
   sort: ApplicationSort;
   onSortChange: (sort: ApplicationSort) => void;
-  groupByMonth: boolean;
-  onGroupByMonthChange: (enabled: boolean) => void;
+  groupBy?: ApplicationGrouping;
+  onGroupByChange?: (grouping: ApplicationGrouping) => void;
+  groupByMonth?: boolean;
+  onGroupByMonthChange?: (enabled: boolean) => void;
 }
 
 export function ApplicationsToolbar({
@@ -76,6 +78,8 @@ export function ApplicationsToolbar({
   onClearDateAdded,
   sort,
   onSortChange,
+  groupBy,
+  onGroupByChange,
   groupByMonth,
   onGroupByMonthChange,
 }: ApplicationsToolbarProps) {
@@ -400,9 +404,29 @@ export function ApplicationsToolbar({
         </Button>
         <Button
           size="sm"
-          variant={groupByMonth ? 'primary' : 'outline'}
-          onClick={() => onGroupByMonthChange(!groupByMonth)}
-          aria-pressed={groupByMonth}
+          variant={(groupBy ?? (groupByMonth ? 'month' : 'none')) === 'date' ? 'primary' : 'outline'}
+          onClick={() => {
+            const current = groupBy ?? (groupByMonth ? 'month' : 'none');
+            const next = current === 'date' ? 'none' : 'date';
+            onGroupByChange?.(next);
+            onGroupByMonthChange?.(false);
+          }}
+          aria-pressed={(groupBy ?? (groupByMonth ? 'month' : 'none')) === 'date'}
+          title="Group the current results page by date"
+        >
+          <CalendarDays size={14} aria-hidden="true" style={{ marginRight: '6px' }} />
+          Group by date
+        </Button>
+        <Button
+          size="sm"
+          variant={(groupBy ?? (groupByMonth ? 'month' : 'none')) === 'month' ? 'primary' : 'outline'}
+          onClick={() => {
+            const current = groupBy ?? (groupByMonth ? 'month' : 'none');
+            const next = current === 'month' ? 'none' : 'month';
+            onGroupByChange?.(next);
+            onGroupByMonthChange?.(next === 'month');
+          }}
+          aria-pressed={(groupBy ?? (groupByMonth ? 'month' : 'none')) === 'month'}
           title="Group the current results page by Date Added month"
         >
           <Layers3 size={14} aria-hidden="true" style={{ marginRight: '6px' }} />

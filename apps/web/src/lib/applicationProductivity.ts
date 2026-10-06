@@ -1,5 +1,5 @@
 import type { Application, ApplicationSort } from '../types/applications';
-import { dayKey, formatInZone, zonedWallTimeToUtcIso } from './time';
+import { dayKey, formatInZone, previousDayKey, zonedWallTimeToUtcIso } from './time';
 
 export interface DateAddedRange {
   from: string;
@@ -10,6 +10,22 @@ export interface ApplicationMonthGroup {
   key: string;
   label: string;
   applications: Application[];
+}
+
+export interface ApplicationDateGroup {
+  key: string;
+  label: string;
+  applications: Application[];
+}
+
+export type ApplicationGrouping = 'none' | 'date' | 'month';
+
+/** Extract valid date string for grouping; prefers created_at (Date Added) aligned with Month grouping, then applied_at. */
+export function getApplicationGroupingDate(app: Application): string | null {
+  const val = app.created_at || app.applied_at;
+  if (!val) return null;
+  const parsed = Date.parse(val);
+  return Number.isNaN(parsed) ? null : val;
 }
 
 /** Advance a calendar key without relying on the browser's local time zone. */
@@ -40,19 +56,80 @@ export function groupApplicationsByMonth(
 ): ApplicationMonthGroup[] {
   const groups = new Map<string, Application[]>();
   for (const application of applications) {
-    const key = dayKey(application.created_at, timeZone).slice(0, 7);
+    const rawDate = getApplicationGroupingDate(application);
+    const key = rawDate ? dayKey(rawDate, timeZone).slice(0, 7) : 'undated';
     const group = groups.get(key);
     if (group) group.push(application);
     else groups.set(key, [application]);
   }
 
   return [...groups.entries()]
-    .sort(([left], [right]) => direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left))
+    .sort(([left], [right]) => {
+      if (left === 'undated') return 1;
+      if (right === 'undated') return -1;
+      return direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left);
+    })
     .map(([key, items]) => ({
       key,
-      label: formatInZone(items[0]!.created_at, timeZone, { month: 'long', year: 'numeric' }),
+      label:
+        key === 'undated'
+          ? 'No application date'
+          : formatInZone(getApplicationGroupingDate(items[0]!)!, timeZone, { month: 'long', year: 'numeric' }),
       applications: items,
     }));
+}
+
+/** Group applications into day-level buckets; callers retain their existing page boundary. */
+export function groupApplicationsByDate(
+  applications: Application[],
+  timeZone: string,
+  direction: 'asc' | 'desc' = 'desc',
+  now: number | string = Date.now(),
+): ApplicationDateGroup[] {
+  const todayKey = dayKey(now, timeZone);
+  const yesterdayKey = previousDayKey(todayKey);
+
+  const groups = new Map<string, Application[]>();
+  for (const application of applications) {
+    const rawDate = getApplicationGroupingDate(application);
+    const key = rawDate ? dayKey(rawDate, timeZone) : 'undated';
+    const group = groups.get(key);
+    if (group) group.push(application);
+    else groups.set(key, [application]);
+  }
+
+  return [...groups.entries()]
+    .sort(([left], [right]) => {
+      if (left === 'undated') return 1;
+      if (right === 'undated') return -1;
+      return direction === 'asc' ? left.localeCompare(right) : right.localeCompare(left);
+    })
+    .map(([key, items]) => {
+      if (key === 'undated') {
+        return {
+          key,
+          label: 'No application date',
+          applications: items,
+        };
+      }
+      let label: string;
+      if (key === todayKey) {
+        label = 'Today';
+      } else if (key === yesterdayKey) {
+        label = 'Yesterday';
+      } else {
+        label = formatInZone(getApplicationGroupingDate(items[0]!)!, timeZone, {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+      return {
+        key,
+        label,
+        applications: items,
+      };
+    });
 }
 
 export function sortDirectionLabel(sort: ApplicationSort): string {

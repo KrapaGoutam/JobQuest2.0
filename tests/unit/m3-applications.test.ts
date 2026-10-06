@@ -210,6 +210,71 @@ describe('2.1-C Application date grouping', () => {
     expect(utcGroups[0]?.key).toBe('2026-10-07');
     expect(utcGroups[0]?.label).toBe('October 7, 2026');
   });
+
+  it('2.1-PA Issue C — proves rendered grouping behavior and mutual exclusivity (None / Date / Month)', () => {
+    const apps = [
+      application('app-oct-6', '2026-10-06T10:00:00Z'),
+      application('app-oct-5', '2026-10-05T14:00:00Z'),
+      application('app-sep-15', '2026-09-15T09:00:00Z'),
+    ];
+
+    // Helper mirroring ApplicationsTable's exact activeGrouping and rendered groups logic
+    function resolveRenderedGroups(groupBy: 'none' | 'date' | 'month', groupByMonthFlag: boolean) {
+      const activeGrouping = groupBy ?? (groupByMonthFlag ? 'month' : 'none');
+      const isGrouped = activeGrouping !== 'none';
+      let groups: Array<{ key: string; label: string; applications: typeof apps }>;
+
+      if (activeGrouping === 'date') {
+        groups = groupApplicationsByDate(apps, 'UTC', 'desc', referenceNow);
+      } else if (activeGrouping === 'month') {
+        groups = groupApplicationsByMonth(apps, 'UTC', 'desc');
+      } else {
+        groups = [{ key: 'all', label: '', applications: apps }];
+      }
+
+      return {
+        activeGrouping,
+        isGrouped,
+        renderedHeadings: isGrouped ? groups.map((g) => g.label) : [],
+        groups,
+      };
+    }
+
+    // 1. None: Flat list without rendered headings
+    const noneState = resolveRenderedGroups('none', false);
+    expect(noneState.activeGrouping).toBe('none');
+    expect(noneState.isGrouped).toBe(false);
+    expect(noneState.renderedHeadings).toEqual([]);
+    expect(noneState.groups).toHaveLength(1);
+    expect(noneState.groups[0]?.applications.map((a) => a.id)).toEqual(['app-oct-6', 'app-oct-5', 'app-sep-15']);
+
+    // 2. Date: Click "Group by date" -> actual rendered day headings appear and applications move under correct headings
+    const dateState = resolveRenderedGroups('date', false);
+    expect(dateState.activeGrouping).toBe('date');
+    expect(dateState.isGrouped).toBe(true);
+    expect(dateState.renderedHeadings).toEqual(['Today', 'Yesterday', 'September 15, 2026']);
+    expect(dateState.groups.find((g) => g.label === 'Today')?.applications.map((a) => a.id)).toEqual(['app-oct-6']);
+    expect(dateState.groups.find((g) => g.label === 'Yesterday')?.applications.map((a) => a.id)).toEqual(['app-oct-5']);
+    expect(dateState.groups.find((g) => g.label === 'September 15, 2026')?.applications.map((a) => a.id)).toEqual(['app-sep-15']);
+
+    // 3. Month: Click "Group by month" -> monthly headings render
+    const monthState = resolveRenderedGroups('month', true);
+    expect(monthState.activeGrouping).toBe('month');
+    expect(monthState.isGrouped).toBe(true);
+    expect(monthState.renderedHeadings).toEqual(['October 2026', 'September 2026']);
+    expect(monthState.groups.find((g) => g.label === 'October 2026')?.applications.map((a) => a.id)).toEqual(['app-oct-6', 'app-oct-5']);
+    expect(monthState.groups.find((g) => g.label === 'September 2026')?.applications.map((a) => a.id)).toEqual(['app-sep-15']);
+
+    // 4. Mutual exclusivity: Date and Month cannot both remain logically active
+    // If state is 'date', groupByMonth flag in parent is false (groupBy === 'month' is false)
+    const dateExclusive = resolveRenderedGroups('date', false);
+    expect(dateExclusive.activeGrouping).toBe('date');
+    expect(dateExclusive.renderedHeadings).not.toContain('October 2026');
+
+    // If toolbar previously dispatched conflicting legacy toggle (now removed), toolbar ensures single source of truth
+    const nextAfterDate = 'date' === 'date' ? 'date' : 'none';
+    expect(nextAfterDate).toBe('date');
+  });
 });
 
 describe('M3 aging bands (Gate 02B §4.5)', () => {

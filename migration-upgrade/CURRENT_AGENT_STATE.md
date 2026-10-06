@@ -1,3 +1,27 @@
+## >>> JOBQUEST 2.1-PA — PRODUCTION ACCEPTANCE REMEDIATION (2026-10-06) <<<
+
+PHASE: 2.1-PA | STATUS: REMEDIATION VERIFIED — READY FOR COMMIT & BRANCH CI
+
+REMEDIATION BRANCH: ix/2.1-production-acceptance-remediation
+BASE DEVELOPMENT SHA: 87525ba100065515aa0e7ba1ab60c47eb47fdc7d
+PRODUCTION BASE SHA: 4dcda58f7283865a6d4b9fe1e6615f6b71a1ff5b
+
+ITEMS REMEDIATED:
+- B: Dashboard Goal: Removed manager goal fetch suppression in DashboardView; daily goal card renders target/progress.
+- C: Group by Date: Removed conflicting legacy month-toggle callbacks in ApplicationsToolbar; date/month grouping mutually exclusive and stable.
+- D: Tasks & Follow-ups: Added Select All / Deselect All for visible active items; completed tab excluded; recurring dismiss warns recurrence stops; canonical cancelTask intact.
+- E: Extension Tailor Resume: "Enter manually" set as default in popup & sidepanel; manual inputs visible initially.
+- F: Extension Copy JSON: Merges live form inputs with captured data; no DB save, ID, or existing record required.
+- G: Analytics Goals: Immediately selects current user when entering Goals tab; preserves authorized member switching.
+- H: Application Activity: Added compact Daily/Weekly toggle; implemented calculateDailyActivity with canonical dayKey profile-timezone semantics.
+- .gitignore: Reverted local changes; operator-local scripts preserved in .git/info/exclude.
+
+DATABASE / MIGRATION IMPACT: NONE (0 migrations).
+
+REPORTS:
+- eature-upgrade-2.1/2.1-PA_PRODUCTION_ACCEPTANCE_REMEDIATION_REPORT.md
+- eature-upgrade-2.1/2.1_FINAL_RELEASE_REPORT.md (marked: INITIAL OPERATOR ACCEPTANCE FAILED — REMEDIATION IN PROGRESS)
+
 ## >>> JOBQUEST 2.1 â€” FINAL APPLICATION RELEASE (2026-10-06) <<<
 
 RELEASE: JobQuest 2.1 Application Feature Release (Phases 2.1-A through 2.1-F)
@@ -742,3 +766,4 @@ Work accomplished:
 4. Added UI actions ("Copy Job JSON") to both the extension side panel and the web app's Application Detail Drawer.
 5. Added rigorous unit tests ensuring payload structure correctness and null-safety.
 6. Workspace typechecks cleanly. Ready for branch CI and merge to `development`.
+

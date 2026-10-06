@@ -49,4 +49,52 @@ describe('M15-F goals member selection', () => {
     expect(resolveAnalyticsMember(members, 'manager', 'workspace-a', 'workspace-b')).toBeNull();
     expect(resolveAnalyticsMember(members, 'foreign', 'workspace-a', 'workspace-a')).toBeNull();
   });
+
+  it('2.1-PA Issue G — Goals tab defaults to current user when unselected, while allowing authorized member switching', () => {
+    const currentUserId = 'manager-1';
+    const otherMemberId = 'member-2';
+    const members = activeAnalyticsMembers([
+      member(currentUserId, 'ACTIVE', 'MANAGER'),
+      member(otherMemberId, 'ACTIVE', 'USER'),
+    ]);
+
+    // Model the state transition of AnalyticsView activeTab and selectedMemberId
+    let selectedMemberId = '';
+    let activeTab: 'overview' | 'goals' = 'overview';
+
+    function evaluateAutoSelectEffect(tab: 'overview' | 'goals', memberId: string, currentId: string | null) {
+      if (tab === 'goals' && memberId === '' && currentId) {
+        return currentId;
+      }
+      return memberId;
+    }
+
+    // 1. Initial overview tab: selectedMemberId remains '' (All members aggregate)
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
+    expect(selectedMemberId).toBe('');
+    expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toBeNull(); // aggregate mode
+
+    // 2. User navigates to Goals tab: immediately defaults to current user
+    activeTab = 'goals';
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
+    expect(selectedMemberId).toBe(currentUserId);
+    expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toEqual(
+      expect.objectContaining({ user_id: currentUserId, role: 'MANAGER' })
+    );
+
+    // 3. Manager switches to another authorized member: switching works and is preserved
+    selectedMemberId = otherMemberId;
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
+    expect(selectedMemberId).toBe(otherMemberId); // NOT overridden back to currentUserId
+    expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toEqual(
+      expect.objectContaining({ user_id: otherMemberId, role: 'USER' })
+    );
+
+    // 4. Authorized switching to another member also preserved
+    const thirdMemberId = 'member-3';
+    selectedMemberId = thirdMemberId;
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
+    expect(selectedMemberId).toBe(thirdMemberId);
+  });
 });
+

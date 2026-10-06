@@ -28,8 +28,6 @@ signing_keys.json
 *.jwk
 *.pem
 *.key
-.jobquest-cli.local.ps1
-.jobquest-prod-cli.local.ps1
 .vercel
 .env*
 scratch/

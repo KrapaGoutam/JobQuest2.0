@@ -10,6 +10,7 @@ import {
 } from "../analytics/AnalyticsCharts";
 import { Card } from "../ui/Card";
 import {
+  calculateDailyActivity,
   calculateDailyGoalMetrics,
   weeklyPulseDelta,
 } from "../../lib/dashboard";
@@ -308,43 +309,10 @@ export function DashboardProgress({
   );
   const [activityMode, setActivityMode] = useState<"daily" | "weekly">("weekly");
 
-  const dailyActivity = useMemo(() => {
-    const days = 14;
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    const start = new Date(end);
-    start.setDate(start.getDate() - days + 1);
-    start.setHours(0, 0, 0, 0);
-
-    const counts: Record<string, number> = {};
-    for (let i = 0; i < days; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      const iso = d.toISOString().slice(0, 10);
-      counts[iso] = 0;
-    }
-
-    for (const app of data.applications) {
-      if (!app.applied_at) continue;
-      const iso = app.applied_at.slice(0, 10);
-      if (counts[iso] !== undefined) {
-        counts[iso]++;
-      }
-    }
-
-    return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0])).map(([iso, count]) => {
-      const d = new Date(iso + 'T12:00:00Z');
-      return {
-        week_start: iso,
-        week_label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' }),
-        applied: count,
-        responses: 0,
-        interviews: 0,
-        outreach: 0,
-        target: 0
-      };
-    });
-  }, [data.applications]);
+  const dailyActivity = useMemo(
+    () => calculateDailyActivity(data.applications, data.timeZone),
+    [data.applications, data.timeZone],
+  );
   const applicationGoal = isManagerAggregate ? null : data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS');
   const networkingGoal = isManagerAggregate ? null : data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'NETWORKING');
   const aggregateTarget = data.week.active_goal?.target_applications;
@@ -495,6 +463,8 @@ export function DashboardProgress({
     </section>
   );
 }
+
+
 
 
 

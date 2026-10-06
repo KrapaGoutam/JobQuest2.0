@@ -1,5 +1,6 @@
 import { dayKey, previousDayKey } from "./time";
-import type { GoalProgressResponse } from "../types/analytics";
+import type { GoalProgressResponse, WeeklyPacingPoint } from "../types/analytics";
+import { addDaysKey } from "../types/tasks";
 
 export type DashboardWidgetKind =
   "kpi" | "goal" | "chart" | "insight" | "activity" | "action";
@@ -435,4 +436,54 @@ export function calculateDailyGoalMetrics(
     isExceeded,
     yesterdayDelta,
   };
+}
+
+/**
+ * Calculates a rolling 14-day daily application activity pacing series
+ * aligned with the user profile timezone and canonical dayKey boundaries.
+ */
+export function calculateDailyActivity(
+  applications: Array<{ applied_at?: string | null }>,
+  timeZone: string = "UTC",
+  now: number | string = Date.now(),
+  days: number = 14,
+): WeeklyPacingPoint[] {
+  const tz = timeZone || "UTC";
+  const today = dayKey(now, tz);
+  const counts: Record<string, number> = {};
+
+  for (let i = days - 1; i >= 0; i--) {
+    const key = addDaysKey(today, -i);
+    counts[key] = 0;
+  }
+
+  for (const app of applications) {
+    if (!app.applied_at) continue;
+    const key = dayKey(app.applied_at, tz);
+    if (counts[key] !== undefined) {
+      counts[key]++;
+    }
+  }
+
+  return Object.entries(counts)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([iso, count]) => {
+      const [y, m, d] = iso.split("-").map(Number);
+      const dateObj = new Date(Date.UTC(y!, m! - 1, d!));
+      const week_label = new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "numeric",
+        day: "numeric",
+        timeZone: "UTC",
+      }).format(dateObj);
+      return {
+        week_start: iso,
+        week_label,
+        applied: count,
+        responses: 0,
+        interviews: 0,
+        outreach: 0,
+        target: 0,
+      };
+    });
 }

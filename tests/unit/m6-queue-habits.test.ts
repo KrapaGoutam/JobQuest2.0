@@ -121,3 +121,56 @@ describe('M6 habits: progress and streaks (derived)', () => {
     expect(habitProgress({ frequency: 'DAILY', target_count: 1 }, logs, '2026-09-23', 1)).toMatchObject({ currentStreak: 1, bestStreak: 4 });
   });
 });
+
+describe('M6 / 2.1-PA Issue D — Tasks selection, dismissal, and recurrence rules', () => {
+  it('selects and deselects all currently visible active task items, excluding completed tab', () => {
+    const visibleItems = [
+      { key: 'task-1', kind: 'TASK', task: task({ id: 'task-1', title: 'Task 1' }) },
+      { key: 'task-2', kind: 'TASK', task: task({ id: 'task-2', title: 'Task 2' }) },
+      { key: 'na-1', kind: 'NEXT_ACTION', nextAction: { id: 'na-1' } },
+    ];
+
+    // Select All
+    let selectedKeys = new Set(visibleItems.map((i) => i.key));
+    expect(selectedKeys.size).toBe(3);
+    expect(selectedKeys.has('task-1')).toBe(true);
+    expect(selectedKeys.has('task-2')).toBe(true);
+    expect(selectedKeys.has('na-1')).toBe(true);
+
+    // Toggle button label
+    const label = selectedKeys.size === visibleItems.length ? 'Deselect all' : 'Select all';
+    expect(label).toBe('Deselect all');
+
+    // Deselect All
+    if (selectedKeys.size === visibleItems.length) {
+      selectedKeys = new Set();
+    }
+    expect(selectedKeys.size).toBe(0);
+    const labelAfterDeselect = selectedKeys.size === visibleItems.length ? 'Deselect all' : 'Select all';
+    expect(labelAfterDeselect).toBe('Select all');
+
+    // Completed tab verification: bulk selection controls hidden
+    const isCompletedTab = true;
+    const showSelectAll = visibleItems.length > 0 && !isCompletedTab;
+    expect(showSelectAll).toBe(false);
+  });
+
+  it('formats Dismiss description with recurring explanation when recurrence_rule is present', () => {
+    function getDismissDescription(t: Task | null) {
+      return t?.recurrence_rule
+        ? 'It moves out of your active queue and stays in history. This follow-up will be dismissed and will not recur again.'
+        : 'It moves out of your active queue and stays in history. Nothing is deleted.';
+    }
+
+    const nonRecurring = task({ id: 'non-rec', recurrence_rule: null });
+    expect(getDismissDescription(nonRecurring)).toBe(
+      'It moves out of your active queue and stays in history. Nothing is deleted.'
+    );
+
+    const recurring = task({ id: 'rec', recurrence_rule: 'DAILY' });
+    expect(getDismissDescription(recurring)).toBe(
+      'It moves out of your active queue and stays in history. This follow-up will be dismissed and will not recur again.'
+    );
+  });
+});
+

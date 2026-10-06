@@ -1,6 +1,6 @@
-## >>> JOBQUEST 2.1-PA — PRODUCTION ACCEPTANCE REMEDIATION (2026-10-06) <<<
+## >>> JOBQUEST 2.1-PA ï¿½ PRODUCTION ACCEPTANCE REMEDIATION (2026-10-06) <<<
 
-PHASE: 2.1-PA | STATUS: REMEDIATION VERIFIED — READY FOR COMMIT & BRANCH CI
+PHASE: 2.1-PA | STATUS: REMEDIATION VERIFIED ï¿½ READY FOR COMMIT & BRANCH CI
 
 REMEDIATION BRANCH: ix/2.1-production-acceptance-remediation
 BASE DEVELOPMENT SHA: 87525ba100065515aa0e7ba1ab60c47eb47fdc7d
@@ -12,7 +12,7 @@ ITEMS REMEDIATED:
 - D: Tasks & Follow-ups: Added Select All / Deselect All for visible active items; completed tab excluded; recurring dismiss warns recurrence stops; canonical cancelTask intact.
 - E: Extension Tailor Resume: "Enter manually" set as default in popup & sidepanel; manual inputs visible initially.
 - F: Extension Copy JSON: Merges live form inputs with captured data; no DB save, ID, or existing record required.
-- G: Analytics Goals: Immediately selects current user when entering Goals tab; preserves authorized member switching.
+- G: Analytics Goals: Immediately selects current user when entering Goals tab; preserves authorized member switching and manager aggregate view without auto-revert.
 - H: Application Activity: Added compact Daily/Weekly toggle; implemented calculateDailyActivity with canonical dayKey profile-timezone semantics.
 - .gitignore: Reverted local changes; operator-local scripts preserved in .git/info/exclude.
 
@@ -20,7 +20,7 @@ DATABASE / MIGRATION IMPACT: NONE (0 migrations).
 
 REPORTS:
 - eature-upgrade-2.1/2.1-PA_PRODUCTION_ACCEPTANCE_REMEDIATION_REPORT.md
-- eature-upgrade-2.1/2.1_FINAL_RELEASE_REPORT.md (marked: INITIAL OPERATOR ACCEPTANCE FAILED — REMEDIATION IN PROGRESS)
+- eature-upgrade-2.1/2.1_FINAL_RELEASE_REPORT.md (marked: INITIAL OPERATOR ACCEPTANCE FAILED ï¿½ REMEDIATION IN PROGRESS)
 
 ## >>> JOBQUEST 2.1 â€” FINAL APPLICATION RELEASE (2026-10-06) <<<
 

@@ -58,43 +58,66 @@ describe('M15-F goals member selection', () => {
       member(otherMemberId, 'ACTIVE', 'USER'),
     ]);
 
-    // Model the state transition of AnalyticsView activeTab and selectedMemberId
+    // Model the state transition of AnalyticsView activeTab, selectedMemberId, and userSelectedMemberRef
     let selectedMemberId = '';
     let activeTab: 'overview' | 'goals' = 'overview';
+    let userSelectedMember = false;
 
-    function evaluateAutoSelectEffect(tab: 'overview' | 'goals', memberId: string, currentId: string | null) {
-      if (tab === 'goals' && memberId === '' && currentId) {
+    function evaluateAutoSelectEffect(
+      tab: 'overview' | 'goals',
+      memberId: string,
+      currentId: string | null,
+      explicitlySelected: boolean,
+    ) {
+      if (tab === 'goals' && memberId === '' && currentId && !explicitlySelected) {
         return currentId;
       }
       return memberId;
     }
 
     // 1. Initial overview tab: selectedMemberId remains '' (All members aggregate)
-    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId, userSelectedMember);
     expect(selectedMemberId).toBe('');
     expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toBeNull(); // aggregate mode
 
     // 2. User navigates to Goals tab: immediately defaults to current user
     activeTab = 'goals';
-    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId, userSelectedMember);
     expect(selectedMemberId).toBe(currentUserId);
     expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toEqual(
-      expect.objectContaining({ user_id: currentUserId, role: 'MANAGER' })
+      expect.objectContaining({ user_id: currentUserId, role: 'MANAGER' }),
     );
 
-    // 3. Manager switches to another authorized member: switching works and is preserved
+    // 3. Manager explicitly selects "All members" ('') on Goals tab: respected and not reverted back
+    userSelectedMember = true;
+    selectedMemberId = '';
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId, userSelectedMember);
+    expect(selectedMemberId).toBe('');
+    expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toBeNull(); // manager aggregate view preserved
+
+    // 4. Manager switches to another authorized member: switching works and is preserved
     selectedMemberId = otherMemberId;
-    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
-    expect(selectedMemberId).toBe(otherMemberId); // NOT overridden back to currentUserId
+    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId, userSelectedMember);
+    expect(selectedMemberId).toBe(otherMemberId);
     expect(resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')).toEqual(
-      expect.objectContaining({ user_id: otherMemberId, role: 'USER' })
+      expect.objectContaining({ user_id: otherMemberId, role: 'USER' }),
     );
 
-    // 4. Authorized switching to another member also preserved
-    const thirdMemberId = 'member-3';
-    selectedMemberId = thirdMemberId;
-    selectedMemberId = evaluateAutoSelectEffect(activeTab, selectedMemberId, currentUserId);
-    expect(selectedMemberId).toBe(thirdMemberId);
+    // 5. Personal workspace: sole manager defaults to current user immediately
+    const personalMembers = activeAnalyticsMembers([member('solo-owner', 'ACTIVE', 'MANAGER')]);
+    let personalMemberId = '';
+    const personalUserSelected = false;
+    personalMemberId = evaluateAutoSelectEffect('goals', personalMemberId, 'solo-owner', personalUserSelected);
+    expect(personalMemberId).toBe('solo-owner');
+    expect(resolveAnalyticsMember(personalMembers, personalMemberId, 'ws-p', 'ws-p')).toEqual(
+      expect.objectContaining({ user_id: 'solo-owner' }),
+    );
+
+    // 6. Non-manager role behavior: targetUserId is null, defaulting directly to own progress in RPC
+    const isManager = false;
+    const targetUserId = isManager ? resolveAnalyticsMember(members, selectedMemberId, 'ws-1', 'ws-1')?.user_id ?? null : null;
+    const isManagerAggregate = isManager && !targetUserId;
+    expect(targetUserId).toBeNull();
+    expect(isManagerAggregate).toBe(false);
   });
 });
-

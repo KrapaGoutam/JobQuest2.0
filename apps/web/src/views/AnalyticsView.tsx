@@ -64,6 +64,11 @@ export function AnalyticsView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadRequestId = useRef(0);
+  const userSelectedMemberRef = useRef(false);
+
+  useEffect(() => {
+    userSelectedMemberRef.current = false;
+  }, [activeWorkspaceId]);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
   useEffect(() => {
@@ -107,6 +112,11 @@ export function AnalyticsView({
   );
   const targetUserId = isManager ? selectedMember?.user_id ?? null : null;
   const isManagerAggregate = isManager && !targetUserId;
+
+  const handleSelectMember = useCallback((userId: string) => {
+    userSelectedMemberRef.current = true;
+    setSelectedMemberId(userId);
+  }, []);
 
   useEffect(() => {
     if (
@@ -245,7 +255,10 @@ export function AnalyticsView({
             <Select
               aria-label="Filter by workspace member"
               value={selectedMemberId}
-              onChange={(event) => setSelectedMemberId(event.target.value)}
+              onChange={(event) => {
+                userSelectedMemberRef.current = true;
+                setSelectedMemberId(event.target.value);
+              }}
             >
               <option value="">Owner: All members</option>
               {members.map((member) => (
@@ -356,7 +369,7 @@ export function AnalyticsView({
                   dateRange={RANGE_LABEL[dateRange]}
                   startDate={bounds.startDate}
                   endDate={bounds.endDate}
-                  onSelectMember={setSelectedMemberId}
+                  onSelectMember={handleSelectMember}
                 />
               )}
             </TabPanel>

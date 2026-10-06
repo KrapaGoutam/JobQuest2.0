@@ -103,6 +103,7 @@ function extractEmbeddedAppState(doc, pageUrl) {
     const data = JSON.parse(nextDataScript.textContent);
     
     // Bounded depth traversal to find job-like objects
+    /** @type {Record<string, any> | null} */
     let foundJob = null;
     
     function traverse(obj, depth = 0) {

@@ -276,6 +276,7 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
 
     // Selecting "All members" displays workspace goal pacing
     await memberFilter.selectOption("");
+    await settle(page);
     await expect(
       page.getByRole("heading", { name: "Workspace goal pacing" }),
     ).toBeVisible();

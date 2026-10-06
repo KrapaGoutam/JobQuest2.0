@@ -72,7 +72,12 @@ export function AnalyticsView({
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
   useEffect(() => {
-    if (activeTab === 'goals' && selectedMemberId === '' && currentUserId) {
+    if (
+      activeTab === 'goals'
+      && selectedMemberId === ''
+      && currentUserId
+      && !userSelectedMemberRef.current
+    ) {
       setSelectedMemberId(currentUserId);
     }
   }, [activeTab, selectedMemberId, currentUserId]);

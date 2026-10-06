@@ -327,11 +327,11 @@ test.describe("Milestone 6 — Tasks, Habits & Unified Queue E2E", () => {
       .click();
     await page
       .getByTestId("task-detail")
-      .getByRole("button", { name: "Cancel task" })
+      .getByRole("button", { name: "Dismiss task" })
       .click();
     await page
-      .getByRole("dialog", { name: "Cancel this task?" })
-      .getByRole("button", { name: "Cancel task" })
+      .getByRole("dialog", { name: "Dismiss this task?" })
+      .getByRole("button", { name: "Dismiss task" })
       .click();
     await expect(fu2).toHaveCount(0);
     evidence["E2E-05-edit-snooze-cancel"] = "PASS";

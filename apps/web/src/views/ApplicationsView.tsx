@@ -50,7 +50,7 @@ import { ApplicationPreviewRail } from '../components/applications/ApplicationPr
 import { Dialog } from '../components/ui/Dialog';
 import { downloadExport } from '../api/importExport';
 import { consumeNewApplicationRequest, onNewApplicationRequest } from '../lib/newApplicationIntent';
-import { dateAddedBounds } from '../lib/applicationProductivity';
+import { dateAddedBounds, type ApplicationGrouping } from '../lib/applicationProductivity';
 import { remainingBulkSelection, runSequentialBulk, type BulkOperationResult } from '../lib/applicationBulk';
 import { applicationSuggestionToggleLabel, applicationSuggestionView } from '../lib/applicationSuggestions';
 import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
@@ -182,7 +182,7 @@ export function ApplicationsView({
   const [sort, setSort] = useState<ApplicationSort>({ field: 'last_activity_at', direction: 'desc' });
   const [dateAddedFrom, setDateAddedFrom] = useState('');
   const [dateAddedTo, setDateAddedTo] = useState('');
-  const [groupByMonth, setGroupByMonth] = useState(false);
+  const [groupBy, setGroupBy] = useState<ApplicationGrouping>('none');
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -751,8 +751,10 @@ export function ApplicationsView({
           }}
           sort={sort}
           onSortChange={setSort}
-          groupByMonth={groupByMonth}
-          onGroupByMonthChange={setGroupByMonth}
+          groupBy={groupBy}
+          onGroupByChange={setGroupBy}
+          groupByMonth={groupBy === 'month'}
+          onGroupByMonthChange={(enabled) => setGroupBy(enabled ? 'month' : 'none')}
         />
 
         {loadError && (
@@ -777,7 +779,8 @@ export function ApplicationsView({
               isMobile={isMobile}
               members={members}
               workflow={workflow}
-              groupByMonth={groupByMonth}
+              groupBy={groupBy}
+              groupByMonth={groupBy === 'month'}
               timeZone={timeZone}
               onSelectRow={(id, selected) =>
                 setSelectedIds((prev) => (selected ? [...new Set([...prev, id])] : prev.filter((i) => i !== id)))

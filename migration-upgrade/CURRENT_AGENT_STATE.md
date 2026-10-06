@@ -1,3 +1,19 @@
+## >>> JOBQUEST 2.1-C — APPLICATION GROUPING (2026-10-06) <<<
+
+PHASE: 2.1-C | STATUS: IMPLEMENTED ON FEATURE BRANCH — PENDING COMMITS & CI VERIFICATION
+
+FEATURE BRANCH: `feature/2.1c-application-date-grouping` | BASE DEVELOPMENT SHA: `75a80488841c657b6f6849bd160b136eb42f79c3`
+
+IMPLEMENTATION: Added Day-level grouping ("Group by Date") alongside "Group by Month". Extended toolbar controls with mutually exclusive grouping (None, Date, Month). Implemented `groupApplicationsByDate`, `getApplicationGroupingDate`, and hardened `groupApplicationsByMonth` with missing-date fallback ("No application date"). Preserved pagination, filters, active sort, and timezone semantics.
+
+LOCAL EVIDENCE: Typecheck PASS; unit tests 203/203 PASS (including targeted 10 new tests in `m3-applications.test.ts`); build PASS.
+
+DATABASE / MIGRATION IMPACT: NONE. 100% frontend reuse of existing application records and `created_at` / `applied_at` date semantics.
+
+NEXT EXACT ACTION: Stage exact paths, commit and push feature branch `feature/2.1c-application-date-grouping`, observe branch CI, merge to development, observe development CI, and stop.
+
+Report: `feature-upgrade-2.1/2.1-C_IMPLEMENTATION_REPORT.md`.
+
 ## >>> JOBQUEST 2.1-B — DASHBOARD GOAL + DAILY METRICS (2026-10-06) <<<
 
 PHASE: 2.1-B | STATUS: IMPLEMENTED ON FEATURE BRANCH — PENDING COMMITS & CI VERIFICATION

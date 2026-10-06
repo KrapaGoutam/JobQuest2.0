@@ -3008,6 +3008,9 @@ button.chip:focus-visible,
   background: var(--color-surface-1);
   box-shadow: var(--shadow-card);
 }
+.analytics-kpis-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .analytics-kpi {
   min-width: 0;
   padding: 10px 14px;
@@ -3117,6 +3120,9 @@ button.chip:focus-visible,
   height: 8px;
   border-radius: 50%;
   background: var(--chart-4);
+}
+.legend-met-dot {
+  background: var(--color-success);
 }
 .legend-line {
   width: 13px;
@@ -3454,6 +3460,48 @@ button.chip:focus-visible,
   gap: 10px;
   margin-bottom: 6px;
   font-size: var(--font-size-xs);
+}
+.goal-trend-card {
+  margin-top: 4px;
+}
+.goal-trend-wrap {
+  min-width: 0;
+  overflow: hidden;
+}
+.goal-trend-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.goal-trend-bar {
+  fill: color-mix(in oklch, var(--chart-1) 25%, var(--color-surface-1));
+  stroke: var(--chart-1);
+  stroke-width: 0.8;
+  transition: opacity 0.15s ease;
+}
+.goal-trend-bar.met {
+  fill: color-mix(in oklch, var(--color-success) 24%, var(--color-surface-1));
+  stroke: var(--color-success);
+}
+.goal-trend-bar.no-goal {
+  fill: var(--color-surface-3);
+  stroke: var(--color-border);
+}
+.goal-trend-target-dot {
+  fill: var(--chart-3);
+  stroke: var(--color-surface-1);
+  stroke-width: 1.2;
+}
+.goal-trend-empty {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: 24px;
 }
 .attainment-strip {
   height: 125px;

@@ -110,8 +110,8 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
       <Dialog
         isOpen={cancelFor !== null}
         onClose={() => setCancelFor(null)}
-        title="Cancel this task?"
-        description="It moves out of your queue and stays in history. Nothing is deleted."
+        title="Dismiss this task?"
+        description="It moves out of your active queue and stays in history. Nothing is deleted."
         maxWidth={440}
         footer={
           <>
@@ -122,7 +122,7 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
               onClick={async () => {
                 try {
                   await cancelTask(cancelFor!.task!.id);
-                  addToast({ title: `Cancelled: ${cancelFor!.title}`, type: 'info' });
+                  addToast({ title: `Dismissed: ${cancelFor!.title}`, type: 'info' });
                   opts.onChanged();
                 } catch (e) {
                   fail(e);
@@ -130,7 +130,7 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
                 setCancelFor(null);
               }}
             >
-              Cancel task
+              Dismiss task
             </Button>
           </>
         }
@@ -173,8 +173,11 @@ export function QueueRow({
   timeZone,
   onComplete,
   onSnooze,
+  onCancel,
   onOpen,
   selected,
+  checked,
+  onCheckChange,
   ownerName,
   compact,
 }: {
@@ -182,8 +185,11 @@ export function QueueRow({
   timeZone: string;
   onComplete: (item: QueueItem) => void;
   onSnooze: (item: QueueItem, days: number) => void;
+  onCancel?: (item: QueueItem) => void;
   onOpen?: (item: QueueItem) => void;
   selected?: boolean;
+  checked?: boolean;
+  onCheckChange?: (checked: boolean) => void;
   ownerName?: string | null;
   compact?: boolean;
 }) {
@@ -197,7 +203,12 @@ export function QueueRow({
   const tone = item.state === 'overdue' ? 'danger-t b' : item.state === 'today' ? 'warning-t b' : 'muted';
   const doneLabel = item.kind === 'NEXT_ACTION' ? `Done, set next: ${item.title}` : item.kind === 'INTERVIEW_OUTCOME' ? item.title : `Complete ${item.title}`;
   return (
-    <div className={`trow ${selected ? 'sel' : ''} ${compact ? 'compact' : ''}`} data-testid="queue-row" data-kind={item.kind} data-state={item.state}>
+    <div className={`trow ${selected ? 'sel' : ''} ${checked ? 'chk-sel' : ''} ${compact ? 'compact' : ''}`} data-testid="queue-row" data-kind={item.kind} data-state={item.state}>
+      {onCheckChange && (
+        <span className="trow-chk">
+          <input type="checkbox" checked={!!checked} onChange={(e) => onCheckChange(e.target.checked)} aria-label={`Select ${item.title}`} />
+        </span>
+      )}
       <button type="button" className="circ-btn" aria-label={doneLabel} onClick={() => onComplete(item)}>
         {item.kind === 'INTERVIEW_OUTCOME' ? <ClipboardPen size={13} aria-hidden="true" /> : <Check size={13} aria-hidden="true" className="circ-check" />}
       </button>
@@ -225,11 +236,16 @@ export function QueueRow({
         {item.state === 'today' && <Clock size={12} aria-hidden="true" />}
         {label}
       </span>
-      <span className="trow-act">
+      <span className="trow-act row" style={{ gap: 4 }}>
         {item.kind === 'INTERVIEW_OUTCOME' ? (
           <Button size="sm" variant="primary" onClick={() => onComplete(item)}>Record outcome</Button>
         ) : (
-          <SnoozeMenu item={item} onSnooze={onSnooze} />
+          <>
+            {onCancel && item.kind !== 'NEXT_ACTION' && (
+              <Button size="sm" variant="ghost" onClick={() => onCancel(item)} aria-label={`Dismiss ${item.title}`}>Dismiss</Button>
+            )}
+            <SnoozeMenu item={item} onSnooze={onSnooze} />
+          </>
         )}
       </span>
     </div>

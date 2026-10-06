@@ -5,9 +5,12 @@ import { Select } from '../components/ui/Select';
 import { Tabs, TabList, Tab } from '../components/ui/Tabs';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Drawer } from '../components/ui/Drawer';
+import { Dialog } from '../components/ui/Dialog';
+import { FormField } from '../components/ui/FormField';
+import { Input } from '../components/ui/Input';
 import { useToast } from '../context/ToastContext';
 import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
-import { countTasks, fetchCompletedSince, fetchNextActions, fetchOutcomesNeeded, fetchTasks, reopenTask, TASKS_PAGE_SIZE, type DayBounds, type TaskFilters } from '../api/tasks';
+import { countTasks, fetchCompletedSince, fetchNextActions, fetchOutcomesNeeded, fetchTasks, reopenTask, cancelTask, updateTask, snoozeNextAction, completeNextAction, TASKS_PAGE_SIZE, type DayBounds, type TaskFilters } from '../api/tasks';
 import { fetchCanonicalWorkflow, fetchWorkspaceMembers, type WorkspaceMemberInfo } from '../api/applications';
 import { TaskDialog } from '../components/tasks/TaskDialog';
 import { TaskDetailPanel } from '../components/tasks/TaskDetailPanel';
@@ -15,8 +18,8 @@ import { QueueRow, useQueueActions } from '../components/tasks/QueueRow';
 import { buildQueue, taskSubtitle, todayBounds, type NextActionSource, type OutcomeSource, type QueueItem } from '../lib/queue';
 import { upcomingBand } from '../types/interviews';
 import type { CanonicalWorkflow } from '../types/applications';
-import type { Task, TaskTab, TaskType } from '../types/tasks';
-import { formatInZone, zonedWallTimeToUtcIso } from '../lib/time';
+import { addDaysKey, type Task, type TaskTab, type TaskType } from '../types/tasks';
+import { formatInZone, zonedWallTimeToUtcIso, dayKey, utcIsoToZonedWallTime } from '../lib/time';
 
 const WIDE = '(min-width: 1100px)';
 function useMedia(query: string): boolean {
@@ -37,6 +40,87 @@ const TYPE_CHIPS: { id: TaskFilters['taskType']; label: string; icon?: ReactNode
   { id: 'REMINDER', label: 'Reminders', icon: <BellRing size={12} aria-hidden="true" /> },
   { id: 'NEXT_ACTION', label: 'Next actions', icon: <Flag size={12} aria-hidden="true" /> },
 ];
+
+function BulkSnoozeMenu({ onSnooze, disabled }: { onSnooze: (days: number) => void; disabled: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span style={{ position: 'relative' }}>
+      <Button size="sm" variant="secondary" disabled={disabled} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        Snooze
+      </Button>
+      {open && (
+        <div role="menu" className="menu-pop" onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+          {[
+            ['Tomorrow', 1],
+            ['In 3 days', 3],
+            ['Next week', 7],
+          ].map(([l, d]) => (
+            <button key={l as string} role="menuitem" type="button" onClick={() => { setOpen(false); onSnooze(d as number); }}>
+              {l as string}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function BulkNextActionDialog({
+  isOpen,
+  onClose,
+  timeZone,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  timeZone: string;
+  onSave: (nextAction: string | null, date: string | null) => Promise<void>;
+}) {
+  const [next, setNext] = useState('');
+  const [date, setDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { if (isOpen) { setNext(''); setDate(''); setError(null); } }, [isOpen]);
+
+  const save = async (withNext: boolean) => {
+    if (withNext && !next.trim()) { setError('Describe the next step, or choose "No next action needed".'); return; }
+    setSaving(true);
+    try {
+      await onSave(withNext ? next.trim() : null, withNext ? date || null : null);
+      onClose();
+    } catch (e) { setError((e as Error).message); } finally { setSaving(false); }
+  };
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose} title="Bulk Set Next Action" description="Applies the same next action to all selected applications." maxWidth={500} footer={
+      <>
+        <Button variant="ghost" onClick={() => void save(false)} disabled={saving}>No next action needed</Button>
+        <span style={{ flex: 1 }} />
+        <Button variant="primary" onClick={() => void save(true)} isLoading={saving}>Save next action</Button>
+      </>
+    }>
+      <div className="col" style={{ gap: 12 }}>
+        {error && <div className="banner danger small">{error}</div>}
+        <FormField label="Next action" required>
+          {(p) => <Input {...p} value={next} maxLength={255} onChange={(e) => setNext(e.target.value)} />}
+        </FormField>
+        <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Tomorrow', value: addDaysKey(dayKey(Date.now(), timeZone), 1) },
+            { label: 'In 1 week', value: addDaysKey(dayKey(Date.now(), timeZone), 7) },
+            { label: 'In 2 weeks', value: addDaysKey(dayKey(Date.now(), timeZone), 14) },
+          ].map((c) => (
+            <button key={c.label} type="button" className={`chip sm ${date === c.value ? 'on' : ''}`} aria-pressed={date === c.value} onClick={() => setDate(c.value)}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <FormField label="Due" optional>
+          {(p) => <Input {...p} type="date" value={date} onChange={(e) => setDate(e.target.value)} />}
+        </FormField>
+      </div>
+    </Dialog>
+  );
+}
 
 export interface TasksViewProps {
   activeWorkspaceId: string | null;
@@ -63,6 +147,9 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
   const [error, setError] = useState<string | null>(null);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkNextActionDialog, setBulkNextActionDialog] = useState(false);
   const [workflow, setWorkflow] = useState<CanonicalWorkflow | null>(null);
   const [members, setMembers] = useState<WorkspaceMemberInfo[]>([]);
   const [dialog, setDialog] = useState<{ type: TaskType; editing: Task | null } | null>(null);
@@ -76,6 +163,9 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
   useEffect(() => {
     if (!wide) setSelectedKey(null);
   }, [wide]);
+  useEffect(() => {
+    setSelectedKeys(new Set());
+  }, [tab, typeFilter, ownerId, page]);
 
   const filters: TaskFilters = useMemo(() => ({ ownerId: ownerId || undefined, taskType: typeFilter }), [ownerId, typeFilter]);
   const viewKey = `${ws}|${tab}|${ownerId}|${typeFilter}|${page}|${timeZone}`;
@@ -146,10 +236,95 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
     return m ? m.display_name || m.username : null;
   };
 
+  const toggleSelection = (key: string, checked: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key); else next.delete(key);
+      return next;
+    });
+  };
+
+  const handleBulkDismiss = async () => {
+    const targets = items.filter(i => selectedKeys.has(i.key) && i.task);
+    if (!targets.length) return;
+    setBulkSaving(true);
+    const results = await Promise.allSettled(targets.map(t => cancelTask(t.task!.id)));
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    if (succeeded === targets.length) {
+      addToast({ title: `Dismissed ${succeeded} item(s)`, type: 'info' });
+      setSelectedKeys(new Set());
+    } else {
+      addToast({ title: `Dismissed ${succeeded} item(s). ${targets.length - succeeded} failed.`, type: 'danger' });
+      setSelectedKeys(new Set(targets.filter((_, i) => results[i]?.status === 'rejected').map(t => t.key)));
+    }
+    setBulkSaving(false);
+    void load();
+  };
+
+  const performSnooze = async (item: QueueItem, days: number, tz: string) => {
+    const today = dayKey(Date.now(), tz);
+    if (item.kind === 'NEXT_ACTION') {
+      return snoozeNextAction(item.nextAction!.id, addDaysKey(today, days));
+    } else if (item.task?.due_at) {
+      const w = utcIsoToZonedWallTime(item.task.due_at, tz);
+      const base = w.date < today ? today : w.date;
+      return updateTask(item.task.id, { due_at: zonedWallTimeToUtcIso(addDaysKey(base, days), w.time, tz) });
+    } else if (item.task) {
+      const base = item.task.due_date && item.task.due_date > today ? item.task.due_date : today;
+      return updateTask(item.task.id, { due_date: addDaysKey(base, days), due_at: null });
+    }
+  };
+
+  const handleBulkSnooze = async (days: number) => {
+    const targets = items.filter(i => selectedKeys.has(i.key) && i.kind !== 'INTERVIEW_OUTCOME');
+    if (!targets.length) return;
+    setBulkSaving(true);
+    const results = await Promise.allSettled(targets.map(t => performSnooze(t, days, timeZone)));
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    if (succeeded === targets.length) {
+      addToast({ title: `Snoozed ${succeeded} item(s)`, type: 'info' });
+      setSelectedKeys(new Set());
+    } else {
+      addToast({ title: `Snoozed ${succeeded} item(s). ${targets.length - succeeded} failed.`, type: 'danger' });
+      setSelectedKeys(new Set(targets.filter((_, i) => results[i]?.status === 'rejected').map(t => t.key)));
+    }
+    setBulkSaving(false);
+    void load();
+  };
+
+  const handleBulkNextAction = async (nextAction: string | null, date: string | null) => {
+    const targets = items.filter(i => selectedKeys.has(i.key) && i.kind === 'NEXT_ACTION');
+    if (!targets.length) return;
+    setBulkSaving(true);
+    const results = await Promise.allSettled(targets.map(t => completeNextAction(t.nextAction!.id, nextAction, date)));
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    if (succeeded === targets.length) {
+      addToast({ title: `Updated ${succeeded} next action(s)`, type: 'success' });
+      setSelectedKeys(new Set());
+    } else {
+      addToast({ title: `Updated ${succeeded} next action(s). ${targets.length - succeeded} failed.`, type: 'danger' });
+      setSelectedKeys(new Set(targets.filter((_, i) => results[i]?.status === 'rejected').map(t => t.key)));
+    }
+    setBulkSaving(false);
+    void load();
+  };
+
   if (!ws) return <EmptyState title="No workspace selected" description="Choose a workspace to see its tasks." />;
 
   const row = (i: QueueItem) => (
-    <QueueRow key={i.key} item={i} timeZone={timeZone} onComplete={actions.complete} onSnooze={actions.snooze} onOpen={(it) => setSelectedKey(it.key)} selected={i.key === selectedKey} ownerName={ownerName(i.ownerId)} />
+    <QueueRow
+      key={i.key}
+      item={i}
+      timeZone={timeZone}
+      onComplete={actions.complete}
+      onSnooze={actions.snooze}
+      onCancel={actions.askCancel}
+      onOpen={(it) => setSelectedKey(it.key)}
+      selected={i.key === selectedKey}
+      checked={selectedKeys.has(i.key)}
+      onCheckChange={(c) => toggleSelection(i.key, c)}
+      ownerName={ownerName(i.ownerId)}
+    />
   );
   const band = (key: string, label: string, list: QueueItem[], tone: 'danger' | 'warning' | 'neutral', icon?: ReactNode) =>
     list.length > 0 && (
@@ -324,6 +499,20 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
           </>
         )}
       </div>
+      {selectedKeys.size > 0 && (
+        <div className="row bulk-bar fade-in" style={{ padding: '8px 12px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', gap: 12, alignItems: 'center' }}>
+          <span className="small b">{selectedKeys.size} selected</span>
+          <span style={{ flex: 1 }} />
+          <BulkSnoozeMenu onSnooze={(d) => void handleBulkSnooze(d)} disabled={bulkSaving} />
+          {Array.from(selectedKeys).some(k => items.find(i => i.key === k)?.kind === 'NEXT_ACTION') && (
+            <Button size="sm" variant="secondary" onClick={() => setBulkNextActionDialog(true)} disabled={bulkSaving}>Set next action</Button>
+          )}
+          {Array.from(selectedKeys).some(k => items.find(i => i.key === k)?.task) && (
+            <Button size="sm" variant="danger" onClick={() => void handleBulkDismiss()} disabled={bulkSaving}>Dismiss</Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => setSelectedKeys(new Set())} disabled={bulkSaving}>Cancel</Button>
+        </div>
+      )}
       <div className="int-body">
         <div className="card int-list" role="tabpanel" id={`tasks-tabs-panel-${tab}`} aria-labelledby={`tasks-tabs-tab-${tab}`} aria-busy={loading} tabIndex={0}>
           {renderList()}
@@ -350,6 +539,12 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
           }}
         />
       )}
+      <BulkNextActionDialog
+        isOpen={bulkNextActionDialog}
+        onClose={() => setBulkNextActionDialog(false)}
+        timeZone={timeZone}
+        onSave={handleBulkNextAction}
+      />
       {actions.dialogs}
     </div>
   );

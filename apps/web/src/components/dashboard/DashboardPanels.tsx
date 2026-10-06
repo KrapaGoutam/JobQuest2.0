@@ -9,9 +9,128 @@ import {
   ScopeTag,
 } from "../analytics/AnalyticsCharts";
 import { Card } from "../ui/Card";
-import { weeklyPulseDelta } from "../../lib/dashboard";
+import {
+  calculateDailyGoalMetrics,
+  weeklyPulseDelta,
+} from "../../lib/dashboard";
 
 type Period = "today" | "week" | "month";
+
+export function DailyGoalCard({
+  data,
+  onNavigate,
+}: {
+  data: DashboardWidgetData;
+  onNavigate?: (path: string) => void;
+}) {
+  const metrics = calculateDailyGoalMetrics(data);
+
+  if (!metrics.hasGoal) {
+    return (
+      <div className="dash-daily-goal-card" data-testid="dashboard-daily-goal">
+        <div className="dash-daily-goal-empty">
+          <div className="dash-daily-goal-empty-info">
+            <div className="dash-daily-goal-empty-title">
+              <Target size={15} aria-hidden="true" />
+              <strong>No daily application goal configured</strong>
+            </div>
+            <div className="dash-daily-goal-empty-metrics">
+              <span>Today: <strong>{metrics.todayCount}</strong></span>
+              <span className="dot-sep" aria-hidden="true">•</span>
+              <span>Yesterday: <strong>{metrics.yesterdayCount}</strong></span>
+              {metrics.yesterdayDelta !== 0 && (
+                <span className="muted small">
+                  ({metrics.yesterdayDelta > 0 ? `+${metrics.yesterdayDelta}` : metrics.yesterdayDelta} vs yesterday)
+                </span>
+              )}
+            </div>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              className="btn-linkish small"
+              onClick={() => onNavigate("/analytics")}
+            >
+              Configure in Analytics
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const deltaText =
+    metrics.yesterdayDelta > 0
+      ? `+${metrics.yesterdayDelta} vs yesterday`
+      : metrics.yesterdayDelta < 0
+        ? `${metrics.yesterdayDelta} vs yesterday`
+        : "Same as yesterday";
+
+  return (
+    <div className="dash-daily-goal-card" data-testid="dashboard-daily-goal">
+      <div className="dash-daily-goal-body">
+        <div className="dash-daily-goal-details">
+          <div className="dash-daily-goal-head">
+            <span className="dash-daily-goal-tag">
+              <Target size={13} aria-hidden="true" />
+              Daily Application Goal
+            </span>
+            <span
+              className={`dash-daily-goal-pill ${
+                metrics.isMet ? "met" : "in-progress"
+              }`}
+            >
+              {metrics.isExceeded
+                ? `Goal exceeded (${metrics.todayCount - metrics.target!} over)`
+                : metrics.isMet
+                  ? "Goal met"
+                  : `${metrics.remaining} remaining`}
+            </span>
+          </div>
+
+          <div className="dash-daily-goal-main">
+            <div className="dash-daily-goal-counts">
+              <span className="dash-daily-goal-today">
+                Today: <strong>{metrics.todayCount}</strong>
+              </span>
+              <span className="dash-daily-goal-divider" aria-hidden="true">
+                /
+              </span>
+              <span className="dash-daily-goal-target">
+                Goal: <strong>{metrics.target}</strong>
+              </span>
+            </div>
+            <div className="dash-daily-goal-pct-badge">
+              <strong>{metrics.percentage}%</strong> complete
+            </div>
+          </div>
+
+          <div className="dash-daily-goal-meta">
+            <span className="dash-daily-goal-remaining">
+              {metrics.isExceeded
+                ? `${metrics.todayCount - metrics.target!} over goal`
+                : `${metrics.remaining} remaining`}
+            </span>
+            <span className="dot-sep" aria-hidden="true">
+              •
+            </span>
+            <span className="dash-daily-goal-yesterday">
+              Yesterday: <strong>{metrics.yesterdayCount}</strong> ({deltaText})
+            </span>
+          </div>
+        </div>
+
+        <div className="dash-daily-goal-visual">
+          <GoalRing
+            value={metrics.todayCount}
+            target={metrics.target!}
+            label="Daily application goal progress"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Delta({ value }: { value: number }) {
   if (!value) return <span className="pulse-delta neutral">No change</span>;
@@ -27,9 +146,11 @@ function Delta({ value }: { value: number }) {
 export function SearchPulse({
   data,
   enabled,
+  onNavigate,
 }: {
   data: DashboardWidgetData;
   enabled: Set<string>;
+  onNavigate?: (path: string) => void;
 }) {
   const [period, setPeriod] = useState<Period>("week");
   const overview = data[period];
@@ -113,6 +234,9 @@ export function SearchPulse({
           ))}
         </div>
       </div>
+
+      <DailyGoalCard data={data} onNavigate={onNavigate} />
+
       <div className="pulse-card">
         {cells
           .filter((cell) => cell.show)
@@ -138,7 +262,31 @@ export function SearchPulse({
           enabled.has("goal-comparison")) && (
           <div className="pulse-cell pulse-goal">
             <span>Goal</span>
-            {applicationGoal ? <GoalRing value={applicationGoal.actual} target={applicationGoal.target_value} label={`${period} application goal`} /> : <small>No {period} application goal</small>}
+            {applicationGoal ? (
+              <>
+                <GoalRing
+                  value={applicationGoal.actual}
+                  target={applicationGoal.target_value}
+                  label={`${period} application goal`}
+                />
+                {period === "today" && (
+                  <small style={{ marginTop: 4 }}>
+                    {applicationGoal.target_value > 0
+                      ? `${Math.round(
+                          (applicationGoal.actual /
+                            applicationGoal.target_value) *
+                            100,
+                        )}% · ${Math.max(
+                          0,
+                          applicationGoal.target_value - applicationGoal.actual,
+                        )} remaining`
+                      : "Target reached"}
+                  </small>
+                )}
+              </>
+            ) : (
+              <small>No {period} application goal</small>
+            )}
           </div>
         )}
       </div>

@@ -471,7 +471,7 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
         <Button variant="secondary" leftIcon={<Reply size={14} />} onClick={() => setDialog({ type: 'FOLLOW_UP', editing: null })}>New follow-up</Button>
         <Button variant="primary" leftIcon={<Plus size={14} />} onClick={() => setDialog({ type: 'TASK', editing: null })}>New task</Button>
       </div>
-      <Tabs id="tasks-tabs" activeTab={tab} onTabChange={(t) => { setTab(t as TaskTab); setPage(0); setSelectedKey(null); }}>
+      <Tabs id="tasks-tabs" activeTab={tab} onTabChange={(t) => { setTab(t as TaskTab); setPage(0); setSelectedKey(null); setSelectedKeys(new Set()); }}>
         <TabList aria-label="Task views">
           <Tab id="overdue" count={counts.overdue}>Overdue</Tab>
           <Tab id="today" count={counts.today}>Today</Tab>
@@ -489,6 +489,7 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
           ))}
         </div>
         <span style={{ flex: 1 }} />
+        {items.length > 0 && tab !== "completed" && (<Button size="sm" variant="outline" onClick={() => { if (selectedKeys.size === items.length) setSelectedKeys(new Set()); else setSelectedKeys(new Set(items.map(i => i.key))); }}>{selectedKeys.size === items.length ? "Deselect all" : "Select all"}</Button>)}
         {isManager && (
           <>
             <label className="sr-only" htmlFor="task-owner-filter">Owner</label>
@@ -549,3 +550,7 @@ export function TasksView({ activeWorkspaceId: ws, isManager, currentUserId }: T
     </div>
   );
 }
+
+
+
+

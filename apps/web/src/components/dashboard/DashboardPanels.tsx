@@ -10,6 +10,7 @@ import {
 } from "../analytics/AnalyticsCharts";
 import { Card } from "../ui/Card";
 import {
+  calculateDailyActivity,
   calculateDailyGoalMetrics,
   weeklyPulseDelta,
 } from "../../lib/dashboard";
@@ -306,8 +307,14 @@ export function DashboardProgress({
   const [pipelineMode, setPipelineMode] = useState<"historical" | "current">(
     "historical",
   );
-  const applicationGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS');
-  const networkingGoal = data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'NETWORKING');
+  const [activityMode, setActivityMode] = useState<"daily" | "weekly">("weekly");
+
+  const dailyActivity = useMemo(
+    () => calculateDailyActivity(data.applications, data.timeZone),
+    [data.applications, data.timeZone],
+  );
+  const applicationGoal = isManagerAggregate ? null : data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'APPLICATIONS');
+  const networkingGoal = isManagerAggregate ? null : data.goalProgress?.active_goals.find((goal) => goal.goal_type === 'NETWORKING');
   const aggregateTarget = data.week.active_goal?.target_applications;
   const target = applicationGoal?.target_value ?? aggregateTarget ?? 0;
   const actual = applicationGoal?.actual ?? (isManagerAggregate ? data.week.total_applications : 0);
@@ -336,11 +343,30 @@ export function DashboardProgress({
             <header className="analytics-card-head">
               <div>
                 <h3>Application activity</h3>
-                <p>Latest 12 weeks</p>
+                <p>{activityMode === "daily" ? "Latest 14 days" : "Latest 12 weeks"}</p>
               </div>
-              <ScopeTag tone="fixed">12 weeks</ScopeTag>
+              <div
+                className="mini-switch"
+                role="group"
+                aria-label="Activity view"
+              >
+                <button
+                  type="button"
+                  aria-pressed={activityMode === "daily"}
+                  onClick={() => setActivityMode("daily")}
+                >
+                  Daily
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={activityMode === "weekly"}
+                  onClick={() => setActivityMode("weekly")}
+                >
+                  Weekly
+                </button>
+              </div>
             </header>
-            <PaceChart points={data.all.weekly_pacing} compact />
+            <PaceChart points={activityMode === "daily" ? dailyActivity : data.all.weekly_pacing} compact />
           </Card>
         )}
         {showPipeline && (
@@ -437,3 +463,10 @@ export function DashboardProgress({
     </section>
   );
 }
+
+
+
+
+
+
+

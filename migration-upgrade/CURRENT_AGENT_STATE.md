@@ -1,3 +1,64 @@
+## >>> JOBQUEST 2.1-PA � PRODUCTION ACCEPTANCE REMEDIATION (2026-10-06) <<<
+
+PHASE: 2.1-PA | STATUS: REMEDIATION VERIFIED � READY FOR COMMIT & BRANCH CI
+
+REMEDIATION BRANCH: ix/2.1-production-acceptance-remediation
+BASE DEVELOPMENT SHA: 87525ba100065515aa0e7ba1ab60c47eb47fdc7d
+PRODUCTION BASE SHA: 4dcda58f7283865a6d4b9fe1e6615f6b71a1ff5b
+
+ITEMS REMEDIATED:
+- B: Dashboard Goal: Removed manager goal fetch suppression in DashboardView; daily goal card renders target/progress.
+- C: Group by Date: Removed conflicting legacy month-toggle callbacks in ApplicationsToolbar; date/month grouping mutually exclusive and stable.
+- D: Tasks & Follow-ups: Added Select All / Deselect All for visible active items; completed tab excluded; recurring dismiss warns recurrence stops; canonical cancelTask intact.
+- E: Extension Tailor Resume: "Enter manually" set as default in popup & sidepanel; manual inputs visible initially.
+- F: Extension Copy JSON: Merges live form inputs with captured data; no DB save, ID, or existing record required.
+- G: Analytics Goals: Immediately selects current user when entering Goals tab; preserves authorized member switching and manager aggregate view without auto-revert.
+- H: Application Activity: Added compact Daily/Weekly toggle; implemented calculateDailyActivity with canonical dayKey profile-timezone semantics.
+- .gitignore: Reverted local changes; operator-local scripts preserved in .git/info/exclude.
+
+DATABASE / MIGRATION IMPACT: NONE (0 migrations).
+
+REPORTS:
+- eature-upgrade-2.1/2.1-PA_PRODUCTION_ACCEPTANCE_REMEDIATION_REPORT.md
+- eature-upgrade-2.1/2.1_FINAL_RELEASE_REPORT.md (marked: INITIAL OPERATOR ACCEPTANCE FAILED � REMEDIATION IN PROGRESS)
+
+## >>> JOBQUEST 2.1 — FINAL APPLICATION RELEASE (2026-10-06) <<<
+
+RELEASE: JobQuest 2.1 Application Feature Release (Phases 2.1-A through 2.1-F)
+STATUS: DEPLOYED TO PRODUCTION — READY FOR OPERATOR ACCEPTANCE
+
+PROMOTION & DEPLOYMENT EVIDENCE:
+- Base Development SHA: `87525ba100065515aa0e7ba1ab60c47eb47fdc7d` | Development CI: `37483333711` (PASS)
+- Main Before Merge: `c5eaaafc98b70b36d83f64038338b73c464cfd3b`
+- Merge Action: `git merge --no-ff development` -> `4dcda58f7283865a6d4b9fe1e6615f6b71a1ff5b`
+- Main After Merge: `4dcda58f7283865a6d4b9fe1e6615f6b71a1ff5b` | Main CI: `37485901187` (PASS across all 3 jobs)
+- Production Deployment: `dpl_FHvf1caqSd8Rc3nskTz1aeh7dm4L` (READY)
+- Production URL: `https://jobquest2.vercel.app` (HTTP 200, `/api/health` 200)
+- Deployed Client Bundle: `/assets/index-B949OcUu.js` (Verified containing 2.1-A through 2.1-F markers)
+
+PHASES INCLUDED:
+- 2.1-A: Resume Version Visibility
+- 2.1-B: Dashboard Goal + Daily Metrics
+- 2.1-C: Application Grouping
+- 2.1-D: Tasks & Follow-ups
+- 2.1-E: Extension Capture + AI Job JSON
+- 2.1-F: Analytics Goal Trends
+
+DATABASE / MIGRATION IMPACT: NONE (0 migrations across entire 2.1 feature set).
+
+EXTENSION RELEASE STATUS:
+- CI bundle & unit tests PASS.
+- Production package buildable via `node apps/extension/scripts/package.mjs prod`.
+- Manual reload required in `chrome://extensions` for unpacked extension instances. No store publish required.
+
+POST-RELEASE PHASES:
+- Phase 2.1-G (Legacy DB Reconciliation): NOT STARTED
+- Phase 2.1-H (AI Connectivity Research): NOT STARTED
+
+NEXT EXACT ACTION: Operator performs consolidated JobQuest 2.1 production acceptance. After acceptance, formally close the application release and proceed separately to 2.1-G.
+
+Report: `feature-upgrade-2.1/2.1_FINAL_RELEASE_REPORT.md`.
+
 ## >>> JOBQUEST 2.1-F — ANALYTICS GOAL TRENDS (2026-10-06) <<<
 
 PHASE: 2.1-F | STATUS: IMPLEMENTED ON FEATURE BRANCH — READY FOR COMMIT & BRANCH CI
@@ -705,3 +766,4 @@ Work accomplished:
 4. Added UI actions ("Copy Job JSON") to both the extension side panel and the web app's Application Detail Drawer.
 5. Added rigorous unit tests ensuring payload structure correctness and null-safety.
 6. Workspace typechecks cleanly. Ready for branch CI and merge to `development`.
+

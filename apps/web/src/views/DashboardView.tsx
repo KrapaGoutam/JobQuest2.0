@@ -210,7 +210,7 @@ export function DashboardView({
         fetchAnalyticsOverview(ws, { userId: owner || null }),
         fetchStageTiming(ws, { userId: owner || null }),
         fetchDashboardApplications(ws, owner),
-        isManager && !owner ? Promise.resolve(null) : fetchGoalProgress(ws, { userId: owner || null }),
+        fetchGoalProgress(ws, { userId: owner || null }),
       ]);
       if (mine !== seq.current) return;
       const nextQueue = buildQueue(

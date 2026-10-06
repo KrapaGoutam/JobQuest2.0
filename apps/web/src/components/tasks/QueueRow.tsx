@@ -111,7 +111,7 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
         isOpen={cancelFor !== null}
         onClose={() => setCancelFor(null)}
         title="Dismiss this task?"
-        description="It moves out of your active queue and stays in history. Nothing is deleted."
+        description={cancelFor?.task?.recurrence_rule ? 'It moves out of your active queue and stays in history. This follow-up will be dismissed and will not recur again.' : 'It moves out of your active queue and stays in history. Nothing is deleted.'}
         maxWidth={440}
         footer={
           <>

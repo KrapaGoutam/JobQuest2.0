@@ -33,6 +33,7 @@ export interface AnalyticsViewProps {
   activeWorkspaceId: string | null;
   isManager: boolean;
   initialTab?: AnalyticsTab;
+  currentUserId: string | null;
 }
 export type AnalyticsTab = "overview" | "timing" | "aging" | "goals";
 export type DateRangePreset = "30d" | "90d" | "180d" | "1y";
@@ -48,6 +49,7 @@ export function AnalyticsView({
   activeWorkspaceId,
   isManager,
   initialTab = "overview",
+  currentUserId,
 }: AnalyticsViewProps) {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
@@ -62,8 +64,23 @@ export function AnalyticsView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadRequestId = useRef(0);
+  const userSelectedMemberRef = useRef(false);
+
+  useEffect(() => {
+    userSelectedMemberRef.current = false;
+  }, [activeWorkspaceId]);
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
+  useEffect(() => {
+    if (
+      activeTab === 'goals'
+      && selectedMemberId === ''
+      && currentUserId
+      && !userSelectedMemberRef.current
+    ) {
+      setSelectedMemberId(currentUserId);
+    }
+  }, [activeTab, selectedMemberId, currentUserId]);
   useEffect(() => {
     let cancelled = false;
     setRosterWorkspaceId(null);
@@ -100,6 +117,11 @@ export function AnalyticsView({
   );
   const targetUserId = isManager ? selectedMember?.user_id ?? null : null;
   const isManagerAggregate = isManager && !targetUserId;
+
+  const handleSelectMember = useCallback((userId: string) => {
+    userSelectedMemberRef.current = true;
+    setSelectedMemberId(userId);
+  }, []);
 
   useEffect(() => {
     if (
@@ -238,7 +260,10 @@ export function AnalyticsView({
             <Select
               aria-label="Filter by workspace member"
               value={selectedMemberId}
-              onChange={(event) => setSelectedMemberId(event.target.value)}
+              onChange={(event) => {
+                userSelectedMemberRef.current = true;
+                setSelectedMemberId(event.target.value);
+              }}
             >
               <option value="">Owner: All members</option>
               {members.map((member) => (
@@ -349,7 +374,7 @@ export function AnalyticsView({
                   dateRange={RANGE_LABEL[dateRange]}
                   startDate={bounds.startDate}
                   endDate={bounds.endDate}
-                  onSelectMember={setSelectedMemberId}
+                  onSelectMember={handleSelectMember}
                 />
               )}
             </TabPanel>
@@ -359,3 +384,8 @@ export function AnalyticsView({
     </div>
   );
 }
+
+
+
+
+

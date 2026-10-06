@@ -262,15 +262,27 @@ test.describe("Milestone 8 · Search Analytics, Reports & Goals E2E", () => {
     // A manager can scope analytics and goals to an individual workspace member.
     const memberFilter = page.getByLabel("Filter by workspace member");
     await expect(memberFilter.locator("option")).toHaveCount(2);
+    const memberValue = await memberFilter.locator("option").nth(1).getAttribute("value");
+    expect(memberValue).toBeTruthy();
     await expect(memberFilter.locator("option").nth(1)).toContainText(username);
+
+    // 2.1-PA: Goals tab defaults to current user immediately
     await page.getByRole("tab", { name: "Goals" }).click();
+    await expect(memberFilter).toHaveValue(memberValue!);
+    await settle(page);
+    await expect(
+      page.getByRole("heading", { name: "Activity goals" }),
+    ).toBeVisible();
+
+    // Selecting "All members" displays workspace goal pacing
+    await memberFilter.selectOption("");
+    await settle(page);
     await expect(
       page.getByRole("heading", { name: "Workspace goal pacing" }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Add goal" })).toHaveCount(0);
 
-    const memberValue = await memberFilter.locator("option").nth(1).getAttribute("value");
-    expect(memberValue).toBeTruthy();
+    // Clicking "Manage <username>'s goals" selects the member and displays Activity goals
     await page.getByRole("button", { name: new RegExp(`Manage ${username}.* goals`) }).click();
     await expect(memberFilter).toHaveValue(memberValue!);
     await settle(page);

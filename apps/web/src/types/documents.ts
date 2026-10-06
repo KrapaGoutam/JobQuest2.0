@@ -37,6 +37,7 @@ export interface ApplicationDocumentRecord {
   resume_id: string | null;
   file_storage_path: string | null;
   notes: string | null;
+  label: string | null;
   created_at: string;
   resume?: ResumeRecord | null;
 }

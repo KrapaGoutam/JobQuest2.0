@@ -1,3 +1,19 @@
+## >>> JOBQUEST 2.1-A — RESUME VERSION / ATTACHED DOCUMENT FIX (2026-10-05) <<<
+
+PHASE: 2.1-A | STATUS: IMPLEMENTED ON FIX BRANCH — AWAITING OPERATOR APPROVAL
+
+CURRENT BRANCH: `fix/2.1a-resume-version-visibility` | BASE: `development`
+
+IMPLEMENTATION: Added `label` to `ApplicationDocumentRecord` in `types/documents.ts` and updated `ApplicationDocumentsSection.tsx` to display `item.label` (if present) over `resume.name`, defaulting to "Attached Document" as a final fallback.
+
+LOCAL EVIDENCE: `npx tsc --noEmit` PASS. No dedicated UI component test file was found to break. 
+
+PROTECTION STATE: `development` and `main` remain unchanged. Production and database schema are untouched.
+
+NEXT EXACT ACTION: Operator manually validates 2.1-A and approves or rejects promotion to `development`.
+
+Report: `feature-upgrade-2.1/2.1-A_IMPLEMENTATION_REPORT.md`.
+
 ## >>> M15-F PRODUCTION LIVE / APPLICATIONS DENSITY HOTFIX IN PROGRESS (2026-10-04) <<<
 
 M15-F Production cutover is live but **not formally closed**. Main is `8c06353ba373efe3306dd34ca126d5360994b6f1`; exact main CI `37212272157` passed; Vercel deployment `dpl_6aAYeZrJCoHDKj8QJGqonZ4tS6rG` is READY at `https://jobquest2.vercel.app`. The Production database has 20 migrations through `20261022100000_pl4c_goals_task_templates_recurrence.sql`; post-migration catalog, RLS, grants, constraints, and representative data reconciliation passed.

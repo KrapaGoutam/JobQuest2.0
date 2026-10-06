@@ -194,7 +194,7 @@ export function ApplicationDocumentsSection({
                 )}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.resume?.name || 'Attached Document'}
+                    {item.label || item.resume?.name || 'Attached Document'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                     {item.document_type}

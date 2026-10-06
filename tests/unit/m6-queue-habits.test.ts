@@ -155,21 +155,26 @@ describe('M6 / 2.1-PA Issue D — Tasks selection, dismissal, and recurrence rul
     expect(showSelectAll).toBe(false);
   });
 
-  it('formats Dismiss description with recurring explanation when recurrence_rule is present', () => {
+  it('formats Dismiss title and description with recurring explanation when recurrence_rule is present', () => {
     function getDismissDescription(t: Task | null) {
       return t?.recurrence_rule
-        ? 'It moves out of your active queue and stays in history. This follow-up will be dismissed and will not recur again.'
+        ? 'This follow-up will be dismissed and will not recur again.'
         : 'It moves out of your active queue and stays in history. Nothing is deleted.';
+    }
+    function getDismissTitle(t: Task | null) {
+      return t?.recurrence_rule ? 'Dismiss recurring follow-up?' : 'Dismiss this task?';
     }
 
     const nonRecurring = task({ id: 'non-rec', recurrence_rule: null });
+    expect(getDismissTitle(nonRecurring)).toBe('Dismiss this task?');
     expect(getDismissDescription(nonRecurring)).toBe(
       'It moves out of your active queue and stays in history. Nothing is deleted.'
     );
 
     const recurring = task({ id: 'rec', recurrence_rule: 'DAILY' });
+    expect(getDismissTitle(recurring)).toBe('Dismiss recurring follow-up?');
     expect(getDismissDescription(recurring)).toBe(
-      'It moves out of your active queue and stays in history. This follow-up will be dismissed and will not recur again.'
+      'This follow-up will be dismissed and will not recur again.'
     );
   });
 });

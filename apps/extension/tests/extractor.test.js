@@ -9,6 +9,9 @@ import { extractJsonLd } from "../extractors/jsonld.js"
 import { extractGreenhouse } from "../extractors/greenhouse.js"
 import { extractLever } from "../extractors/lever.js"
 import { extractGeneric } from "../extractors/generic.js"
+import { extractHiringCafe } from "../extractors/hiringcafe.js"
+import { extractDice } from "../extractors/dice.js"
+import { extractLinkedIn } from "../extractors/linkedin.js"
 import { extractJobPosting } from "../extractors/index.js"
 
 import { fileURLToPath } from "node:url"
@@ -234,3 +237,49 @@ test("Conflict priority: hidden headings, modal headings, and navigation are ign
   assert.equal(result.jobTitle, "Lead Security Architect")
   assert.equal(result.workArrangement, "Remote")
 })
+
+test('Stale SPA Protection: Reject mismatched job ID in JSON-LD', () => {
+  const doc = loadFixture('stale_spa.html');
+  const result = extractJsonLd(doc, 'https://example.com/jobs/999');
+  assert.equal(result, null, 'Should return null for stale SPA page');
+});
+
+test('HiringCafe extractor: quick view', () => {
+  const doc = loadFixture('hiringcafe_quick.html');
+  const result = extractHiringCafe(doc, 'https://hiringcafe.com/job/123');
+  assert.ok(result);
+  assert.equal(result.jobTitle, 'Software Engineer');
+  assert.equal(result.company, 'Cafe Corp');
+});
+
+test('Dice extractor', () => {
+  const doc = loadFixture('dice_job.html');
+  const result = extractDice(doc, 'https://dice.com/jobs/123');
+  assert.ok(result);
+  assert.equal(result.jobTitle, 'Dice Job');
+  assert.equal(result.company, 'Dice Corp');
+  assert.equal(result.location, 'Remote, USA');
+  assert.equal(result.workArrangement, 'Remote / On-site');
+  assert.deepEqual(result.skills, ['JavaScript']);
+});
+
+test('LinkedIn extractor', () => {
+  const doc = loadFixture('linkedin_job.html');
+  const result = extractLinkedIn(doc, 'https://linkedin.com/jobs/view/123');
+  assert.ok(result);
+  assert.equal(result.jobTitle, 'LinkedIn Job');
+  assert.equal(result.company, 'Linked Corp');
+  assert.equal(result.location, 'San Francisco, CA');
+  assert.equal(result.workArrangement, 'Remote');
+  assert.equal(result.employmentType, 'Full-time');
+  assert.equal(result.description, 'LI description');
+  assert.deepEqual(result.skills, ['TypeScript']);
+});
+
+test('JSON-LD + DOM merge', () => {
+  const doc = loadFixture('jsonld_job.html');
+  doc.body.innerHTML += "<main><div class='job-description'><h2>Skills</h2><ul><li>Rust</li></ul></div></main>";
+  const result = extractJobPosting(doc, 'https://stripe.com/jobs/12345');
+  assert.equal(result.jobTitle, 'Staff Software Engineer');
+  assert.ok(result.skills.includes('Rust'));
+});

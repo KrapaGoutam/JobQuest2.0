@@ -526,7 +526,8 @@ export function extractStructuredLists(doc) {
   const result = {
     responsibilities: [],
     requirements: [],
-    skills: []
+    skills: [],
+    extras: {}
   }
 
   const containerSelectors = [
@@ -556,15 +557,24 @@ export function extractStructuredLists(doc) {
   const headings = targetDoc.querySelectorAll('h1, h2, h3, h4, h5, h6, b, strong, p > strong');
   
   for (const heading of headings) {
-    const text = cleanText(heading.textContent).toLowerCase();
+    const rawText = cleanText(heading.textContent);
+    const text = rawText.toLowerCase();
     
     let targetList = null;
+    let isExtra = false;
     if (/responsibilit(?:y|ies)|what you'll do|role|duties|what we expect/.test(text)) {
       targetList = result.responsibilities;
     } else if (/requirement|qualification|what you need|who you are|what we're looking for|experience/.test(text)) {
       targetList = result.requirements;
     } else if (/skill|tech(?:nolog(?:y|ies))?|tool/.test(text)) {
       targetList = result.skills;
+    } else if (text.length > 3 && text.length < 50 && !/apply|about us|company|salary|location|benefits|perks/.test(text)) {
+      // Possible unknown section (e.g. "Nice to have", "Bonus points")
+      if (!result.extras[rawText]) {
+        result.extras[rawText] = [];
+      }
+      targetList = result.extras[rawText];
+      isExtra = true;
     }
 
     if (targetList) {
@@ -587,6 +597,11 @@ export function extractStructuredLists(doc) {
              }
           }
         }
+      }
+      
+      // Cleanup empty extras
+      if (isExtra && targetList.length === 0) {
+        delete result.extras[rawText];
       }
     }
   }

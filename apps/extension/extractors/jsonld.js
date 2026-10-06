@@ -81,10 +81,41 @@ export function extractJsonLd(doc, pageUrl = "") {
     }
   }
 
-  if (postings.length === 0) return null
+  if (postings.length === 0) return null;
 
-  // Use the first valid JobPosting found
-  const job = postings[0]
+  // Stale SPA Protection: Look for an exact match if multiple postings, 
+  // or verify the single posting isn't from a previous route.
+  let job = postings[0];
+  for (const p of postings) {
+    const pUrl = p.url || "";
+    const pId = p.identifier?.value || "";
+    if ((pUrl && pageUrl.includes(pUrl)) || (pId && pageUrl.includes(pId))) {
+      job = p;
+      break;
+    }
+  }
+
+  // If the job explicitly declares a URL/ID and it's completely missing from our pageUrl, it might be stale.
+  const jobUrlStr = String(job.url || "");
+  const jobIdStr = String(job.identifier?.value || "");
+  
+  let hasValidMatch = false;
+  let hasStaleData = false;
+  
+  if (jobUrlStr) {
+    if (pageUrl.includes(jobUrlStr) || jobUrlStr.includes(pageUrl)) hasValidMatch = true;
+    else hasStaleData = true;
+  }
+  
+  if (jobIdStr) {
+    if (pageUrl.includes(jobIdStr)) hasValidMatch = true;
+    else hasStaleData = true;
+  }
+  
+  // If we found a mismatch and no valid match rescued it, it's stale
+  if (hasStaleData && !hasValidMatch) {
+    return null;
+  }
 
   // Job Title
   const jobTitle = cleanText(job.title || job.name || "")

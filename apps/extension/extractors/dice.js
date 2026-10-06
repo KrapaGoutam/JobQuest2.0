@@ -1,5 +1,7 @@
 export function matchesDice(url, doc) {
-  return url.includes('dice.com');
+  if (url.includes('dice.com')) return true;
+  if (doc?.querySelector?.('job-detail-header-card, .job-detail-header-card')) return true;
+  return false;
 }
 
 export function extractDice(doc, url) {

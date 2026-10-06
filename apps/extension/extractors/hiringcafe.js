@@ -1,5 +1,7 @@
 export function matchesHiringCafe(url, doc) {
-  return url.includes('hiringcafe.com');
+  if (url.includes('hiringcafe.com')) return true;
+  if (doc?.querySelector?.('#job-info, #job-description, #company-info')) return true;
+  return false;
 }
 
 export function extractHiringCafe(doc, url) {

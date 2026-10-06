@@ -1,5 +1,7 @@
 export function matchesLinkedIn(url, doc) {
-  return url.includes('linkedin.com');
+  if (url.includes('linkedin.com')) return true;
+  if (doc?.querySelector?.('[data-sdui-screen="SemanticJobDetails"], .jobs-details__main-content, .job-view-layout')) return true;
+  return false;
 }
 
 export function extractLinkedIn(doc, url) {

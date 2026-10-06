@@ -130,7 +130,7 @@ export function useQueueActions(opts: { timeZone: string; workflow: CanonicalWor
                 setCancelFor(null);
               }}
             >
-              Dismiss
+              Dismiss task
             </Button>
           </>
         }

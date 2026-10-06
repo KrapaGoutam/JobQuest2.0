@@ -1,16 +1,33 @@
+## >>> JOBQUEST 2.1-B — DASHBOARD GOAL + DAILY METRICS (2026-10-06) <<<
+
+PHASE: 2.1-B | STATUS: IMPLEMENTED ON FEATURE BRANCH — PENDING COMMITS & CI VERIFICATION
+
+FEATURE BRANCH: `feature/2.1b-dashboard-goal-metrics` | BASE DEVELOPMENT SHA: `b4400f06acc34bc74ce71af3d7adf397ab32b2c9`
+
+IMPLEMENTATION: Added Daily Goal Card to SearchPulse zone, enhanced GoalProgress widget, wrapped Today's queue in a contained scroll container with sticky header, implemented timezone-safe date subtraction (`previousDayKey`) and goal metrics calculation (`calculateDailyGoalMetrics`).
+
+LOCAL EVIDENCE: Typecheck PASS; unit tests 193/193 PASS (including targeted 13/13 in `m9-dashboard.test.ts`); build PASS.
+
+DATABASE / MIGRATION IMPACT: NONE. 100% reuse of existing backend RPCs and queries (`rpc_get_goal_progress`, `rpc_get_analytics_overview`, `fetchDashboardApplications`).
+
+NEXT EXACT ACTION: Review diff, stage exact paths, commit and push feature branch `feature/2.1b-dashboard-goal-metrics`, observe branch CI, merge to development, observe development CI, and stop.
+
+Report: `feature-upgrade-2.1/2.1-B_IMPLEMENTATION_REPORT.md`.
+
 ## >>> JOBQUEST 2.1-A — RESUME VERSION / ATTACHED DOCUMENT FIX (2026-10-05) <<<
 
-PHASE: 2.1-A | STATUS: IMPLEMENTED ON FIX BRANCH — AWAITING OPERATOR APPROVAL
+PHASE: 2.1-A | STATUS: PROMOTED TO MAIN & DEPLOYED TO PRODUCTION — AWAITING OPERATOR MANUAL ACCEPTANCE
 
-CURRENT BRANCH: `fix/2.1a-resume-version-visibility` | BASE: `development`
+FIX BRANCH: `fix/2.1a-resume-version-visibility` (retained) | FIX SHA: `b3412bb9c964972b55bf970de6d9213548ae1d59` | FIX CI: `37408524474` (PASS)
+DEVELOPMENT SHA: `b4400f06acc34bc74ce71af3d7adf397ab32b2c9` | DEV CI: `37409345201` (rerun PASS)
+MAIN BEFORE: `74e9d225ebb739a9ddb5348f7548cca9fbe6f7ba` | MAIN SHA: `c5eaaafc98b70b36d83f64038338b73c464cfd3b` | MAIN CI: `37411431957` (PASS)
+PRODUCTION DEPLOYMENT: `dpl_6xU9HwNM58tM11nZdBaEx14XPTjo` (READY) | URL: `https://jobquest2.vercel.app`
 
 IMPLEMENTATION: Added `label` to `ApplicationDocumentRecord` in `types/documents.ts` and updated `ApplicationDocumentsSection.tsx` to display `item.label` (if present) over `resume.name`, defaulting to "Attached Document" as a final fallback.
 
-LOCAL EVIDENCE: `npx tsc --noEmit` PASS. No dedicated UI component test file was found to break. 
+VERIFICATION: Client bundle `/assets/index-BJxPZYzx.js` verified serving updated label logic. Production HTTP 200. No schema/migration changes.
 
-PROTECTION STATE: `development` and `main` remain unchanged. Production and database schema are untouched.
-
-NEXT EXACT ACTION: Operator manually validates 2.1-A and approves or rejects promotion to `development`.
+NEXT EXACT ACTION: Operator conducts manual acceptance in production. Upon acceptance, formally close Phase 2.1-A and begin Phase 2.1-B in a new session.
 
 Report: `feature-upgrade-2.1/2.1-A_IMPLEMENTATION_REPORT.md`.
 

@@ -8,7 +8,9 @@ import {
   readDashboardLayout,
   writeDashboardLayout,
   weeklyPulseDelta,
+  calculateDailyGoalMetrics,
 } from "../../apps/web/src/lib/dashboard";
+import { previousDayKey } from "../../apps/web/src/lib/time";
 
 describe("Milestone 9 — dashboard registry and preferences", () => {
   it("preserves the complete unique 30-widget contract verbatim", () => {
@@ -153,5 +155,244 @@ describe("Milestone 9 — dashboard registry and preferences", () => {
         .flatMap((tier) => tier.widgets)
         .every(({ definition }) => Boolean(definition)),
     ).toBe(true);
+  });
+});
+
+describe("Phase 2.1-B — Dashboard Goal + Daily Application Metrics", () => {
+  describe("previousDayKey calendar helper", () => {
+    it("computes the previous calendar date across standard days, month ends, leap years, and year ends", () => {
+      expect(previousDayKey("2026-10-06")).toBe("2026-10-05");
+      expect(previousDayKey("2026-10-01")).toBe("2026-09-30");
+      expect(previousDayKey("2026-01-01")).toBe("2025-12-31");
+      expect(previousDayKey("2024-03-01")).toBe("2024-02-29"); // leap year
+      expect(previousDayKey("2023-03-01")).toBe("2023-02-28"); // non-leap year
+    });
+  });
+
+  describe("calculateDailyGoalMetrics", () => {
+    // Fixed reference point: 2026-10-06T12:00:00Z (Tuesday)
+    const fixedNow = Date.parse("2026-10-06T12:00:00Z");
+
+    it("scenario A: daily goal configured -> correct today, target, remaining, completion percentage, and yesterday count", () => {
+      const input = {
+        timeZone: "UTC",
+        today: { total_applications: 7 },
+        goalProgress: {
+          user_id: "user-1",
+          timezone: "UTC",
+          week_start: 1,
+          active_goals: [
+            {
+              goal_type: "APPLICATIONS" as const,
+              period_type: "DAILY" as const,
+              target_value: 10,
+              actual: 7,
+              effective_date: "2026-10-01",
+              period_start: "2026-10-06",
+              period_end: "2026-10-07",
+              percentage: 70,
+              is_enabled: true,
+            },
+          ],
+          history: [
+            {
+              goal_type: "APPLICATIONS" as const,
+              period_type: "DAILY" as const,
+              target_value: 10,
+              actual: 8,
+              effective_date: "2026-10-01",
+              period_start: "2026-10-05",
+              period_end: "2026-10-06",
+              percentage: 80,
+            },
+          ],
+          versions: [],
+        },
+        applications: [],
+      };
+
+      const metrics = calculateDailyGoalMetrics(input, fixedNow);
+      expect(metrics.hasGoal).toBe(true);
+      expect(metrics.todayCount).toBe(7);
+      expect(metrics.target).toBe(10);
+      expect(metrics.remaining).toBe(3);
+      expect(metrics.percentage).toBe(70);
+      expect(metrics.yesterdayCount).toBe(8);
+      expect(metrics.yesterdayDelta).toBe(-1);
+      expect(metrics.isMet).toBe(false);
+      expect(metrics.isExceeded).toBe(false);
+    });
+
+    it("scenario B: goal exceeded -> percentage is uncapped, remaining is 0, isExceeded is true", () => {
+      const input = {
+        timeZone: "UTC",
+        today: { total_applications: 12 },
+        goalProgress: {
+          user_id: "user-1",
+          timezone: "UTC",
+          week_start: 1,
+          active_goals: [
+            {
+              goal_type: "APPLICATIONS" as const,
+              period_type: "DAILY" as const,
+              target_value: 10,
+              actual: 12,
+              effective_date: "2026-10-01",
+              period_start: "2026-10-06",
+              period_end: "2026-10-07",
+              percentage: 120,
+              is_enabled: true,
+            },
+          ],
+          history: [],
+          versions: [],
+        },
+        applications: [
+          // 5 applications yesterday
+          { applied_at: "2026-10-05T09:00:00Z" },
+          { applied_at: "2026-10-05T10:00:00Z" },
+          { applied_at: "2026-10-05T11:00:00Z" },
+          { applied_at: "2026-10-05T12:00:00Z" },
+          { applied_at: "2026-10-05T13:00:00Z" },
+        ],
+      };
+
+      const metrics = calculateDailyGoalMetrics(input, fixedNow);
+      expect(metrics.hasGoal).toBe(true);
+      expect(metrics.todayCount).toBe(12);
+      expect(metrics.target).toBe(10);
+      expect(metrics.remaining).toBe(0);
+      expect(metrics.percentage).toBe(120);
+      expect(metrics.isMet).toBe(true);
+      expect(metrics.isExceeded).toBe(true);
+      expect(metrics.yesterdayCount).toBe(5);
+      expect(metrics.yesterdayDelta).toBe(7);
+    });
+
+    it("scenario C: zero applications today -> valid 0% and full target remaining, not empty state", () => {
+      const input = {
+        timeZone: "UTC",
+        today: { total_applications: 0 },
+        goalProgress: {
+          user_id: "user-1",
+          timezone: "UTC",
+          week_start: 1,
+          active_goals: [
+            {
+              goal_type: "APPLICATIONS" as const,
+              period_type: "DAILY" as const,
+              target_value: 10,
+              actual: 0,
+              effective_date: "2026-10-01",
+              period_start: "2026-10-06",
+              period_end: "2026-10-07",
+              percentage: 0,
+              is_enabled: true,
+            },
+          ],
+          history: [],
+          versions: [],
+        },
+        applications: [
+          { applied_at: "2026-10-05T10:00:00Z" },
+          { applied_at: "2026-10-05T11:00:00Z" },
+        ],
+      };
+
+      const metrics = calculateDailyGoalMetrics(input, fixedNow);
+      expect(metrics.hasGoal).toBe(true);
+      expect(metrics.todayCount).toBe(0);
+      expect(metrics.target).toBe(10);
+      expect(metrics.remaining).toBe(10);
+      expect(metrics.percentage).toBe(0);
+      expect(metrics.isMet).toBe(false);
+      expect(metrics.isExceeded).toBe(false);
+      expect(metrics.yesterdayCount).toBe(2);
+      expect(metrics.yesterdayDelta).toBe(-2);
+    });
+
+    it("scenario D: no daily goal configured -> hasGoal is false, target and percentage are null, counts still accurate", () => {
+      const input = {
+        timeZone: "UTC",
+        today: { total_applications: 3 },
+        goalProgress: {
+          user_id: "user-1",
+          timezone: "UTC",
+          week_start: 1,
+          active_goals: [
+            // Only a weekly goal, no daily goal
+            {
+              goal_type: "APPLICATIONS" as const,
+              period_type: "WEEKLY" as const,
+              target_value: 15,
+              actual: 8,
+              effective_date: "2026-10-01",
+              period_start: "2026-10-05",
+              period_end: "2026-10-12",
+              percentage: 53.3,
+              is_enabled: true,
+            },
+          ],
+          history: [],
+          versions: [],
+        },
+        applications: [
+          { applied_at: "2026-10-06T10:00:00Z" },
+          { applied_at: "2026-10-06T11:00:00Z" },
+          { applied_at: "2026-10-06T12:00:00Z" },
+          { applied_at: "2026-10-05T15:00:00Z" },
+        ],
+      };
+
+      const metrics = calculateDailyGoalMetrics(input, fixedNow);
+      expect(metrics.hasGoal).toBe(false);
+      expect(metrics.target).toBeNull();
+      expect(metrics.remaining).toBeNull();
+      expect(metrics.percentage).toBeNull();
+      expect(metrics.todayCount).toBe(3);
+      expect(metrics.yesterdayCount).toBe(1);
+      expect(metrics.yesterdayDelta).toBe(2);
+    });
+
+    it("scenario E: fallback to application list when today/history overview is null", () => {
+      const input = {
+        timeZone: "UTC",
+        today: null,
+        goalProgress: null,
+        applications: [
+          { applied_at: "2026-10-06T08:00:00Z" },
+          { applied_at: "2026-10-06T09:00:00Z" },
+          { applied_at: "2026-10-05T14:00:00Z" },
+          { applied_at: "2026-10-04T12:00:00Z" }, // 2 days ago
+        ],
+      };
+
+      const metrics = calculateDailyGoalMetrics(input, fixedNow);
+      expect(metrics.hasGoal).toBe(false);
+      expect(metrics.todayCount).toBe(2);
+      expect(metrics.yesterdayCount).toBe(1);
+      expect(metrics.yesterdayDelta).toBe(1);
+    });
+
+    it("scenario F: respects custom timezone boundaries (e.g. America/Chicago)", () => {
+      // 2026-10-06T03:00:00Z in America/Chicago (UTC-5) is 2026-10-05 22:00:00 (yesterday!)
+      const chicagoNow = Date.parse("2026-10-06T18:00:00Z"); // 1:00 PM CDT on 2026-10-06
+      const input = {
+        timeZone: "America/Chicago",
+        today: null,
+        goalProgress: null,
+        applications: [
+          // In Chicago, 2026-10-06T02:00:00Z is 2026-10-05 21:00 (yesterday)
+          { applied_at: "2026-10-06T02:00:00Z" },
+          // In Chicago, 2026-10-06T15:00:00Z is 2026-10-06 10:00 (today)
+          { applied_at: "2026-10-06T15:00:00Z" },
+        ],
+      };
+
+      const metrics = calculateDailyGoalMetrics(input, chicagoNow);
+      expect(metrics.todayCount).toBe(1);
+      expect(metrics.yesterdayCount).toBe(1);
+      expect(metrics.yesterdayDelta).toBe(0);
+    });
   });
 });

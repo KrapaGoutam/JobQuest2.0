@@ -1,5 +1,7 @@
 import type { Application } from '../types/applications';
 
+export type JobDataInput = Partial<Application> | Record<string, unknown>;
+
 /**
  * Creates an AI-friendly JSON representation of a captured job.
  * Ensures no sensitive/internal metadata is exposed.
@@ -7,42 +9,45 @@ import type { Application } from '../types/applications';
  * @param jobData The normalized capture payload or JobQuest Application record
  * @returns The formatted JSON string
  */
-export function generateAIJobJson(jobData: Partial<Application> | any): string {
+export function generateAIJobJson(jobData: JobDataInput): string {
+  const data = jobData as Record<string, unknown>;
+  const snapshot = (data.job_snapshot as Record<string, unknown> | undefined) || undefined;
+
   // Basic properties
-  const title = jobData.jobTitle || jobData.role_title || null;
-  const company = jobData.company || jobData.company_name || null;
-  const location = jobData.location || null;
-  const workArrangement = jobData.workArrangement || jobData.work_arrangement || null;
-  const employmentType = jobData.employmentType || jobData.employment_type || null;
+  const title = (data.jobTitle as string) || (data.role_title as string) || null;
+  const company = (data.company as string) || (data.company_name as string) || null;
+  const location = (data.location as string) || null;
+  const workArrangement = (data.workArrangement as string) || (data.work_arrangement as string) || null;
+  const employmentType = (data.employmentType as string) || (data.employment_type as string) || null;
   
   // Compensation
-  const compMin = jobData.salaryMin ?? jobData.salary_min ?? null;
-  const compMax = jobData.salaryMax ?? jobData.salary_max ?? null;
-  const compCurrency = jobData.salaryCurrency || jobData.salary_currency || null;
-  const compRangeText = jobData.salaryRange || null;
+  const compMin = (data.salaryMin as number) ?? (data.salary_min as number) ?? null;
+  const compMax = (data.salaryMax as number) ?? (data.salary_max as number) ?? null;
+  const compCurrency = (data.salaryCurrency as string) || (data.salary_currency as string) || null;
+  const compRangeText = (data.salaryRange as string) || null;
 
   // Description
-  const description = jobData.description || jobData.job_snapshot?.job_description || jobData.job_description || null;
+  const description = (data.description as string) || (snapshot?.job_description as string) || (data.job_description as string) || null;
   
   // Raw payload handling
-  const rawPayload = jobData.job_snapshot?.raw_payload || jobData.raw_payload || jobData || {};
+  const rawPayload = (snapshot?.raw_payload || data.raw_payload || data || {}) as Record<string, unknown>;
   
   const responsibilities = Array.isArray(rawPayload.responsibilities) ? rawPayload.responsibilities : [];
   const requirements = Array.isArray(rawPayload.requirements) 
     ? rawPayload.requirements 
-    : (typeof jobData.job_snapshot?.requirements === 'string' ? [jobData.job_snapshot.requirements] : (typeof jobData.requirements === 'string' ? [jobData.requirements] : []));
+    : (typeof snapshot?.requirements === 'string' ? [snapshot.requirements] : (typeof data.requirements === 'string' ? [data.requirements] : []));
   const skills = Array.isArray(rawPayload.skills)
     ? rawPayload.skills
-    : (typeof jobData.job_snapshot?.skills === 'string' ? [jobData.job_snapshot.skills] : (typeof jobData.skills === 'string' ? [jobData.skills] : []));
+    : (typeof snapshot?.skills === 'string' ? [snapshot.skills] : (typeof data.skills === 'string' ? [data.skills] : []));
 
   // Source info
-  const sourcePlatform = jobData.source || null;
-  const jobUrl = jobData.jobUrl || jobData.job_url || null;
-  const externalId = jobData.externalJobId || jobData.external_job_id || null;
+  const sourcePlatform = (data.source as string) || null;
+  const jobUrl = (data.jobUrl as string) || (data.job_url as string) || null;
+  const externalId = (data.externalJobId as string) || (data.external_job_id as string) || null;
   
   // Dates
-  const capturedAt = jobData.job_snapshot?.captured_at || jobData.captured_at || new Date().toISOString();
-  const confidence = rawPayload.confidence || null;
+  const capturedAt = (snapshot?.captured_at as string) || (data.captured_at as string) || new Date().toISOString();
+  const confidence = (rawPayload.confidence as unknown) || null;
 
   const aiJson = {
     schema_version: "1.0",
@@ -80,7 +85,7 @@ export function generateAIJobJson(jobData: Partial<Application> | any): string {
     }
   };
 
-  const finalJson = JSON.parse(JSON.stringify(aiJson, (key, value) => {
+  const finalJson = JSON.parse(JSON.stringify(aiJson, (_key, value) => {
     if (value === "" || value === undefined) return null;
     return value;
   }));

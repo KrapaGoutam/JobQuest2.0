@@ -1134,7 +1134,7 @@ function setupCaptureFallbackActions() {
       navigator.clipboard.writeText(json).then(() => {
         showToast('AI JSON copied to clipboard');
       }).catch(() => showToast('Failed to copy JSON'));
-    } catch (err) {
+    } catch {
       showToast('Error generating AI JSON');
     }
   });

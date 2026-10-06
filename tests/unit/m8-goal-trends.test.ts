@@ -54,17 +54,17 @@ describe('JobQuest 2.1-F — Analytics Goal Trends Calculation Unit Tests', () =
     it('excludes days without configured goal from success rate denominator', () => {
       // 30 days total: 20 days had goals (12 reached, 8 missed), 10 days had no goal
       const points = [
-        ...Array.from({ length: 12 }, (_, i) => ({
+        ...Array.from({ length: 12 }, () => ({
           actual: 10,
           target: 10,
           status: 'MET' as const,
         })),
-        ...Array.from({ length: 8 }, (_, i) => ({
+        ...Array.from({ length: 8 }, () => ({
           actual: 5,
           target: 10,
           status: 'MISSED' as const,
         })),
-        ...Array.from({ length: 10 }, (_, i) => ({
+        ...Array.from({ length: 10 }, () => ({
           actual: 3,
           target: null,
           status: 'NO_GOAL' as const,

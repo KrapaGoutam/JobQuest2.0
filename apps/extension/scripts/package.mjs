@@ -27,6 +27,7 @@ const sourceEntries = [
   'sidepanel-logic.js',
   'api',
   'extractors',
+  'serializers',
   'icons',
 ];
 

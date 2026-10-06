@@ -336,9 +336,9 @@ function populateEditFields(data = {}) {
   const nts = /** @type {HTMLTextAreaElement | null} */ (byId('edit-notes'));
   if (nts) nts.value = data.notes || '';
 
-  const existingRadio = /** @type {HTMLInputElement | null} */ (byId('sidepanel-mode-resume-existing'));
+  const existingRadio = /** @type {HTMLInputElement | null} */ (byId('sidepanel-mode-resume-manual'));
   if (existingRadio) existingRadio.checked = true;
-  setResumeMode('existing');
+  setResumeMode('manual');
   const resSelect = select('edit-resume');
   if (resSelect) resSelect.value = '';
   const resManual = input('edit-resume-manual');
@@ -1130,7 +1130,18 @@ function setupCaptureFallbackActions() {
 
   button('footer-copy-json').addEventListener('click', () => {
     try {
-      const json = generateAIJobJson(captured);
+      const currentData = {
+        ...captured,
+        company: input('edit-company').value.trim() || captured.company,
+        jobTitle: input('edit-title').value.trim() || captured.jobTitle,
+        location: input('edit-location').value.trim() || captured.location,
+        workArrangement: select('edit-arrangement').value || captured.workArrangement,
+        employmentType: select('edit-employment').value || captured.employmentType,
+        salaryRange: input('edit-salary').value.trim() || captured.salaryRange,
+        jobUrl: input('edit-url').value.trim() || captured.jobUrl,
+        source: input('edit-source').value.trim() || captured.source
+      };
+      const json = generateAIJobJson(currentData);
       navigator.clipboard.writeText(json).then(() => {
         showToast('AI JSON copied to clipboard');
       }).catch(() => showToast('Failed to copy JSON'));
@@ -1464,3 +1475,5 @@ setupSetupScreen();
 void initialize().catch((error) => {
   setPanelState('ERROR', error instanceof Error ? error.message : 'Initialization error');
 });
+
+

@@ -81,7 +81,6 @@ export function ApplicationsToolbar({
   groupBy,
   onGroupByChange,
   groupByMonth,
-  onGroupByMonthChange,
 }: ApplicationsToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -409,7 +408,7 @@ export function ApplicationsToolbar({
             const current = groupBy ?? (groupByMonth ? 'month' : 'none');
             const next = current === 'date' ? 'none' : 'date';
             onGroupByChange?.(next);
-            onGroupByMonthChange?.(false);
+            
           }}
           aria-pressed={(groupBy ?? (groupByMonth ? 'month' : 'none')) === 'date'}
           title="Group the current results page by date"
@@ -424,7 +423,7 @@ export function ApplicationsToolbar({
             const current = groupBy ?? (groupByMonth ? 'month' : 'none');
             const next = current === 'month' ? 'none' : 'month';
             onGroupByChange?.(next);
-            onGroupByMonthChange?.(next === 'month');
+            
           }}
           aria-pressed={(groupBy ?? (groupByMonth ? 'month' : 'none')) === 'month'}
           title="Group the current results page by Date Added month"

@@ -272,8 +272,11 @@ describe('2.1-C Application date grouping', () => {
     expect(dateExclusive.renderedHeadings).not.toContain('October 2026');
 
     // If toolbar previously dispatched conflicting legacy toggle (now removed), toolbar ensures single source of truth
-    const nextAfterDate = 'date' === 'date' ? 'date' : 'none';
-    expect(nextAfterDate).toBe('date');
+    const toggleGrouping = (current: 'none' | 'date' | 'month', target: 'date' | 'month'): 'none' | 'date' | 'month' =>
+      current === target ? 'none' : target;
+    expect(toggleGrouping('none', 'date')).toBe('date');
+    expect(toggleGrouping('date', 'date')).toBe('none');
+    expect(toggleGrouping('month', 'date')).toBe('date');
   });
 });
 

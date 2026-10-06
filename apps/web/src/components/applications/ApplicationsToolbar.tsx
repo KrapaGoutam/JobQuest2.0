@@ -81,7 +81,6 @@ export function ApplicationsToolbar({
   groupBy,
   onGroupByChange,
   groupByMonth,
-  onGroupByMonthChange,
 }: ApplicationsToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);

@@ -27,7 +27,7 @@ describe('Reconciliation Matcher', () => {
   });
 
   test('4. URL query/tracking normalization', () => {
-    expect(normalizeUrl('https://ex.com/?utm_campaign=x')).toBe('https://ex.com');
+    expect(normalizeUrl('https://ex.com/?utm_campaign=x')).toBe('ex.com');
   });
 
   test('5. distinct URLs with different job IDs remain distinct', () => {

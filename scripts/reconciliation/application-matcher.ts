@@ -118,7 +118,7 @@ export class ApplicationMatcher {
       });
 
       if (matches.length === 1) {
-        const l = matches[0];
+        const l = matches[0]!;
         matchedLegacyIds.add(l.id);
         matchedCurrentIds.add(c.id);
         results.push(this.createMatch(l, c, 'EXACT_COMPOSITE', 0.9));

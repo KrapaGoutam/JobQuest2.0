@@ -8,7 +8,7 @@ if (fs.existsSync(envPath)) {
   const content = fs.readFileSync(envPath, 'utf8');
   for (const line of content.split('\n')) {
     if (line.trim().startsWith('#') || !line.includes('=')) continue;
-    const [key, ...rest] = line.split('=');
+    const parts = line.split('='); const key = parts[0]; if (!key) continue; const rest = parts.slice(1);
     const value = rest.join('=').trim().replace(/^['"](.*)['"]$/, '$1');
     if (!process.env[key.trim()]) {
       process.env[key.trim()] = value;

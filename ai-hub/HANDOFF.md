@@ -6,7 +6,9 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1P COMPLETE · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1A (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1A COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1B RLS/Ownership/Audit (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+
+AI-1A: migration `supabase/migrations/20261023100000_ai_hub_database_foundation.sql` applied to jobquest-dev only (4 tables, RLS on, no policies, client privileges revoked; service_role DML). See `reports/AI-1A_DATABASE_FOUNDATION_REPORT.md`. Branch still NOT pushed (Preview mapping unverified). AI-0 dev CI 37690590350 finished: success.
 
 AI-1P environment findings: `reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md` and `ENVIRONMENT_STRATEGY.md` §7. Local dev/CLI → jobquest-dev (verified). Unresolved operator actions: Vercel Preview/Production env→Supabase mapping, Production deployment ID/SHA, stale `.env.production.local`, final result of CI run 37690590350. AI-1P: no tests, no CI, no DB change, no migration. Do not push the feature branch until Preview mapping is confirmed. Agents: dev DB only.
 
@@ -26,7 +28,7 @@ All 17 AI-0 docs under `ai-hub/`.
 `ai-hub/**` only.
 
 ## Database State
-Dev (`xpnkasclquplmrcmhsif`) and prod (`kqsxdothjxtcktyirpux`): 20 migrations each, head `20261022100000`. No `ai_*` tables. Unchanged by AI-0.
+Dev (`xpnkasclquplmrcmhsif`): 21 migrations, head `20261023100000` (has 4 `ai_*` tables). Prod (`kqsxdothjxtcktyirpux`): 20 migrations, head `20261022100000`, no `ai_*` tables, untouched.
 
 ## Migration State
 None created. Repo `supabase/migrations/` = 20 files.

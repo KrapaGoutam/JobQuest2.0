@@ -1,25 +1,29 @@
 # AI Hub — Current Agent State
 
 ```
-CURRENT PHASE: AI-1
-CURRENT SUB-PHASE: AI-1P COMPLETE
-STATUS: COMPLETE (docs/verification only) — GO FOR AI-1A (conditional) — AWAITING OPERATOR APPROVAL FOR AI-1A
+CURRENT PHASE:
+AI-1
 
-WORKING BRANCH: feature/ai-1-foundation (cumulative for AI-1P…AI-1F; local only, NOT pushed)
-BASE: development ab1d7589e4f8b5a9c10c5f22661d71ed268b89d1
-CURRENT HEAD: local AI-1P docs commit on feature/ai-1-foundation (see `git log -1`)
+CURRENT SUB-PHASE:
+AI-1A COMPLETE
 
-LAST COMPLETED STEP: AI-1P environment verification + docs (report: reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md).
+STATUS:
+READY FOR OPERATOR REVIEW
 
-FINDINGS: local dev + CLI link → hosted jobquest-dev (xpnkasclquplmrcmhsif) VERIFIED. Vercel Preview/Production env mapping and production deployment/SHA UNVERIFIED (Vercel MCP 403/404) → operator action. .env.production.local = stale pull, unknown ref kwmnljvyvqvbvimypnmw, auto-loaded by `vite build` (HIGH, local only). Migrations are manual; CI never migrates/deploys. AI-0 dev CI 37690590350: db job was still IN PROGRESS at check — re-check.
+WORKING BRANCH:
+feature/ai-1-foundation
 
-CONDITIONS FOR AI-1A: agents use jobquest-dev ONLY (never jobquest-prod); verify target ref before every migration; DO NOT push feature/ai-1-foundation (Vercel Preview build) until operator confirms Preview → jobquest-dev.
+BRANCH PUSHED:
+NO
 
-VALIDATION/CI: none run, no CI triggered, no DB change, no migration, no app code change.
+NEXT SUB-PHASE:
+AI-1B — RLS / Ownership / Audit
 
-UNCOMMITTED WORK: none expected (untracked .artifacts/ is pre-existing; never stage it).
+DO NOT REPEAT:
+AI-1A migration 20261023100000_ai_hub_database_foundation.sql (applied to jobquest-dev; Dev head now 20261023100000); structural validation + security advisors. Do not re-run db push.
 
-DO NOT REPEAT: repo audit, env comparison, Vercel connector retry (use operator checklist in the report).
-
-NEXT EXACT STEP: on operator approval, AI-1A: on feature/ai-1-foundation, confirm `supabase/.temp/project-ref` == xpnkasclquplmrcmhsif and `list_migrations`(dev) head 20261022100000, then draft the ai_* migration per DATA_MODEL_PLAN.md (resolve any Q blocking AI-1A first).
+NEXT EXACT STEP:
+On operator approval: verify supabase/.temp/project-ref == xpnkasclquplmrcmhsif, then draft AI-1B migration (after 20261023100000): SELECT grant + can_access_owned_record policies on ai_*, service-role-only ingest/decide/dismiss/delete RPCs with audit_events, and behavioural RLS/constraint tests (the rollback-based constraint test was declined in AI-1A and is still outstanding).
 ```
+
+Notes: Prod untouched (head 20261022100000). Do not push the branch until Vercel Preview → jobquest-dev mapping is confirmed. Untracked .artifacts/ is pre-existing; never stage it.

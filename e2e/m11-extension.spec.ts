@@ -225,7 +225,7 @@ test.describe('Milestone 11 · unpacked MV3 extension', () => {
         return result[0]?.result;
       });
       evidence.extraction_ms = Date.now() - extractionStarted;
-      expect(extracted).toMatchObject({ company: 'Stripe', jobTitle: 'Staff Software Engineer' });
+      expect(extracted).toMatchObject({ company: { name: 'Stripe' }, job: { title: 'Staff Software Engineer' } });
       const expectedCompany = reusedAccountRun ? `Stripe ${run}` : 'Stripe';
       const captureInput = reusedAccountRun
         ? { ...(extracted as Record<string, unknown>), company: expectedCompany, externalJobId: `12345-${run}` }

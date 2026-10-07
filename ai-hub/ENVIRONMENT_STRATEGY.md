@@ -49,3 +49,15 @@ Never in the browser: service-role/secret key, DB passwords, connector token pep
 ## 6. Seed / test data
 
 Dev: synthetic fixtures only (no real email content). Tests use the local Supabase stack; the AI contract gets golden-file fixtures (valid, unknown-field, oversize, injection-text) committed under `tests/`. Prod is never seeded.
+
+## 7. AI-1P findings (2026-10-07) — see `reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md`
+
+- **Local dev** → hosted `jobquest-dev` (`xpnkasclquplmrcmhsif`) via `.env.local` — VERIFIED. Supabase CLI link (`supabase/.temp/project-ref`) → dev — VERIFIED. Local Docker stack (`.env.m1b-local`) is test-only.
+- **Vercel Preview / Production** env → Supabase mapping: **UNVERIFIED — OPERATOR ACTION REQUIRED** (Vercel MCP 403/404). Production deployment ID/SHA unverified (non-blocking).
+- **E-2 `.env.production.local`**: HIGH ENVIRONMENT RISK (build-time only): stale Vercel pull pointing at unknown ref `kwmnljvyvqvbvimypnmw`; Vite auto-loads it on `vite build`. Not jobquest-prod. Do not delete/modify without operator.
+- **Migrations are manual** (`pnpm db:push` → CLI-linked project, or MCP `apply_migration` with explicit ref). No CI/CD step applies migrations; CI does not deploy (Vercel Git integration does).
+- **Dev / prod procedures and target guard**: see report (create → verify ref == dev → `list_migrations` → apply → verify → targeted tests; prod only at approved release: verify prod ref → main CI → apply once → verify history → deploy → smoke).
+- **Preview write-safety**: UNVERIFIED RISK. If Preview = prod → BLOCKER FOR AI WRITE DEVELOPMENT.
+
+### Permanent agent database rule
+Development phases may use **only** `jobquest-dev` (`xpnkasclquplmrcmhsif`). `jobquest-prod` (`kqsxdothjxtcktyirpux`) is forbidden for agents (read, `execute_sql`, `apply_migration`) unless the current prompt explicitly approves a production release/verification step. Every migration command must first verify the target ref. Do not push `feature/ai-1-foundation` (it triggers a Vercel Preview build) until the operator confirms Preview → `jobquest-dev`.

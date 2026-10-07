@@ -1,34 +1,25 @@
 # AI Hub — Current Agent State
 
 ```
-CURRENT PHASE: AI-0 — Architecture / Roadmap / Handoff Foundation
-CURRENT SUB-PHASE: AI-0I (final) — all sub-phases written
-STATUS: COMPLETE — INTEGRATED TO DEVELOPMENT — AWAITING OPERATOR APPROVAL FOR AI-1
+CURRENT PHASE: AI-1
+CURRENT SUB-PHASE: AI-1P COMPLETE
+STATUS: COMPLETE (docs/verification only) — GO FOR AI-1A (conditional) — AWAITING OPERATOR APPROVAL FOR AI-1A
 
-BASE BRANCH: development
-BASE SHA: c46392e13d4a85878e782439f8c01b11c0c2c92e
-WORKING BRANCH: docs/ai-0-ai-hub-planning
-CURRENT HEAD: the docs commit on docs/ai-0-ai-hub-planning (exact SHAs: ai-hub/reports/AI-0_PLANNING_REPORT.md and git log)
+WORKING BRANCH: feature/ai-1-foundation (cumulative for AI-1P…AI-1F; local only, NOT pushed)
+BASE: development ab1d7589e4f8b5a9c10c5f22661d71ed268b89d1
+CURRENT HEAD: local AI-1P docs commit on feature/ai-1-foundation (see `git log -1`)
 
-LAST COMPLETED STEP: AI-0 documentation committed, pushed, merged --no-ff to development.
+LAST COMPLETED STEP: AI-1P environment verification + docs (report: reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md).
 
-CURRENT WORK: none. Hard stop.
+FINDINGS: local dev + CLI link → hosted jobquest-dev (xpnkasclquplmrcmhsif) VERIFIED. Vercel Preview/Production env mapping and production deployment/SHA UNVERIFIED (Vercel MCP 403/404) → operator action. .env.production.local = stale pull, unknown ref kwmnljvyvqvbvimypnmw, auto-loaded by `vite build` (HIGH, local only). Migrations are manual; CI never migrates/deploys. AI-0 dev CI 37690590350: db job was still IN PROGRESS at check — re-check.
 
-FILES TOUCHED: ai-hub/** only (17 files, docs). No app code, no migrations, no DB.
+CONDITIONS FOR AI-1A: agents use jobquest-dev ONLY (never jobquest-prod); verify target ref before every migration; DO NOT push feature/ai-1-foundation (Vercel Preview build) until operator confirms Preview → jobquest-dev.
 
-DECISIONS ALREADY MADE: ARCHITECTURE.md §9 (D-1…D-8); data model Option C; MCP in Hono /api/mcp (Streamable HTTP, stateless); auth mechanism (S1/S2/S3) deliberately UNDECIDED until AI-3B; Claude first provider; Gemini conditional.
+VALIDATION/CI: none run, no CI triggered, no DB change, no migration, no app code change.
 
-VALIDATION ALREADY COMPLETED: none required (docs-only). Read-only checks: git SHAs, Supabase list_projects + list_migrations (dev & prod identical, head 20261022100000), CI workflow/classifier read.
+UNCOMMITTED WORK: none expected (untracked .artifacts/ is pre-existing; never stage it).
 
-CI ALREADY COMPLETED: branch push CI — none triggers for docs/** pushes. Development CI — see report (FULL_CI expected because ai-hub/ is not in the docs-only classifier).
+DO NOT REPEAT: repo audit, env comparison, Vercel connector retry (use operator checklist in the report).
 
-DO NOT REPEAT: repository audit; Supabase project/migration comparison; provider capability search (re-verify only the NEEDS RECHECK rows when a phase needs them); CI classifier analysis.
-
-BLOCKERS: operator approval for AI-1; AI-1P needs operator to read Vercel env mapping (Vercel MCP returned 403).
-
-UNCOMMITTED WORK: none expected (untracked .artifacts/ is pre-existing and unrelated; never stage it).
-
-NEXT EXACT STEP: wait for operator. On approval: branch `chore/ai-1p-env-isolation` from latest development, resolve OPEN_QUESTIONS Q-1/Q-2 with the operator, record in ENVIRONMENT_STRATEGY.md; then AI-1A.
-
-EXPECTED STOP CONDITION: AI-1P recorded COMPLETE and merged to development once; then stop for approval of AI-1A.
+NEXT EXACT STEP: on operator approval, AI-1A: on feature/ai-1-foundation, confirm `supabase/.temp/project-ref` == xpnkasclquplmrcmhsif and `list_migrations`(dev) head 20261022100000, then draft the ai_* migration per DATA_MODEL_PLAN.md (resolve any Q blocking AI-1A first).
 ```

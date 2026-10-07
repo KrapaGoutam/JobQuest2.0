@@ -15,8 +15,8 @@ AI-0 Architecture                                       READY FOR REVIEW (integr
 [x] AI-0H Idempotency/observability/failure
 [x] AI-0I Final roadmap
 
-AI-1 Foundation                                         NOT STARTED
-[ ] AI-1P Env isolation verification (prerequisite)
+AI-1 Foundation                                         IN PROGRESS (feature/ai-1-foundation)
+[x] AI-1P Env isolation verification (prerequisite) — COMPLETE, GO FOR AI-1A (do not push branch until Preview mapping confirmed)
 [ ] AI-1A Database
 [ ] AI-1B RLS / ownership / audit
 [ ] AI-1C Run + finding model + contract

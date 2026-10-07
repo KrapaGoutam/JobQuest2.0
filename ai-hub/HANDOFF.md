@@ -6,7 +6,9 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-AI-0 complete (docs). Next: AI-1P → AI-1A…1F (not approved yet).
+CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1P COMPLETE · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1A (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+
+AI-1P environment findings: `reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md` and `ENVIRONMENT_STRATEGY.md` §7. Local dev/CLI → jobquest-dev (verified). Unresolved operator actions: Vercel Preview/Production env→Supabase mapping, Production deployment ID/SHA, stale `.env.production.local`, final result of CI run 37690590350. AI-1P: no tests, no CI, no DB change, no migration. Do not push the feature branch until Preview mapping is confirmed. Agents: dev DB only.
 
 ## Why This Phase Exists
 2.1-G (legacy reconciliation) was closed and shelved; AI connectivity became its own subsystem needing architecture before any schema/code.
@@ -48,7 +50,7 @@ None confirmed by the operator. All in `PROVIDER_CAPABILITY_MATRIX.md` (mostly N
 Repo audit, env comparison, provider web search (unless re-verifying a specific row).
 
 ## Unfinished Work
-AI-1P onward.
+AI-1A onward.
 
 ## Uncommitted Work
 None (pre-existing untracked `.artifacts/` is not part of this work).
@@ -57,7 +59,7 @@ None (pre-existing untracked `.artifacts/` is not part of this work).
 Follow `CURRENT_AGENT_STATE.md` → NEXT EXACT STEP. Run `git status` and `git log -3` first; if HEAD differs from the state file, trust Git.
 
 ## Next Phase
-AI-1P (prerequisite), then AI-1A, upon explicit operator approval.
+AI-1A upon explicit operator approval.
 
 ---
 

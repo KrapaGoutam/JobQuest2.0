@@ -73,3 +73,6 @@ Sidebar groups (`components/shell/Sidebar.tsx`): Dashboard, Applications, Tasks 
 - FILES INSPECTED: CLAUDE.md, `.agents/AGENTS.md` (head), `CURRENT_AGENT_STATE.md` (head), `.env.example` (names only), `vercel.json`, workflow + classifier, `apps/api/src/app.ts`, `api/index.ts`, Sidebar/App route lists, migration headers (foundation, M11), `extension.ts` route list.
 - DECISIONS: see `ARCHITECTURE.md`. QUESTIONS RESOLVED / OPEN: see `OPEN_QUESTIONS.md`.
 - Subagents used: 0 (all questions answerable by narrow grep).
+
+## Addendum 2026-10-07 (AI-1P)
+- Local dev uses HOSTED `jobquest-dev`; CLI link → dev (VERIFIED). `.env.production.local` is a stale Vercel pull pointing at unknown ref `kwmnljvyvqvbvimypnmw`. Vercel Preview/Production mapping and production deployment still unverified (connector 403). Migrations are manual; no CI deploy/migrate. AI-0 dev CI `37690590350` db job still in progress at check time. Details: `reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md`.

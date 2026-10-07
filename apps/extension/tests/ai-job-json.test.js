@@ -23,10 +23,10 @@ test("generateAIJobJson: handles extension extraction payload correctly", () => 
   expect(result.company.name).toBe("Acme")
   expect(result.compensation.min).toBe(100000)
   expect(result.responsibilities).toEqual(["Code", "Test"])
-  expect(result.requirements).toEqual({ must_have: ["Java", "SQL"], preferred: [] })
+  expect(result.requirements).toEqual(["Java", "SQL"])
   expect(result.skills).toEqual(["React"])
   expect(result.description).toBe("Good job")
-
+  expect(result.capture_metadata.extractor_confidence).toBe("generic")
 })
 
 test("generateAIJobJson: handles web Application shape correctly", () => {
@@ -51,10 +51,10 @@ test("generateAIJobJson: handles web Application shape correctly", () => {
   expect(result.job.title).toBe("Product Manager")
   expect(result.company.name).toBe("Globex")
   expect(result.responsibilities).toEqual(["A", "B"])
-  expect(result.requirements).toEqual({ must_have: ["C", "D"], preferred: [] })
+  expect(result.requirements).toEqual(["C", "D"])
   expect(result.skills).toEqual(["E"])
   expect(result.description).toBe("Manage products")
-
+  expect(result.capture_metadata.extractor_confidence).toBe("jsonld")
 })
 
 test("generateAIJobJson: 2.1-PA Issue F pre-save Copy JSON requires no application ID, no DB save, and no existing DB record", () => {
@@ -90,8 +90,8 @@ test("generateAIJobJson: 2.1-PA Issue F pre-save Copy JSON requires no applicati
   expect(result.source.url).toBe("https://stripe.com/jobs/lead-101")
   expect(result.compensation.range_text).toBe("$190k - $240k")
   expect(result.description).toBe("Design and scale global payments infrastructure.")
-  expect(result.requirements).toEqual({ must_have: ["Distributed systems", "Go", "High availability"], preferred: [] })
-
+  expect(result.requirements).toEqual(["Distributed systems", "Go", "High availability"])
+  expect(result.capture_metadata.extractor_confidence).toBe("generic")
 })
 
 test("generateAIJobJson: 2.1-PA Issue F reflects visible form edits prior to saving", () => {

@@ -83,33 +83,38 @@ export function extractJsonLd(doc, pageUrl = "") {
 
   if (postings.length === 0) return null;
 
-  // Stale SPA Protection:
-  // If multiple postings exist, find the one matching the current URL or ID.
-  // If none match when multiple postings exist, it's stale/unmatched SPA data.
+  // Stale SPA Protection: Look for an exact match if multiple postings, 
+  // or verify the single posting isn't from a previous route.
   let job = postings[0];
-  if (postings.length > 1) {
-    let matchedJob = null;
-    for (const p of postings) {
-      const pUrl = String(p.url || "");
-      const pId = String(p.identifier?.value || "");
-      if ((pUrl && (pageUrl.includes(pUrl) || pUrl.includes(pageUrl))) || (pId && pageUrl.includes(pId))) {
-        matchedJob = p;
-        break;
-      }
+  for (const p of postings) {
+    const pUrl = p.url || "";
+    const pId = p.identifier?.value || "";
+    if ((pUrl && pageUrl.includes(pUrl)) || (pId && pageUrl.includes(pId))) {
+      job = p;
+      break;
     }
-    if (!matchedJob) return null;
-    job = matchedJob;
-  } else {
-    // Single posting: verify its declared URL (if explicitly provided) isn't pointing to a different route.
-    const jobUrlStr = String(job.url || "");
-    const jobIdStr = String(job.identifier?.value || "");
-    if (jobUrlStr) {
-      const urlMatches = pageUrl.includes(jobUrlStr) || jobUrlStr.includes(pageUrl);
-      const idMatches = Boolean(jobIdStr && pageUrl.includes(jobIdStr));
-      if (!urlMatches && !idMatches) {
-        return null;
-      }
-    }
+  }
+
+  // If the job explicitly declares a URL/ID and it's completely missing from our pageUrl, it might be stale.
+  const jobUrlStr = String(job.url || "");
+  const jobIdStr = String(job.identifier?.value || "");
+  
+  let hasValidMatch = false;
+  let hasStaleData = false;
+  
+  if (jobUrlStr) {
+    if (pageUrl.includes(jobUrlStr) || jobUrlStr.includes(pageUrl)) hasValidMatch = true;
+    else hasStaleData = true;
+  }
+  
+  if (jobIdStr) {
+    if (pageUrl.includes(jobIdStr)) hasValidMatch = true;
+    else hasStaleData = true;
+  }
+  
+  // If we found a mismatch and no valid match rescued it, it's stale
+  if (hasStaleData && !hasValidMatch) {
+    return null;
   }
 
   // Job Title

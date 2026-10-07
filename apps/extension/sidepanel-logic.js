@@ -397,27 +397,6 @@ export function buildCaptureDraft({
   captured = {}, company, jobTitle, stageId, jobUrl, source, location, workArrangement,
   employmentType, salary, notes, appliedAtDate, resumeId, resumeLabel,
 }) {
-  let reqStr = null;
-  if (typeof captured.requirements === 'string') {
-    reqStr = captured.requirements || null;
-  } else if (Array.isArray(captured.requirements)) {
-    reqStr = captured.requirements.filter(Boolean).join('\n') || null;
-  } else if (captured.requirements && typeof captured.requirements === 'object') {
-    /** @type {Record<string, any>} */
-    const reqObj = captured.requirements;
-    const parts = [];
-    if (Array.isArray(reqObj.must_have) && reqObj.must_have.length) parts.push(`Must have:\n${reqObj.must_have.map((r) => `• ${r}`).join('\n')}`);
-    if (Array.isArray(reqObj.preferred) && reqObj.preferred.length) parts.push(`Preferred:\n${reqObj.preferred.map((r) => `• ${r}`).join('\n')}`);
-    reqStr = parts.join('\n\n') || null;
-  }
-
-  let skillsStr = null;
-  if (typeof captured.skills === 'string') {
-    skillsStr = captured.skills || null;
-  } else if (Array.isArray(captured.skills)) {
-    skillsStr = captured.skills.filter(Boolean).join(', ') || null;
-  }
-
   return {
     company,
     job_title: jobTitle,
@@ -438,8 +417,8 @@ export function buildCaptureDraft({
     applied_at: `${appliedAtDate}T12:00:00.000Z`,
     snapshot: {
       description: captured.description || null,
-      requirements: reqStr,
-      skills: skillsStr,
+      requirements: captured.requirements || null,
+      skills: captured.skills || null,
       raw_payload: {
         extraction_confidence: captured.confidence || null,
         salary_range: captured.salaryRange || null,

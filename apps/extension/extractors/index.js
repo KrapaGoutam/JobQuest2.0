@@ -10,152 +10,89 @@ import { extractDice, matchesDice } from "./dice.js"
 import { extractLinkedIn, matchesLinkedIn } from "./linkedin.js"
 
 /**
- * Merges extracted fields in priority order into a canonical Master Record.
+ * Merges extracted fields in priority order.
  * Earlier objects in the cascade take precedence; later objects fill missing fields.
  */
 function mergeCaptures(candidates, fallbackUrl = "") {
   const result = {
-    schema_version: "1.1",
-    job: { title: null },
-    company: { name: null },
-    location: { text: null, work_arrangement: null },
-    employment: { type: null },
-    compensation: { min: null, max: null, currency: null, range_text: null },
+    jobTitle: "",
+    company: "",
+    location: "",
+    workArrangement: "",
+    employmentType: "",
+    salaryMin: null,
+    salaryMax: null,
+    salaryCurrency: "",
+    salaryRange: "",
     description: "",
     responsibilities: [],
-    requirements: { must_have: [], preferred: [] },
+    requirements: [],
     skills: [],
-    education: [],
-    benefits: [],
-    source: { platform: null, url: fallbackUrl, external_id: null, secondary_ids: {} },
     extras: {},
-    notes: "",
-    capture_metadata: { captured_at: new Date().toISOString(), extractor_confidence: "none" },
-  };
+    jobUrl: fallbackUrl,
+    source: "",
+    confidence: "none",
+  }
 
   for (const item of candidates) {
-    if (!item) continue;
-    
-    if (result.capture_metadata.extractor_confidence === "none" && item.confidence) {
-      result.capture_metadata.extractor_confidence = item.confidence;
+    if (!item) continue
+    if (result.confidence === "none" && item.confidence) {
+      result.confidence = item.confidence
     }
-    
-    if (!result.job.title && item.jobTitle) result.job.title = item.jobTitle;
-    if (!result.job.title && item.job?.title) result.job.title = item.job.title;
-    
-    if (!result.company.name && item.company) result.company.name = typeof item.company === 'string' ? item.company : item.company.name;
-    
-    if (!result.location.text && item.location) result.location.text = typeof item.location === 'string' ? item.location : item.location.text;
-    
-    if (!result.location.work_arrangement && item.workArrangement) {
-      result.location.work_arrangement = item.workArrangement;
-    }
-    if (!result.location.work_arrangement && item.location?.work_arrangement) {
-      result.location.work_arrangement = item.location.work_arrangement;
-    }
-    
-    if (!result.employment.type && item.employmentType) result.employment.type = item.employmentType;
-    if (!result.employment.type && item.employment?.type) result.employment.type = item.employment.type;
-    
-    const itemMin = item.salaryMin ?? item.compensation?.min;
-    if (result.compensation.min === null && itemMin !== null && itemMin !== undefined) {
-      result.compensation.min = itemMin;
-    }
-    
-    const itemMax = item.salaryMax ?? item.compensation?.max;
-    if (result.compensation.max === null && itemMax !== null && itemMax !== undefined) {
-      result.compensation.max = itemMax;
-    }
-    
-    const itemCur = item.salaryCurrency ?? item.compensation?.currency;
-    if (!result.compensation.currency && itemCur) {
-      result.compensation.currency = itemCur;
-    }
-    
-    const itemRange = item.salaryRange ?? item.compensation?.range_text;
-    if (!result.compensation.range_text && itemRange) {
-      result.compensation.range_text = itemRange;
-    }
-    
-    if (!result.description && item.description) {
-      result.description = item.description;
-    }
+    if (!result.jobTitle && item.jobTitle) result.jobTitle = item.jobTitle
+    if (!result.company && item.company) result.company = item.company
+    if (!result.location && item.location) result.location = item.location
+    if (!result.workArrangement && item.workArrangement)
+      result.workArrangement = item.workArrangement
+    if (!result.employmentType && item.employmentType)
+      result.employmentType = item.employmentType
+    if (result.salaryMin === null && item.salaryMin !== null)
+      result.salaryMin = item.salaryMin
+    if (result.salaryMax === null && item.salaryMax !== null)
+      result.salaryMax = item.salaryMax
+    if (!result.salaryCurrency && item.salaryCurrency)
+      result.salaryCurrency = item.salaryCurrency
+    if (!result.salaryRange && item.salaryRange)
+      result.salaryRange = item.salaryRange
+    if (!result.description && item.description)
+      result.description = item.description
     
     // Arrays - merge and deduplicate
-    const resp = item.responsibilities || [];
-    if (resp.length > 0) {
-      result.responsibilities = Array.from(new Set([...result.responsibilities, ...resp]));
+    if (item.responsibilities?.length > 0) {
+      result.responsibilities = Array.from(new Set([...result.responsibilities, ...item.responsibilities]))
     }
-    
-    if (item.requirements) {
-      if (Array.isArray(item.requirements) && item.requirements.length > 0) {
-        result.requirements.must_have = Array.from(new Set([...result.requirements.must_have, ...item.requirements]));
-      } else if (typeof item.requirements === 'object' && !Array.isArray(item.requirements)) {
-        if (item.requirements.must_have?.length > 0) {
-          result.requirements.must_have = Array.from(new Set([...result.requirements.must_have, ...item.requirements.must_have]));
-        }
-        if (item.requirements.preferred?.length > 0) {
-          result.requirements.preferred = Array.from(new Set([...result.requirements.preferred, ...item.requirements.preferred]));
-        }
-      }
+    if (item.requirements?.length > 0) {
+      result.requirements = Array.from(new Set([...result.requirements, ...item.requirements]))
     }
-    
-    const skills = item.skills || [];
-    if (skills.length > 0) {
-      result.skills = Array.from(new Set([...result.skills, ...skills]));
-    }
-    
-    const benefits = item.benefits || [];
-    if (benefits.length > 0) {
-      result.benefits = Array.from(new Set([...result.benefits, ...benefits]));
+    if (item.skills?.length > 0) {
+      result.skills = Array.from(new Set([...result.skills, ...item.skills]))
     }
     
     if (item.extras) {
       for (const [k, v] of Object.entries(item.extras)) {
         if (!result.extras[k]) {
-          result.extras[k] = typeof v === 'string' ? v : [];
+          result.extras[k] = [];
         }
-        if (Array.isArray(v)) {
-          if (Array.isArray(result.extras[k])) {
-            result.extras[k] = Array.from(new Set([...result.extras[k], ...v]));
-          }
-        } else {
-          result.extras[k] = v;
-        }
+        result.extras[k] = Array.from(new Set([...result.extras[k], ...v]));
       }
     }
 
-    const itemUrl = item.jobUrl || item.source?.url;
-    if ((!result.source.url || result.source.url === fallbackUrl) && itemUrl) {
-      result.source.url = itemUrl;
-    }
-    
-    const itemSrc = item.source?.platform || (typeof item.source === 'string' ? item.source : null);
-    if (!result.source.platform && itemSrc) {
-      result.source.platform = itemSrc;
-    }
-    
-    const itemExtId = item.externalJobId || item.source?.external_id;
-    if (itemExtId) {
-      result.source.external_id = itemExtId;
-    }
-    
-    if (item.apply_url) {
-       result.extras.apply_url = item.apply_url;
-    }
+    if ((!result.jobUrl || result.jobUrl === fallbackUrl) && item.jobUrl)
+      result.jobUrl = item.jobUrl
+    if (!result.source && item.source) result.source = item.source
   }
 
   // If source still empty, infer from URL domain
-  if (!result.source.platform && result.source.url) {
+  if (!result.source && result.jobUrl) {
     try {
-      const parsed = new URL(result.source.url);
-      result.source.platform = parsed.hostname.replace(/^www\./, "");
+      const parsed = new URL(result.jobUrl)
+      result.source = parsed.hostname.replace(/^www\./, "")
     } catch {
       // ignore
     }
   }
 
-  return result;
+  return result
 }
 
 function extractEmbeddedAppState(doc, pageUrl) {

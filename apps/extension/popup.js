@@ -9,7 +9,6 @@ import {
   isConnectionError,
   parseSalaryRange,
   testConnection,
-  flattenMasterRecord,
 } from './api/jobquest.js';
 
 const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -191,7 +190,7 @@ async function extractActivePage() {
   if (!tab?.id) return { jobUrl: tab?.url || '' };
   try {
     const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-    return flattenMasterRecord(result[0]?.result) || { jobUrl: tab.url || '' };
+    return result[0]?.result || { jobUrl: tab.url || '' };
   } catch {
     return { jobUrl: tab.url || '' };
   }
@@ -243,7 +242,7 @@ async function initialize() {
     return;
   }
   const pending = (await chrome.storage.local.get(['pendingCapture'])).pendingCapture;
-  captured = (pending ? flattenMasterRecord(pending) : null) || await extractActivePage();
+  captured = pending || await extractActivePage();
   clearDuplicate();
   populateForm(captured);
   setState(captured.company && captured.jobTitle ? readyStateCode() : captured.company || captured.jobTitle ? 'X6' : 'X7', 'screen-capture');
@@ -297,8 +296,8 @@ async function save(event) {
     applied_at: `${input('input-date').value}T12:00:00.000Z`,
     snapshot: {
       description: captured.description || null,
-      requirements: typeof captured.requirements === 'string' ? captured.requirements || null : null,
-      skills: typeof captured.skills === 'string' ? captured.skills || null : null,
+      requirements: captured.requirements || null,
+      skills: captured.skills || null,
       raw_payload: { extraction_confidence: captured.confidence || null, salary_range: input('input-salary').value || null },
     },
     resume_id: resumeMode === 'existing' && resumeSelect.value ? resumeSelect.value : null,

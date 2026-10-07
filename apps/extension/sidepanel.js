@@ -23,7 +23,6 @@ import {
   saveSettings,
   saveTheme,
   testConnection,
-  flattenMasterRecord,
 } from './api/jobquest.js';
 import { generateAIJobJson } from './serializers/ai-job-json.js';
 import {
@@ -394,9 +393,9 @@ async function runCaptureFlow(tab, { showScanning = true } = {}) {
   if (showScanning && currentCaptureScreen !== 'none' && currentCaptureScreen !== 'offline') {
     byId('scan-indicator').hidden = false;
   }
-  const extractedRaw = await extractFromTab(tab);
+  const extracted = await extractFromTab(tab);
   if (seq !== captureRequestSeq) return; // superseded by a newer tab-change request
-  captured = flattenMasterRecord(extractedRaw);
+  captured = extracted;
   populateEditFields(captured);
   const extractionScreen = classifyExtraction(captured);
   if (extractionScreen === 'none') {
@@ -1129,56 +1128,24 @@ function setupCaptureFallbackActions() {
     renderCapture(resolveCaptureScreen(classifyExtraction(captured), duplicateInfo.level));
   });
 
-  button('footer-copy-json').addEventListener('click', async () => {
+  button('footer-copy-json').addEventListener('click', () => {
     try {
-      if (!currentActiveTab) {
-        showToast('No active tab to capture');
-        return;
-      }
-      
-      showToast('Rescanning current job...');
-      const freshRaw = await extractFromTab(currentActiveTab);
-      const freshCapture = flattenMasterRecord(freshRaw);
-      
-      const cCompany = input('edit-company').value.trim();
-      const cJobTitle = input('edit-title').value.trim();
-      const cLoc = input('edit-location').value.trim();
-      const cArr = select('edit-arrangement').value;
-      const cEmp = select('edit-employment').value;
-      const cSal = input('edit-salary').value.trim();
-      const cUrl = input('edit-url').value.trim();
-      const cSrc = input('edit-source').value.trim();
-      const cNotes = /** @type {HTMLTextAreaElement | null} */ (byId('edit-notes'))?.value?.trim();
-      
-      // Update the flat fields for any legacy logic
-      freshCapture.company = cCompany || freshCapture.company;
-      freshCapture.jobTitle = cJobTitle || freshCapture.jobTitle;
-      freshCapture.location = cLoc || freshCapture.location;
-      freshCapture.workArrangement = cArr || freshCapture.workArrangement;
-      freshCapture.employmentType = cEmp || freshCapture.employmentType;
-      freshCapture.salaryRange = cSal || freshCapture.salaryRange;
-      freshCapture.jobUrl = cUrl || freshCapture.jobUrl;
-      freshCapture.source = cSrc || freshCapture.source;
-      freshCapture.notes = cNotes || freshCapture.notes;
-      
-      // Sync overrides into the nested master record fields to ensure 1.1 structure honors user edits
-      if (freshCapture.schema_version === "1.1") {
-        if (cJobTitle) freshCapture.job.title = cJobTitle;
-        if (cCompany) freshCapture.company.name = cCompany;
-        if (cLoc) freshCapture.location.text = cLoc;
-        if (cArr) freshCapture.location.work_arrangement = cArr;
-        if (cEmp) freshCapture.employment.type = cEmp;
-        if (cSal) freshCapture.compensation.range_text = cSal;
-        if (cUrl) freshCapture.source.url = cUrl;
-        if (cSrc) freshCapture.source.platform = cSrc;
-        if (cNotes) freshCapture.notes = cNotes;
-      }
-      
-      const json = generateAIJobJson(freshCapture);
-      await navigator.clipboard.writeText(json);
-      showToast('AI JSON copied to clipboard');
-    } catch(e) {
-      console.error(e);
+      const currentData = {
+        ...captured,
+        company: input('edit-company').value.trim() || captured.company,
+        jobTitle: input('edit-title').value.trim() || captured.jobTitle,
+        location: input('edit-location').value.trim() || captured.location,
+        workArrangement: select('edit-arrangement').value || captured.workArrangement,
+        employmentType: select('edit-employment').value || captured.employmentType,
+        salaryRange: input('edit-salary').value.trim() || captured.salaryRange,
+        jobUrl: input('edit-url').value.trim() || captured.jobUrl,
+        source: input('edit-source').value.trim() || captured.source
+      };
+      const json = generateAIJobJson(currentData);
+      navigator.clipboard.writeText(json).then(() => {
+        showToast('AI JSON copied to clipboard');
+      }).catch(() => showToast('Failed to copy JSON'));
+    } catch {
       showToast('Error generating AI JSON');
     }
   });

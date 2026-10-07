@@ -94,12 +94,12 @@ test("Orchestrator: cascades through priorities and returns clean capture object
     "https://stripe.com/jobs/12345?utm_source=linkedin",
   )
 
-  assert.equal(captured.jobTitle, "Staff Software Engineer")
-  assert.equal(captured.company, "Stripe")
-  assert.equal(captured.workArrangement, "Remote")
-  assert.equal(captured.confidence, "jsonld")
+  assert.equal(captured.job.title, "Staff Software Engineer")
+  assert.equal(captured.company.name, "Stripe")
+  assert.equal(captured.location.work_arrangement, "Remote")
+  assert.equal(captured.capture_metadata.extractor_confidence, "jsonld")
   assert.equal(
-    captured.jobUrl,
+    captured.source.url,
     "https://stripe.com/jobs/12345?utm_source=linkedin",
   )
 })
@@ -244,6 +244,14 @@ test('Stale SPA Protection: Reject mismatched job ID in JSON-LD', () => {
   assert.equal(result, null, 'Should return null for stale SPA page');
 });
 
+test('JSON-LD: extracts valid single posting when identifier is not part of page URL', () => {
+  const doc = loadFixture('jsonld_job.html');
+  const result = extractJsonLd(doc, 'https://jobs.example.test/careers/staff-software-engineer');
+  assert.ok(result);
+  assert.equal(result.company, 'Stripe');
+  assert.equal(result.jobTitle, 'Staff Software Engineer');
+});
+
 test('HiringCafe extractor: quick view', () => {
   const doc = loadFixture('hiringcafe_quick.html');
   const result = extractHiringCafe(doc, 'https://hiringcafe.com/job/123');
@@ -280,6 +288,6 @@ test('JSON-LD + DOM merge', () => {
   const doc = loadFixture('jsonld_job.html');
   doc.body.innerHTML += "<main><div class='job-description'><h2>Skills</h2><ul><li>Rust</li></ul></div></main>";
   const result = extractJobPosting(doc, 'https://stripe.com/jobs/12345');
-  assert.equal(result.jobTitle, 'Staff Software Engineer');
+  assert.equal(result.job.title, 'Staff Software Engineer');
   assert.ok(result.skills.includes('Rust'));
 });

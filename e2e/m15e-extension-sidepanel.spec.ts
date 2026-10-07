@@ -304,7 +304,7 @@ test.describe('Milestone 15E · extension Side Panel', () => {
         const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
         return result[0]?.result;
       });
-      expect(workerExtractionA).toMatchObject({ company: 'Stripe', jobTitle: 'Staff Software Engineer' });
+      expect(workerExtractionA).toMatchObject({ company: { name: 'Stripe' }, job: { title: 'Staff Software Engineer' } });
       evidence.service_worker_injection_verified = true;
 
       await expect(sidePanel.locator('#job-title')).toHaveText('Staff Software Engineer');

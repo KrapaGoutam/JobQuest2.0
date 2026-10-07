@@ -379,6 +379,7 @@ function renderEditDetails(screen) {
     } else {
       setEditDetailsExpanded(false);
     }
+  }
 }
 
 /** Runs the full real capture pipeline for a given tab: extraction, duplicate

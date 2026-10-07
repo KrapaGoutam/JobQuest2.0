@@ -243,7 +243,7 @@ async function initialize() {
     return;
   }
   const pending = (await chrome.storage.local.get(['pendingCapture'])).pendingCapture;
-  captured = pending || await extractActivePage();
+  captured = (pending ? flattenMasterRecord(pending) : null) || await extractActivePage();
   clearDuplicate();
   populateForm(captured);
   setState(captured.company && captured.jobTitle ? readyStateCode() : captured.company || captured.jobTitle ? 'X6' : 'X7', 'screen-capture');
@@ -297,8 +297,8 @@ async function save(event) {
     applied_at: `${input('input-date').value}T12:00:00.000Z`,
     snapshot: {
       description: captured.description || null,
-      requirements: captured.requirements || null,
-      skills: captured.skills || null,
+      requirements: typeof captured.requirements === 'string' ? captured.requirements || null : null,
+      skills: typeof captured.skills === 'string' ? captured.skills || null : null,
       raw_payload: { extraction_confidence: captured.confidence || null, salary_range: input('input-salary').value || null },
     },
     resume_id: resumeMode === 'existing' && resumeSelect.value ? resumeSelect.value : null,

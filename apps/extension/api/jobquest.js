@@ -227,5 +227,41 @@ export function isConnectionError(error) {
 
 export function flattenMasterRecord(record) {
   if (!record || record.schema_version !== '1.1') return record;
-  return { ...record, jobTitle: record.job?.title || '', company: record.company?.name || '', location: record.location?.text || '', workArrangement: record.location?.work_arrangement || '', employmentType: record.employment?.type || '', salaryMin: record.compensation?.min, salaryMax: record.compensation?.max, salaryRange: record.compensation?.range_text || '', jobUrl: record.source?.url || '', source: record.source?.platform || '', externalJobId: record.source?.external_id || '', notes: record.notes || '' };
+  let reqStr = '';
+  if (record.requirements) {
+    if (typeof record.requirements === 'string') {
+      reqStr = record.requirements;
+    } else if (Array.isArray(record.requirements)) {
+      reqStr = record.requirements.filter(Boolean).join('\n');
+    } else if (typeof record.requirements === 'object') {
+      const parts = [];
+      if (record.requirements.must_have?.length) parts.push(`Must have:\n${record.requirements.must_have.map((r) => `• ${r}`).join('\n')}`);
+      if (record.requirements.preferred?.length) parts.push(`Preferred:\n${record.requirements.preferred.map((r) => `• ${r}`).join('\n')}`);
+      reqStr = parts.join('\n\n');
+    }
+  }
+
+  let skillsStr = '';
+  if (record.skills) {
+    if (typeof record.skills === 'string') skillsStr = record.skills;
+    else if (Array.isArray(record.skills)) skillsStr = record.skills.filter(Boolean).join(', ');
+  }
+
+  return {
+    ...record,
+    jobTitle: record.job?.title || '',
+    company: record.company?.name || '',
+    location: record.location?.text || '',
+    workArrangement: record.location?.work_arrangement || '',
+    employmentType: record.employment?.type || '',
+    salaryMin: record.compensation?.min,
+    salaryMax: record.compensation?.max,
+    salaryRange: record.compensation?.range_text || '',
+    jobUrl: record.source?.url || '',
+    source: record.source?.platform || '',
+    externalJobId: record.source?.external_id || '',
+    notes: record.notes || '',
+    requirements: reqStr || null,
+    skills: skillsStr || null,
+  };
 }

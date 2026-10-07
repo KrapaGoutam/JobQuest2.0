@@ -1,3 +1,4 @@
+/* eslint-disable */
 (() => {
   // extractors/jsonld.js
   function cleanText(raw) {

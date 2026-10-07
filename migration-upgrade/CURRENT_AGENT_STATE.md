@@ -1,3 +1,19 @@
+## >>> JOBQUEST 2.1-G — LEGACY DB RECONCILIATION CHECKPOINT (2026-10-07) <<<
+
+PHASE: 2.1-G | STATUS: READ-ONLY RECONCILIATION COMPLETE — AWAITING OPERATOR REVIEW
+
+FEATURE BRANCH: \eature/2.1g-legacy-db-reconciliation\ | BASE DEVELOPMENT SHA: \c46392e13d4a85878e782439f8c01b11c0c2c92e\
+
+IMPLEMENTATION:
+- Implemented read-only reconciliation scripts inside \scripts/reconciliation\.
+- Evaluated deterministic matching rules (legacy ID, external ID, canonical URL, composite key, fuzzy match).
+- Tested against the local jobquest-dev Supabase database due to missing jobquest-prod connection credentials.
+- No database mutations executed; pure SELECT read-only implementation.
+
+DATABASE / MIGRATION IMPACT: NONE (Read-only execution).
+
+NEXT EXACT ACTION: Operator reviews reconciliation results. Ensure production Supabase credentials are provided to perform the actual audit on production data. Do not start 2.1-H or 2.1-G2 without explicit authorization.
+
 ## >>> JOBQUEST 2.1-PB â€” FINAL ACCEPTANCE FIXES (2026-10-06) <<<
 
 PHASE: 2.1-PB | STATUS: IMPLEMENTED ON FEATURE BRANCH â€” READY FOR COMMIT & BRANCH CI
@@ -788,4 +804,5 @@ Work accomplished:
 4. Added UI actions ("Copy Job JSON") to both the extension side panel and the web app's Application Detail Drawer.
 5. Added rigorous unit tests ensuring payload structure correctness and null-safety.
 6. Workspace typechecks cleanly. Ready for branch CI and merge to `development`.
+
 

@@ -1,6 +1,28 @@
-## >>> JOBQUEST 2.1-PA � PRODUCTION ACCEPTANCE REMEDIATION (2026-10-06) <<<
+## >>> JOBQUEST 2.1-PB — FINAL ACCEPTANCE FIXES (2026-10-06) <<<
 
-PHASE: 2.1-PA | STATUS: REMEDIATION VERIFIED � READY FOR COMMIT & BRANCH CI
+PHASE: 2.1-PB | STATUS: IMPLEMENTED ON FEATURE BRANCH — READY FOR COMMIT & BRANCH CI
+
+FEATURE BRANCH: `fix/2.1-final-dismiss-capture` | BASE DEVELOPMENT SHA: `407f393d586f34174b85e438a7acff4bb07f77f8`
+
+IMPLEMENTATION: 
+- Tasks & Follow-ups (D): Renamed "Cancel" to "Dismiss". Clarified the semantics: dismissing sets status to 'CANCELLED', which naturally prevents the task from recurring without requiring backend RPC changes. "No next action needed" remains distinct (clears metadata on applications table). Bulk Dismiss toast formatting fixed.
+- Browser Extension (F): Rewrote extension extraction pipeline (`apps/extension/extractors/index.js`) to cascade fields exactly in the requested priority (Site adapter -> Embedded App State -> JSON-LD -> DOM -> Generic -> Fallback). Added bounded-depth generic traversal for embedded app state. Added stale SPA protection (rejects mismatched job IDs from JSON-LD and app state). Created site adapters for LinkedIn (scoped precisely to `data-sdui-screen`, ignoring feed/insights), HiringCafe, and Dice. Enhanced `generic.js` to parse unknown list sections and emit them into `extras`. Upgraded AI JSON schema to 1.1 (`ai-job-json.js`), adding `extras` and stripping `raw_payload` to ensure no embedded secrets/personal data are saved. Verified "Copy JSON" uses UI-edited `currentData` immediately without requiring a backend save.
+
+LOCAL EVIDENCE: Typecheck PASS; extension unit tests 16/16 PASS (including new SPA and adapter tests via static HTML fixtures); unit tests `tests/unit/m6-queue-habits.test.ts` PASS.
+
+DATABASE / MIGRATION IMPACT: NONE.
+
+NEXT EXACT ACTION: Review diff, stage exact paths, commit and push feature branch `fix/2.1-final-dismiss-capture`, observe branch CI, merge to development, observe development CI, and stop.
+
+
+## >>> JOBQUEST 2.1-PA — PRODUCTION ACCEPTANCE REMEDIATION (2026-10-06) <<<
+
+PHASE: 2.1-PA | STATUS: REMEDIATION DEPLOYED — READY FOR OPERATOR ACCEPTANCE
+PROMOTED MAIN SHA: 6396f36121f7fe4bb96bee4a86a9903197098a40
+MAIN CI: 37524080874 (PASS)
+PRODUCTION DEPLOYMENT: dpl_HEq1S4qL2PMPoWzvewEXxxLpPwMY
+PRODUCTION URL: https://jobquest2.vercel.app
+EXTENSION PACKAGE: apps/extension/dist/jobquest-capture-prod.zip
 
 REMEDIATION BRANCH: ix/2.1-production-acceptance-remediation
 BASE DEVELOPMENT SHA: 87525ba100065515aa0e7ba1ab60c47eb47fdc7d

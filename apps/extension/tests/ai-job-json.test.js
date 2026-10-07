@@ -18,7 +18,7 @@ test("generateAIJobJson: handles extension extraction payload correctly", () => 
   const resultStr = generateAIJobJson(payload)
   const result = JSON.parse(resultStr)
   
-  expect(result.schema_version).toBe("1.0")
+  expect(result.schema_version).toBe("1.1")
   expect(result.job.title).toBe("Software Engineer")
   expect(result.company.name).toBe("Acme")
   expect(result.compensation.min).toBe(100000)
@@ -81,7 +81,7 @@ test("generateAIJobJson: 2.1-PA Issue F pre-save Copy JSON requires no applicati
   const jsonStr = generateAIJobJson(freshExtraction)
   const result = JSON.parse(jsonStr)
 
-  expect(result.schema_version).toBe("1.0")
+  expect(result.schema_version).toBe("1.1")
   expect(result.job.title).toBe("Backend Lead")
   expect(result.company.name).toBe("Stripe")
   expect(result.location.text).toBe("Remote, US")
@@ -133,7 +133,7 @@ test("generateAIJobJson: 2.1-PA Issue F reflects visible form edits prior to sav
   const jsonStr = generateAIJobJson(mergedCurrentData)
   const result = JSON.parse(jsonStr)
 
-  expect(result.schema_version).toBe("1.0")
+  expect(result.schema_version).toBe("1.1")
   expect(result.company.name).toBe("Acme Corporation Inc.")
   expect(result.job.title).toBe("Staff Software Engineer")
   expect(result.location.text).toBe("Austin, TX (Hybrid)")
@@ -161,7 +161,7 @@ test("generateAIJobJson: 2.1-PA Issue F works for already-known/captured job wit
   const jsonStr = generateAIJobJson(duplicatePageData)
   const result = JSON.parse(jsonStr)
 
-  expect(result.schema_version).toBe("1.0")
+  expect(result.schema_version).toBe("1.1")
   expect(result.company.name).toBe("Netflix")
   expect(result.job.title).toBe("Senior UI Engineer")
   expect(result.source.external_id).toBe("netflix-9988")

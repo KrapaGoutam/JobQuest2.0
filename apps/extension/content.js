@@ -1,4 +1,3 @@
-/* eslint-disable */
 (() => {
 var JQExt = (() => {
   var __defProp = Object.defineProperty;
@@ -77,29 +76,33 @@ var JQExt = (() => {
       }
     }
     if (postings.length === 0) return null;
+    // Stale SPA Protection:
+    // If multiple postings exist, find the one matching the current URL or ID.
+    // If none match when multiple postings exist, it's stale/unmatched SPA data.
     let job = postings[0];
-    for (const p of postings) {
-      const pUrl = p.url || "";
-      const pId = p.identifier?.value || "";
-      if (pUrl && pageUrl.includes(pUrl) || pId && pageUrl.includes(pId)) {
-        job = p;
-        break;
+    if (postings.length > 1) {
+      let matchedJob = null;
+      for (const p of postings) {
+        const pUrl = String(p.url || "");
+        const pId = String(p.identifier?.value || "");
+        if ((pUrl && (pageUrl.includes(pUrl) || pUrl.includes(pageUrl))) || (pId && pageUrl.includes(pId))) {
+          matchedJob = p;
+          break;
+        }
       }
-    }
-    const jobUrlStr = String(job.url || "");
-    const jobIdStr = String(job.identifier?.value || "");
-    let hasValidMatch = false;
-    let hasStaleData = false;
-    if (jobUrlStr) {
-      if (pageUrl.includes(jobUrlStr) || jobUrlStr.includes(pageUrl)) hasValidMatch = true;
-      else hasStaleData = true;
-    }
-    if (jobIdStr) {
-      if (pageUrl.includes(jobIdStr)) hasValidMatch = true;
-      else hasStaleData = true;
-    }
-    if (hasStaleData && !hasValidMatch) {
-      return null;
+      if (!matchedJob) return null;
+      job = matchedJob;
+    } else {
+      // Single posting: verify its declared URL (if explicitly provided) isn't pointing to a different route.
+      const jobUrlStr = String(job.url || "");
+      const jobIdStr = String(job.identifier?.value || "");
+      if (jobUrlStr) {
+        const urlMatches = pageUrl.includes(jobUrlStr) || jobUrlStr.includes(pageUrl);
+        const idMatches = Boolean(jobIdStr && pageUrl.includes(jobIdStr));
+        if (!urlMatches && !idMatches) {
+          return null;
+        }
+      }
     }
     const jobTitle = cleanText(job.title || job.name || "");
     let company = "";

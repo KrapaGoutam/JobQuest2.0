@@ -244,6 +244,14 @@ test('Stale SPA Protection: Reject mismatched job ID in JSON-LD', () => {
   assert.equal(result, null, 'Should return null for stale SPA page');
 });
 
+test('JSON-LD: extracts valid single posting when identifier is not part of page URL', () => {
+  const doc = loadFixture('jsonld_job.html');
+  const result = extractJsonLd(doc, 'https://jobs.example.test/careers/staff-software-engineer');
+  assert.ok(result);
+  assert.equal(result.company, 'Stripe');
+  assert.equal(result.jobTitle, 'Staff Software Engineer');
+});
+
 test('HiringCafe extractor: quick view', () => {
   const doc = loadFixture('hiringcafe_quick.html');
   const result = extractHiringCafe(doc, 'https://hiringcafe.com/job/123');

@@ -23,6 +23,7 @@ import {
   saveSettings,
   saveTheme,
   testConnection,
+  flattenMasterRecord,
 } from './api/jobquest.js';
 import { generateAIJobJson } from './serializers/ai-job-json.js';
 import {
@@ -378,26 +379,6 @@ function renderEditDetails(screen) {
     } else {
       setEditDetailsExpanded(false);
     }
-  }
-}
-
-function flattenMasterRecord(record) {
-  if (!record || record.schema_version !== "1.1") return record;
-  return {
-    ...record,
-    jobTitle: record.job?.title || "",
-    company: record.company?.name || "",
-    location: record.location?.text || "",
-    workArrangement: record.location?.work_arrangement || "",
-    employmentType: record.employment?.type || "",
-    salaryMin: record.compensation?.min,
-    salaryMax: record.compensation?.max,
-    salaryRange: record.compensation?.range_text || "",
-    jobUrl: record.source?.url || "",
-    source: record.source?.platform || "",
-    externalJobId: record.source?.external_id || "",
-    notes: record.notes || ""
-  };
 }
 
 /** Runs the full real capture pipeline for a given tab: extraction, duplicate

@@ -9,6 +9,7 @@ import {
   isConnectionError,
   parseSalaryRange,
   testConnection,
+  flattenMasterRecord,
 } from './api/jobquest.js';
 
 const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -190,7 +191,7 @@ async function extractActivePage() {
   if (!tab?.id) return { jobUrl: tab?.url || '' };
   try {
     const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-    return result[0]?.result || { jobUrl: tab.url || '' };
+    return flattenMasterRecord(result[0]?.result) || { jobUrl: tab.url || '' };
   } catch {
     return { jobUrl: tab.url || '' };
   }

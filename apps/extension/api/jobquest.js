@@ -224,3 +224,8 @@ export const createCapture = (instanceUrl, apiToken, capture) => request(instanc
 export function isConnectionError(error) {
   return error instanceof JobQuestApiError && error.status === 401;
 }
+
+export function flattenMasterRecord(record) {
+  if (!record || record.schema_version !== '1.1') return record;
+  return { ...record, jobTitle: record.job?.title || '', company: record.company?.name || '', location: record.location?.text || '', workArrangement: record.location?.work_arrangement || '', employmentType: record.employment?.type || '', salaryMin: record.compensation?.min, salaryMax: record.compensation?.max, salaryRange: record.compensation?.range_text || '', jobUrl: record.source?.url || '', source: record.source?.platform || '', externalJobId: record.source?.external_id || '', notes: record.notes || '' };
+}

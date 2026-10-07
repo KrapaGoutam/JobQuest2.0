@@ -488,29 +488,6 @@ export function extractSalary(doc) {
 }
 
 /**
- * Preserves structure (paragraphs, bullets, newlines) and decodes entities.
- */
-export function preserveHtmlText(htmlStr) {
-  if (!htmlStr) return "";
-  return String(htmlStr)
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|section|article|header|footer)>/gi, '\n\n')
-    .replace(/<li[^>]*>/gi, '• ')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<\/?h[1-6][^>]*>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '') // strip remaining tags
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\n[ \t]+/g, '\n') // remove leading spaces on lines
-    .replace(/\n{3,}/g, '\n\n') // collapse 3+ newlines to 2
-    .trim();
-}
-
-/**
  * Extracts job description content.
  */
 export function extractDescription(doc) {
@@ -529,7 +506,7 @@ export function extractDescription(doc) {
   for (const selector of descSelectors) {
     const el = doc.querySelector(selector)
     if (el) {
-      const text = preserveHtmlText(el.innerHTML);
+      const text = cleanText(el.textContent)
       if (text && text.length > 50) return text
     }
   }
@@ -548,9 +525,8 @@ export function extractDescription(doc) {
 export function extractStructuredLists(doc) {
   const result = {
     responsibilities: [],
-    requirements: { must_have: [], preferred: [] },
+    requirements: [],
     skills: [],
-    benefits: [],
     extras: {}
   }
 
@@ -575,7 +551,9 @@ export function extractStructuredLists(doc) {
     }
   }
 
+  // If no specific container, fallback to the body but it's riskier. We'll stick to doc
   const targetDoc = descContainer || doc;
+
   const headings = targetDoc.querySelectorAll('h1, h2, h3, h4, h5, h6, b, strong, p > strong');
   
   for (const heading of headings) {
@@ -584,19 +562,14 @@ export function extractStructuredLists(doc) {
     
     let targetList = null;
     let isExtra = false;
-    
     if (/responsibilit(?:y|ies)|what you'll do|role|duties|what we expect/.test(text)) {
       targetList = result.responsibilities;
-    } else if (/preferred|nice to have|bonus|plus/.test(text)) {
-      targetList = result.requirements.preferred;
     } else if (/requirement|qualification|what you need|who you are|what we're looking for|experience/.test(text)) {
-      targetList = result.requirements.must_have;
+      targetList = result.requirements;
     } else if (/skill|tech(?:nolog(?:y|ies))?|tool/.test(text)) {
       targetList = result.skills;
-    } else if (/benefit|perk|offer|what we give/.test(text)) {
-      targetList = result.benefits;
-    } else if (text.length > 3 && text.length < 50 && !/apply|about us|company|salary|location/.test(text)) {
-      // Possible unknown section
+    } else if (text.length > 3 && text.length < 50 && !/apply|about us|company|salary|location|benefits|perks/.test(text)) {
+      // Possible unknown section (e.g. "Nice to have", "Bonus points")
       if (!result.extras[rawText]) {
         result.extras[rawText] = [];
       }
@@ -608,7 +581,8 @@ export function extractStructuredLists(doc) {
       let next = heading.nextElementSibling;
       while (next && !['ul', 'ol'].includes(next.tagName.toLowerCase())) {
         if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(next.tagName.toLowerCase())) {
-          break; // Stopped by another heading
+          // Stopped by another heading
+          break;
         }
         next = next.nextElementSibling;
       }
@@ -679,13 +653,16 @@ export function extractGeneric(doc, pageUrl = "") {
     company &&
     jobTitle.toLowerCase() === company.toLowerCase()
   ) {
+    // Both title and company were assigned the same brand
     if (domHeading && domHeading.toLowerCase() !== company.toLowerCase()) {
       jobTitle = domHeading
     } else {
+      // If no other heading exists, prefer company for the brand, clear title
       jobTitle = ""
     }
   }
 
+  // If jobTitle is still empty, and domHeading is available, use it
   if (!jobTitle && domHeading) {
     jobTitle = domHeading
   }
@@ -700,6 +677,7 @@ export function extractGeneric(doc, pageUrl = "") {
   // Extract Structured Lists
   const structuredLists = extractStructuredLists(doc)
 
+  // 6. Source is the hostname / platform
   let source = hostname.replace(/^www\./i, "")
 
   return {
@@ -716,8 +694,6 @@ export function extractGeneric(doc, pageUrl = "") {
     responsibilities: structuredLists.responsibilities,
     requirements: structuredLists.requirements,
     skills: structuredLists.skills,
-    benefits: structuredLists.benefits,
-    extras: structuredLists.extras,
     jobUrl: pageUrl,
     source,
     confidence: "generic",

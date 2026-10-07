@@ -381,6 +381,25 @@ function renderEditDetails(screen) {
   }
 }
 
+function flattenMasterRecord(record) {
+  if (!record || record.schema_version !== "1.1") return record;
+  return {
+    ...record,
+    jobTitle: record.job?.title || "",
+    company: record.company?.name || "",
+    location: record.location?.text || "",
+    workArrangement: record.location?.work_arrangement || "",
+    employmentType: record.employment?.type || "",
+    salaryMin: record.compensation?.min,
+    salaryMax: record.compensation?.max,
+    salaryRange: record.compensation?.range_text || "",
+    jobUrl: record.source?.url || "",
+    source: record.source?.platform || "",
+    externalJobId: record.source?.external_id || "",
+    notes: record.notes || ""
+  };
+}
+
 /** Runs the full real capture pipeline for a given tab: extraction, duplicate
  * check, then renders the resolved Capture screen. */
 async function runCaptureFlow(tab, { showScanning = true } = {}) {
@@ -393,9 +412,9 @@ async function runCaptureFlow(tab, { showScanning = true } = {}) {
   if (showScanning && currentCaptureScreen !== 'none' && currentCaptureScreen !== 'offline') {
     byId('scan-indicator').hidden = false;
   }
-  const extracted = await extractFromTab(tab);
+  const extractedRaw = await extractFromTab(tab);
   if (seq !== captureRequestSeq) return; // superseded by a newer tab-change request
-  captured = extracted;
+  captured = flattenMasterRecord(extractedRaw);
   populateEditFields(captured);
   const extractionScreen = classifyExtraction(captured);
   if (extractionScreen === 'none') {

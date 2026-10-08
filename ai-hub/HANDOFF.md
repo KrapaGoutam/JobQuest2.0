@@ -6,7 +6,20 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-AI-0 complete (docs). Next: AI-1P → AI-1A…1F (not approved yet).
+CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1 integrated to development; branch CI 37799394061 PASS @4a478265; AI-2 awaits operator approval (dev SHA/CI in chat checkpoint; persist at AI-2 start) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1F2 final validation/CI/integration (needs operator approval + Preview mapping) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+
+AI-1F1: central flag resolver `apps/web/src/lib/aiHubFlags.ts` (`VITE_AI_HUB_ENABLED` frontend, `AI_HUB_ENABLED` server kill switch in `apps/api/src/lib/aiHubConfig.ts`; default OFF, kill switch wins); nav, mobile nav and routes (`/ai-hub*`, `/settings/ai`) hidden/404 when off; read-only Settings -> AI & Automation; workflow-config mutation DEFERRED (no migration, no DB change); write actions OFF. 40 unit tests pass, tsc/eslint clean; live visual smoke not done. See `reports/AI-1F1_SETTINGS_FLAGS_REPORT.md`.
+
+AI-1A: migration `supabase/migrations/20261023100000_ai_hub_database_foundation.sql` applied to jobquest-dev only (4 tables, RLS on, no policies, client privileges revoked; service_role DML). See `reports/AI-1A_DATABASE_FOUNDATION_REPORT.md`.
+
+AI-1E: read-only Overview cards (latest run, 7-day activity, needs-attention, pending suggestions, recent findings), run-centric History (status/provider/workflow filters, 20/page, size+1 pagination), run + finding detail dialogs, allowlisted payload display, AuditHistory AI-scope filter (client-side). No migration, no writes. 29 unit tests, typecheck/eslint clean, focused fixture browser check at 375/768/1280. See `reports/AI-1E_OPERATIONAL_VIEWS_REPORT.md`.
+
+AI-1D: AI Hub shell `/ai-hub` + `/ai-hub/history` (apps/web: views/AiHubView.tsx, api/aiHub.ts, lib/aiHub.ts), sidebar + mobile More drawer entry, read-only RLS SELECTs, 12 unit tests pass, typecheck/eslint clean, no DB change, not pushed. Settings → AI & Automation and feature flags deferred to AI-1F. See `reports/AI-1D_UI_FOUNDATION_REPORT.md`.
+
+AI-1C: provider-neutral contract layer `apps/api/src/lib/aiContract/` (constants, types, validate, dedupe, canonical), fixtures `tests/unit/fixtures/ai-contract/`, tests `tests/unit/ai-contract.test.ts` (54 pass), typecheck + eslint clean. No DB change, not pushed. See `reports/AI-1C_CANONICAL_CONTRACT_REPORT.md`. Deferred: closed-finding supersession (ingestion/service phase), audit-view entity filter (AI-1E/AI-2), workflow-config mutation (AI-1F).
+AI-1B: migration `supabase/migrations/20261024100000_ai_hub_rls_ownership_audit.sql` applied to jobquest-dev only: authenticated SELECT + `can_access_owned_record` policies (configs owner-only), 4 service_role-only ingest RPCs, 3 owner-only review RPCs (ACCEPTED refused until AI-11), audit via `audit_events`. Behavioural tests `tests/integration/ai-1b-rls-audit.test.ts` 15/15 on the local stack (no hosted-Dev test writes). See `reports/AI-1B_RLS_OWNERSHIP_AUDIT_REPORT.md`. Branch still NOT pushed (Preview mapping unverified). AI-0 dev CI 37690590350 finished: success.
+
+AI-1P environment findings: `reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md` and `ENVIRONMENT_STRATEGY.md` §7. Local dev/CLI → jobquest-dev (verified). Unresolved operator actions: Vercel Preview/Production env→Supabase mapping, Production deployment ID/SHA, stale `.env.production.local`, final result of CI run 37690590350. AI-1P: no tests, no CI, no DB change, no migration. Do not push the feature branch until Preview mapping is confirmed. Agents: dev DB only.
 
 ## Why This Phase Exists
 2.1-G (legacy reconciliation) was closed and shelved; AI connectivity became its own subsystem needing architecture before any schema/code.
@@ -24,13 +37,13 @@ All 17 AI-0 docs under `ai-hub/`.
 `ai-hub/**` only.
 
 ## Database State
-Dev (`xpnkasclquplmrcmhsif`) and prod (`kqsxdothjxtcktyirpux`): 20 migrations each, head `20261022100000`. No `ai_*` tables. Unchanged by AI-0.
+Dev (`xpnkasclquplmrcmhsif`): 22 migrations, head `20261024100000` (4 `ai_*` tables with SELECT policies + `rpc_ai_*`; 0 AI rows). Prod (`kqsxdothjxtcktyirpux`): 20 migrations, head `20261022100000`, no `ai_*` tables, untouched.
 
 ## Migration State
-None created. Repo `supabase/migrations/` = 20 files.
+Repo `supabase/migrations/` = 22 files (AI-1A `20261023100000`, AI-1B `20261024100000`).
 
 ## Tests Already Run
-None (docs-only).
+AI-1B: `tests/integration/ai-1b-rls-audit.test.ts` 15/15 on local Supabase (Docker). No branch/dev CI for AI-1 yet (deferred to AI-1 completion).
 
 ## CI Already Run
 See report. Note: `docs/**` branches don't trigger push CI; `ai-hub/` is not docs-only for the classifier (F-1).
@@ -48,7 +61,7 @@ None confirmed by the operator. All in `PROVIDER_CAPABILITY_MATRIX.md` (mostly N
 Repo audit, env comparison, provider web search (unless re-verifying a specific row).
 
 ## Unfinished Work
-AI-1P onward.
+AI-1C onward (AI-1C–AI-1F, then one branch CI + development merge).
 
 ## Uncommitted Work
 None (pre-existing untracked `.artifacts/` is not part of this work).
@@ -57,7 +70,7 @@ None (pre-existing untracked `.artifacts/` is not part of this work).
 Follow `CURRENT_AGENT_STATE.md` → NEXT EXACT STEP. Run `git status` and `git log -3` first; if HEAD differs from the state file, trust Git.
 
 ## Next Phase
-AI-1P (prerequisite), then AI-1A, upon explicit operator approval.
+AI-1C upon explicit operator approval.
 
 ---
 

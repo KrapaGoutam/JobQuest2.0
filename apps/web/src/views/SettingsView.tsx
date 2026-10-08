@@ -5,6 +5,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { KeyRound, ShieldCheck, Activity, Bug } from 'lucide-react';
 import { ExtensionSettingsView } from './ExtensionSettingsView';
+import { AiAutomationSettings } from './AiAutomationSettings';
+import { isAiHubExposed } from '../lib/aiHubFlags';
 import type { PublicSession } from '../api';
 import { TaskTemplateManager } from '../components/tasks/TaskTemplateManager';
 
@@ -26,7 +28,7 @@ export interface SettingsViewProps {
   onDismissCodes: () => void;
   onRefreshSession: () => Promise<unknown>;
   onLogout: (scope: 'local' | 'global') => Promise<void>;
-  initialTab?: 'account' | 'templates' | 'extension' | 'diagnostics';
+  initialTab?: 'account' | 'templates' | 'extension' | 'ai' | 'diagnostics';
 }
 
 export function SettingsView({
@@ -49,7 +51,7 @@ export function SettingsView({
   onLogout,
   initialTab,
 }: SettingsViewProps) {
-  const [tab, setTab] = useState<'account' | 'templates' | 'extension' | 'diagnostics'>(initialTab ?? 'account');
+  const [tab, setTab] = useState<'account' | 'templates' | 'extension' | 'ai' | 'diagnostics'>(initialTab ?? 'account');
 
   useEffect(() => setTab(initialTab ?? 'account'), [initialTab]);
 
@@ -57,7 +59,7 @@ export function SettingsView({
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <header>
         <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 16px 0' }}>Settings</h1>
-        <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
           <button
             onClick={() => setTab('account')}
             style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', fontWeight: tab === 'account' ? 700 : 400, color: tab === 'account' ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
@@ -76,6 +78,15 @@ export function SettingsView({
           >
             Browser Extension
           </button>
+          {isAiHubExposed() && (
+            <button
+              onClick={() => setTab('ai')}
+              aria-current={tab === 'ai' ? 'page' : undefined}
+              style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', fontWeight: tab === 'ai' ? 700 : 400, color: tab === 'ai' ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
+            >
+              AI & Automation
+            </button>
+          )}
           <button
             onClick={() => setTab('diagnostics')}
             style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', fontWeight: tab === 'diagnostics' ? 700 : 400, color: tab === 'diagnostics' ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
@@ -181,6 +192,8 @@ export function SettingsView({
           session={session}
         />
       )}
+
+      {tab === 'ai' && isAiHubExposed() && <AiAutomationSettings activeWorkspaceId={activeWorkspaceId} />}
 
       {tab === 'diagnostics' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

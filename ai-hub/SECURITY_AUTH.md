@@ -46,6 +46,7 @@ Recommendation: design tokens now as S1-compatible opaque tokens (`jqa_*`, HMAC-
 - MCP layer uses `SUPABASE_SECRET_KEY` server-side only to call ingest RPCs *and* passes the resolved user identity; read tools should execute as the user (mint a short-lived user JWT with `JQ_JWT_PRIVATE_JWK`, as the app already does) so existing RLS enforces access rather than hand-written filters.
 - Service-role key never leaves the server; never sent to providers; CI bundle scan covers the browser.
 - Managers may see members' findings (consistent with core RLS); a connector token is user-scoped, so it cannot read others' data even if the user is a manager (read tools filter `user_id = token.user`).
+- **Implemented (AI-1B, migration 20261024100000):** managers *read* members' runs/findings/suggestions but cannot review, dismiss or delete them (owner-only RPCs); `ai_workflow_configs` are owner-only to read. Ingest RPCs are service_role-only; review RPCs are authenticated-only (EXECUTE revoked from service_role, so providers cannot delete/decide). `rpc_ai_decide_suggestion` refuses `ACCEPTED` until AI-11. Audit rows use `metadata.actor_kind` = `SERVICE_INGEST` | `USER` and carry ids/enums/counts only. See `reports/AI-1B_RLS_OWNERSHIP_AUDIT_REPORT.md`.
 
 ## 6. Other controls
 

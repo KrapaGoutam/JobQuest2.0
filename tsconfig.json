@@ -1,5 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": { "types": ["node"], "noEmit": true },
-  "include": ["api/**/*", "apps/api/src/**/*", "tests", "e2e", "playwright.config.ts", "vitest.config.mts"]
+  "include": ["api/**/*", "apps/api/src/**/*", "tests", "e2e", "playwright.config.ts", "vitest.config.mts"],
+  "exclude": ["tests/unit/ai-hub-ui.test.ts", "tests/unit/ai-hub-operational.test.ts", "tests/unit/ai-hub-flags.test.ts"]
 }

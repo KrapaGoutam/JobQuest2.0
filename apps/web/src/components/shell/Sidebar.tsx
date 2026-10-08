@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { isAiHubExposed } from '../../lib/aiHubFlags';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import {
   LayoutDashboard,
@@ -23,6 +24,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Building2,
+  Sparkles,
 } from 'lucide-react';
 
 export interface SidebarProps {
@@ -61,6 +63,7 @@ export function Sidebar({
 
   const insightsNav = [
     { id: 'analytics', path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    ...(isAiHubExposed() ? [{ id: 'ai-hub', path: '/ai-hub', label: 'AI Hub', icon: Sparkles }] : []),
   ];
 
   const sharedWorkspaceNav = [
@@ -87,7 +90,7 @@ export function Sidebar({
     badge?: { text: string; danger?: boolean };
   }) => {
     const Icon = item.icon;
-    const isCurrent = currentPath === item.path;
+    const isCurrent = currentPath === item.path || (item.path === '/ai-hub' && currentPath.startsWith('/ai-hub/'));
 
     return (
       <button

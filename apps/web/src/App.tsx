@@ -29,6 +29,9 @@ import { ArchiveView } from './views/ArchiveView';
 import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import { JournalView } from './views/JournalView';
+import { AiHubView } from './views/AiHubView';
+import { aiHubTabFromPath } from './lib/aiHub';
+import { isAiHubExposed } from './lib/aiHubFlags';
 import {
   UserPlus,
   AlertCircle,
@@ -402,6 +405,9 @@ function AppContent() {
       case '/analytics':
       case '/analytics/aging':
         return 'Analytics';
+      case '/ai-hub':
+      case '/ai-hub/history':
+        return 'AI Hub';
       case '/workspace':
       case '/workspace/members':
         return 'Workspace Members';
@@ -418,6 +424,7 @@ function AppContent() {
         return 'Join Workspace';
       case '/settings':
       case '/settings/extension':
+      case '/settings/ai':
         return 'Settings';
       case '/design-system':
         return 'Design System';
@@ -456,6 +463,16 @@ function AppContent() {
         />
       );
     }
+
+    const notFoundView = (
+      <PlaceholderView
+        title="404 — Page Not Found"
+        subtitle="The requested view does not exist in JobQuest 2.0"
+        icon={<AlertCircle size={24} />}
+        actionText="Return to Applications"
+        onAction={() => navigate('/applications')}
+      />
+    );
 
     if (currentPath === '/design-system') {
       return <DesignSystemShowcase />;
@@ -591,6 +608,17 @@ function AppContent() {
       );
     }
 
+    if (routePath === '/ai-hub' || routePath === '/ai-hub/history') {
+      if (!isAiHubExposed()) return notFoundView;
+      return (
+        <AiHubView
+          activeWorkspaceId={activeWs}
+          initialTab={aiHubTabFromPath(routePath)}
+          onNavigate={navigate}
+        />
+      );
+    }
+
     if (currentPath === '/workspace/imports') {
       return (
         <ImportExportView
@@ -650,7 +678,9 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/settings' || currentPath === '/settings/extension') {
+    if (currentPath === '/settings/ai' && !isAiHubExposed()) return notFoundView;
+
+    if (currentPath === '/settings' || currentPath === '/settings/extension' || currentPath === '/settings/ai') {
       return (
         <SettingsView
           activeWorkspaceId={activeWs}
@@ -670,20 +700,12 @@ function AppContent() {
           onDismissCodes={() => setCodes(null)}
           onRefreshSession={refresh}
           onLogout={onLogout}
-          initialTab={currentPath === '/settings/extension' ? 'extension' : 'account'}
+          initialTab={currentPath === '/settings/extension' ? 'extension' : currentPath === '/settings/ai' ? 'ai' : 'account'}
         />
       );
     }
 
-    return (
-      <PlaceholderView
-        title="404 — Page Not Found"
-        subtitle="The requested view does not exist in JobQuest 2.0"
-        icon={<AlertCircle size={24} />}
-        actionText="Return to Applications"
-        onAction={() => navigate('/applications')}
-      />
-    );
+    return notFoundView;
   };
 
   return (

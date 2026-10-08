@@ -66,3 +66,6 @@ Recommendation: design tokens now as S1-compatible opaque tokens (`jqa_*`, HMAC-
 ## 7. Security gates (see `IMPLEMENTATION_PHASES.md`)
 
 AI-1B (RLS review), AI-3B (auth decision, operator approval), AI-3F (injection/abuse tests), AI-11 (action approval) require explicit security review. Use `release-security-reviewer` agent read-only at AI-3F and before final release.
+
+## AI-2A integration-service boundary (implemented)
+`ingestAiResult(context, input)` (`apps/api/src/services/aiIntegrationService.ts`) is internal-only, not an HTTP route. Trusted (server-decided): `workspaceId`, `userId`, `actorKind`, `triggerType`, `retryOfRunId`, `correlationId`. External/untrusted: the whole provider payload (only the AI-1C validator's normalized output is used). Server `AI_HUB_ENABLED` is checked first and writes nothing when off; `VITE_AI_HUB_ENABLED` is never consulted. Writes go only through the four AI-1B service RPCs (no direct table writes); the DB owns audit, dedupe and `content_hash`. See `reports/AI-2A_INTEGRATION_SERVICE_REPORT.md`.

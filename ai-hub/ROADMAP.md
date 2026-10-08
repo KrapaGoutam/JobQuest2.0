@@ -25,9 +25,9 @@ AI-1 Foundation                                         AI-1 READY FOR BRANCH CI
 [x] AI-1F1 Feature flags / AI & Automation settings — COMPLETE; local commit, not pushed; no DB change
 [ ] AI-1F2 AI-1 final validation / branch CI / development integration — AI-1 READY FOR BRANCH CI (validation done; CI/merge pending)
 
-AI-2 Internal integration service                       NOT STARTED
-[ ] AI-2A Read service  [ ] AI-2B Ingestion  [ ] AI-2C Validation/versioning
-[ ] AI-2D Idempotency/dedupe  [ ] AI-2E Audit/provenance
+AI-2 Internal integration service                       IN PROGRESS (branch feature/ai-2-integration-service)
+[x] AI-2A Service core + validation + ingestion (absorbs former 2B ingestion, 2C validation reuse, 2D idempotency, 2E provenance/audit) — COMPLETE; local commit, not pushed; no DB change
+[ ] AI-2B Read service / operational API / AI-2 finalization (former 2A read service + audit-window filter + branch CI/merge)
 
 AI-3 Remote MCP + auth                                  NOT STARTED
 [ ] AI-3A Foundation  [ ] AI-3B Auth (decision gate)  [ ] AI-3C Read tools

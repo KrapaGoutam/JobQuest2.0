@@ -6,7 +6,9 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1 integrated to development; branch CI 37799394061 PASS @4a478265; AI-2 awaits operator approval (dev SHA/CI in chat checkpoint; persist at AI-2 start) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1F2 final validation/CI/integration (needs operator approval + Preview mapping) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+CURRENT PHASE: AI-2 · CURRENT SUB-PHASE: AI-2A COMPLETE locally (internal integration service `apps/api/src/services/aiIntegrationService.ts`; report `reports/AI-2A_INTEGRATION_SERVICE_REPORT.md`; 39 unit + 11 local-DB integration tests, typecheck/lint clean, no migration) — awaiting operator approval for AI-2B · WORKING BRANCH: `feature/ai-2-integration-service` (local, not pushed, no CI) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+
+AI-1 FINAL (persisted): development SHA `0847447474e9cfd6c53bcab43c4457fbd48ff9c5`; development CI `37801299047` PASS; branch implementation SHA `4a478265ce52de17b4c32290ed751f6cf21c99b3`, branch CI `37799394061` PASS; main `26e517ea…` and Production unchanged; Dev head `20261024100000`, Prod head `20261022100000`.
 
 AI-1F1: central flag resolver `apps/web/src/lib/aiHubFlags.ts` (`VITE_AI_HUB_ENABLED` frontend, `AI_HUB_ENABLED` server kill switch in `apps/api/src/lib/aiHubConfig.ts`; default OFF, kill switch wins); nav, mobile nav and routes (`/ai-hub*`, `/settings/ai`) hidden/404 when off; read-only Settings -> AI & Automation; workflow-config mutation DEFERRED (no migration, no DB change); write actions OFF. 40 unit tests pass, tsc/eslint clean; live visual smoke not done. See `reports/AI-1F1_SETTINGS_FLAGS_REPORT.md`.
 

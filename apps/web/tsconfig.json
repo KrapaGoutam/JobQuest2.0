@@ -3,8 +3,9 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"],
-    "noEmit": true
+    "types": ["vite/client", "node"],
+    "noEmit": true,
+    "paths": { "react": ["./node_modules/@types/react"], "react-dom/server": ["./node_modules/@types/react-dom/server"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "../../tests/unit/ai-hub-ui.test.ts", "../../tests/unit/ai-hub-operational.test.ts", "../../tests/unit/ai-hub-flags.test.ts"]
 }

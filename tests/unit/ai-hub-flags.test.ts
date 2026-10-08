@@ -1,5 +1,5 @@
-import { createElement } from '../../apps/web/node_modules/react';
-import { renderToStaticMarkup } from '../../apps/web/node_modules/react-dom/server';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 

@@ -1,5 +1,5 @@
-import { createElement } from '../../apps/web/node_modules/react';
-import { renderToStaticMarkup } from '../../apps/web/node_modules/react-dom/server';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -91,7 +91,7 @@ describe('AI-1E History', () => {
     expect(html).toContain('Next');
   });
   it('empty, filtered-empty and localized error states', () => {
-    const none = { status: 'ready', rows: [], hasNext: false } as const;
+    const none = { status: 'ready' as const, rows: [], hasNext: false };
     expect(hist({ state: none })).toContain('No AI runs yet');
     expect(hist({ state: none, filters: { ...DEFAULT_RUN_FILTERS, status: 'FAILED' } })).toContain('No runs match these filters');
     const err = hist({ state: { status: 'error' } });

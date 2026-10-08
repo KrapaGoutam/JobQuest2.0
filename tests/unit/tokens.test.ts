@@ -66,9 +66,11 @@ describe('service-role boundary (static)', () => {
   it('admin() (service role) stays inside the explicit auth, rate-limit, extension Node-facade and AI ingestion-service boundaries', () => {
     const users = files('apps/api/src').filter((p) => /\badmin\(\)/.test(readFileSync(p, 'utf8'))).map((p) => p.replace(/\\/g, '/')).sort();
     expect(users).toEqual([
+      'apps/api/src/lib/aiConnectorTokens.ts', // AI-3: connector-token resolve/touch via service-role-only RPCs (no table reads)
       'apps/api/src/lib/db.ts',
       'apps/api/src/lib/extensionTokens.ts',
       'apps/api/src/lib/rateLimit.ts',
+      'apps/api/src/routes/aiConnectors.ts', // AI-3: owner-only connector-token create/revoke RPC facade
       'apps/api/src/routes/auth.ts',
       'apps/api/src/routes/extension.ts',
       'apps/api/src/routes/scope.ts',

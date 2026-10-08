@@ -25,6 +25,9 @@ export function clientIp(c: Context): string {
 export const requireSameOriginJson: MiddlewareHandler = async (c, next) => {
   const method = c.req.method;
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
+  // MCP clients are not browsers: they authenticate with an explicit connector bearer
+  // token (never ambient cookies) and the handler enforces its own Origin allow-list.
+  if (c.req.path === '/api/mcp' || c.req.path === '/api/mcp/') return next();
   // Extension bearer tokens are explicit Authorization credentials, never ambient
   // cookies. Their route performs its own optional extension-origin allow-list check.
   if (c.req.path.startsWith('/api/ext/v1/')) {

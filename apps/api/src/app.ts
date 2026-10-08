@@ -4,6 +4,8 @@ import { workflow } from './routes/workflow';
 import { imports } from './routes/imports';
 import { exportsRoute } from './routes/exports';
 import { extensionManagement, extensionV1 } from './routes/extension';
+import { aiConnectors } from './routes/aiConnectors';
+import { mcp } from './routes/mcp';
 import { requireSameOriginJson, securityHeaders } from './lib/security';
 
 /** JobQuest Node API (M1B, Auth Option B). Same origin as the SPA, mounted at /api. */
@@ -19,6 +21,8 @@ app.route('/import', imports);
 app.route('/exports', exportsRoute);
 app.route('/extension', extensionManagement);
 app.route('/ext/v1', extensionV1);
+app.route('/ai/connector-tokens', aiConnectors);
+app.route('/mcp', mcp);
 
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Not found.' } }, 404));
 app.onError((err, c) => {

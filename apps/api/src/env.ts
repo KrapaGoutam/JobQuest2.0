@@ -42,6 +42,11 @@ const schema = z.object({
   EXTENSION_TOKEN_RATE_LIMIT: z.coerce.number().int().positive().default(120),
   /** Optional comma-separated chrome-extension:// origins that receive CORS headers. */
   EXTENSION_ORIGINS: z.string().default(''),
+  /** AI-3 MCP endpoint: per-token request ceiling per minute, body cap and request timeout. */
+  MCP_TOKEN_RATE_LIMIT: z.coerce.number().int().positive().default(120),
+  MCP_AUTH_FAILURE_IP_MAX_PER_MINUTE: z.coerce.number().int().positive().default(30),
+  MCP_MAX_BODY_BYTES: z.coerce.number().int().min(1024).max(4_194_304).default(1_048_576),
+  MCP_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(25_000),
   /** Minimum response time for failed auth, to blunt username-enumeration timing. */
   AUTH_FAILURE_FLOOR_MS: z.coerce.number().int().nonnegative().default(600),
 });

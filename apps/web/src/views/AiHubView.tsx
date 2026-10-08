@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Sparkles, AlertTriangle } from 'lucide-react';
-import { fetchAiHubSnapshot } from '../api/aiHub';
+import { fetchAiFindingDetail, fetchAiHubSnapshot, fetchAiRunDetail } from '../api/aiHub';
 import {
-  aiHubPathForTab, aiRunStatusLabel, aiRunStatusVariant, aiWorkflowLabel, isAiHubEmpty,
-  type AiHubSnapshot, type AiHubTab,
+  RECENT_WINDOW_DAYS, aiHubPathForTab, aiProviderLabel, aiRunStatusLabel, aiRunStatusVariant,
+  aiSuggestionActionLabel, aiWorkflowLabel, isAiHubEmpty,
+  type AiFindingDetailRow, type AiFindingRow, type AiHubSnapshot, type AiHubTab, type AiRunDetailRow, type AiRunRow,
 } from '../lib/aiHub';
+import {
+  FindingDetailDialog, FindingList, RunDetailDialog, fmtTime, type DetailState,
+} from './AiHubDetails';
+import { AiHubHistory } from './AiHubHistory';
 import { Tabs, TabList, Tab, TabPanel } from '../components/ui/Tabs';
 import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -17,10 +22,7 @@ export type AiHubLoadState =
   | { status: 'error' }
   | { status: 'ready'; snapshot: AiHubSnapshot };
 
-const fmt = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
-};
+const fmt = fmtTime;
 
 export function AiHubLoading() {
   return (
@@ -55,23 +57,15 @@ export function AiHubEmpty() {
   );
 }
 
-export function AiHubRunList({ snapshot }: { snapshot: AiHubSnapshot }) {
-  return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '8px' }}>
-      {snapshot.runs.map((run) => (
-        <li key={run.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <StatusBadge variant={aiRunStatusVariant(run.status)}>{aiRunStatusLabel(run.status)}</StatusBadge>
-          <span>{aiWorkflowLabel(run.workflow)}</span>
-          <span className="muted small">{run.provider} · {fmt(run.created_at)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
+const bigNumber = { fontSize: '22px', fontWeight: 700 } as const;
 
-export function AiHubOverview({ snapshot }: { snapshot: AiHubSnapshot }) {
+export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun }: {
+  snapshot: AiHubSnapshot; onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
+}) {
   if (isAiHubEmpty(snapshot)) return <AiHubEmpty />;
   const latest = snapshot.runs[0];
+  const attention = snapshot.attentionRunCount ?? 0;
+  const rows = snapshot.pendingSuggestionRows ?? [];
   return (
     <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
       <Card>
@@ -80,48 +74,67 @@ export function AiHubOverview({ snapshot }: { snapshot: AiHubSnapshot }) {
           {latest ? (
             <div style={{ display: 'grid', gap: '4px' }}>
               <span><StatusBadge variant={aiRunStatusVariant(latest.status)}>{aiRunStatusLabel(latest.status)}</StatusBadge></span>
-              <span>{aiWorkflowLabel(latest.workflow)}</span>
-              <span className="muted small">{fmt(latest.created_at)}</span>
+              <span>{aiWorkflowLabel(latest.workflow)} · {aiProviderLabel(latest.provider)}</span>
+              <span className="muted small">
+                {fmt(latest.started_at ?? latest.created_at)}
+                {latest.completed_at ? ` – ${fmt(latest.completed_at)}` : ''}
+              </span>
+              {onOpenRun && <div><Button variant="secondary" onClick={() => onOpenRun(latest)}>View details</Button></div>}
             </div>
           ) : <span className="muted">No runs yet.</span>}
         </CardBody>
       </Card>
       <Card>
-        <CardHeader><CardTitle>Pending suggestions</CardTitle></CardHeader>
-        <CardBody><strong style={{ fontSize: '22px' }}>{snapshot.pendingSuggestions}</strong></CardBody>
-      </Card>
-      <Card style={{ gridColumn: '1 / -1' }}>
-        <CardHeader><CardTitle>Recent AI activity</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Recent activity</CardTitle></CardHeader>
         <CardBody>
-          {snapshot.findings.length === 0 ? <span className="muted">No findings yet.</span> : (
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '8px' }}>
-              {snapshot.findings.map((f) => (
-                // Plain-text rendering only; React escapes all values.
-                <li key={f.id}>
-                  <div>{f.title}</div>
-                  {f.summary && <div className="muted small">{f.summary}</div>}
-                  {f.evidence && <div className="muted small">{f.evidence}</div>}
+          <strong style={bigNumber}>{snapshot.recentRunCount ?? 0}</strong>
+          <div className="muted small">runs in the last {RECENT_WINDOW_DAYS} days</div>
+        </CardBody>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Needs attention</CardTitle></CardHeader>
+        <CardBody>
+          <strong style={bigNumber}>{attention}</strong>
+          <div className="muted small">
+            {attention > 0 ? `failed or partial runs in the last ${RECENT_WINDOW_DAYS} days` : `No failed or partial runs in the last ${RECENT_WINDOW_DAYS} days`}
+          </div>
+        </CardBody>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Pending suggestions</CardTitle></CardHeader>
+        <CardBody>
+          <strong style={bigNumber}>{snapshot.pendingSuggestions}</strong>
+          {rows.length > 0 && (
+            <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'grid', gap: '4px' }}>
+              {rows.map((r) => (
+                <li key={r.id} className="muted small">
+                  {aiSuggestionActionLabel(r.action)}{r.target_type ? ` · ${r.target_type.replace(/_/g, ' ')}` : ''} · {fmt(r.created_at)}
                 </li>
               ))}
             </ul>
           )}
         </CardBody>
       </Card>
+      <Card style={{ gridColumn: '1 / -1' }}>
+        <CardHeader><CardTitle>Recent findings</CardTitle></CardHeader>
+        <CardBody>
+          {snapshot.findings.length === 0
+            ? <span className="muted">No findings yet.</span>
+            : <FindingList findings={snapshot.findings} onOpen={onOpenFinding} />}
+        </CardBody>
+      </Card>
     </div>
   );
 }
 
-export function AiHubHistory({ snapshot }: { snapshot: AiHubSnapshot }) {
-  if (snapshot.runs.length === 0) {
-    return <EmptyState icon={<Sparkles size={22} />} title="No AI runs yet" description="Completed and failed AI runs will be listed here." />;
-  }
-  return <Card><CardBody><AiHubRunList snapshot={snapshot} /></CardBody></Card>;
-}
-
 /** Presentational shell: no data fetching, easy to render in every state. */
 export function AiHubShell({
-  tab, onTabChange, state, onRetry,
-}: { tab: AiHubTab; onTabChange: (t: AiHubTab) => void; state: AiHubLoadState; onRetry?: () => void }) {
+  tab, onTabChange, state, onRetry, history, onOpenFinding, onOpenRun,
+}: {
+  tab: AiHubTab; onTabChange: (t: AiHubTab) => void; state: AiHubLoadState; onRetry?: () => void;
+  /** History owns its own data/failure state so it is isolated from Overview. */
+  history?: ReactNode; onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
+}) {
   const body = (render: (s: AiHubSnapshot) => ReactNode) =>
     state.status === 'loading' ? <AiHubLoading />
       : state.status === 'error' ? <AiHubError onRetry={onRetry} />
@@ -139,8 +152,10 @@ export function AiHubShell({
           <Tab id="overview">Overview</Tab>
           <Tab id="history">History</Tab>
         </TabList>
-        <TabPanel id="overview">{body((s) => <AiHubOverview snapshot={s} />)}</TabPanel>
-        <TabPanel id="history">{body((s) => <AiHubHistory snapshot={s} />)}</TabPanel>
+        <TabPanel id="overview">
+          {body((s) => <AiHubOverview snapshot={s} onOpenFinding={onOpenFinding} onOpenRun={onOpenRun} />)}
+        </TabPanel>
+        <TabPanel id="history">{history}</TabPanel>
       </Tabs>
     </div>
   );
@@ -166,12 +181,51 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate }: AiHubVi
     return () => { cancelled = true; };
   }, [activeWorkspaceId, attempt]);
   const onTabChange = useCallback((t: AiHubTab) => onNavigate(aiHubPathForTab(t)), [onNavigate]);
+
+  // Detail surfaces: one at a time, each with its own isolated load/failure state.
+  const [selection, setSelection] = useState<{ kind: 'run' | 'finding'; id: string } | null>(null);
+  const [runDetail, setRunDetail] = useState<DetailState<{ run: AiRunDetailRow; findings: AiFindingRow[] }>>({ status: 'loading' });
+  const [findingDetail, setFindingDetail] = useState<DetailState<AiFindingDetailRow>>({ status: 'loading' });
+  const [detailAttempt, setDetailAttempt] = useState(0);
+  useEffect(() => {
+    if (!selection || !activeWorkspaceId) return undefined;
+    let cancelled = false;
+    if (selection.kind === 'run') {
+      setRunDetail({ status: 'loading' });
+      fetchAiRunDetail(activeWorkspaceId, selection.id).then(
+        (data) => { if (!cancelled) setRunDetail({ status: 'ready', data }); },
+        () => { if (!cancelled) setRunDetail({ status: 'error' }); },
+      );
+    } else {
+      setFindingDetail({ status: 'loading' });
+      fetchAiFindingDetail(activeWorkspaceId, selection.id).then(
+        (data) => { if (!cancelled) setFindingDetail({ status: 'ready', data }); },
+        () => { if (!cancelled) setFindingDetail({ status: 'error' }); },
+      );
+    }
+    return () => { cancelled = true; };
+  }, [selection, activeWorkspaceId, detailAttempt]);
+  const openRun = useCallback((run: AiRunRow) => setSelection({ kind: 'run', id: run.id }), []);
+  const openFinding = useCallback((id: string) => setSelection({ kind: 'finding', id }), []);
+  const close = useCallback(() => setSelection(null), []);
+  const retryDetail = useCallback(() => setDetailAttempt((n) => n + 1), []);
   return (
-    <AiHubShell
-      tab={initialTab}
-      onTabChange={onTabChange}
-      state={state}
-      onRetry={() => setAttempt((n) => n + 1)}
-    />
+    <>
+      <AiHubShell
+        tab={initialTab}
+        onTabChange={onTabChange}
+        state={state}
+        onRetry={() => setAttempt((n) => n + 1)}
+        onOpenFinding={openFinding}
+        onOpenRun={openRun}
+        history={<AiHubHistory activeWorkspaceId={activeWorkspaceId} onOpenRun={openRun} />}
+      />
+      {selection?.kind === 'run' && (
+        <RunDetailDialog state={runDetail} onClose={close} onRetry={retryDetail} onOpenFinding={openFinding} />
+      )}
+      {selection?.kind === 'finding' && (
+        <FindingDetailDialog state={findingDetail} onClose={close} onRetry={retryDetail} />
+      )}
+    </>
   );
 }

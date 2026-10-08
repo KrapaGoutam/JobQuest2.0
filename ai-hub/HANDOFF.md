@@ -6,9 +6,11 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1D COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1E Overview / History (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1E COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1F Feature flags / AI & Automation settings (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
 
 AI-1A: migration `supabase/migrations/20261023100000_ai_hub_database_foundation.sql` applied to jobquest-dev only (4 tables, RLS on, no policies, client privileges revoked; service_role DML). See `reports/AI-1A_DATABASE_FOUNDATION_REPORT.md`.
+
+AI-1E: read-only Overview cards (latest run, 7-day activity, needs-attention, pending suggestions, recent findings), run-centric History (status/provider/workflow filters, 20/page, size+1 pagination), run + finding detail dialogs, allowlisted payload display, AuditHistory AI-scope filter (client-side). No migration, no writes. 29 unit tests, typecheck/eslint clean, focused fixture browser check at 375/768/1280. See `reports/AI-1E_OPERATIONAL_VIEWS_REPORT.md`.
 
 AI-1D: AI Hub shell `/ai-hub` + `/ai-hub/history` (apps/web: views/AiHubView.tsx, api/aiHub.ts, lib/aiHub.ts), sidebar + mobile More drawer entry, read-only RLS SELECTs, 12 unit tests pass, typecheck/eslint clean, no DB change, not pushed. Settings → AI & Automation and feature flags deferred to AI-1F. See `reports/AI-1D_UI_FOUNDATION_REPORT.md`.
 

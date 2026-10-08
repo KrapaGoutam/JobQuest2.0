@@ -15,6 +15,7 @@ export function AuditHistoryView() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterAction, setFilterAction] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
+  const [scope, setScope] = useState<'ALL' | 'AI' | 'OTHER'>('ALL');
 
   const loadEvents = useCallback(async () => {
     if (!activeWorkspaceId || !isManager) {
@@ -45,6 +46,9 @@ export function AuditHistoryView() {
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       if (filterAction !== 'ALL' && e.action !== filterAction) return false;
+      // AI Hub events are namespaced AI_*; this separates them from membership/security events.
+      if (scope === 'AI' && !e.action.startsWith('AI_')) return false;
+      if (scope === 'OTHER' && e.action.startsWith('AI_')) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesActor = e.actor_name?.toLowerCase().includes(q);
@@ -54,7 +58,7 @@ export function AuditHistoryView() {
       }
       return true;
     });
-  }, [events, filterAction, search]);
+  }, [events, filterAction, scope, search]);
 
   const handleExport = () => {
     if (filteredEvents.length === 0) return;
@@ -158,6 +162,19 @@ export function AuditHistoryView() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ height: '34px' }}
           />
+        </div>
+
+        <div style={{ width: '160px' }}>
+          <Select
+            aria-label="Filter by event scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value as 'ALL' | 'AI' | 'OTHER')}
+            style={{ height: '34px' }}
+          >
+            <option value="ALL">Scope: All events</option>
+            <option value="AI">AI Hub events</option>
+            <option value="OTHER">Membership &amp; security</option>
+          </Select>
         </div>
 
         <div style={{ width: '180px' }}>

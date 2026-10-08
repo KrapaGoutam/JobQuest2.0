@@ -26,7 +26,9 @@ function fakeClient(opts: { fail?: boolean; runs?: unknown[]; findings?: unknown
         ? { data: null, error: { message: 'secret db detail' }, count: null }
         : { data: table === 'ai_runs' ? (opts.runs ?? []) : (opts.findings ?? []), error: null, count: opts.count ?? 0 };
       const q: Record<string, unknown> = {};
-      for (const m of ['select', 'eq', 'order', 'limit']) q[m] = (...a: unknown[]) => { calls.push(`${m}:${a[0]}`); return q; };
+      for (const m of ['select', 'eq', 'order', 'limit', 'gte', 'in', 'range', 'maybeSingle']) {
+        q[m] = (...a: unknown[]) => { calls.push(`${m}:${a.map((x) => JSON.stringify(x)).join(',')}`); return q; };
+      }
       q.then = (res: (v: unknown) => unknown) => Promise.resolve(result).then(res);
       return q;
     },
@@ -55,8 +57,11 @@ describe('AI Hub shell', () => {
     expect(html).toContain('AI integrations have not been connected yet');
     expect(html).not.toMatch(/Connected account|Claude Hub|Gemini Hub|ChatGPT Hub/);
   });
-  it('renders the History shell (empty)', () => {
-    expect(render({ status: 'ready', snapshot: empty }, 'history')).toContain('No AI runs yet');
+  it('renders the History slot supplied by the container', () => {
+    const html = renderToStaticMarkup(createElement(AiHubShell, {
+      tab: 'history', onTabChange: () => undefined, state: { status: 'error' }, history: createElement('i', null, 'HIST-SLOT'),
+    }));
+    expect(html).toContain('HIST-SLOT');
   });
   it('renders loading', () => {
     expect(render({ status: 'loading' })).toContain('Loading AI Hub');
@@ -99,9 +104,9 @@ describe('AI Hub read layer', () => {
     const snap = await fetchAiHubSnapshot('ws-1', client);
     expect(snap.pendingSuggestions).toBe(3);
     expect(snap.runs).toHaveLength(1);
-    expect(calls.filter((c) => c.startsWith('from:')).sort()).toEqual(['from:ai_findings', 'from:ai_runs', 'from:ai_suggestions']);
+    expect([...new Set(calls.filter((c) => c.startsWith('from:')))].sort()).toEqual(['from:ai_findings', 'from:ai_runs', 'from:ai_suggestions']);
     expect(calls.some((c) => /insert|update|delete|upsert|rpc/.test(c))).toBe(false);
-    expect(calls).toContain('eq:workspace_id');
+    expect(calls).toContain('eq:"workspace_id","ws-1"');
   });
   it('throws an opaque error on failure', async () => {
     const { client } = fakeClient({ fail: true });

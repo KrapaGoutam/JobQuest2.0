@@ -1,6 +1,6 @@
 # AI-3 — Remote MCP + Authentication: Final Report
 
-**Status:** READY FOR BRANCH CI (see "CI / integration" for the recorded results).
+**Status:** BRANCH CI PASS; merged to development (development SHA/CI are in the chat checkpoint and persisted at AI-4 start, to avoid a docs push while the SHA is being certified).
 Branch `feature/ai-3-mcp-auth`, base development `222d7e40f112cb3a56c6adf30e574cfd6177a731` (unchanged since AI-2 closure).
 Auth decision: `AI-3_AUTH_DECISION.md`.
 
@@ -58,4 +58,5 @@ Not simulated (reviewed in code only): the 25 s request timeout path and the "li
 Full OAuth provider / protected-resource metadata; provider-specific adapters (AI-4+); connector-token UI; suggestion cross-run re-proposal policy; closed-finding supersession; application matching; workflow-config mutation; core AI actions (AI-11); email/calendar/job/recruiter workflows; Production rollout. **Product decision flagged:** should a manager's connector token see members' applications/AI rows (current: yes, mirrors the manager's UI, tested) or only the manager's own (stricter; `SECURITY_AUTH.md` §5 wording)?
 
 ## CI / integration
-Recorded after the runs (see `CURRENT_AGENT_STATE.md` / `HANDOFF.md`): branch CI run ID + tested SHA; development merge SHA; development CI run ID.
+Branch CI run 37819293115 - PASS on pushed HEAD d8657e54fdb758658ab7989d3a47430dff5b6df1 (all 3 jobs). Executable code SHA validated by branch CI: bac31196 (implementation commit; d8657e54 is docs-only on top).
+Development before merge: 222d7e40f112cb3a56c6adf30e574cfd6177a731 (verified unchanged by fetch).

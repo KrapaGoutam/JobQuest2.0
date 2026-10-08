@@ -1,6 +1,6 @@
 # AI-1 Final Report — AI Hub Foundation
 
-STATUS: AI-1 READY FOR BRANCH CI (branch CI = PENDING; development integration = PENDING)
+STATUS: BRANCH CI PASSED; merged to development (development CI result: see final chat checkpoint)
 
 ## Scope delivered (feature/ai-1-foundation)
 AI-1P env verification; AI-1A DB foundation (4 tables); AI-1B RLS/ownership/audit (SELECT policies, 4 service-only ingest RPCs, 3 owner-only review RPCs); AI-1C canonical contract `jobquest.ai-result 1.0`; AI-1D UI shell; AI-1E Overview/History; AI-1F1 feature flags + read-only AI & Automation settings.
@@ -26,4 +26,7 @@ No providers, MCP, OAuth, write actions, or production config.
 WORKFLOW CONFIG MUTATION — INTENTIONALLY DEFERRED TO THE APPROPRIATE PROVIDER/WORKFLOW PHASE. Also: provider connection/storage, server status endpoint, server-side audit-window filter, closed-finding supersession, Email Rules, Permissions UI, provider workflows, MCP, core AI write actions. Production deployment metadata verification deferred to final release gate (now operator-supplied above).
 
 ## CI / integration
-Branch CI: PENDING. Development merge: PENDING. Development CI: PENDING.
+- Branch CI run 5cb51699 (37797678065): FAILED at root `pnpm typecheck` (web view tests compiled by root tsc). Genuine AI-1 defect; fixed in 4a478265 (tests typechecked under apps/web/tsconfig; react alias in unit vitest project).
+- Branch CI run 37799394061 on 4a478265: PASS (classify, lint/typecheck/unit/build/secret scans, migrations/RLS/browser).
+- Implementation SHA validated by branch CI: 4a478265ce52de17b4c32290ed751f6cf21c99b3. Post-CI change: documentation only.
+- Development merge + development CI: recorded in the chat checkpoint (not re-committed to avoid a redundant CI); AI-2's first action persists them.

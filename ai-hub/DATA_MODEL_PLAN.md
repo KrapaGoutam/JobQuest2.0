@@ -32,6 +32,7 @@ Deferred: `ai_provider_connections` / connector tokens (AI-3B; modeled on `exten
 - Clients: `SELECT` via `can_access_owned_record(workspace_id, user_id)`; **no** client INSERT/UPDATE/DELETE grants on `ai_*` (pattern: M3 table-privilege migration).
 - Writers: `rpc_ai_ingest_*` (service-role-only, called by MCP layer with the token's resolved user/workspace) and `rpc_ai_decide_suggestion` / `rpc_ai_dismiss_finding` / `rpc_ai_delete_*` (authenticated, owner-checked, audited).
 - Cross-user isolation: ingest RPCs take user/workspace from the token, never from payload.
+- AI-1B: ingest takes workspace/user/provider from the owning run (`rpc_ai_ingest_finding`, `rpc_ai_create_suggestion`); only `rpc_ai_ingest_run` takes `p_workspace_id`, validated against ACTIVE membership of `p_actor_id`.
 
 ## 4. Canonical result contract `jobquest.ai-result` (v1.0)
 
@@ -74,6 +75,8 @@ Dedupe key is computed **by JobQuest** from deterministic fields, not AI judgmen
 | same event, different provider | same key → one finding; later provider recorded in `payload.seen_by` |
 | rerun of same `(provider, external_run_id)` | return prior run result (idempotent) |
 | related, different events (e.g. invite → reschedule) | distinct findings linked via `payload.related_keys` |
+
+**AI-1B implementation notes:** `content_hash` is computed inside `rpc_ai_ingest_finding` (sha256 of canonical stored fields); callers cannot supply it. `dedupe_key` is computed by the server util (AI-1C) and only shape-validated in SQL. The ACCEPTED/DISMISSED row applies to any non-NEW status and currently returns `unchanged_closed`; linked superseding findings (which need a derived key under the unchanged unique index) are deferred. `payload.seen_by` is server-owned (stripped from input).
 
 ## 6. Run states
 

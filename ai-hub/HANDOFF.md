@@ -6,9 +6,11 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1A COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1B RLS/Ownership/Audit (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1B COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1C Contract types / validator / dedupe utils (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
 
-AI-1A: migration `supabase/migrations/20261023100000_ai_hub_database_foundation.sql` applied to jobquest-dev only (4 tables, RLS on, no policies, client privileges revoked; service_role DML). See `reports/AI-1A_DATABASE_FOUNDATION_REPORT.md`. Branch still NOT pushed (Preview mapping unverified). AI-0 dev CI 37690590350 finished: success.
+AI-1A: migration `supabase/migrations/20261023100000_ai_hub_database_foundation.sql` applied to jobquest-dev only (4 tables, RLS on, no policies, client privileges revoked; service_role DML). See `reports/AI-1A_DATABASE_FOUNDATION_REPORT.md`.
+
+AI-1B: migration `supabase/migrations/20261024100000_ai_hub_rls_ownership_audit.sql` applied to jobquest-dev only: authenticated SELECT + `can_access_owned_record` policies (configs owner-only), 4 service_role-only ingest RPCs, 3 owner-only review RPCs (ACCEPTED refused until AI-11), audit via `audit_events`. Behavioural tests `tests/integration/ai-1b-rls-audit.test.ts` 15/15 on the local stack (no hosted-Dev test writes). See `reports/AI-1B_RLS_OWNERSHIP_AUDIT_REPORT.md`. Branch still NOT pushed (Preview mapping unverified). AI-0 dev CI 37690590350 finished: success.
 
 AI-1P environment findings: `reports/AI-1P_ENVIRONMENT_READINESS_REPORT.md` and `ENVIRONMENT_STRATEGY.md` §7. Local dev/CLI → jobquest-dev (verified). Unresolved operator actions: Vercel Preview/Production env→Supabase mapping, Production deployment ID/SHA, stale `.env.production.local`, final result of CI run 37690590350. AI-1P: no tests, no CI, no DB change, no migration. Do not push the feature branch until Preview mapping is confirmed. Agents: dev DB only.
 
@@ -28,13 +30,13 @@ All 17 AI-0 docs under `ai-hub/`.
 `ai-hub/**` only.
 
 ## Database State
-Dev (`xpnkasclquplmrcmhsif`): 21 migrations, head `20261023100000` (has 4 `ai_*` tables). Prod (`kqsxdothjxtcktyirpux`): 20 migrations, head `20261022100000`, no `ai_*` tables, untouched.
+Dev (`xpnkasclquplmrcmhsif`): 22 migrations, head `20261024100000` (4 `ai_*` tables with SELECT policies + `rpc_ai_*`; 0 AI rows). Prod (`kqsxdothjxtcktyirpux`): 20 migrations, head `20261022100000`, no `ai_*` tables, untouched.
 
 ## Migration State
-None created. Repo `supabase/migrations/` = 20 files.
+Repo `supabase/migrations/` = 22 files (AI-1A `20261023100000`, AI-1B `20261024100000`).
 
 ## Tests Already Run
-None (docs-only).
+AI-1B: `tests/integration/ai-1b-rls-audit.test.ts` 15/15 on local Supabase (Docker). No branch/dev CI for AI-1 yet (deferred to AI-1 completion).
 
 ## CI Already Run
 See report. Note: `docs/**` branches don't trigger push CI; `ai-hub/` is not docs-only for the classifier (F-1).
@@ -52,7 +54,7 @@ None confirmed by the operator. All in `PROVIDER_CAPABILITY_MATRIX.md` (mostly N
 Repo audit, env comparison, provider web search (unless re-verifying a specific row).
 
 ## Unfinished Work
-AI-1A onward.
+AI-1C onward (AI-1C–AI-1F, then one branch CI + development merge).
 
 ## Uncommitted Work
 None (pre-existing untracked `.artifacts/` is not part of this work).
@@ -61,7 +63,7 @@ None (pre-existing untracked `.artifacts/` is not part of this work).
 Follow `CURRENT_AGENT_STATE.md` → NEXT EXACT STEP. Run `git status` and `git log -3` first; if HEAD differs from the state file, trust Git.
 
 ## Next Phase
-AI-1A upon explicit operator approval.
+AI-1C upon explicit operator approval.
 
 ---
 

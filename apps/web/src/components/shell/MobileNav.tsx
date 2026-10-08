@@ -19,6 +19,7 @@ import {
   BarChart3,
   ArrowDownUp,
   LogOut,
+  Sparkles,
 } from 'lucide-react';
 import { Drawer } from '../ui/Drawer';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -195,6 +196,7 @@ export function MobileNav({
                 { path: '/journal', label: 'Journal', icon: BookOpen },
                 { path: '/resumes', label: 'Resumes', icon: FileText },
                 { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+                { path: '/ai-hub', label: 'AI Hub', icon: Sparkles },
               ].map((item) => {
                 const Icon = item.icon;
                 return (

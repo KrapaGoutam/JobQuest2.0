@@ -20,7 +20,7 @@ AI-1 Foundation                                         IN PROGRESS (feature/ai-
 [x] AI-1A Database — COMPLETE on jobquest-dev (migration 20261023100000); local commit, not pushed
 [x] AI-1B RLS / ownership / audit — COMPLETE on jobquest-dev (migration 20261024100000); local commit, not pushed
 [x] AI-1C Canonical contract / validator / dedupe utils (TS) — COMPLETE; local commit, not pushed; no DB change
-[ ] AI-1D Shell / navigation
+[x] AI-1D Shell / navigation / read-only UI — COMPLETE; local commit, not pushed; no DB change
 [ ] AI-1E Overview / History
 [ ] AI-1F Feature flags / release controls
 

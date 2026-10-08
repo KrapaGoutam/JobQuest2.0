@@ -6,9 +6,11 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1C COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1D AI Hub shell / navigation / read-only UI (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+CURRENT PHASE: AI-1 · CURRENT SUB-PHASE: AI-1D COMPLETE (ready for operator review) · WORKING BRANCH: `feature/ai-1-foundation` (local, not pushed) · NEXT SUB-PHASE: AI-1E Overview / History (needs operator approval) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
 
 AI-1A: migration `supabase/migrations/20261023100000_ai_hub_database_foundation.sql` applied to jobquest-dev only (4 tables, RLS on, no policies, client privileges revoked; service_role DML). See `reports/AI-1A_DATABASE_FOUNDATION_REPORT.md`.
+
+AI-1D: AI Hub shell `/ai-hub` + `/ai-hub/history` (apps/web: views/AiHubView.tsx, api/aiHub.ts, lib/aiHub.ts), sidebar + mobile More drawer entry, read-only RLS SELECTs, 12 unit tests pass, typecheck/eslint clean, no DB change, not pushed. Settings → AI & Automation and feature flags deferred to AI-1F. See `reports/AI-1D_UI_FOUNDATION_REPORT.md`.
 
 AI-1C: provider-neutral contract layer `apps/api/src/lib/aiContract/` (constants, types, validate, dedupe, canonical), fixtures `tests/unit/fixtures/ai-contract/`, tests `tests/unit/ai-contract.test.ts` (54 pass), typecheck + eslint clean. No DB change, not pushed. See `reports/AI-1C_CANONICAL_CONTRACT_REPORT.md`. Deferred: closed-finding supersession (ingestion/service phase), audit-view entity filter (AI-1E/AI-2), workflow-config mutation (AI-1F).
 AI-1B: migration `supabase/migrations/20261024100000_ai_hub_rls_ownership_audit.sql` applied to jobquest-dev only: authenticated SELECT + `can_access_owned_record` policies (configs owner-only), 4 service_role-only ingest RPCs, 3 owner-only review RPCs (ACCEPTED refused until AI-11), audit via `audit_events`. Behavioural tests `tests/integration/ai-1b-rls-audit.test.ts` 15/15 on the local stack (no hosted-Dev test writes). See `reports/AI-1B_RLS_OWNERSHIP_AUDIT_REPORT.md`. Branch still NOT pushed (Preview mapping unverified). AI-0 dev CI 37690590350 finished: success.

@@ -29,6 +29,8 @@ import { ArchiveView } from './views/ArchiveView';
 import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import { JournalView } from './views/JournalView';
+import { AiHubView } from './views/AiHubView';
+import { aiHubTabFromPath } from './lib/aiHub';
 import {
   UserPlus,
   AlertCircle,
@@ -402,6 +404,9 @@ function AppContent() {
       case '/analytics':
       case '/analytics/aging':
         return 'Analytics';
+      case '/ai-hub':
+      case '/ai-hub/history':
+        return 'AI Hub';
       case '/workspace':
       case '/workspace/members':
         return 'Workspace Members';
@@ -587,6 +592,16 @@ function AppContent() {
           isManager={memberships.find((m) => m.workspace_id === activeWs)?.role === 'MANAGER'}
           initialTab={currentPath === '/analytics/aging' ? 'aging' : 'overview'}
           currentUserId={user?.id ?? null}
+        />
+      );
+    }
+
+    if (routePath === '/ai-hub' || routePath === '/ai-hub/history') {
+      return (
+        <AiHubView
+          activeWorkspaceId={activeWs}
+          initialTab={aiHubTabFromPath(routePath)}
+          onNavigate={navigate}
         />
       );
     }

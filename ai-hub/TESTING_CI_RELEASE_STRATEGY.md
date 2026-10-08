@@ -50,3 +50,7 @@ final development validation → `development → main --no-ff` → main CI once
 - Static service-role allow-list (`tests/unit/tokens.test.ts`) must list any new file calling `admin()`; run the **full** unit suite (`pnpm test:unit`) once per phase, not only AI files (AI-2A missed this).
 - Enum-sync tests normalize CRLF (Windows `core.autocrlf`). DB integration for AI runs on the local stack only (`ai-1b`, `ai-2a`, `ai-2b`, `m12` audit); CI's `database` job runs them against the disposable stack.
 - Root `pnpm typecheck` + `eslint .` + `pnpm build` + `check:bundle` mirror the CI `static` job.
+
+## AI-3 test notes
+- `tests/integration/ai-3-mcp.test.ts` (local stack only) drives the real Hono app with the official MCP SDK client; `tests/unit/ai-3-mcp.test.ts` holds the static boundary/allow-list/migration-contract checks. The SDK is also a root devDependency solely for the test client.
+- Run `supabase migration up --local` before the integration suite; Dev receives the migration only via `supabase db push` after a dry-run with the project ref verified. Preview MCP smoke needs `AI_HUB_ENABLED=true` on Preview (operator-controlled).

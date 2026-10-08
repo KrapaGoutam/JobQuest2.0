@@ -5,10 +5,10 @@ CURRENT PHASE:
 AI-2
 
 CURRENT SUB-PHASE:
-AI-2B implemented locally — AI-2 READY FOR BRANCH CI (not COMPLETE)
+AI-2 branch CI PASS (run 37812197575 @79e44c17); merge to development + development CI in progress
 
 STATUS:
-READY FOR BRANCH CI
+BRANCH CI PASSED — INTEGRATING TO DEVELOPMENT
 
 BASE BRANCH:
 development
@@ -17,10 +17,10 @@ WORKING BRANCH:
 feature/ai-2-integration-service
 
 BRANCH PUSHED:
-NO (push is the next step)
+YES
 
 CI:
-NOT RUN
+Branch CI 37812197575 PASS @79e44c17ba1ffcf364df5aa0eb287d9649c336ed; development CI pending
 
 NEXT SUB-PHASE:
 AI-2 closure (push, branch CI, development merge, development CI) then AI-3 (combined AI-3A + AI-3B, needs operator approval)
@@ -29,7 +29,7 @@ DO NOT REPEAT:
 AI-1 work; AI-2A ingestion service; AI-2B read service, audit scope migration (applied to Dev and local), CRLF fix. Do not re-run db push.
 
 NEXT EXACT STEP:
-Commit AI-2B, push feature/ai-2-integration-service once, watch the push-triggered branch CI (no manual dispatch), record run ID + SHA in reports/AI-2_FINAL_REPORT.md, refresh origin/development, merge --no-ff once, push development, watch development CI, then set AI-2 COMPLETE. Do not start AI-3.
+Merge --no-ff into development (done once), push, watch development CI; once PASS AI-2 is COMPLETE. Persist the development SHA + CI run ID here at the start of the next phase. Do not start AI-3 without operator approval.
 ```
 
 AI-2A commit: `eadef2760a3511c3c2171bd07b01eb453deac578`. AI-2B commit: `feat(ai-hub): add AI read service and operational queries` (SHA in chat checkpoint/final report). DB: Dev head `20261025100000` (audit scope filter, applied to jobquest-dev only), Prod head `20261022100000` untouched. Final report: `reports/AI-2_FINAL_REPORT.md`.

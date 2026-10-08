@@ -1,6 +1,6 @@
 # AI-2 — Internal Integration Service: Final Report
 
-**Status:** AI-2 READY FOR BRANCH CI (not yet COMPLETE; see "CI / integration" below, filled in after CI).
+**Status:** branch CI PASS; merged to development (development CI result and final SHAs are recorded in the chat checkpoint and persisted at AI-3 start, to avoid a docs push while the SHA is being certified).
 
 - **Branch:** `feature/ai-2-integration-service` (base development `0847447474e9cfd6c53bcab43c4457fbd48ff9c5`).
 - **AI-2A commit:** `eadef2760a3511c3c2171bd07b01eb453deac578` (ingestion; see `AI-2A_INTEGRATION_SERVICE_REPORT.md`).
@@ -56,7 +56,8 @@ Closed-finding supersession; application matching; workflow-config mutation; HTT
 DB: Dev head `20261025100000` (23 migrations); Prod head `20261022100000` (unchanged, read-only check). Hosted-Dev test writes: none (only the migration). main `26e517ea…` unchanged; Production unchanged; no providers, MCP, OAuth, write actions.
 
 ## CI / integration
-(Filled in after branch CI and development merge: branch CI run ID + tested SHA, development SHA/CI.)
+- **Branch CI:** run `37812197575` — PASS (jobs: Classify changes, Lint · typecheck · unit · build · secret scans, Migrations · Option B auth · RLS · browser). **Executable SHA validated by branch CI: `79e44c17ba1ffcf364df5aa0eb287d9649c336ed`.** Later commits on the branch are docs-only.
+- Development before merge: `0847447474e9cfd6c53bcab43c4457fbd48ff9c5` (unchanged since AI-2 start).
 
 ## Next
 AI-3 — Remote MCP + Authentication, planned as one combined AI-3A + AI-3B phase (transport, endpoint, tool registry, auth decision + implementation, scoped initial tools, security tests). Not started.

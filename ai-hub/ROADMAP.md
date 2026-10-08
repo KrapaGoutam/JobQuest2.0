@@ -15,7 +15,7 @@ AI-0 Architecture                                       READY FOR REVIEW (integr
 [x] AI-0H Idempotency/observability/failure
 [x] AI-0I Final roadmap
 
-AI-1 Foundation                                         IN PROGRESS (feature/ai-1-foundation)
+AI-1 Foundation                                         AI-1 READY FOR BRANCH CI (feature/ai-1-foundation)
 [x] AI-1P Env isolation verification (prerequisite) — COMPLETE, GO FOR AI-1A (do not push branch until Preview mapping confirmed)
 [x] AI-1A Database — COMPLETE on jobquest-dev (migration 20261023100000); local commit, not pushed
 [x] AI-1B RLS / ownership / audit — COMPLETE on jobquest-dev (migration 20261024100000); local commit, not pushed
@@ -23,7 +23,7 @@ AI-1 Foundation                                         IN PROGRESS (feature/ai-
 [x] AI-1D Shell / navigation / read-only UI — COMPLETE; local commit, not pushed; no DB change
 [x] AI-1E Overview / History / read-only operational views — COMPLETE; local commit, not pushed; no DB change
 [x] AI-1F1 Feature flags / AI & Automation settings — COMPLETE; local commit, not pushed; no DB change
-[ ] AI-1F2 AI-1 final validation / branch CI / development integration — NOT STARTED (AI-1 overall IN PROGRESS)
+[ ] AI-1F2 AI-1 final validation / branch CI / development integration — AI-1 READY FOR BRANCH CI (validation done; CI/merge pending)
 
 AI-2 Internal integration service                       NOT STARTED
 [ ] AI-2A Read service  [ ] AI-2B Ingestion  [ ] AI-2C Validation/versioning

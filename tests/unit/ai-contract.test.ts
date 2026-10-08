@@ -17,9 +17,10 @@ type Loose = { findings: Array<Record<string, any>>; suggestions: Array<Record<s
 const loose = (x: unknown): Loose => clone(x) as Loose;
 
 describe('enum synchronization with AI-1A CHECK constraints', () => {
-  const sql = readFileSync('supabase/migrations/20261023100000_ai_hub_database_foundation.sql', 'utf8');
-  const listFor = (constraint: string) => {
-    const m = new RegExp(`${constraint} check \\(([\\s\\S]*?)\\),?\\n`).exec(sql);
+  // Normalize line endings: Windows checkouts (core.autocrlf=true) materialize migrations as CRLF.
+  const sql = readFileSync('supabase/migrations/20261023100000_ai_hub_database_foundation.sql', 'utf8').replace(/\r\n/g, '\n');
+  const listFor = (constraint: string, source = sql) => {
+    const m = new RegExp(`${constraint} check \\(([\\s\\S]*?)\\),?\\n`).exec(source);
     expect(m, constraint).not.toBeNull();
     return [...m![1]!.matchAll(/'([^']+)'/g)].map((x) => x[1]!);
   };
@@ -30,6 +31,11 @@ describe('enum synchronization with AI-1A CHECK constraints', () => {
     ['chk_ai_findings_status', C.AI_FINDING_STATUSES], ['chk_ai_findings_priority', C.AI_PRIORITIES],
     ['chk_ai_suggestions_action', C.AI_SUGGESTION_ACTIONS], ['chk_ai_suggestions_status', C.AI_SUGGESTION_STATUSES],
   ] as const)('%s', (name, values) => expect(listFor(name)).toEqual([...values]));
+  it('still detects drift between the SQL CHECK list and the TypeScript enum', () => {
+    const mutated = sql.replace("'claude', 'gemini'", "'claude', 'gemini-x'");
+    expect(mutated).not.toBe(sql);
+    expect(listFor('chk_ai_runs_provider', mutated)).not.toEqual([...C.AI_PROVIDERS]);
+  });
 });
 
 describe('version', () => {

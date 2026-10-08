@@ -186,9 +186,10 @@ describe('AI-1E read-only guarantees and audit scope filter', () => {
       expect(src).not.toMatch(/\.(insert|update|delete|upsert|rpc)\(|service_role|dangerouslySetInnerHTML|JSON\.stringify/);
     }
   });
-  it('audit history has a client-side AI scope filter without changing the fetch', () => {
+  it('audit history passes its scope to the server so filtering happens before the row limit (AI-2B)', () => {
     const src = readFileSync('apps/web/src/views/AuditHistoryView.tsx', 'utf8');
-    expect(src).toContain("startsWith('AI_')");
-    expect(src).toContain('listWorkspaceAuditEvents(activeWorkspaceId, 100)');
+    expect(src).not.toContain("startsWith('AI_')");
+    expect(src).toContain('listWorkspaceAuditEvents(activeWorkspaceId, 100, scope)');
+    expect(readFileSync('apps/web/src/api/workspace.ts', 'utf8')).toContain('p_scope: scope');
   });
 });

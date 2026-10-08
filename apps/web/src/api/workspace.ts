@@ -269,16 +269,21 @@ export async function joinWorkspace(inviteCode: string): Promise<{ workspace_id:
   return { workspace_id: wsId, role: 'member' };
 }
 
+export type AuditScope = 'ALL' | 'AI' | 'OTHER';
+
 /**
- * List workspace audit events for managers.
+ * List workspace audit events for managers. `scope` is applied by the database
+ * BEFORE the limit (AI = AI_* actions, OTHER = membership/security and the rest).
  */
 export async function listWorkspaceAuditEvents(
   workspaceId: string,
   limit = 50,
+  scope: AuditScope = 'ALL',
 ): Promise<WorkspaceAuditEvent[]> {
   const { data, error } = await supabase.rpc('rpc_list_workspace_audit_events', {
     p_workspace_id: workspaceId,
     p_limit: limit,
+    p_scope: scope,
   });
 
   if (error) {

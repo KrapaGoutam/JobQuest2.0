@@ -45,3 +45,8 @@ Bundle the phase report with the implementation commit when practical; avoid cod
 ## 7. Final release (operator-approved only)
 
 final development validation → `development → main --no-ff` → main CI once → approved production migrations (in version order, after verifying dev/prod lists match) → production deployment → production smoke → manual acceptance → `AI_HUB_FINAL_RELEASE_REPORT.md`. Flags remain **off** in prod until the operator turns them on after acceptance (`AI_HUB_ENABLED`, per-workspace flags). Rollback: disable flags first (instant), then revert deployment; AI tables are additive and left in place.
+
+## AI-2 test notes
+- Static service-role allow-list (`tests/unit/tokens.test.ts`) must list any new file calling `admin()`; run the **full** unit suite (`pnpm test:unit`) once per phase, not only AI files (AI-2A missed this).
+- Enum-sync tests normalize CRLF (Windows `core.autocrlf`). DB integration for AI runs on the local stack only (`ai-1b`, `ai-2a`, `ai-2b`, `m12` audit); CI's `database` job runs them against the disposable stack.
+- Root `pnpm typecheck` + `eslint .` + `pnpm build` + `check:bundle` mirror the CI `static` job.

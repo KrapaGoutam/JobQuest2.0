@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useToast } from '../context/ToastContext';
-import { listWorkspaceAuditEvents, type WorkspaceAuditEvent } from '../api/workspace';
+import { listWorkspaceAuditEvents, type AuditScope, type WorkspaceAuditEvent } from '../api/workspace';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -15,7 +15,7 @@ export function AuditHistoryView() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterAction, setFilterAction] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
-  const [scope, setScope] = useState<'ALL' | 'AI' | 'OTHER'>('ALL');
+  const [scope, setScope] = useState<AuditScope>('ALL');
 
   const loadEvents = useCallback(async () => {
     if (!activeWorkspaceId || !isManager) {
@@ -26,7 +26,7 @@ export function AuditHistoryView() {
 
     setIsLoading(true);
     try {
-      const data = await listWorkspaceAuditEvents(activeWorkspaceId, 100);
+      const data = await listWorkspaceAuditEvents(activeWorkspaceId, 100, scope);
       setEvents(data);
     } catch (err) {
       addToast({
@@ -37,7 +37,7 @@ export function AuditHistoryView() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeWorkspaceId, isManager, addToast]);
+  }, [activeWorkspaceId, isManager, scope, addToast]);
 
   useEffect(() => {
     void loadEvents();
@@ -46,9 +46,7 @@ export function AuditHistoryView() {
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       if (filterAction !== 'ALL' && e.action !== filterAction) return false;
-      // AI Hub events are namespaced AI_*; this separates them from membership/security events.
-      if (scope === 'AI' && !e.action.startsWith('AI_')) return false;
-      if (scope === 'OTHER' && e.action.startsWith('AI_')) return false;
+      // Scope (AI / membership-security) is applied server-side, before the row limit.
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesActor = e.actor_name?.toLowerCase().includes(q);
@@ -58,7 +56,7 @@ export function AuditHistoryView() {
       }
       return true;
     });
-  }, [events, filterAction, scope, search]);
+  }, [events, filterAction, search]);
 
   const handleExport = () => {
     if (filteredEvents.length === 0) return;
@@ -168,7 +166,7 @@ export function AuditHistoryView() {
           <Select
             aria-label="Filter by event scope"
             value={scope}
-            onChange={(e) => setScope(e.target.value as 'ALL' | 'AI' | 'OTHER')}
+            onChange={(e) => setScope(e.target.value as AuditScope)}
             style={{ height: '34px' }}
           >
             <option value="ALL">Scope: All events</option>

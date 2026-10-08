@@ -49,3 +49,6 @@ No document may claim provider configuration happened unless the operator report
 - **AI-4 Claude/Cowork:** custom connector → dev MCP URL first; read-only workflow, then scheduled Morning Brief **if** Cowork scheduled tasks can use the connector (spike). Operator sets write tools to Allow only after AI-3F passes.
 - **AI-5 Gemini:** blocked on plan eligibility decision.
 - **AI-6 ChatGPT:** developer mode, attended; expect per-call confirmation; unattended = UNSUPPORTED until proven.
+
+## AI-3 status (implemented)
+The provider-neutral MCP server exists at `/api/mcp` (Streamable HTTP, stateless, tools only) with scoped connector-token auth; no provider adapter, provider API key or provider-specific code was added. Test clients today: Claude Code (`--transport http` with an `Authorization: Bearer` header), MCP Inspector, official SDK client. Providers whose connector UI requires OAuth cannot connect until the deferred OAuth phase; provider phases (AI-4+) must verify each provider's accepted auth method (Q-7). Tools: `jobquest_list_applications`, `jobquest_get_application`, `jobquest_list_ai_runs`, `jobquest_list_ai_findings`, `jobquest_list_ai_suggestions`, `jobquest_submit_ai_result`.

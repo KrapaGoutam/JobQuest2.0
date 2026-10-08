@@ -96,3 +96,14 @@ export async function fetchAiFindingDetail(
   if (error || !data) throw fail();
   return data as unknown as AiFindingDetailRow;
 }
+
+/** Own workflow-config rows (RLS: owner + active member). Read-only; AI-1F1 has no mutation. */
+export async function fetchAiWorkflowConfigs(
+  workspaceId: string,
+  client: Client = supabase,
+): Promise<Array<{ workflow: string; enabled: boolean }>> {
+  const { data, error } = await client.from('ai_workflow_configs').select('workflow, enabled')
+    .eq('workspace_id', workspaceId).limit(20);
+  if (error) throw fail();
+  return (data ?? []) as Array<{ workflow: string; enabled: boolean }>;
+}

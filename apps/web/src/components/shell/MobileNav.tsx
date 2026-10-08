@@ -1,3 +1,4 @@
+import { isAiHubExposed } from '../../lib/aiHubFlags';
 import { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import {
@@ -196,7 +197,7 @@ export function MobileNav({
                 { path: '/journal', label: 'Journal', icon: BookOpen },
                 { path: '/resumes', label: 'Resumes', icon: FileText },
                 { path: '/analytics', label: 'Analytics', icon: BarChart3 },
-                { path: '/ai-hub', label: 'AI Hub', icon: Sparkles },
+                ...(isAiHubExposed() ? [{ path: '/ai-hub', label: 'AI Hub', icon: Sparkles }] : []),
               ].map((item) => {
                 const Icon = item.icon;
                 return (

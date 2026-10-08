@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { isAiHubExposed } from '../../lib/aiHubFlags';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import {
   LayoutDashboard,
@@ -62,7 +63,7 @@ export function Sidebar({
 
   const insightsNav = [
     { id: 'analytics', path: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'ai-hub', path: '/ai-hub', label: 'AI Hub', icon: Sparkles },
+    ...(isAiHubExposed() ? [{ id: 'ai-hub', path: '/ai-hub', label: 'AI Hub', icon: Sparkles }] : []),
   ];
 
   const sharedWorkspaceNav = [

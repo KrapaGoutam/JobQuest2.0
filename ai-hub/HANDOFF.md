@@ -6,7 +6,7 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
-CURRENT PHASE: AI-2 · CURRENT SUB-PHASE: AI-2A COMPLETE locally (internal integration service `apps/api/src/services/aiIntegrationService.ts`; report `reports/AI-2A_INTEGRATION_SERVICE_REPORT.md`; 39 unit + 11 local-DB integration tests, typecheck/lint clean, no migration) — awaiting operator approval for AI-2B · WORKING BRANCH: `feature/ai-2-integration-service` (local, not pushed, no CI) · NEXT EXACT STEP: see `CURRENT_AGENT_STATE.md`.
+CURRENT PHASE: AI-2 · CURRENT SUB-PHASE: AI-2A + AI-2B implemented locally; AI-2 READY FOR BRANCH CI (not COMPLETE). Read service `apps/api/src/services/aiReadService.ts` (RLS-as-caller, internal API only, no routes); audit scope filter migration `20261025100000` (Dev applied; Prod untouched); CRLF enum test fixed; tokens.test.ts service-role allow-list updated. See `reports/AI-2_FINAL_REPORT.md`. · WORKING BRANCH: `feature/ai-2-integration-service` · NEXT: push, branch CI, merge to development, development CI (see `CURRENT_AGENT_STATE.md`); then AI-3 (combined AI-3A+AI-3B: Remote MCP + Authentication) only on operator approval.
 
 AI-1 FINAL (persisted): development SHA `0847447474e9cfd6c53bcab43c4457fbd48ff9c5`; development CI `37801299047` PASS; branch implementation SHA `4a478265ce52de17b4c32290ed751f6cf21c99b3`, branch CI `37799394061` PASS; main `26e517ea…` and Production unchanged; Dev head `20261024100000`, Prod head `20261022100000`.
 

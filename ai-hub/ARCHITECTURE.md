@@ -76,3 +76,10 @@ Stored in `ai_workflow_configs` (per workspace/user): `workflow`, `primary_provi
 ## 9. Settled decisions (do not reopen without contradicting evidence)
 
 D-1 pull-model, provider-out-of-process · D-2 Option C data model · D-3 findings→suggestions→accept via existing RPCs · D-4 same-schema-different-project for Dev/Prod · D-5 MCP in Hono, Streamable HTTP stateless · D-6 token model derived from `extension_tokens` · D-7 cumulative development integration, no per-phase main/prod · D-8 AI-writes only via SECURITY DEFINER RPCs; no direct client INSERT/UPDATE on `ai_*`.
+
+## 10. AI service layer boundaries (AI-2, implemented)
+
+- **Write path (internal, AI-2A):** `apps/api/src/services/aiIntegrationService.ts` `ingestAiResult()` -> AI-1C validator -> the four service-role `rpc_ai_ingest_*`/`finalize` RPCs. Service-role is confined to this file for AI data (static allow-list test). Not an HTTP route.
+- **Read path (internal, AI-2B):** `apps/api/src/services/aiReadService.ts` (`listAiRuns/getAiRun/listAiFindings/getAiFinding/listAiSuggestions/getAiSuggestion/countPendingAiSuggestions`). Reads run **as the caller through RLS** (`userClient(accessToken)`), never service-role; trusted server code picks the workspace; kill switch `AI_HUB_ENABLED` enforced; bounded filters/pagination (default 20, max 50, `created_at desc, id desc`); DTOs omit `error_detail`, `content_hash`, `dedupe_key`.
+- **Operational interface = internal service API** (no `/api/ai/*` routes in AI-2). AI-3 MCP tools will call these functions with the verified connector identity; neither module is imported by API boot.
+- **Audit read:** `rpc_list_workspace_audit_events(..., p_scope)` filters `ALL|AI|OTHER` before the limit (manager-only, unchanged authz).

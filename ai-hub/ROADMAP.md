@@ -29,12 +29,14 @@ AI-2 Internal integration service                       BRANCH CI PASS (37812197
 [x] AI-2A Service core + validation + ingestion (absorbs former 2B ingestion, 2C validation reuse, 2D idempotency, 2E provenance/audit) — COMPLETE; local commit, not pushed; no DB change
 [x] AI-2B Read service (internal service API, no routes) + server-side audit scope filter (migration 20261025100000, Dev) + CRLF test fix — branch CI 37812197575 PASS @79e44c17; merged to development
 
-AI-3 Remote MCP + auth                                  READY FOR BRANCH CI (feature/ai-3-mcp-auth)
+AI-3 Remote MCP + auth                                  COMPLETE (branch CI 37819293115; development CI 37820583043; development ed517594)
 [x] AI-3A Foundation (/api/mcp, Streamable HTTP, stateless)  [x] AI-3B Auth (connector tokens; OAuth DEFERRED)  [x] AI-3C Read tools
 [x] AI-3D Safe write tool (jobquest_submit_ai_result only)  [x] AI-3E Limits/scopes  [x] AI-3F Security validation (tests; release-security-reviewer pass still due before final release)
 
-AI-4 Claude / Cowork                                    NOT STARTED   (first provider)
-[ ] 4A Connector  [ ] 4B Read workflow  [ ] 4C Scheduled Morning Brief  [ ] 4D Structured return  [ ] 4E Failure/approval
+AI-4 Claude Integration (combined)                  READY FOR BRANCH CI (feature/ai-4-claude-integration)
+[x] Claude custom remote MCP connector setup UX (fixed Bearer header, AI-3 tokens)  [x] manager-token RLS-parity decision + test  [x] tool descriptions + eval fixtures
+[ ] branch CI  [ ] remote Claude connector smoke (operator gate)  [ ] development integration + CI
+(Deferred, not started: scheduled Morning Brief, workflow-config mutation, OAuth)
 
 AI-5 Gemini                                             NOT STARTED   (conditional: plan eligibility)
 [ ] 5A  [ ] 5B  [ ] 5C  [ ] 5D  [ ] 5E

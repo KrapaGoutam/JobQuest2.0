@@ -2,6 +2,57 @@
 
 ```
 CURRENT PHASE:
+AI-4
+
+CURRENT SUB-PHASE:
+AI-4 Claude Integration — READY FOR BRANCH CI (implementation + local validation complete; not yet pushed)
+
+STATUS:
+AI-4 = READY FOR BRANCH CI
+
+BASE BRANCH:
+development (ed517594d58dedf26b6144d61b2e9ac2f8e60a58)
+
+WORKING BRANCH:
+feature/ai-4-claude-integration
+
+BRANCH PUSHED:
+NO
+
+CI:
+Branch CI pending
+
+NEXT SUB-PHASE:
+Push branch once; branch CI; then Preview + remote Claude connector smoke (operator gate: Preview `AI_HUB_ENABLED`, Preview protection, adding the Claude custom connector); revoke temporary token; merge --no-ff to development; development CI; STOP.
+
+DO NOT REPEAT:
+AI-1..AI-3 work; MCP architecture/auth research; migrations (AI-4 has none; Dev head stays 20261026100000, Prod 20261022100000).
+
+NEXT EXACT STEP:
+git push -u origin feature/ai-4-claude-integration; observe the one branch CI run by exact run ID (>=60s polling).
+```
+
+## AI-3 final facts (persisted at AI-4 start)
+
+- AI-3 COMPLETE — integrated to development. Final development SHA: `ed517594d58dedf26b6144d61b2e9ac2f8e60a58` (merge of `feature/ai-3-mcp-auth`).
+- AI-3 development CI: run `37820583043` — PASS. AI-3 executable feature SHA `d8657e54` (implementation `bac31196`); branch CI `37819293115` — PASS.
+- main unchanged `26e517ea7cd8e6be421ad2c2188d8ceee4bfb224`; Production unchanged. Dev head `20261026100000`; Prod head `20261022100000`.
+
+## AI-4 facts (this branch)
+
+- Integration = Claude custom remote MCP connector -> `/api/mcp`, fixed `Authorization: Bearer <connector token>` header, AI-3 connector tokens reused (no new table/migration, no OAuth, no Anthropic API/SDK/key, no Claude credentials stored).
+- Manager token policy (operator decision): same RLS visibility as the manager's UI; `SECURITY_AUTH.md` §5 updated; regression `tests/integration/ai-4-claude.test.ts` AI4-04.
+- UI: `apps/web/src/components/ai/ClaudeConnectorPanel.tsx` (+ `lib/claudeConnector.ts`, `api/aiConnectors.ts`) inside Settings -> AI & Automation -> Providers. States: Not configured / Connector ready / Last used / Expired / Revoked. Presets Read only (default) and Read + AI findings; expiry 7/30/90 (default 30); raw token shown once, ephemeral state only.
+- MCP tool descriptions reworded for Claude tool selection (same six tools; no new tools).
+- Local validation before push: see `reports/AI-4_CLAUDE_INTEGRATION_REPORT.md`.
+- Preview remote smoke needs operator: Preview `AI_HUB_ENABLED=true` (not changed by the agent), Preview protection decision, and adding the Claude custom connector.
+
+---
+
+# Previous state (AI-3, kept for history)
+
+```
+CURRENT PHASE:
 AI-3
 
 CURRENT SUB-PHASE:

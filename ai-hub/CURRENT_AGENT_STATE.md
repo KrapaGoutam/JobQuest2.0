@@ -5,31 +5,31 @@ CURRENT PHASE:
 AI-4
 
 CURRENT SUB-PHASE:
-AI-4 Claude Integration — READY FOR BRANCH CI (implementation + local validation complete; not yet pushed)
+AI-4 INTERRUPTED FOR OPERATOR ACTION — IMPLEMENTATION COMPLETE, PROVIDER SMOKE PENDING
 
 STATUS:
-AI-4 = READY FOR BRANCH CI
+AI-4 = BRANCH CI PASS — AWAITING CLAUDE PROVIDER SMOKE
 
 BASE BRANCH:
 development (ed517594d58dedf26b6144d61b2e9ac2f8e60a58)
 
 WORKING BRANCH:
-feature/ai-4-claude-integration
+feature/ai-4-claude-integration (pushed head 4c3a5778; docs-only commit after it is local/unpushed)
 
 BRANCH PUSHED:
-NO
+YES
 
 CI:
-Branch CI pending
+Branch CI 37947672506 PASS @4c3a5778 (earlier 37945994001 PASS @3687b048; 37947317533 @3e1dc5da cancelled by the newer push)
 
 NEXT SUB-PHASE:
-Push branch once; branch CI; then Preview + remote Claude connector smoke (operator gate: Preview `AI_HUB_ENABLED`, Preview protection, adding the Claude custom connector); revoke temporary token; merge --no-ff to development; development CI; STOP.
+Operator: set Vercel PREVIEW `AI_HUB_ENABLED=true` (Preview only), redeploy/confirm Preview, add Claude custom connector. Then remote Claude smoke, revoke temp token, merge --no-ff to development, development CI, STOP.
 
 DO NOT REPEAT:
-AI-1..AI-3 work; MCP architecture/auth research; migrations (AI-4 has none; Dev head stays 20261026100000, Prod 20261022100000).
+Implementation, local tests, MCP load-failure diagnosis (fixed). Migrations: none.
 
 NEXT EXACT STEP:
-git push -u origin feature/ai-4-claude-integration; observe the one branch CI run by exact run ID (>=60s polling).
+After the operator enables Preview AI_HUB_ENABLED, probe https://<preview-host>/api/mcp (expect 401 UNAUTHENTICATED, not 503 AI_HUB_DISABLED), create temp token `Claude AI-4 validation` (7 days, jobquest:read+ai:read+ai:ingest) in Dev via the Preview UI/API, give the operator the manual connector steps (no token in chat), run the 9-point smoke, revoke the token, then merge.
 ```
 
 ## AI-3 final facts (persisted at AI-4 start)
@@ -45,6 +45,7 @@ git push -u origin feature/ai-4-claude-integration; observe the one branch CI ru
 - UI: `apps/web/src/components/ai/ClaudeConnectorPanel.tsx` (+ `lib/claudeConnector.ts`, `api/aiConnectors.ts`) inside Settings -> AI & Automation -> Providers. States: Not configured / Connector ready / Last used / Expired / Revoked. Presets Read only (default) and Read + AI findings; expiry 7/30/90 (default 30); raw token shown once, ephemeral state only.
 - MCP tool descriptions reworded for Claude tool selection (same six tools; no new tools).
 - Local validation before push: see `reports/AI-4_CLAUDE_INTEGRATION_REPORT.md`.
+- Preview finding (fixed): the extensionless lazy `import('../mcp/server')` was not resolvable in the compiled Vercel function (ERR_MODULE_NOT_FOUND, Preview 503 `MCP_UNAVAILABLE`); AI-3's local tests could not see this. Fixed with `import('../mcp/server.js')` (+ server-side load-failure logging). Verified on Preview `jobquest2-qu6p8vi9w-one-piece-5779.vercel.app`: `/api/mcp` now answers `AI_HUB_DISABLED` (flag off), `/api/health` 200. Vercel Deployment Protection did NOT block the endpoint.
 - Preview remote smoke needs operator: Preview `AI_HUB_ENABLED=true` (not changed by the agent), Preview protection decision, and adding the Claude custom connector.
 
 ---

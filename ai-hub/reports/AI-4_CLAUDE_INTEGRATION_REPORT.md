@@ -1,6 +1,6 @@
 # AI-4 — Claude Integration: Report
 
-**Status:** READY FOR BRANCH CI (local validation complete; remote Claude smoke, development integration and development CI pending — updated below as they complete).
+**Status:** AI-4 INTERRUPTED FOR OPERATOR ACTION — IMPLEMENTATION COMPLETE, PROVIDER SMOKE PENDING (branch CI PASS; remote Claude smoke, development integration and development CI pending — updated below as they complete).
 Branch `feature/ai-4-claude-integration`, base development `ed517594d58dedf26b6144d61b2e9ac2f8e60a58` (unchanged by fetch).
 
 ## AI-3 final facts (persisted at AI-4 start)
@@ -51,7 +51,15 @@ Deterministic fixtures in `tests/unit/fixtures/claude-eval/scenarios.ts` (E1 pip
 **None.** Dev head `20261026100000`; Prod head `20261022100000`; Production database not touched.
 
 ## Remote Claude smoke, CI, development integration
-_Pending — filled in as each gate completes._
+**Branch CI:** `37945994001` PASS @`3687b048` (feature); `37947672506` PASS @`4c3a5778` (head after the Preview fix; `37947317533` @`3e1dc5da` was superseded/cancelled).
+
+**Preview finding (genuine integration defect, fixed):** the first Preview probe returned `503 MCP_UNAVAILABLE` rather than `AI_HUB_DISABLED`. Server logs (added in `3e1dc5da`: error class, code, truncated message only) showed `ERR_MODULE_NOT_FOUND: Cannot find module '/var/task/apps/api/src/mcp/server' imported from .../routes/mcp.js`: the extensionless dynamic import is not resolvable in the compiled ESM Vercel function. AI-3's local/in-process tests could not detect this because AI-3 never ran a remote Preview smoke. Fix `4c3a5778`: `import('../mcp/server.js')` (TypeScript/Vite/tsx map `.js` to `.ts`; AI-3 unit + integration and AI-4 integration re-run green: 16 unit, 25 integration). Verified remotely: Preview `https://jobquest2-qu6p8vi9w-one-piece-5779.vercel.app/api/mcp` now answers `503 AI_HUB_DISABLED` (flag off) and `/api/health` is 200. **Vercel Deployment Protection did not block the endpoint** (requests reach the app unauthenticated).
+
+**Preview MCP URL (non-secret, branch-ephemeral):** `https://jobquest2-qu6p8vi9w-one-piece-5779.vercel.app/api/mcp`. A stable branch alias may exist; the connector should be removed/reconfigured after testing.
+
+**Operator gate:** Preview `AI_HUB_ENABLED` is OFF (not changed by the agent). Required Preview-only variable: `AI_HUB_ENABLED=true` (Vercel -> Settings -> Environment Variables -> Preview scope only; do not touch Production), then redeploy the branch Preview so it takes effect. `VITE_AI_HUB_ENABLED=true` (Preview) is only needed to view the Claude setup UI on Preview, not for MCP.
+
+_Remote Claude smoke, token revocation, development merge and development CI: pending._
 
 ## Deferred
 Scheduled Claude workflow / Morning Brief and workflow-config mutation; OAuth; Claude Skill (not created; live evaluation decides); suggestion cross-run re-proposal policy; application matching; core AI writes (AI-11); Gemini and ChatGPT provider phases (separate architectures, not extrapolated from Claude); Production rollout.

@@ -9,7 +9,7 @@ export const mcp = new Hono();
 
 mcp.all('/', async (c) => {
   try {
-    const { handleMcpRequest } = await import('../mcp/server');
+    const { handleMcpRequest } = await import('../mcp/server.js');
     return await handleMcpRequest(c);
   } catch (error) {
     // Operability: a load/config failure must be diagnosable from server logs. Only the error class, code and a

@@ -17,12 +17,12 @@ Readiness: `VERIFIED / READY NOW` · `LIMITED` · `NEEDS RECHECK` · `FUTURE` ·
 | Capability | Claude Pro / Cowork | Google AI Pro / Gemini | ChatGPT Plus |
 |---|---|---|---|
 | Subscription-native reasoning (no separate API billing) | NEEDS RECHECK — chat/Cowork use subscription quota by design; unattended-run quota behavior unverified | NEEDS RECHECK | NEEDS RECHECK |
-| Remote MCP / custom connector | **LIMITED→READY**: custom remote MCP connectors available on Free/Pro/Max/Team/Ent, in beta; connects from Anthropic cloud, so server must be publicly reachable [C1] | **NEEDS RECHECK / conflicting**: one source says custom apps need Google AI Ultra; another says any remote MCP URL via Settings → Connected apps since June 2026 [G1] | **LIMITED**: Developer mode (beta) available to Plus/Pro/Business/Ent/Edu on web; HTTPS public URL; SSE + streamable HTTP; optional OAuth [O1] |
+| Remote MCP / custom connector | **VERIFIED (AI-4, 2026-10-11) end to end.** Earlier doc finding: custom remote MCP connectors available on Free/Pro/Max/Team/Ent, in beta; connects from Anthropic cloud, so server must be publicly reachable [C1] | **NEEDS RECHECK / conflicting**: one source says custom apps need Google AI Ultra; another says any remote MCP URL via Settings → Connected apps since June 2026 [G1] | **LIMITED**: Developer mode (beta) available to Plus/Pro/Business/Ent/Edu on web; HTTPS public URL; SSE + streamable HTTP; optional OAuth [O1] |
 | MCP read tools | READY (same as above) | NEEDS RECHECK | LIMITED (developer mode) |
 | MCP write tools | READY; per-tool Allow/Ask/Blocked [C1] | NEEDS RECHECK | LIMITED: write = any tool without `readOnlyHint`; **confirmation required by default** [O1] |
 | Unattended write | NEEDS RECHECK — an "Ask" tool may stall scheduled tasks (inference) | NEEDS RECHECK | LIMITED/likely UNSUPPORTED — per-call confirmation; "remember" only within one conversation [O1] |
 | Manual approval requirement | Configurable per tool (Allow avoids prompt) | unknown | Default on for writes |
-| Auth to custom MCP | OAuth supported; static-token/authless support **NEEDS EXTERNAL VERIFICATION** | NEEDS RECHECK | OAuth optional; no-auth allowed per [O1] summary — headers support NEEDS RECHECK |
+| Auth to custom MCP | **VERIFIED (AI-4)**: fixed `Authorization: Bearer` request header works; OAuth not required | NEEDS RECHECK | OAuth optional; no-auth allowed per [O1] summary — headers support NEEDS RECHECK |
 | Scheduled / recurring workflows | NEEDS RECHECK — Cowork reportedly has scheduled tasks (third-party only); whether they can call remote connectors on Pro unverified | NEEDS RECHECK (Gemini scheduled actions exist in consumer app per general knowledge; custom-connector use unverified) | NEEDS RECHECK — ChatGPT Tasks exist; connector use in tasks unverified |
 | Event triggers | FUTURE | FUTURE | FUTURE |
 | Background execution (device closed) | NEEDS RECHECK — Cowork runs on user's computer | NEEDS RECHECK | NEEDS RECHECK |
@@ -36,6 +36,22 @@ Readiness: `VERIFIED / READY NOW` · `LIMITED` · `NEEDS RECHECK` · `FUTURE` ·
 | Local stdio MCP | UNSUPPORTED for connectors-in-cloud (local servers separate; not in Cowork/claude.ai) | UNSUPPORTED (remote only) | UNSUPPORTED (public HTTPS only) |
 | Overall readiness for JobQuest Daily Brief (read + save findings) | **LIMITED → best first target** | NEEDS RECHECK (may be blocked by plan) | LIMITED (confirmation friction) |
 
+## Claude custom connector — VERIFIED by AI-4 (2026-10-11)
+Source: real Claude custom connector against the JobQuest Dev Preview MCP endpoint (operator-performed smoke; see `reports/AI-4_CLAUDE_INTEGRATION_REPORT.md`). Applies to the operator's Claude plan/account only; Gemini and ChatGPT are NOT extrapolated from this.
+
+**VERIFIED**
+- A custom remote MCP connector can be added to Claude and reaches JobQuest's public HTTPS `/api/mcp` from Anthropic's cloud (Vercel Preview deployment protection did not block it).
+- Auth: a fixed request header `Authorization: Bearer <JobQuest connector token>` is accepted; no OAuth was needed.
+- Claude discovers tools via Streamable HTTP and classifies them from MCP annotations (`readOnlyHint`): five reads read-only, the submit tool the single non-read-only tool.
+- Read tools (applications, application detail, AI findings/runs) work; the write-capable tool works with an `ai:ingest` credential; a missing write tool is reported as unavailable (no core mutation possible).
+- Revoking the connector credential in JobQuest denies the next Claude call before any data is returned.
+- Claude can author a valid `jobquest.ai-result 1.0` after correction; first attempts omitted `generated_at` and per-finding `dedupe`.
+
+**ASSUMED / NOT TESTED**
+- Live ingest denial for a read-only credential in Claude (covered by automated server tests only).
+- Scheduled / unattended Claude use of the connector, per-tool Allow/Ask/Blocked behaviour for the write tool, Cowork, mobile, Claude Code surface, usage limits, plan variations, and OAuth for Claude.
+- Gmail/Calendar/Drive workflows through JobQuest data.
+
 ## Implications for roadmap
 
 1. Build provider-neutral MCP once; **AI-4 (Claude) first** because remote connectors on Pro are the best-documented path.
@@ -46,3 +62,4 @@ Readiness: `VERIFIED / READY NOW` · `LIMITED` · `NEEDS RECHECK` · `FUTURE` ·
 
 ## Change log
 - 2026-10-07 — initial population (AI-0G).
+- 2026-10-11 — AI-4: Claude custom connector VERIFIED (discovery, annotations, reads, ingest, fixed-header auth, revocation). Gemini/ChatGPT unchanged.

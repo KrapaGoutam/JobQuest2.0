@@ -1,6 +1,6 @@
 # AI-4 — Claude Integration: Report
 
-**Status:** AI-4 INTERRUPTED FOR OPERATOR ACTION — IMPLEMENTATION COMPLETE, PROVIDER SMOKE PENDING (branch CI PASS; remote Claude smoke, development integration and development CI pending — updated below as they complete).
+**Status:** AI-4 PROVIDER SMOKE PASS — READY FOR DEVELOPMENT INTEGRATION (branch CI PASS; real Claude custom-connector smoke PASS; temporary credential revoked and post-revocation access denied; development merge and development CI are recorded in the chat checkpoint to avoid a docs push while the merged SHA is being certified).
 Branch `feature/ai-4-claude-integration`, base development `ed517594d58dedf26b6144d61b2e9ac2f8e60a58` (unchanged by fetch).
 
 ## AI-3 final facts (persisted at AI-4 start)
@@ -59,7 +59,34 @@ Deterministic fixtures in `tests/unit/fixtures/claude-eval/scenarios.ts` (E1 pip
 
 **Operator gate:** Preview `AI_HUB_ENABLED` is OFF (not changed by the agent). Required Preview-only variable: `AI_HUB_ENABLED=true` (Vercel -> Settings -> Environment Variables -> Preview scope only; do not touch Production), then redeploy the branch Preview so it takes effect. `VITE_AI_HUB_ENABLED=true` (Preview) is only needed to view the Claude setup UI on Preview, not for MCP.
 
-_Remote Claude smoke, token revocation, development merge and development CI: pending._
+## Remote Claude provider smoke — PASS (operator-performed, 2026-10-11)
+Tested against the stable branch alias MCP endpoint (Preview `jobquest2-d4ys3g5jy`, executable commit `4c3a5778`, Dev database, Preview `AI_HUB_ENABLED=true` set by the operator, Production untouched). The operator installed a real Claude custom connector (`JobQuest2DEV`) with a fixed `Authorization: Bearer` header and a credential created from the new Settings UI (Read + AI findings preset, 7 days). No token value, application title, finding body or other private content is recorded here.
+
+| Check | Result |
+|---|---|
+| Connector accepted by Claude | PASS |
+| Tool discovery | PASS — the 6 expected tools (Get application, List applications, List AI findings, List AI runs, List AI suggestions, Submit AI result) |
+| Annotations as seen by Claude | PASS — five reads classified read-only; Submit AI result is the single non-read-only tool |
+| Core mutation tools | NONE exist (no application/task/contact/status tool) |
+| Application list read | PASS |
+| Application detail read | PASS |
+| AI findings and AI runs reads | PASS |
+| Unsupported write ("change this application's stage") | PASS — no callable JobQuest write tool; no core mutation occurred |
+| Synthetic `jobquest.ai-result` submission, provider `claude` | PASS — one AI finding created; no application/task/contact/status mutation |
+| Prompt-injection-style record content | PASS — stayed data; no write action |
+| Live read-only credential denied ingest | NOT REPEATED live (would need a second credential). Scope enforcement is PASS on the automated AI-3/AI-4 tests (HTTP 403 `insufficient_scope`, `tools/list` hides submit) plus the live tool surface and the successful write-enabled credential |
+| Temporary credential revoked from JobQuest | PASS |
+| Next Claude read after revocation | DENIED — authentication failure before any data was returned (PASS) |
+
+**Live contract observations (provider usability / contract validation; no contract semantics were changed in AI-4):**
+- A first submission was rejected because `run.generated_at` was missing (rejected before ingestion).
+- A second attempt created a **PARTIAL** run with zero findings because the finding lacked its required `dedupe` data.
+- Resubmitting the same finalized `external_run_id` returned duplicate-run behaviour and did not reopen or append to the finalized run (idempotent).
+- A new `external_run_id` with the corrected canonical result succeeded and created the finding.
+- One synthetic PARTIAL validation run therefore remains in Dev. This is accepted Dev validation residue; it is not a reason to add a connector delete tool (connectors cannot delete, by design).
+- Implication for later phases: Claude needs the required fields spelled out (`generated_at`, per-finding `dedupe`). The tool schema/description already states the contract name and version; if this repeats, a short skill or a richer example is the documented remedy (no Claude Skill was created; the evidence does not yet justify one).
+
+**Cleanup:** the temporary credential is revoked (no active validation credential). The operator should remove or repoint the `JobQuest2DEV` connector in Claude if it targets an ephemeral Preview; the branch alias is not a permanent provider endpoint.
 
 ## Deferred
 Scheduled Claude workflow / Morning Brief and workflow-config mutation; OAuth; Claude Skill (not created; live evaluation decides); suggestion cross-run re-proposal policy; application matching; core AI writes (AI-11); Gemini and ChatGPT provider phases (separate architectures, not extrapolated from Claude); Production rollout.

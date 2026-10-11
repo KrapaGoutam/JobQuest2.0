@@ -4,16 +4,19 @@ import {
   AI_PROVIDER_LABELS, AI_WORKFLOW_LABELS, AI_WRITE_ACTIONS_ENABLED, workflowStatus,
 } from '../lib/aiHubFlags';
 import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
+import { ClaudeConnectorPanel } from '../components/ai/ClaudeConnectorPanel';
+import type { PublicSession } from '../api';
 
-// Settings -> AI & Automation (AI-1F1). Entirely read-only: no provider exists,
-// so nothing here can be connected, enabled or run. Rendered only when the AI
-// Hub is exposed (see isAiHubExposed); failures are local to this panel.
+// Settings -> AI & Automation (AI-1F1). Workflows and general settings are
+// read-only. AI-4 adds the Claude connector setup (scoped connector token for the
+// remote MCP endpoint); Gemini/ChatGPT remain "Not configured". Rendered only when
+// the AI Hub is exposed (see isAiHubExposed); failures are local to this panel.
 
 type Cfg = { status: 'loading' } | { status: 'error' } | { status: 'ready'; rows: Array<{ workflow: string; enabled: boolean }> };
 
 const rowStyle = { display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' as const, padding: '6px 0' };
 
-export function AiAutomationSettings({ activeWorkspaceId }: { activeWorkspaceId: string | null }) {
+export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWorkspaceId: string | null; session?: PublicSession }) {
   const [cfg, setCfg] = useState<Cfg>({ status: 'loading' });
 
   useEffect(() => {
@@ -38,7 +41,7 @@ export function AiAutomationSettings({ activeWorkspaceId }: { activeWorkspaceId:
             <div style={rowStyle}><span>Automation</span><b>Not configured yet</b></div>
             <div style={rowStyle}><span>Write actions</span><b>{AI_WRITE_ACTIONS_ENABLED ? 'Enabled' : 'Disabled'}</b></div>
             <p className="muted" style={{ margin: '8px 0 0', fontSize: '13px' }}>
-              No settings can be changed yet. Workspace settings can never override a system-level shutdown.
+              Workflow settings can’t be changed yet. Workspace settings can never override a system-level shutdown.
             </p>
           </CardBody>
         </Card>
@@ -50,7 +53,11 @@ export function AiAutomationSettings({ activeWorkspaceId }: { activeWorkspaceId:
           <CardBody>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {AI_PROVIDER_LABELS.map((p) => (
-                <li key={p.id} style={rowStyle}><span>{p.label}</span><b>Not configured</b></li>
+                <li key={p.id} style={p.id === 'claude' && session ? undefined : rowStyle}>
+                  {p.id === 'claude' && session
+                    ? <ClaudeConnectorPanel activeWorkspaceId={activeWorkspaceId} session={session} />
+                    : <><span>{p.label}</span><b>Not configured</b></>}
+                </li>
               ))}
             </ul>
           </CardBody>

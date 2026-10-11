@@ -147,7 +147,7 @@ describe('AI-3 MCP static security boundary', () => {
     const app = read('apps/api/src/app.ts');
     expect(app).toMatch(/app\.route\('\/mcp', mcp\)/);
     expect(app).not.toMatch(/modelcontextprotocol|mcp\/server/);
-    expect(read('apps/api/src/routes/mcp.ts')).toContain("import('../mcp/server')");
+    expect(read('apps/api/src/routes/mcp.ts')).toContain("import('../mcp/server.js')");
     expect(read('apps/api/src/routes/mcp.ts')).not.toMatch(/^import .*modelcontextprotocol/m);
     // The same-origin CSRF layer exempts ONLY the exact MCP path, and MCP validates Origin itself.
     const sec = read('apps/api/src/lib/security.ts');

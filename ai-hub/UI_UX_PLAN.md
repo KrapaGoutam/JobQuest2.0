@@ -64,3 +64,11 @@ regression-tested). `/ai-hub/calendar`: views Upcoming / Today / This week / Pas
 review status), day-grouped list, 20 per page, states loading/error/not configured/zero (per view)/populated. Scheduled events and deadlines are labelled
 differently; rescheduled items show where they moved from; cancelled items are struck through with the original time kept. Times render in the owner's
 profile zone (source zone noted when different); all-day items are dates. Read-only: only the shared owner-only Dismiss. Overview gains one Calendar card.
+
+## AI-8 — Actions (human approval center)
+
+- **Navigation:** eight tabs — Overview, Daily Digest, Job Leads, Email, Recruiter Intel, Calendar, **Actions**, History. The tab row scrolls inside itself; the dedicated e2e checks clipping/reachability of every tab (including Actions and History) at 375 / 768 / 1280.
+- **/ai-hub/actions:** *Pending* (filters: action, source, provider, suggested date range; 10 per page) and *Completed and failed* (bounded history). A card shows the proposed action, source finding, provider, confidence, evidence, target/match state and a **Review** button only — never Execute/Accept, no checkboxes, no bulk controls.
+- **Review dialog:** Action · Source · Match status · Current state / Proposed state · Warnings · choices. Action-specific Confirm labels ("Create application", "Create task", "Change status to Interview"). Ambiguity: nothing pre-selected, radio group of the server's candidates with an Open link each; a duplicate needs an explicit "create anyway" + checkbox; tasks have editable title / due date (with its source) / priority / notes and a "without an application" choice. Stale → "The underlying record changed. Review the updated action before confirming." and the review regenerates. Messages never contain raw database text.
+- **Surfaces:** Overview "Pending actions" card; Daily Digest line ("N actions awaiting your review" + link; the digest never executes anything); Job Leads show "Application created" + Open application, or "Review application action" while one is pending.
+- **Accessibility:** dialog focus trap and labelled title (existing Dialog), labelled regions for before/after state, `role="alert"` errors, `role="status"` results, radio/checkbox labels, 24 px+ targets, axe 0 serious/critical on the page, every dialog state and at 375/768/1280.

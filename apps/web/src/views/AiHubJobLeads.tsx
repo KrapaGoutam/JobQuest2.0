@@ -34,8 +34,10 @@ function MatchBadge({ lead }: { lead: JobLeadView }) {
   );
 }
 
-export function JobLeadCard({ lead, timeZone, currentUserId, onOpen, onDismiss }: {
+export function JobLeadCard({ lead, timeZone, currentUserId, onOpen, onDismiss, onReviewAction, onOpenApplication }: {
   lead: JobLeadView; timeZone: string; currentUserId: string | null; onOpen: (l: JobLeadView) => void; onDismiss?: (l: JobLeadView) => Promise<void>;
+  /** AI-8: opens the Actions queue (the approval center). A lead is never converted from this card. */
+  onReviewAction?: () => void; onOpenApplication?: (applicationId: string) => void;
 }) {
   const meta = [lead.location, workArrangementLabel(lead.arrangement), employmentTypeLabel(lead.employmentType)].filter(Boolean).join(' · ');
   const canDismiss = onDismiss && currentUserId === lead.ownerId && (lead.status === 'NEW' || lead.status === 'REVIEWED');
@@ -50,6 +52,7 @@ export function JobLeadCard({ lead, timeZone, currentUserId, onOpen, onDismiss }
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             <MatchBadge lead={lead} />
             {lead.status === 'DISMISSED' && <StatusBadge variant="muted">Dismissed</StatusBadge>}
+            {lead.applicationId && <StatusBadge variant="success">Application created</StatusBadge>}
           </div>
           {meta && <span className="muted small" style={wrap}>{meta}</span>}
           {lead.salary && <span className="small">Published salary: {lead.salary}</span>}
@@ -61,6 +64,8 @@ export function JobLeadCard({ lead, timeZone, currentUserId, onOpen, onDismiss }
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             <Button variant="secondary" size="sm" onClick={() => onOpen(lead)} aria-label={`View details: ${lead.title} at ${lead.company}`}>View details</Button>
             {lead.sourceUrl && <ExternalLink href={lead.sourceUrl}>Open posting</ExternalLink>}
+            {lead.applicationId && onOpenApplication && <Button variant="secondary" size="sm" onClick={() => onOpenApplication(lead.applicationId!)} aria-label={`Open application: ${lead.title} at ${lead.company}`}>Open application</Button>}
+            {!lead.applicationId && lead.pendingAction && onReviewAction && currentUserId === lead.ownerId && <Button variant="primary" size="sm" onClick={onReviewAction} aria-label={`Review create application action: ${lead.title} at ${lead.company}`}>Review application action</Button>}
             {canDismiss && <DismissControl label={`${lead.title} at ${lead.company}`} onDismiss={() => onDismiss(lead)} />}
           </div>
         </article>
@@ -157,6 +162,8 @@ export interface JobLeadsPanelProps {
   onOpen: (l: JobLeadView) => void;
   onDismiss?: (l: JobLeadView) => Promise<void>;
   onOpenSettings?: () => void;
+  onReviewAction?: () => void;
+  onOpenApplication?: (applicationId: string) => void;
 }
 
 export function AiHubJobLeadsPanel(p: JobLeadsPanelProps) {
@@ -202,7 +209,7 @@ export function AiHubJobLeadsPanel(p: JobLeadsPanelProps) {
             ? <SourceEmpty kind="job_leads" configured={p.configured} filtered={p.filtered} onOpenSettings={p.onOpenSettings} />
             : (
               <ul aria-label="Job leads" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '12px' }}>
-                {p.state.rows.map((l) => <li key={l.id}><JobLeadCard lead={l} timeZone={p.timeZone} currentUserId={p.currentUserId} onOpen={p.onOpen} onDismiss={p.onDismiss} /></li>)}
+                {p.state.rows.map((l) => <li key={l.id}><JobLeadCard lead={l} timeZone={p.timeZone} currentUserId={p.currentUserId} onOpen={p.onOpen} onDismiss={p.onDismiss} onReviewAction={p.onReviewAction} onOpenApplication={p.onOpenApplication} /></li>)}
               </ul>
             )}
           <SourcePager page={p.page} hasNext={p.state.hasNext} onPage={p.onPage} label="Job leads" />
@@ -266,6 +273,8 @@ export function AiHubJobLeads({ activeWorkspaceId, currentUserId, onNavigate }: 
         state={state} draft={draft} page={page} timeZone={timeZone} currentUserId={currentUserId} configured={configured} filtered={filtered} message={message}
         onDraft={setDraft} onApply={onApply} onReset={onReset} onPage={setPage} onRetry={retry} onOpen={setSelected} onDismiss={onDismiss}
         onOpenSettings={onNavigate ? () => onNavigate('/settings/ai') : undefined}
+        onReviewAction={onNavigate ? () => onNavigate('/ai-hub/actions') : undefined}
+        onOpenApplication={onNavigate && activeWorkspaceId ? (id) => onNavigate(`/w/${activeWorkspaceId}/applications/${id}`) : undefined}
       />
       {selected && <JobLeadDetail lead={selected} description={description} timeZone={timeZone} onClose={close} onRetry={() => setDescAttempt((n) => n + 1)} onCopy={onCopy} copied={copied} />}
     </>

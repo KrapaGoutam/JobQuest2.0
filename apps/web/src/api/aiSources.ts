@@ -34,7 +34,7 @@ export function applyStatus(q: Query, status: keyof typeof SOURCE_STATUSES | 'AL
 
 const LEAD_COLUMNS = 'finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, discovered_at, '
   + 'salary_min, salary_max, salary_currency, salary_period, experience_level, match_score, required_skills, preferred_skills, description_truncated, description_length, '
-  + 'finding:ai_findings!inner(provider, status, priority, confidence, summary, payload)';
+  + 'finding:ai_findings!inner(provider, status, priority, confidence, summary, payload, application_id)';
 
 export async function fetchJobLeadsPage(
   workspaceId: string, f: JobLeadFilters, timeZone: string, page: number, client: Client = supabase,
@@ -43,7 +43,8 @@ export async function fetchJobLeadsPage(
   if (!disc.ok) throw fail();
   const posted = f.posted;
   let q: Query = client.from('ai_job_leads').select(LEAD_COLUMNS).eq('workspace_id', workspaceId);
-  q = applyStatus(q, f.status, 'finding.');
+  // AI-8: a lead that was converted to an application stays visible in the default view (with its "Application created" badge); it is history, not noise.
+  q = f.status === 'ACTIVE' ? q.in('finding.status', ['NEW', 'REVIEWED', 'ACCEPTED']) : applyStatus(q, f.status, 'finding.');
   if (f.provider !== 'ALL') q = q.eq('finding.provider', f.provider);
   const search = sanitizeSearch(f.search);
   if (search) q = q.or(`company.ilike.%${search}%,title.ilike.%${search}%`);
@@ -61,7 +62,18 @@ export async function fetchJobLeadsPage(
   const { from, to } = range(page);
   const { data, error } = await q.order('discovered_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
   if (error) throw fail();
-  return sliceRows<JobLeadRow, JobLeadView>(data, toJobLeadView);
+  const out = sliceRows<JobLeadRow, JobLeadView>(data, toJobLeadView);
+  // AI-8: which leads have a create_application suggestion waiting for review (owner's own; an RLS head query). Best-effort:
+  // a failure only hides the shortcut, never the page.
+  const ids = out.rows.filter((l) => !l.applicationId).map((l) => l.id);
+  if (ids.length) {
+    const pending = await client.from('ai_suggestions').select('finding_id').eq('workspace_id', workspaceId).eq('status', 'PENDING').eq('action', 'create_application').in('finding_id', ids);
+    if (!pending.error) {
+      const set = new Set(((pending.data ?? []) as Array<{ finding_id: string }>).map((r) => r.finding_id));
+      out.rows = out.rows.map((l) => (set.has(l.id) ? { ...l, pendingAction: true } : l));
+    }
+  }
+  return out;
 }
 
 /** The (up to 30,000 character) plain-text description is fetched for one lead at a time, never in list reads. */

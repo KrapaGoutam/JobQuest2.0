@@ -106,6 +106,27 @@ attendee lists.
   an end before the start rejects that one event (run *Partial*); the other events are kept.
 - A stored Daily Digest is a snapshot: an event found after it was stored never rewrites it.
 
+## 6c. Suggested actions and human approval (AI-8)
+
+A scheduled task may *propose* three kinds of change through the same single write tool (`jobquest_submit_ai_result`):
+
+| Suggestion `action` | `proposed` fields | Applies to |
+| --- | --- | --- |
+| `create_application` | `reason`, `priority` (optional) | a `job_lead` finding only |
+| `create_task` | `title` (required), `details`, `due_date` (YYYY-MM-DD), `priority`, `task_type` (TASK or FOLLOW_UP), `reason` | email, calendar, lead and recruiter findings |
+| `set_status` | exactly one of `stage` (an existing workflow stage) or `outcome` (only `REJECTED`), plus `reason` | email findings (calendar items alone are not evidence) |
+
+- **Submitting never executes.** A suggestion appears in AI Hub → **Actions**. You review the current and proposed state and
+  confirm each one individually; JobQuest then re-reads the record, re-checks your permission and applies it through the normal
+  application/task paths. There is no "approve all", no scheduled execution and no MCP tool that changes applications or tasks.
+- **JobQuest finds the target.** Any `target`, `application_id` or other id in a suggestion is ignored (with a warning). Matching uses
+  your own applications only: external job id, job URL, then company + title with agreeing context. Several candidates, or none,
+  are never guessed: you choose, or the action is blocked.
+- **Unsupported on purpose:** replying to or sending email, changing/accepting/declining calendar events, contacting recruiters,
+  deleting anything, editing arbitrary fields, bulk or chained actions. A suggestion with any other action or an unknown field is
+  rejected (the run ends *Partial*; the finding itself is kept).
+- A converted job lead stays in AI Hub as history with an "Application created" badge. Dismissing a finding ignores its suggestions.
+
 ## 7. Troubleshooting
 
 | Symptom | Likely cause / action |

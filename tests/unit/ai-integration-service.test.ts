@@ -238,8 +238,9 @@ describe('suggestions', () => {
     doc.suggestions[0].finding_index = 1;
     const { f } = await run(doc);
     expect(f.of('rpc_ai_create_suggestion')[0]!.args).toMatchObject({
-      p_finding_id: 'f-2', p_action: 'set_status', p_target_type: 'application', p_target_id: '11111111-1111-4111-8111-111111111111',
-      p_proposed: { status: 'REJECTED' },
+      // AI-8: the target of an executable action is never taken from the provider; the server resolves it
+      p_finding_id: 'f-2', p_action: 'set_status', p_target_type: null, p_target_id: null,
+      p_proposed: { outcome: 'REJECTED' },
     });
   });
   it('skips suggestions on unchanged_closed findings (not a failure)', async () => {
@@ -251,7 +252,7 @@ describe('suggestions', () => {
   it('a finding whose ingestion failed leaves no orphan suggestion; run ends PARTIAL or FAILED', async () => {
     const doc = clone(valid.suggestion) as Record<string, any>;
     doc.findings.push({ ...doc.findings[0], dedupe: { ...doc.findings[0].dedupe, source_id: 'second' } });
-    doc.suggestions.push({ ...doc.suggestions[0], finding_index: 1, proposed: { status: 'REJECTED', n: 2 } });
+    doc.suggestions.push({ ...doc.suggestions[0], finding_index: 1, proposed: { outcome: 'REJECTED', reason: 'second' } });
     const { result, f } = await run(doc, fake((fn, _a, n) => (fn === 'rpc_ai_ingest_finding' && n === 1 ? dbErr('AI_FINDING_INVALID_TITLE') : undefined)));
     expect(f.of('rpc_ai_create_suggestion')).toHaveLength(1);
     expect(result).toMatchObject({ status: 'PARTIAL', counts: { findingsFailed: 1, findingsCreated: 1, suggestionsFailed: 1, suggestionsCreated: 1 } });

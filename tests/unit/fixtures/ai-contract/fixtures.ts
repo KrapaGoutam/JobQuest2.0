@@ -84,7 +84,7 @@ export const valid = {
   }),
   suggestion: base({
     findings: [gmailFinding('rejection')],
-    suggestions: [{ finding_index: 0, action: 'set_status', target: { type: 'application', id: '11111111-1111-4111-8111-111111111111' }, proposed: { status: 'REJECTED' }, confidence: 0.97 }],
+    suggestions: [{ finding_index: 0, action: 'set_status', proposed: { outcome: 'REJECTED' }, confidence: 0.97 }],
   }),
 };
 

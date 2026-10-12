@@ -74,3 +74,7 @@ The provider-neutral MCP server exists at `/api/mcp` (Streamable HTTP, stateless
 Workflow id `calendar_review` (canonical; no `calendar_intel`), kind `calendar_event`, template `provider-workflows/claude/CALENDAR_INTEL.md`
 (exact schema, time rules, reschedule/cancellation, privacy, safety). Cadence guidance: weekday morning, optionally afternoon; the provider owns
 the schedule. Live provider test: optional, not performed. ChatGPT/Gemini/OAuth unchanged (deferred).
+
+## AI-8 — Suggested actions in the Claude workflows
+
+The Claude templates (`EMAIL_TRIAGE.md`, `CALENDAR_INTEL.md`, `JOB_DISCOVERY.md`) now describe optional, conservative suggestions: email may propose `create_task` or `set_status` (INTERVIEW / REJECTED), calendar may propose a preparation `create_task`, job discovery may propose `create_application` for exceptional leads. Each template states that **submission does not execute the action** and that a human confirms in JobQuest. MCP is unchanged (11 tools; the one write is still `jobquest_submit_ai_result`); there is deliberately no `jobquest_create_application` / `update_application` / `create_task` tool. See `provider-workflows/CLAUDE_SCHEDULED_TASKS.md` §6c. An optional live smoke after a Preview deployment: have Claude submit one synthetic supported suggestion, then confirm it appears in Actions, does not execute, and executes exactly once on human confirm (no real mail/calendar data).

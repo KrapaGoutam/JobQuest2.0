@@ -217,7 +217,9 @@ describe('workflow definitions', () => {
     const by = Object.fromEntries(AI_WORKFLOW_DEFINITIONS.map((d) => [d.id, d]));
     expect(workflowAvailability(by.daily_brief!)).toBe('AVAILABLE');
     expect(workflowAvailability(by.daily_brief!, { claudeConnected: false })).toBe('PROVIDER_SETUP_REQUIRED');
-    expect(workflowAvailability(by.email_triage!)).toBe('SOURCE_NOT_IMPLEMENTED');
+    for (const id of ['job_discovery', 'email_triage', 'recruiter_intel', 'calendar_review', 'daily_brief']) expect(workflowAvailability(by[id]!), id).toBe('AVAILABLE');
+    // The availability helper itself still reports a source that is not operational honestly.
+    expect(workflowAvailability({ ...by.email_triage!, sourceOperational: false })).toBe('SOURCE_NOT_IMPLEMENTED');
     expect(workflowAvailability(by.daily_brief!, { disabled: true })).toBe('DISABLED');
   });
   it('the API has no scheduler dependency or timer', () => {

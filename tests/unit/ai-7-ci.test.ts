@@ -6,7 +6,8 @@ import { existsSync, readFileSync } from 'node:fs';
 // with no new secret. Text-level checks on the workflow (no YAML dependency).
 const wf = readFileSync('.github/workflows/m1b-ci.yml', 'utf8').replace(/\r\n/g, '\n');
 const jobsStart = wf.indexOf('\njobs:\n');
-const SPECS = ['e2e/ai5-digest.spec.ts', 'e2e/ai6-sources.spec.ts', 'e2e/ai7-calendar.spec.ts'];
+// AI-8 extends the same isolated job with its action spec; nothing else about the job changes.
+const SPECS = ['e2e/ai5-digest.spec.ts', 'e2e/ai6-sources.spec.ts', 'e2e/ai7-calendar.spec.ts', 'e2e/ai8-actions.spec.ts'];
 const jobs: Record<string, string> = {};
 {
   const body = wf.slice(jobsStart + 1);
@@ -36,7 +37,7 @@ describe('dedicated AI Hub browser CI job (AI-7)', () => {
     const db = jobs.database!;
     expect(db).toContain('run: pnpm test:e2e');
     expect(db).toContain('M1B_ENV_FILE: .env.m1b-local');
-    expect(db).not.toMatch(/AI_HUB|ai5-digest|ai6-sources|ai7-calendar/);
+    expect(db).not.toMatch(/AI_HUB|ai5-digest|ai6-sources|ai7-calendar|ai8-actions/);
   });
 
   it('runs only the focused AI Hub specs, not the whole browser suite', () => {

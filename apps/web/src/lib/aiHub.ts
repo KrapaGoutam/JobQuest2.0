@@ -89,6 +89,8 @@ export interface AiHubSnapshot {
   sources?: { newJobLeads: number; emailAttention: number; recruiterIntel: number };
   /** AI-7 calendar counts (upcoming, interviews, deadlines); absent when they could not be loaded. */
   calendar?: { upcoming: number; interviews: number; deadlines: number };
+  /** AI-8: supported actions awaiting THIS user's review; absent when it could not be loaded. */
+  pendingActions?: number;
 }
 
 export const RECENT_WINDOW_DAYS = 7;
@@ -248,7 +250,7 @@ export function isAiHubEmpty(s: AiHubSnapshot): boolean {
   return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0;
 }
 
-export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'history';
+export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'actions' | 'history';
 
 /** Tab order is the navigation order. */
 export const AI_HUB_TABS: ReadonlyArray<{ id: AiHubTab; label: string; path: string }> = [
@@ -258,6 +260,7 @@ export const AI_HUB_TABS: ReadonlyArray<{ id: AiHubTab; label: string; path: str
   { id: 'email', label: 'Email', path: '/ai-hub/email' },
   { id: 'recruiters', label: 'Recruiter Intel', path: '/ai-hub/recruiters' },
   { id: 'calendar', label: 'Calendar', path: '/ai-hub/calendar' },
+  { id: 'actions', label: 'Actions', path: '/ai-hub/actions' },
   { id: 'history', label: 'History', path: '/ai-hub/history' },
 ];
 export const AI_HUB_PATHS: readonly string[] = AI_HUB_TABS.map((t) => t.path);

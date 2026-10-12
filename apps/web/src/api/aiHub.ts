@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { fetchSourceCounts } from './aiSources';
 import { fetchCalendarCounts } from './aiCalendar';
+import { fetchPendingActionCount } from './aiActions';
 import {
   HISTORY_PAGE_SIZE, RECENT_WINDOW_DAYS, pageRange, sliceRunsPage,
   type AiFindingDetailRow, type AiFindingRow, type AiHubSnapshot, type AiRunDetailRow, type AiRunFilters,
@@ -30,9 +31,11 @@ export async function fetchAiHubSnapshot(
   now: Date = new Date(),
   /** The owner's profile zone (calendar counts are "from now" and all-day items are dates in this zone). */
   timeZone = 'UTC',
+  /** The signed-in user; the pending-actions card counts only THEIR actions (the Actions page is owner-only). */
+  userId: string | null = null,
 ): Promise<AiHubSnapshot> {
   const since = new Date(now.getTime() - RECENT_WINDOW_DAYS * 86_400_000).toISOString();
-  const [runs, findings, pending, pendingRows, recent, attention, sources, calendar] = await Promise.all([
+  const [runs, findings, pending, pendingRows, recent, attention, sources, calendar, pendingActions] = await Promise.all([
     client.from('ai_runs').select(RUN_COLUMNS).eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false }).limit(10),
     client.from('ai_findings').select(FINDING_COLUMNS).eq('workspace_id', workspaceId)
@@ -48,6 +51,8 @@ export async function fetchAiHubSnapshot(
     // Isolated: a source-count failure must not break the rest of the Overview.
     fetchSourceCounts(workspaceId, client).catch(() => undefined),
     fetchCalendarCounts(workspaceId, timeZone, now, client).catch(() => undefined),
+    // AI-8, isolated like the other source counts: a failure here must not break the rest of the Overview.
+    userId ? fetchPendingActionCount(workspaceId, userId, client).catch(() => undefined) : Promise.resolve(undefined),
   ]);
   if ([runs, findings, pending, pendingRows, recent, attention].some((r) => r.error)) throw fail();
   return {
@@ -59,6 +64,7 @@ export async function fetchAiHubSnapshot(
     attentionRunCount: attention.count ?? 0,
     ...(sources ? { sources } : {}),
     ...(calendar ? { calendar } : {}),
+    ...(pendingActions !== undefined ? { pendingActions } : {}),
   };
 }
 

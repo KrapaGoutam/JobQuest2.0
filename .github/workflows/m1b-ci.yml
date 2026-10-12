@@ -178,7 +178,7 @@ jobs:
         run: pnpm exec supabase stop --no-backup
 
   ai-hub-e2e:
-    # AI-7: dedicated, isolated AI Hub browser job. The AI Hub flags are OFF for every other job (including the
+    # AI-7 (extended by AI-8): dedicated, isolated AI Hub browser job. The AI Hub flags are OFF for every other job (including the
     # `database` job's full browser suite, where the AI Hub specs skip themselves). They are turned ON here, only in
     # this job's own env file on its own runner, and only the focused AI Hub specs run. All data is synthetic and is
     # seeded into this job's disposable local Supabase stack; no provider, mailbox, calendar, token or Production/Dev
@@ -203,8 +203,8 @@ jobs:
           pnpm local:env
           printf 'AI_HUB_ENABLED=true\nVITE_AI_HUB_ENABLED=true\n' >> .env.m1b-local
       - run: pnpm exec playwright install --with-deps chromium
-      - name: AI Hub focused specs (Daily Digest · Job Leads · Email · Recruiter Intel · Calendar · shell/clipping · axe · 375/768/1280)
-        run: pnpm exec playwright test e2e/ai5-digest.spec.ts e2e/ai6-sources.spec.ts e2e/ai7-calendar.spec.ts
+      - name: AI Hub focused specs (Daily Digest · Job Leads · Email · Recruiter Intel · Calendar · Actions · shell/clipping · axe · 375/768/1280)
+        run: pnpm exec playwright test e2e/ai5-digest.spec.ts e2e/ai6-sources.spec.ts e2e/ai7-calendar.spec.ts e2e/ai8-actions.spec.ts
         env:
           M1B_ENV_FILE: .env.m1b-local
       - name: Upload sanitized evidence

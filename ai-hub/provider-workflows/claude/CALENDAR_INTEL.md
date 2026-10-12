@@ -127,6 +127,13 @@ NOTES
   time and, if stated, "cancelled_at".
 - dedupe.source_name and dedupe.source_id are required together; omit dedupe.event. Do NOT send application_id or any
   database id; JobQuest ignores them. job_url is only a public posting URL JobQuest may match against your stored job leads.
-- Leave "suggestions" empty unless I ask. Suggestions are inert proposals a human decides on later.
+- Suggested actions are OPTIONAL: only for an upcoming interview or a deadline, you may add one preparation or follow-up task:
+  { "finding_index": 0, "action": "create_task", "proposed": { "title": "Prepare for <Company> interview", "due_date": "YYYY-MM-DD",
+  "details": "<short>", "priority": "LOW|MEDIUM|HIGH" } }. A calendar item alone is not evidence that an application's status
+  changed, so do not propose set_status. Never ask to change, accept, decline or reschedule the calendar event: JobQuest cannot.
+- Submitting a suggestion does NOT execute it. It only appears in JobQuest > AI Hub > Actions, where I review the
+  current and proposed state and confirm each one myself. JobQuest finds the matching application itself: never send
+  "target", application_id or any other database id (they are ignored), and never claim in your reply that anything
+  was changed.
 - Reply with one line: how many events were stored, how many skipped.
 ```

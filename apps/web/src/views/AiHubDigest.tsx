@@ -5,6 +5,8 @@ import { fetchDigestPage, fetchLiveMetrics, generateTodayDigest, type LiveMetric
 import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
 import { formatInZone } from '../lib/time';
 import { aiPriorityLabel } from '../lib/aiHub';
+import { pendingActionsText } from '../lib/aiActions';
+import { fetchPendingActionCount } from '../api/aiActions';
 import {
   DIGEST_PRESETS, DIGEST_PROVIDER_FILTERS, DIGEST_SECTION_ORDER, DIGEST_SECTION_STATUS_LABELS, combineDigests, digestProviderLabel,
   digestSourceLabel, formatDigestDate, groupDigestsByDate, resolveDigestRange, sourceAvailability, todayKey,
@@ -162,6 +164,9 @@ export interface DigestPanelProps {
   onPage: (p: number) => void;
   onRetry?: () => void;
   onGenerate?: () => void;
+  /** AI-8: supported actions awaiting THIS user's review (null/absent = unknown or none to show). The digest never executes anything. */
+  pendingActions?: number | null;
+  onOpenActions?: () => void;
 }
 
 function LiveCard({ live, onGenerate, generate }: { live: NonNullable<DigestPanelProps['live']>; onGenerate?: () => void; generate?: DigestPanelProps['generate'] }) {
@@ -203,6 +208,12 @@ export function AiHubDigestPanel(p: DigestPanelProps) {
   return (
     <div style={{ display: 'grid', gap: '16px' }}>
       <h2 style={{ margin: 0, fontSize: '18px' }}>Daily Digest</h2>
+      {typeof p.pendingActions === 'number' && p.pendingActions > 0 && (
+        <p role="status" style={{ margin: 0, display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>{pendingActionsText(p.pendingActions)}.</span>
+          {p.onOpenActions && <Button variant="secondary" size="sm" onClick={p.onOpenActions}>Review in Actions</Button>}
+        </p>
+      )}
       <div role="group" aria-label="Digest date range" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {DIGEST_PRESETS.map((d) => (
           <Button key={d.id} variant={p.preset === d.id ? 'primary' : 'secondary'} aria-pressed={p.preset === d.id} onClick={() => p.onPreset(d.id)}>{d.label}</Button>
@@ -270,7 +281,7 @@ export function AiHubDigestPanel(p: DigestPanelProps) {
 // ---- container --------------------------------------------------------------------------------------
 
 /** Owns range/provider/page and its own failure state, isolated from Overview and History. */
-export function AiHubDigest({ activeWorkspaceId, currentUserId, session }: { activeWorkspaceId: string | null; currentUserId: string | null; session?: PublicSession | null }) {
+export function AiHubDigest({ activeWorkspaceId, currentUserId, session, onNavigate }: { activeWorkspaceId: string | null; currentUserId: string | null; session?: PublicSession | null; onNavigate?: (path: string) => void }) {
   const { timeZone, loaded } = useProfileTimeZone(currentUserId);
   const today = todayKey(new Date(), timeZone);
   const [preset, setPreset] = useState<DigestPreset>('today');
@@ -295,6 +306,17 @@ export function AiHubDigest({ activeWorkspaceId, currentUserId, session }: { act
     );
     return () => { cancelled = true; };
   }, [activeWorkspaceId, loaded, from, to, provider, page, attempt]);
+
+  const [pendingActions, setPendingActions] = useState<number | null>(null);
+  useEffect(() => {
+    if (!activeWorkspaceId || !currentUserId) return undefined;
+    let cancelled = false;
+    fetchPendingActionCount(activeWorkspaceId, currentUserId).then(
+      (n) => { if (!cancelled) setPendingActions(n); },
+      () => { if (!cancelled) setPendingActions(null); }, // isolated: the digest renders without it
+    );
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId, currentUserId]);
 
   const needLive = preset === 'today' && state.status === 'ready' && state.rows.length === 0;
   useEffect(() => {
@@ -327,6 +349,8 @@ export function AiHubDigest({ activeWorkspaceId, currentUserId, session }: { act
       onPage={setPage}
       onRetry={() => setAttempt((n) => n + 1)}
       onGenerate={session ? onGenerate : undefined}
+      pendingActions={pendingActions}
+      onOpenActions={onNavigate ? () => onNavigate('/ai-hub/actions') : undefined}
     />
   );
 }

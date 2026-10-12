@@ -36,7 +36,10 @@ export function isAiHubPath(path: string): boolean {
   return path === '/ai-hub' || path.startsWith('/ai-hub/') || path === '/settings/ai';
 }
 
-/** AI write actions stay OFF throughout AI-1; controlled actions belong to AI-11. */
+/**
+ * UNATTENDED AI writes: always OFF. AI-8 adds *human-approved* actions (AI Hub -> Actions): the AI only proposes, a person
+ * confirms each change, and nothing is applied automatically, so this flag stays false.
+ */
 export const AI_WRITE_ACTIONS_ENABLED = false as const;
 
 export const AI_WORKFLOW_LABELS: Record<string, string> = {

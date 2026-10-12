@@ -15,6 +15,7 @@ import { AiHubJobLeads } from './AiHubJobLeads';
 import { AiHubEmail } from './AiHubEmail';
 import { AiHubRecruiters } from './AiHubRecruiters';
 import { AiHubCalendar } from './AiHubCalendar';
+import { AiHubActions } from './AiHubActions';
 import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
 import type { PublicSession } from '../api';
 import { Tabs, TabList, Tab, TabPanel } from '../components/ui/Tabs';
@@ -23,6 +24,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
+import { pendingActionsText } from '../lib/aiActions';
 
 export type AiHubLoadState =
   | { status: 'loading' }
@@ -125,6 +127,16 @@ export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun, onOpenTab }:
           </CardBody>
         </Card>
       )}
+      {snapshot.pendingActions !== undefined && (
+        <Card>
+          <CardHeader><CardTitle>Pending actions</CardTitle></CardHeader>
+          <CardBody>
+            <strong style={bigNumber}>{snapshot.pendingActions}</strong>
+            <div className="muted small">{snapshot.pendingActions === 0 ? 'Nothing waiting for your review' : pendingActionsText(snapshot.pendingActions)}</div>
+            {onOpenTab && <div style={{ marginTop: '8px' }}><Button variant="secondary" size="sm" onClick={() => onOpenTab('actions')}>Open Actions</Button></div>}
+          </CardBody>
+        </Card>
+      )}
       <Card>
         <CardHeader><CardTitle>Pending suggestions</CardTitle></CardHeader>
         <CardBody>
@@ -169,11 +181,11 @@ function SourceCard({ title, value, hint, tab, action, onOpenTab }: {
 
 /** Presentational shell: no data fetching, easy to render in every state. */
 export function AiHubShell({
-  tab, onTabChange, state, onRetry, history, digest, jobLeads, email, recruiters, calendar, onOpenFinding, onOpenRun,
+  tab, onTabChange, state, onRetry, history, digest, jobLeads, email, recruiters, calendar, actions, onOpenFinding, onOpenRun,
 }: {
   tab: AiHubTab; onTabChange: (t: AiHubTab) => void; state: AiHubLoadState; onRetry?: () => void;
   /** Each section owns its own data/failure state so it is isolated from Overview and from the others. */
-  history?: ReactNode; digest?: ReactNode; jobLeads?: ReactNode; email?: ReactNode; recruiters?: ReactNode; calendar?: ReactNode;
+  history?: ReactNode; digest?: ReactNode; jobLeads?: ReactNode; email?: ReactNode; recruiters?: ReactNode; calendar?: ReactNode; actions?: ReactNode;
   onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
 }) {
   const body = (render: (s: AiHubSnapshot) => ReactNode) =>
@@ -200,6 +212,7 @@ export function AiHubShell({
         <TabPanel id="email">{email}</TabPanel>
         <TabPanel id="recruiters">{recruiters}</TabPanel>
         <TabPanel id="calendar">{calendar}</TabPanel>
+        <TabPanel id="actions">{actions}</TabPanel>
         <TabPanel id="history">{history}</TabPanel>
       </Tabs>
     </div>
@@ -222,7 +235,7 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUs
     if (!activeWorkspaceId || (currentUserId && !zoneLoaded)) return undefined; // wait for the profile zone when there is a user
     let cancelled = false;
     setState({ status: 'loading' });
-    fetchAiHubSnapshot(activeWorkspaceId, undefined, undefined, timeZone).then(
+    fetchAiHubSnapshot(activeWorkspaceId, undefined, undefined, timeZone, currentUserId).then(
       (snapshot) => { if (!cancelled) setState({ status: 'ready', snapshot }); },
       () => { if (!cancelled) setState({ status: 'error' }); }, // isolated: never rethrown
     );
@@ -267,11 +280,12 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUs
         onOpenFinding={openFinding}
         onOpenRun={openRun}
         history={<AiHubHistory activeWorkspaceId={activeWorkspaceId} onOpenRun={openRun} />}
-        digest={initialTab === 'digest' ? <AiHubDigest activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} /> : null}
+        digest={initialTab === 'digest' ? <AiHubDigest activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
         jobLeads={initialTab === 'job-leads' ? <AiHubJobLeads activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
         email={initialTab === 'email' ? <AiHubEmail activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
         recruiters={initialTab === 'recruiters' ? <AiHubRecruiters activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
         calendar={initialTab === 'calendar' ? <AiHubCalendar activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
+        actions={initialTab === 'actions' ? <AiHubActions activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} onChanged={() => setAttempt((n) => n + 1)} /> : null}
       />
       {selection?.kind === 'run' && (
         <RunDetailDialog state={runDetail} onClose={close} onRetry={retryDetail} onOpenFinding={openFinding} />

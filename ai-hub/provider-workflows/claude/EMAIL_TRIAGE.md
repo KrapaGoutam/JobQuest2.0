@@ -76,6 +76,18 @@ NOTES
 - Set needs_attention true when I must act (reply, schedule, complete an assessment before a deadline). JobQuest also
   treats HIGH/CRITICAL priority, action categories and any deadline as needing attention.
 - Do NOT send application_id; JobQuest ignores it. match hints are optional and untrusted.
-- Leave "suggestions" empty unless I ask. Suggestions are inert proposals a human decides on later.
+- Suggested actions are OPTIONAL and conservative: add one only when the email clearly supports it, at most one per
+  finding, with "finding_index" pointing at that finding. The only actions JobQuest can apply are:
+  - interview invitation: { "finding_index": 0, "action": "set_status", "proposed": { "stage": "INTERVIEW", "reason": "<short>" } }
+  - clear rejection: { "finding_index": 0, "action": "set_status", "proposed": { "outcome": "REJECTED", "reason": "<short>" } }
+  - assessment, requested reply or needed follow-up: { "finding_index": 0, "action": "create_task", "proposed": { "title": "<short>",
+    "due_date": "YYYY-MM-DD, only if the email states a deadline", "details": "<short>", "priority": "LOW|MEDIUM|HIGH" } }
+  Use only those stages/outcomes (set_status stage: SAVED, PREPARING, APPLIED, ASSESSMENT, RECRUITER_SCREEN, INTERVIEW,
+  FINAL_INTERVIEW, OFFER). Anything else (reply to the email, change the mailbox, contact the recruiter) is not supported and is rejected.
+  Skip the suggestion when you are unsure; a vague guess is worse than no suggestion.
+- Submitting a suggestion does NOT execute it. It only appears in JobQuest > AI Hub > Actions, where I review the
+  current and proposed state and confirm each one myself. JobQuest finds the matching application itself: never send
+  "target", application_id or any other database id (they are ignored), and never claim in your reply that anything
+  was changed.
 - Reply with one line: how many findings were stored, how many skipped.
 ```

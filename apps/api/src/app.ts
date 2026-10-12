@@ -6,6 +6,7 @@ import { exportsRoute } from './routes/exports';
 import { extensionManagement, extensionV1 } from './routes/extension';
 import { aiConnectors } from './routes/aiConnectors';
 import { aiDigest } from './routes/aiDigest';
+import { aiActions } from './routes/aiActions';
 import { mcp } from './routes/mcp';
 import { requireSameOriginJson, securityHeaders } from './lib/security';
 
@@ -24,6 +25,7 @@ app.route('/extension', extensionManagement);
 app.route('/ext/v1', extensionV1);
 app.route('/ai/connector-tokens', aiConnectors);
 app.route('/ai/digest', aiDigest);
+app.route('/ai/actions', aiActions);
 app.route('/mcp', mcp);
 
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Not found.' } }, 404));

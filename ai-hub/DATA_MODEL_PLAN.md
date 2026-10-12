@@ -137,3 +137,24 @@ rescheduled, cancelled), `is_deadline` (derived from category), timed instants (
 job title/location, https meeting/event links, organizer name+domain, `original_start_at`, `reschedule_count`, `cancelled_at`, `logical_key`.
 CHECKs enforce shape (all-day = dates, timed = instants), end >= start, cancelled_at iff cancelled, https-only links. Indexes (query-driven only):
 `(workspace_id, sort_at, id)`, source identity, logical key. No raw payload, attendee list or description is stored anywhere.
+
+## AI-8 — `ai_action_executions` (implemented, migration `20261029100000`)
+
+No core table changes and no suggestion-vocabulary change (`create_application`, `create_task`, `set_status` already existed in the AI-1A CHECK). One new table:
+
+| Column | Notes |
+| --- | --- |
+| `id`, `workspace_id`, `user_id`, `suggestion_id`, `finding_id` | owner/tenant keys; cascade with the suggestion/finding |
+| `action_type` | `create_application` \| `create_task` \| `set_status` |
+| `target_type`, `target_id` | `application` \| `task`; the id is set by JobQuest (pre-generated for applications), never by a provider; no FK (polymorphic) |
+| `status` | `PENDING` \| `SUCCEEDED` \| `FAILED` \| `CONFLICT` (small closed set; no workflow engine) |
+| `idempotency_key`, `state_fingerprint` | server-owned sha256 values |
+| `before_snapshot`, `after_snapshot` | bounded (4 KiB) safe labels only (no provider payloads, no secrets) |
+| `error_category` | the `ACTION_*` categories |
+| `correlation_id`, `requested_at`, `completed_at` | observability |
+
+Unique partial indexes (live = PENDING or SUCCEEDED): per `suggestion_id`, per `(workspace_id, idempotency_key)`, and per `finding_id` for `create_application` (a lead becomes an Application at most once). A FAILED/CONFLICT row never blocks a deliberate retry. RLS: SELECT only, `can_access_owned_record(workspace_id, user_id)` (same predicate as the other AI tables); writes only through the service-role-only claim/complete RPCs.
+
+**Job lead conversion** links the finding to the Application only after JobQuest created (or the human chose) it: `ai_findings.application_id` + `match_confidence = 1` + `status = ACCEPTED`; the lead (`ai_job_leads`) is kept as history. Sibling pending `create_application` suggestions on the same finding become `SUPERSEDED`. **Logical-key review (AI-6 note):** the child table accumulates identity (URL / source+id only ever fill in, never erase), and conversion is keyed by the finding, so a moved/reposted lead cannot be converted twice and a cross-provider re-submission cannot create a second Application; no schema change was needed.
+
+**Initial stage** of a converted lead is `SAVED` (an existing stage meaning "not applied yet"): the Application is not claimed to be applied. `applied_at` keeps the table default; no AI-specific stage or column was invented.

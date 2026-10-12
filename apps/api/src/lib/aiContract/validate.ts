@@ -76,7 +76,8 @@ function timestamp(c: Ctx, v: unknown, path: string, required = false): string |
   if (typeof v !== 'string' || !ISO_TS.test(v.trim())) { c.err(path, 'timestamp', 'must be ISO-8601 with explicit timezone offset'); return null; }
   const t = Date.parse(v.trim());
   const year = new Date(t).getUTCFullYear();
-  if (Number.isNaN(t) || year < 2000 || year > 2100) { c.err(path, 'timestamp', 'invalid or out-of-range date'); return null; }
+  // Date.parse rolls impossible days over (Feb 30 -> Mar 2); an impossible calendar date is invalid, never "fixed".
+  if (Number.isNaN(t) || year < 2000 || year > 2100 || !isIsoDate(v.trim().slice(0, 10))) { c.err(path, 'timestamp', 'invalid or out-of-range date'); return null; }
   return new Date(t).toISOString();
 }
 
@@ -584,7 +585,7 @@ function recruiterPayload(c: Ctx, v: unknown, path: string, ctx: { sourceUrl: st
 
 const CALENDAR_KEYS = [
   'version', 'status', 'start_at', 'end_at', 'start_local', 'end_local', 'all_day', 'start_date', 'end_date', 'time_zone',
-  'deadline_at', 'deadline_local', 'deadline_date', 'source_event_url', 'organizer_name', 'organizer_domain', 'company', 'job_title',
+  'deadline_at', 'deadline_local', 'deadline_date', 'source_event_url', 'organizer_name', 'organizer_domain', 'company', 'job_title', 'job_url',
   'location', 'meeting_url', 'previous_event', 'cancelled_at', 'attendee_count',
 ] as const;
 const CALENDAR_PREVIOUS_KEYS = ['source_event_id', 'start_at', 'start_local'] as const;
@@ -661,7 +662,9 @@ function calendarPayload(
   else c.err(ctx.categoryPath, 'calendar_category', `must be one of: ${CALENDAR_CATEGORIES.join(', ')}`);
   const isDeadline = category !== null && (CALENDAR_DEADLINE_CATEGORIES as readonly string[]).includes(category);
 
-  const status = enumField(c, v.status, `${path}.status`, CALENDAR_STATUSES, { confirmed: 'scheduled', accepted: 'scheduled', canceled: 'cancelled', moved: 'rescheduled' }) ?? aliasStatus ?? 'scheduled';
+  // A lifecycle word used as the category wins over a default/explicit "scheduled" status (the provider is telling us it changed).
+  const explicitStatus = enumField(c, v.status, `${path}.status`, CALENDAR_STATUSES, { confirmed: 'scheduled', accepted: 'scheduled', canceled: 'cancelled', moved: 'rescheduled' });
+  const status: CalendarStatus = aliasStatus && (!explicitStatus || explicitStatus === 'scheduled') ? aliasStatus : explicitStatus ?? 'scheduled';
 
   const zoneRaw = text(c, v.time_zone, `${path}.time_zone`, 64);
   let zone: string | null = null;
@@ -705,6 +708,8 @@ function calendarPayload(
   const location = text(c, v.location, `${path}.location`, CALENDAR_LIMITS.location);
   const company = text(c, v.company, `${path}.company`, SOURCE_KEY_LIMITS.short);
   const jobTitle = text(c, v.job_title, `${path}.job_title`, SOURCE_KEY_LIMITS.medium);
+  // The public posting this event relates to (association is resolved at read time inside the caller's scope; never a database id).
+  const jobUrl = url(c, v.job_url, `${path}.job_url`);
   const meetingUrl = safeHttpsUrl(c, v.meeting_url, `${path}.meeting_url`);
   const eventUrl = safeHttpsUrl(c, v.source_event_url, `${path}.source_event_url`);
   const orgRaw = text(c, v.organizer_name, `${path}.organizer_name`, CALENDAR_LIMITS.organizerName);
@@ -743,7 +748,7 @@ function calendarPayload(
   const put = (k: string, val: JsonValue | null) => { if (val !== null && val !== undefined) out[k] = val; };
   put('start_at', startAt); put('end_at', endAt); put('start_date', startDate); put('end_date', endDate); put('deadline_at', deadlineAt);
   put('time_zone', zone); put('calendar_source', calendarSource); put('source_event_id', sourceEventId); put('source_event_url', eventUrl);
-  put('organizer_name', organizerName); put('organizer_domain', organizerDomain); put('company', company); put('job_title', jobTitle);
+  put('organizer_name', organizerName); put('organizer_domain', organizerDomain); put('company', company); put('job_title', jobTitle); put('job_url', jobUrl);
   put('location', location); put('meeting_url', meetingUrl); put('cancelled_at', cancelledAt); put('attendee_count', attendeeCount);
   if (prevId || prevStart) out.previous_event = { ...(prevId ? { source_event_id: prevId } : {}), ...(prevStart ? { start_at: prevStart } : {}) };
   if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', 'calendar payload too large');

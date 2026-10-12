@@ -87,6 +87,8 @@ export interface AiHubSnapshot {
   attentionRunCount?: number;
   /** AI-6 source counts; absent when they could not be loaded (the rest of the Overview still renders). */
   sources?: { newJobLeads: number; emailAttention: number; recruiterIntel: number };
+  /** AI-7 calendar counts (upcoming, interviews, deadlines); absent when they could not be loaded. */
+  calendar?: { upcoming: number; interviews: number; deadlines: number };
 }
 
 export const RECENT_WINDOW_DAYS = 7;
@@ -153,7 +155,7 @@ export const AI_PAYLOAD_FIELDS: Record<string, Array<[key: string, label: string
   email_event: [['from_domain', 'From domain', 'string'], ['company', 'Company', 'string'], ['role_title', 'Role', 'string'], ['next_step', 'Next step', 'string'], ['deadline', 'Deadline', 'timestamp']],
   job_lead: [['company', 'Company', 'string'], ['role_title', 'Role', 'string'], ['location', 'Location', 'string'], ['salary_text', 'Salary', 'string'], ['remote', 'Remote', 'boolean'], ['job_url', 'Job posting', 'url'], ['fit_notes', 'Fit notes', 'string']],
   recruiter_intel: [['recruiter_name', 'Recruiter', 'string'], ['company', 'Company', 'string'], ['channel', 'Channel', 'string'], ['role_title', 'Role', 'string']],
-  calendar_event: [['start_at', 'Starts', 'timestamp'], ['end_at', 'Ends', 'timestamp'], ['location', 'Location', 'string'], ['attendee_count', 'Attendees', 'number'], ['join_url', 'Join link', 'url']],
+  calendar_event: [['status', 'Status', 'string'], ['start_at', 'Starts', 'timestamp'], ['end_at', 'Ends', 'timestamp'], ['deadline_at', 'Due', 'timestamp'], ['start_date', 'Date', 'string'], ['time_zone', 'Source time zone', 'string'], ['company', 'Company', 'string'], ['job_title', 'Role', 'string'], ['location', 'Location', 'string'], ['meeting_url', 'Meeting link', 'url']],
 };
 
 export interface PayloadDisplayItem { label: string; type: PayloadFieldType; text?: string; items?: string[]; href?: string }
@@ -246,15 +248,16 @@ export function isAiHubEmpty(s: AiHubSnapshot): boolean {
   return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0;
 }
 
-export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'history';
+export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'history';
 
-/** Tab order is the navigation order. Calendar stays hidden until it is implemented. */
+/** Tab order is the navigation order. */
 export const AI_HUB_TABS: ReadonlyArray<{ id: AiHubTab; label: string; path: string }> = [
   { id: 'overview', label: 'Overview', path: '/ai-hub' },
   { id: 'digest', label: 'Daily Digest', path: '/ai-hub/digest' },
   { id: 'job-leads', label: 'Job Leads', path: '/ai-hub/job-leads' },
   { id: 'email', label: 'Email', path: '/ai-hub/email' },
   { id: 'recruiters', label: 'Recruiter Intel', path: '/ai-hub/recruiters' },
+  { id: 'calendar', label: 'Calendar', path: '/ai-hub/calendar' },
   { id: 'history', label: 'History', path: '/ai-hub/history' },
 ];
 export const AI_HUB_PATHS: readonly string[] = AI_HUB_TABS.map((t) => t.path);

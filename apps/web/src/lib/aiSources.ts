@@ -225,12 +225,13 @@ export function toRecruiterView(r: RecruiterRow): RecruiterView {
 
 // ---- states --------------------------------------------------------------------------------------------------
 
-export type SourceKind = 'job_leads' | 'email' | 'recruiters';
-export const SOURCE_WORKFLOW: Record<SourceKind, string> = { job_leads: 'job_discovery', email: 'email_triage', recruiters: 'recruiter_intel' };
-export const SOURCE_TITLES: Record<SourceKind, string> = { job_leads: 'Job Leads', email: 'Email Intelligence', recruiters: 'Recruiter Intelligence' };
+export type SourceKind = 'job_leads' | 'email' | 'recruiters' | 'calendar';
+export const SOURCE_WORKFLOW: Record<SourceKind, string> = { job_leads: 'job_discovery', email: 'email_triage', recruiters: 'recruiter_intel', calendar: 'calendar_review' };
+export const SOURCE_TITLES: Record<SourceKind, string> = { job_leads: 'Job Leads', email: 'Email Intelligence', recruiters: 'Recruiter Intelligence', calendar: 'Calendar Intelligence' };
 export const SOURCE_NOT_CONFIGURED: Record<SourceKind, string> = {
   job_leads: 'Job discovery has not run yet. Connect Claude in Settings → AI & Automation and schedule the Job Discovery task; its results appear here.',
   email: 'Email triage has not run yet. Connect Claude in Settings → AI & Automation and schedule the Email Triage task; classifications and summaries appear here (never message bodies).',
   recruiters: 'Recruiter research has not run yet. Connect Claude in Settings → AI & Automation and schedule the Recruiter Intelligence task; cited public findings appear here.',
+  calendar: 'Calendar review has not run yet. Connect Claude in Settings → AI & Automation and schedule the Calendar Intelligence task; interviews, calls and deadlines it finds appear here. JobQuest never connects to your calendar and cannot change it.',
 };
 export const AI_MATCH_NOTE = 'AI match is the provider’s own estimate, not a measure JobQuest guarantees. A job lead is not an application.';

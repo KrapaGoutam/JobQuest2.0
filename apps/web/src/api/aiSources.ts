@@ -15,16 +15,16 @@ import {
 type Client = Pick<SupabaseClient, 'from'>;
 type ActionClient = Pick<SupabaseClient, 'rpc'>;
 const fail = () => new Error('AI_SOURCE_LOAD_FAILED');
-const range = (page: number) => { const p = Math.max(0, Math.floor(page)); return { from: p * SOURCE_PAGE_SIZE, to: p * SOURCE_PAGE_SIZE + SOURCE_PAGE_SIZE }; };
+export const range = (page: number) => { const p = Math.max(0, Math.floor(page)); return { from: p * SOURCE_PAGE_SIZE, to: p * SOURCE_PAGE_SIZE + SOURCE_PAGE_SIZE }; };
 
 export interface SourcePage<T> { rows: T[]; hasNext: boolean }
-const sliceRows = <R, V>(data: unknown, map: (r: R) => V): SourcePage<V> => {
+export const sliceRows = <R, V>(data: unknown, map: (r: R) => V): SourcePage<V> => {
   const rows = (Array.isArray(data) ? data : []) as R[];
   return { rows: rows.slice(0, SOURCE_PAGE_SIZE).map(map), hasNext: rows.length > SOURCE_PAGE_SIZE };
 };
 
-type Query = any; // eslint-disable-line @typescript-eslint/no-explicit-any
-function applyStatus(q: Query, status: keyof typeof SOURCE_STATUSES | 'ALL', prefix = ''): Query {
+export type Query = any; // eslint-disable-line @typescript-eslint/no-explicit-any
+export function applyStatus(q: Query, status: keyof typeof SOURCE_STATUSES | 'ALL', prefix = ''): Query {
   if (status === 'ALL') return q;
   const set = SOURCE_STATUSES[status];
   return set.length === 1 ? q.eq(`${prefix}status`, set[0]) : q.in(`${prefix}status`, [...set]);

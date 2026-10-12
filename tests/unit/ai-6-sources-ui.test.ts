@@ -85,14 +85,14 @@ describe('client/server contract sync', () => {
 });
 
 describe('navigation', () => {
-  it('exposes Overview, Daily Digest, Job Leads, Email, Recruiter Intel and History; Calendar stays hidden', () => {
-    expect(AI_HUB_TABS.map((t) => t.label)).toEqual(['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'History']);
-    expect(AI_HUB_TABS.map((t) => t.path)).toEqual(['/ai-hub', '/ai-hub/digest', '/ai-hub/job-leads', '/ai-hub/email', '/ai-hub/recruiters', '/ai-hub/history']);
+  it('exposes Overview, Daily Digest, Job Leads, Email, Recruiter Intel, Calendar (AI-7) and History', () => {
+    expect(AI_HUB_TABS.map((t) => t.label)).toEqual(['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'History']);
+    expect(AI_HUB_TABS.map((t) => t.path)).toEqual(['/ai-hub', '/ai-hub/digest', '/ai-hub/job-leads', '/ai-hub/email', '/ai-hub/recruiters', '/ai-hub/calendar', '/ai-hub/history']);
     for (const t of AI_HUB_TABS) { expect(aiHubTabFromPath(t.path)).toBe(t.id); expect(aiHubPathForTab(t.id)).toBe(t.path); }
-    expect(aiHubTabFromPath('/ai-hub/calendar')).toBe('overview');
+    expect(aiHubTabFromPath('/ai-hub/calendar')).toBe('calendar');
+    expect(aiHubTabFromPath('/ai-hub/unknown')).toBe('overview');
     const shell = html(createElement(AiHubShell, { tab: 'job-leads', onTabChange: noop, state: { status: 'loading' }, jobLeads: createElement('p', null, 'LEADS-SLOT') }));
-    for (const label of ['Job Leads', 'Email', 'Recruiter Intel', 'Daily Digest', 'History', 'LEADS-SLOT']) expect(shell).toContain(label);
-    expect(shell).not.toContain('Calendar');
+    for (const label of ['Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'Daily Digest', 'History', 'LEADS-SLOT']) expect(shell).toContain(label);
   });
   it('the App routes every tab behind the existing AI Hub exposure check', () => {
     const app = readFileSync('apps/web/src/App.tsx', 'utf8');

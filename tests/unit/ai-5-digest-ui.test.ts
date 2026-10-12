@@ -193,7 +193,7 @@ describe('AI Hub navigation', () => {
     const shell = renderToStaticMarkup(createElement(AiHubShell, { tab: 'digest', onTabChange: noop, state: { status: 'loading' }, digest: createElement('p', null, 'DIGEST-SLOT') }));
     for (const label of ['Overview', 'Daily Digest', 'History']) expect(shell).toContain(label);
     expect(shell).toContain('DIGEST-SLOT');
-    expect(shell).not.toContain('Calendar'); // calendar stays hidden until implemented (AI-6 adds Job Leads, Email and Recruiter Intel)
+    expect(shell).toContain('Calendar'); // AI-7: Calendar is operational
   });
   it('is registered behind the existing AI Hub exposure check only', () => {
     const app = readFileSync('apps/web/src/App.tsx', 'utf8');

@@ -53,7 +53,8 @@ AI-5 Scheduled Intelligence + Daily Digest (combined; re-sequenced)   COMPLETE (
 [historical label] Former AI-6 ChatGPT                 RE-SEQUENCED (after AI-6; expect attended-only; custom MCP availability differs by plan/product)
 [ ] 6A  [ ] 6B  [ ] 6C  [ ] 6D  [ ] 6E
 
-AI-6 (new) External Intelligence Sources              READY FOR BRANCH CI (feature/ai-6-external-intelligence; see reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md)
+AI-6 (new) External Intelligence Sources              COMPLETE (branch CI 38211220785 @a507bf3f; development CI 38212006797; development f0a0ec89) (feature/ai-6-external-intelligence; see reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md)
+AI-7 (new) Calendar Intelligence + dedicated AI-Hub e2e CI  IN PROGRESS (feature/ai-7-calendar-intelligence)
 [x] job_lead child table ai_job_leads (migration 20261027100000)  [x] email_event + recruiter_intel as findings  [x] one ingestion path, 3 read-only MCP tools
 [x] Job Leads / Email / Recruiter Intel pages + Overview cards  [x] Daily Digest integration (available/zero/not_configured preserved)  [x] Claude templates
 (Deferred: calendar, application matching/conversion, email send/reply, recruiter outreach, ChatGPT/Gemini, controlled AI actions, Production rollout)

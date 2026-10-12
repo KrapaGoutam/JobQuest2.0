@@ -2,6 +2,32 @@
 
 ```
 CURRENT PHASE:
+AI-7 (Calendar Intelligence + dedicated AI-Hub browser CI; one cumulative branch)
+
+CURRENT SUB-PHASE:
+AI-7 IN PROGRESS (implementation)
+
+STATUS:
+AI-7 IN PROGRESS. Not complete until branch CI (incl. the dedicated AI-Hub e2e job), development merge and development CI pass; results go in the chat checkpoint.
+
+BASE BRANCH:
+development (f0a0ec898088c33c918601c51025f913f6ed586b)
+
+WORKING BRANCH:
+feature/ai-7-calendar-intelligence
+
+NEXT EXACT STEP:
+Calendar contract/validator -> migration 20261028100000 (ai_calendar_events) -> ingestion projection -> read service + MCP tool -> UI -> digest -> dedicated CI job -> local validation -> push once.
+```
+
+## AI-6 FINAL FACTS (persisted at AI-7 start)
+
+- AI-6 COMPLETE — integrated to development. Development SHA `f0a0ec898088c33c918601c51025f913f6ed586b` (merge of `feature/ai-6-external-intelligence`); development CI `38212006797` PASS; AI-6 executable feature SHA `a507bf3fd9f92852839b2d303dfc03992086b3e9`, branch CI `38211220785` PASS; main `26e517ea…` and Production unchanged; Dev head `20261027100000`, Prod `20261022100000`. Operational sources: Daily Digest (`daily_brief`), Job Leads, Email Intelligence, Recruiter Intelligence. No internal scheduler (provider-owned scheduling is intentional).
+
+(Previous state, AI-6 pre-CI, kept for history:)
+
+```
+CURRENT PHASE:
 AI-6 (External Intelligence Sources: Email Intelligence + Job Discovery + Recruiter Intelligence; one cumulative branch)
 
 CURRENT SUB-PHASE:

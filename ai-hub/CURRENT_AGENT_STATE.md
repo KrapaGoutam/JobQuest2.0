@@ -2,6 +2,32 @@
 
 ```
 CURRENT PHASE:
+AI-6 (External Intelligence Sources: Email Intelligence + Job Discovery + Recruiter Intelligence; one cumulative branch)
+
+CURRENT SUB-PHASE:
+AI-6 IMPLEMENTATION IN PROGRESS
+
+STATUS:
+AI-6 IN PROGRESS (not complete until branch CI, development merge and development CI pass)
+
+BASE BRANCH:
+development (ce3c16a6e4a96e8ccfe2bc13752df1998822a218)
+
+WORKING BRANCH:
+feature/ai-6-external-intelligence
+
+NEXT EXACT STEP:
+Continue the AI-6 task list; see reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md once written.
+```
+
+## AI-5 FINAL FACTS (persisted at AI-6 start)
+
+- AI-5 COMPLETE — integrated to development. Development SHA `ce3c16a6e4a96e8ccfe2bc13752df1998822a218` (merge of `feature/ai-5-scheduled-digest`); development CI `38205932872` PASS; AI-5 executable feature SHA `6c8196f75a284725e0c1ef1bd7c0d48ffbe778ea`, branch CI `38205261995` PASS; main `26e517ea…` and Production unchanged; Dev head `20261026100000`, Prod `20261022100000`. `daily_brief` = canonical workflow identifier for the Daily Digest product feature (do NOT add a `daily_digest` enum). The focused AI-5 e2e stays local (AI Hub flags are OFF in CI by design).
+
+(Previous state, AI-5 pre-CI, kept for history:)
+
+```
+CURRENT PHASE:
 AI-5 (Scheduled Intelligence + Daily Digest Foundation; re-sequenced from "Gemini")
 
 CURRENT SUB-PHASE:

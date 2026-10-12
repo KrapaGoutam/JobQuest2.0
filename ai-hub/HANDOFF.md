@@ -6,6 +6,9 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
+CURRENT PHASE: AI-6 (External Intelligence Sources: email + job discovery + recruiter, one cumulative branch) · CURRENT SUB-PHASE: AI-6 IN PROGRESS · WORKING BRANCH: `feature/ai-6-external-intelligence` (from development `ce3c16a6`). AI-5 COMPLETE — integrated to development. Development SHA `ce3c16a6e4a96e8ccfe2bc13752df1998822a218` (merge of `feature/ai-5-scheduled-digest`); development CI `38205932872` PASS; AI-5 executable feature SHA `6c8196f75a284725e0c1ef1bd7c0d48ffbe778ea`, branch CI `38205261995` PASS; main `26e517ea…` and Production unchanged; Dev head `20261026100000`, Prod `20261022100000`. `daily_brief` = canonical workflow identifier for the Daily Digest product feature (do NOT add a `daily_digest` enum). The focused AI-5 e2e stays local (AI Hub flags are OFF in CI by design).
+
+(Previous phase pointer, kept for history:)
 CURRENT PHASE: AI-5 (Scheduled Intelligence + Daily Digest; re-sequenced from "Gemini") · CURRENT SUB-PHASE: AI-5 READY FOR BRANCH CI · WORKING BRANCH: `feature/ai-5-scheduled-digest` (from development `498d3342`; AI-4 closure docs carried as `76322f69`). Digest = `ai_findings` `daily_brief` (per owner+date+provider, payload 1.0), no new table/migration, provider-owned scheduling (no JobQuest scheduler), one new read-only MCP tool, Daily Digest tab `/ai-hub/digest`. Details: `reports/AI-5_SCHEDULED_DIGEST_REPORT.md`. Next: AI-6 External Intelligence Sources needs operator approval.
 
 (Previous phase pointer, kept for history:)

@@ -1414,7 +1414,7 @@ a:hover {
   justify-content: center;
   border-radius: 50%;
   background: var(--color-accent);
-  color: white;
+  color: var(--color-on-accent);
   font-weight: 700;
 }
 .calendar-cell-events {

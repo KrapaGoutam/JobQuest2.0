@@ -34,7 +34,7 @@ export interface AiTrustedContext {
 
 export type AiServiceErrorCode =
   | 'AI_HUB_DISABLED' | 'INVALID_CONTEXT' | 'INVALID_AI_RESULT' | 'SERVICE_UNAVAILABLE'
-  | 'INGEST_RUN_FAILED' | 'RUN_NOT_OPEN' | 'INGEST_FINDING_FAILED' | 'PROJECT_JOB_LEAD_FAILED'
+  | 'INGEST_RUN_FAILED' | 'RUN_NOT_OPEN' | 'INGEST_FINDING_FAILED' | 'PROJECT_JOB_LEAD_FAILED' | 'PROJECT_CALENDAR_EVENT_FAILED'
   | 'CREATE_SUGGESTION_FAILED' | 'FINALIZE_RUN_FAILED';
 
 export interface AiServiceError {
@@ -155,7 +155,7 @@ function parseContext(raw: unknown): ParsedContext {
 const CATEGORY: Record<AiServiceErrorCode, AiErrorCategory | null> = {
   AI_HUB_DISABLED: null, INVALID_CONTEXT: 'SCHEMA_INVALID', INVALID_AI_RESULT: 'SCHEMA_INVALID',
   SERVICE_UNAVAILABLE: 'INTERNAL', INGEST_RUN_FAILED: 'INTERNAL', RUN_NOT_OPEN: 'INTERNAL',
-  INGEST_FINDING_FAILED: 'INTERNAL', PROJECT_JOB_LEAD_FAILED: 'INTERNAL', CREATE_SUGGESTION_FAILED: 'INTERNAL', FINALIZE_RUN_FAILED: 'INTERNAL',
+  INGEST_FINDING_FAILED: 'INTERNAL', PROJECT_JOB_LEAD_FAILED: 'INTERNAL', PROJECT_CALENDAR_EVENT_FAILED: 'INTERNAL', CREATE_SUGGESTION_FAILED: 'INTERNAL', FINALIZE_RUN_FAILED: 'INTERNAL',
 };
 const MESSAGE: Record<AiServiceErrorCode, string> = {
   AI_HUB_DISABLED: 'AI Hub is disabled on this server',
@@ -166,6 +166,7 @@ const MESSAGE: Record<AiServiceErrorCode, string> = {
   RUN_NOT_OPEN: 'Run already exists and is no longer open for ingestion',
   INGEST_FINDING_FAILED: 'A finding could not be ingested',
   PROJECT_JOB_LEAD_FAILED: 'A finding was stored but its job lead details could not be saved; re-submit to retry',
+  PROJECT_CALENDAR_EVENT_FAILED: 'A finding was stored but its calendar details could not be saved; re-submit to retry',
   CREATE_SUGGESTION_FAILED: 'A suggestion could not be created',
   FINALIZE_RUN_FAILED: 'Run could not be finalized',
 };
@@ -279,7 +280,9 @@ export async function ingestAiResult(context: AiTrustedContext, input: unknown, 
   for (const [i, f] of data.findings.entries()) {
     // AI-6: the same posting may reach JobQuest with a different strongest identity (job id vs URL).
     // Reuse the existing lead's key (same owner/workspace, provider-independent) so it is updated, not duplicated.
-    const dedupeKey = f.kind === 'job_lead' && f.job_lead ? await resolveJobLeadKey(client, ctx, f) : f.dedupe_key;
+    // AI-7: the same calendar event may arrive under another provider's id, or as a reschedule with a new id / no id.
+    const dedupeKey = f.kind === 'job_lead' && f.job_lead ? await resolveJobLeadKey(client, ctx, f)
+      : f.kind === 'calendar_event' && f.calendar ? await resolveCalendarKey(client, ctx, f) : f.dedupe_key;
     const out = await callRpc(client, 'rpc_ai_ingest_finding', { p_actor_id: ctx.userId, p_run_id: runId, ...toFindingParams({ ...f, dedupe_key: dedupeKey }, data.schema_version) });
     const id = out.ok ? str(out.data.finding_id) : null;
     const outcome = out.ok ? str(out.data.outcome) : null;
@@ -301,6 +304,18 @@ export async function ingestAiResult(context: AiTrustedContext, input: unknown, 
     // Child projection (job leads only). The parent ingestion already audited the mutation, so the
     // projection writes no audit. A failure leaves the finding stored, ends the run PARTIAL, and
     // heals when the same lead is submitted again (idempotent upsert).
+    // Calendar items are projected even when the parent is closed (REVIEWED): a cancellation or a new time must not stay
+    // hidden behind an earlier review. The RPC itself refuses DISMISSED / EXPIRED / SUPERSEDED items.
+    if (f.kind === 'calendar_event' && f.calendar) {
+      const { previous_logical_key: _omit, ...event } = f.calendar; // eslint-disable-line @typescript-eslint/no-unused-vars
+      const proj = await callRpc(client, 'rpc_ai_upsert_calendar_event', { p_actor_id: ctx.userId, p_finding_id: id, p_event: event });
+      if (!proj.ok) {
+        counts.findingsFailed++;
+        const err = svcError('PROJECT_CALENDAR_EVENT_FAILED', { path: `findings[${i}]`, ...(proj.dbCode ? { dbCode: proj.dbCode } : {}) });
+        result.errors.push(err);
+        if (proj.systemic) { systemic = err; break; }
+      }
+    }
     if (f.kind === 'job_lead' && f.job_lead && outcome !== 'unchanged_closed') {
       const proj = await callRpc(client, 'rpc_ai_upsert_job_lead', { p_actor_id: ctx.userId, p_finding_id: id, p_lead: f.job_lead });
       if (!proj.ok) {
@@ -385,6 +400,21 @@ async function resolveJobLeadKey(client: AiRpcClient, ctx: { userId: string; wor
   const out = await callRpc(client, 'rpc_ai_resolve_job_lead_key', {
     p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId, p_canonical_url: lead.canonical_url,
     p_source_name: lead.source_name, p_external_job_id: lead.external_job_id,
+  });
+  const key = out.ok ? out.data.dedupe_key : null;
+  return typeof key === 'string' && /^[!-~]{1,255}$/.test(key) ? key : f.dedupe_key;
+}
+
+/** Best-effort, like the job-lead resolver: any problem falls back to the computed key. */
+async function resolveCalendarKey(client: AiRpcClient, ctx: { userId: string; workspaceId: string }, f: AiFinding): Promise<string> {
+  const cal = f.calendar;
+  if (!cal) return f.dedupe_key;
+  const ids = [cal.source_event_id, cal.previous_source_event_id].filter((x): x is string => typeof x === 'string' && x.length > 0);
+  const logical = [cal.logical_key, cal.previous_logical_key].filter((x): x is string => typeof x === 'string' && x.length > 0);
+  if (ids.length === 0 && logical.length === 0) return f.dedupe_key;
+  const out = await callRpc(client, 'rpc_ai_resolve_calendar_key', {
+    p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId, p_calendar_source: cal.calendar_source, p_source_event_ids: ids,
+    p_logical_keys: logical, p_organizer_domain: cal.organizer_domain, p_company: cal.company,
   });
   const key = out.ok ? out.data.dedupe_key : null;
   return typeof key === 'string' && /^[!-~]{1,255}$/.test(key) ? key : f.dedupe_key;

@@ -52,6 +52,45 @@ export interface AiJobLeadProjection {
   payload_version: string;
 }
 
+/**
+ * Normalized calendar child row (ai_calendar_events) derived from a calendar_event finding. All instants are
+ * UTC ISO strings; `time_zone` is the SOURCE zone (kept so the item can be explained in its own zone).
+ * All-day items carry dates (`start_date`/`end_date`, inclusive) instead of instants.
+ */
+export interface AiCalendarProjection {
+  category: string;
+  /** Derived from the category (never provider-supplied): the item is a due time, not a meeting. */
+  is_deadline: boolean;
+  status: string;
+  all_day: boolean;
+  start_at: string | null;
+  end_at: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  deadline_at: string | null;
+  /** Chronological anchor: deadline, else start, else local midnight of start_date. */
+  sort_at: string;
+  time_zone: string | null;
+  calendar_source: string | null;
+  source_event_id: string | null;
+  previous_source_event_id: string | null;
+  source_event_url: string | null;
+  company: string | null;
+  job_title: string | null;
+  location: string | null;
+  meeting_url: string | null;
+  organizer_name: string | null;
+  organizer_domain: string | null;
+  /** Provider-stated previous start (reschedule/cancellation); the server also derives it when a stored time moves. */
+  original_start_at: string | null;
+  cancelled_at: string | null;
+  /** company + category + title + start minute; cross-provider convergence key (null when not computable). */
+  logical_key: string | null;
+  /** Logical key of the PREVIOUS start, so a reschedule without an event id still resolves to the same finding. */
+  previous_logical_key: string | null;
+  payload_version: string;
+}
+
 export interface AiFinding {
   kind: AiFindingKind;
   /** Computed by JobQuest from deterministic fields; never taken from the provider. */
@@ -69,6 +108,8 @@ export interface AiFinding {
   payload: JsonRecord;
   /** Present only for kind job_lead. */
   job_lead?: AiJobLeadProjection;
+  /** Present only for kind calendar_event. */
+  calendar?: AiCalendarProjection;
 }
 
 /** A PROPOSAL only. No status: nothing here is executable (AI-11). */

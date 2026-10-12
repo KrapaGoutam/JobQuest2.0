@@ -30,6 +30,24 @@ export interface DedupeInput {
   occurred_at?: string | null;
   sender?: string | null;
   subject?: string | null;
+  // AI-7 calendar identity inputs. `source_name` is the calendar provider ("google_calendar", "outlook").
+  /** Closed calendar category (interview, assessment_deadline, ...). */
+  category?: string | null;
+  /** Normalized sort instant (UTC ISO) of the event/deadline. */
+  start_at?: string | null;
+}
+
+/**
+ * Cross-provider identity of a calendar item: same company + category + title + start MINUTE. Title alone is
+ * never an identity (two "Interview" events on different dates stay distinct because the start is part of it).
+ * The organizer domain is NOT hashed (a provider may not know it); the resolve step uses it only as a guard.
+ */
+export function calendarLogicalKey(i: { company?: string | null; category?: string | null; title?: string | null; start_at?: string | null }): string | null {
+  const co = normalizeIdentityText(i.company), cat = normalizeIdentityText(i.category), ti = normalizeIdentityText(i.title);
+  const t = i.start_at ? Date.parse(i.start_at) : NaN;
+  if (!cat || !ti || Number.isNaN(t)) return null;
+  const minute = new Date(Math.floor(t / 60_000) * 60_000).toISOString();
+  return sha256Hex(`${co}|${cat}|${ti}|${minute}`);
 }
 
 const TRACKING_PARAM = /^(utm_.*|gclid|fbclid|msclkid|mc_cid|mc_eid|igshid|_hsenc|_hsmi|trk|trackingid)$/i;
@@ -76,9 +94,17 @@ export function buildDedupeKey(kind: AiFindingKind, i: DedupeInput): DedupeResul
       return { ok: false, reason: 'email_event requires source_type and a stable source_id (message id), or source_type + received time + sender + subject' };
     }
     case 'calendar_event': {
-      const st = clean(i.source_type).toLowerCase(), id = clean(i.source_id), ev = clean(i.event).toLowerCase();
-      if (!st || !id || !ev) return { ok: false, reason: 'dedupe requires source_type, source_id and event' };
-      return ok(`ev:${sha256Hex(`${st}|${id}|${ev}`)}`);
+      // Primary identity: the calendar provider + its stable event id. A reschedule or cancellation of the
+      // same provider event keeps the id, so it updates ONE finding instead of creating a second active event.
+      const src = normalizeIdentityText(i.source_name), id = clean(i.source_id);
+      if (id) {
+        if (!src) return { ok: false, reason: 'calendar events with a source_id need dedupe.source_name (the calendar provider, e.g. google_calendar)' };
+        return ok(`cal:${sha256Hex(`${src}|${id}`)}`);
+      }
+      // Fallback ONLY when the provider exposes no event id: company + category + title + start minute.
+      const logical = calendarLogicalKey({ company: i.company, category: i.category, title: i.title, start_at: i.start_at });
+      if (!logical) return { ok: false, reason: 'calendar event needs dedupe.source_name + source_id, or category + title + a start time' };
+      return ok(`calfb:${logical}`);
     }
     case 'job_lead': {
       // Provider is deliberately NOT part of the identity. Strongest available identity wins:

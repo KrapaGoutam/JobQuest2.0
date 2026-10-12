@@ -5,8 +5,10 @@
 import { z } from 'zod';
 import {
   AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
-  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, EMAIL_CATEGORIES, JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
+  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_CATEGORIES,
+  JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
 } from '../lib/aiContract';
+import { CALENDAR_ORDERS } from '../services/aiCalendarService';
 import { SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
 import {
   APPLICATION_STAGES, APPLICATION_STATUSES, APP_READ_MAX_PAGE, APP_READ_MAX_PAGE_SIZE, APP_SEARCH_MAX_LENGTH,
@@ -90,6 +92,17 @@ export const listRecruiterIntelInput = z.strictObject({
   company: searchText.optional(),
   discoveredSince: iso.optional(),
   discoveredBefore: iso.optional(),
+  ...sourceCommon,
+});
+// ---- AI-7 calendar intelligence read (ai:read). Chronological, bounded, no provider event ids. ----
+export const listCalendarIntelligenceInput = z.strictObject({
+  category: z.enum(CALENDAR_CATEGORIES).optional(),
+  eventStatus: z.enum(CALENDAR_STATUSES).optional().describe('Calendar lifecycle: scheduled, tentative, rescheduled or cancelled'),
+  company: searchText.optional(),
+  deadlinesOnly: z.boolean().optional().describe('Only deadline-type items (assessment, application, take-home deadlines, follow-ups)'),
+  startsSince: iso.optional().describe('Items at or after this instant (the start, or the deadline for deadline items)'),
+  startsBefore: iso.optional().describe('Items before this instant'),
+  order: z.enum(CALENDAR_ORDERS).optional().describe('asc = soonest first (default); desc = latest first'),
   ...sourceCommon,
 });
 export const listAiSuggestionsInput = z.strictObject({

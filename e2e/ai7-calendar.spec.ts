@@ -310,9 +310,12 @@ test.describe('AI-7 calendar intelligence', () => {
     await expect(page.getByRole('button', { name: /^(Reschedule|Cancel event|Accept|Decline|Edit|Add to calendar|RSVP|Create task|Create application)/ })).toHaveCount(0);
     await expect(page.getByText('cannot create, change, accept or cancel calendar events')).toBeVisible();
     await view('Past').click();
+    await page.getByLabel('Company').fill('Globex');
+    await apply();
+    await expect(page.getByRole('heading', { name: 'Globex intro call (past)', level: 4 })).toBeVisible();
     await page.getByRole('button', { name: /Dismiss Globex intro call/ }).click();
     await page.getByRole('button', { name: 'Confirm dismiss' }).click();
-    await expect(page.getByRole('heading', { name: 'No past calendar items.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No results match these filters.' })).toBeVisible();
     expect((await admin.from('ai_findings').select('status').eq('id', idOf('G')).single()).data!.status).toBe('DISMISSED');
     expect((await admin.from('applications').select('id', { count: 'exact', head: true }).eq('workspace_id', state.workspaceId)).count ?? 0).toBe(applicationsBefore);
     await page.getByLabel(/^Status/).selectOption('DISMISSED'); // (the Event status select starts with "Event")

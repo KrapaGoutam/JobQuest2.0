@@ -33,9 +33,9 @@ AI-3 Remote MCP + auth                                  COMPLETE (branch CI 3781
 [x] AI-3A Foundation (/api/mcp, Streamable HTTP, stateless)  [x] AI-3B Auth (connector tokens; OAuth DEFERRED)  [x] AI-3C Read tools
 [x] AI-3D Safe write tool (jobquest_submit_ai_result only)  [x] AI-3E Limits/scopes  [x] AI-3F Security validation (tests; release-security-reviewer pass still due before final release)
 
-AI-4 Claude Integration (combined)                  PROVIDER SMOKE PASS - READY FOR DEVELOPMENT INTEGRATION (branch CI 37947672506) (feature/ai-4-claude-integration)
+AI-4 Claude Integration (combined)                  COMPLETE (branch CI 37947672506; development CI 38201400116; development 498d3342) (feature/ai-4-claude-integration)
 [x] Claude custom remote MCP connector setup UX (fixed Bearer header, AI-3 tokens)  [x] manager-token RLS-parity decision + test  [x] tool descriptions + eval fixtures
-[x] branch CI  [x] remote Claude connector smoke (PASS, token revoked)  [ ] development integration + CI
+[x] branch CI  [x] remote Claude connector smoke (PASS, token revoked)  [x] development integration + CI
 (Deferred, not started: scheduled Morning Brief, workflow-config mutation, OAuth)
 
 AI-5 Gemini                                             NOT STARTED   (conditional: plan eligibility)

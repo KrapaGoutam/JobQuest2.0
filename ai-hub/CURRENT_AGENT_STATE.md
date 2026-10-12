@@ -5,32 +5,34 @@ CURRENT PHASE:
 AI-4
 
 CURRENT SUB-PHASE:
-AI-4 PROVIDER SMOKE PASS — READY FOR DEVELOPMENT INTEGRATION
+AI-4 COMPLETE
 
 STATUS:
-AI-4 PROVIDER SMOKE PASS — READY FOR DEVELOPMENT INTEGRATION
+AI-4 COMPLETE — CLAUDE REMOTE CONNECTOR INTEGRATED TO DEVELOPMENT — AWAITING OPERATOR APPROVAL FOR NEXT PROVIDER PHASE
 
 BASE BRANCH:
-development (ed517594d58dedf26b6144d61b2e9ac2f8e60a58; unchanged at fetch 2026-10-11)
+development (498d3342765deb252cceefb287940d3d83382814)
 
 WORKING BRANCH:
-feature/ai-4-claude-integration (executable commit 4c3a5778, certified by branch CI 37947672506; later commits are docs-only)
-
-BRANCH PUSHED:
-YES (4c3a5778); docs-only commits go to development with the merge
+none (feature/ai-4-claude-integration and fix/calendar-today-contrast merged)
 
 CI:
-Branch CI 37947672506 PASS @4c3a5778; 37945994001 PASS @3687b048. Development CI pending (see chat checkpoint).
+Development CI 38201400116 PASS @498d3342. See facts below.
 
 NEXT SUB-PHASE:
-Merge --no-ff to development once, push once, development CI once, STOP (no next provider without operator approval).
+Await operator decision on the next provider phase (do not assume Gemini/ChatGPT match Claude).
 
 DO NOT REPEAT:
-Implementation, local suites, remote Claude smoke, token creation. The temporary credential is revoked.
+AI-1..AI-4 work, the Claude remote smoke, connector token creation, the calendar contrast fix.
 
 NEXT EXACT STEP:
-git fetch; confirm development unchanged; git merge --no-ff feature/ai-4-claude-integration into development; push once; observe development CI by run ID.
+Operator review. This closure doc is carried by the next phase branch (it was not pushed, to avoid a CI cycle on the certified development SHA).
 ```
+
+## AI-4 closure facts (persisted; docs-only, unpushed at closure)
+
+AI-4 COMPLETE — CLAUDE REMOTE CONNECTOR INTEGRATED TO DEVELOPMENT. Executable SHA `4c3a5778` (branch CI `37947672506` PASS); first development merge `ddec2093` CI `38149316322` FAILED on an unrelated pre-existing calendar today-badge contrast defect (white on #8098ff, 2.67:1; `e2e/pl4b-planning.spec.ts:70`; failed-job rerun failed the same way); narrow fix branch `fix/calendar-today-contrast` (`019cbaba`, `.calendar-today` now uses existing `--color-on-accent`), branch CI `38200664445` PASS; merged to development `498d3342765deb252cceefb287940d3d83382814`; final development CI `38201400116` PASS. AI-4 provider functionality needed no further change; Claude smoke NOT repeated. Main `26e517ea` and Production unchanged; Dev migration head `20261026100000`, Prod `20261022100000`.
+
 
 ## AI-3 final facts (persisted at AI-4 start)
 

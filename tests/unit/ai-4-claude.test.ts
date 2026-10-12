@@ -180,7 +180,7 @@ describe('Claude connector settings UI states', () => {
 });
 
 describe('Claude connector frontend token hygiene', () => {
-  const FILES = ['apps/web/src/components/ai/ClaudeConnectorPanel.tsx', 'apps/web/src/api/aiConnectors.ts', 'apps/web/src/lib/claudeConnector.ts'];
+  const FILES = ['apps/web/src/components/ai/ProviderConnectorPanel.tsx', 'apps/web/src/api/aiConnectors.ts', 'apps/web/src/lib/claudeConnector.ts'];
   it('never touches web storage, cookies, history, URL search params, query caches, analytics or the console', () => {
     for (const f of FILES) {
       const code = strip(read(f));
@@ -201,9 +201,10 @@ describe('Claude connector frontend token hygiene', () => {
     expect(api).toContain('/ai/connector-tokens');
     expect(api).not.toMatch(/anthropic|claude\.ai|api\.anthropic/i);
   });
-  it('Settings -> Providers wires the Claude panel and keeps Gemini/ChatGPT "Not configured"', () => {
+  it('Settings -> Providers wires the Claude panel (AI-9 adds Gemini and ChatGPT cards on the same generic panel)', () => {
     const settings = read('apps/web/src/views/AiAutomationSettings.tsx');
     expect(settings).toContain('ClaudeConnectorPanel');
+    expect(settings).toContain('ProviderConnectorPanel');
     expect(settings).toMatch(/p\.id === 'claude' && session/);
     expect(read('apps/web/src/views/SettingsView.tsx')).toContain('<AiAutomationSettings activeWorkspaceId={activeWorkspaceId} session={session} />');
   });
@@ -318,13 +319,13 @@ describe('No Anthropic API, no stored Claude credentials, no workflow config mut
       expect(read(manifest), manifest).not.toMatch(/@anthropic-ai|anthropic/i);
     }
     const shipped = [
-      'apps/web/src/components/ai/ClaudeConnectorPanel.tsx', 'apps/web/src/api/aiConnectors.ts', 'apps/web/src/lib/claudeConnector.ts',
+      'apps/web/src/components/ai/ClaudeConnectorPanel.tsx', 'apps/web/src/components/ai/ProviderConnectorPanel.tsx', 'apps/web/src/api/aiConnectors.ts', 'apps/web/src/lib/claudeConnector.ts',
       'apps/api/src/mcp/tools.ts', 'apps/api/src/mcp/server.ts', 'apps/api/src/env.ts',
     ];
     for (const f of shipped) expect(strip(read(f)), f).not.toMatch(/ANTHROPIC_API_KEY|api\.anthropic\.com|@anthropic-ai/);
   });
   it('the Claude UI never mutates ai_workflow_configs and adds no migration', () => {
-    const code = strip(read('apps/web/src/components/ai/ClaudeConnectorPanel.tsx')) + strip(read('apps/web/src/api/aiConnectors.ts'));
+    const code = strip(read('apps/web/src/components/ai/ProviderConnectorPanel.tsx')) + strip(read('apps/web/src/api/aiConnectors.ts'));
     expect(code).not.toMatch(/ai_workflow_configs|workflow_config|supabase/i);
   });
 });

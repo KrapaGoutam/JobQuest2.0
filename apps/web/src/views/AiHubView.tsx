@@ -235,12 +235,12 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUs
     if (!activeWorkspaceId || (currentUserId && !zoneLoaded)) return undefined; // wait for the profile zone when there is a user
     let cancelled = false;
     setState({ status: 'loading' });
-    fetchAiHubSnapshot(activeWorkspaceId, undefined, undefined, timeZone, currentUserId).then(
+    fetchAiHubSnapshot(activeWorkspaceId, undefined, undefined, timeZone, session).then(
       (snapshot) => { if (!cancelled) setState({ status: 'ready', snapshot }); },
       () => { if (!cancelled) setState({ status: 'error' }); }, // isolated: never rethrown
     );
     return () => { cancelled = true; };
-  }, [activeWorkspaceId, attempt, timeZone, zoneLoaded, currentUserId]);
+  }, [activeWorkspaceId, attempt, timeZone, zoneLoaded, currentUserId, session?.access_token]); // a refreshed token should refetch, a new session object should not
   const onTabChange = useCallback((t: AiHubTab) => onNavigate(aiHubPathForTab(t)), [onNavigate]);
 
   // Detail surfaces: one at a time, each with its own isolated load/failure state.

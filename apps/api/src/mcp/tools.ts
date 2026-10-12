@@ -209,7 +209,7 @@ export const MCP_TOOLS: readonly ToolDef[] = [
   {
     name: 'jobquest_submit_ai_result',
     title: 'Submit AI result',
-    description: 'WRITE (AI Hub only): store one `jobquest.ai-result` (version 1.0, provider "claude") of structured AI findings and inert suggestions in the connected workspace. Call it only when the user asks to record an analysis (a scheduled task they created counts), never to answer a read request. Finding kinds: daily_brief, job_lead, email_event (summaries, never bodies), recruiter_intel (public sources), calendar_event (no attendee lists or invite text). It does NOT change an application status, create applications (a job lead is not an application), edit contacts, complete tasks, touch email or edit calendars. The same external_run_id is idempotent. Limits: 50 sources, 200 findings, 200 suggestions.',
+    description: 'WRITE (AI Hub only): store one `jobquest.ai-result` (1.0; provider = the calling product: "claude", "gemini" or "chatgpt") of structured AI findings and inert suggestions in the workspace. Call it only when the user asks to record an analysis (a scheduled task counts), never to answer a read request. Finding kinds: daily_brief, job_lead, email_event (summaries, never bodies), recruiter_intel (public sources), calendar_event (no attendee lists or invite text). It does NOT change an application status, create applications (a job lead is not an application), edit contacts, complete tasks, touch email or edit calendars. The same external_run_id is idempotent. Limits: 50 sources, 200 findings, 200 suggestions.',
     scope: 'ai:ingest',
     input: submitAiResultInput,
     output: submitAiResultOutput,

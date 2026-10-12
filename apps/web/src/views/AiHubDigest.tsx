@@ -309,14 +309,14 @@ export function AiHubDigest({ activeWorkspaceId, currentUserId, session, onNavig
 
   const [pendingActions, setPendingActions] = useState<number | null>(null);
   useEffect(() => {
-    if (!activeWorkspaceId || !currentUserId) return undefined;
+    if (!activeWorkspaceId || !currentUserId || !session) return undefined;
     let cancelled = false;
-    fetchPendingActionCount(activeWorkspaceId, currentUserId).then(
+    fetchPendingActionCount(activeWorkspaceId, session).then(
       (n) => { if (!cancelled) setPendingActions(n); },
       () => { if (!cancelled) setPendingActions(null); }, // isolated: the digest renders without it
     );
     return () => { cancelled = true; };
-  }, [activeWorkspaceId, currentUserId]);
+  }, [activeWorkspaceId, currentUserId, session?.access_token]); // the count only needs a fresh token, not a new session object
 
   const needLive = preset === 'today' && state.status === 'ready' && state.rows.length === 0;
   useEffect(() => {

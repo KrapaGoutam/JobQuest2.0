@@ -78,3 +78,25 @@ the schedule. Live provider test: optional, not performed. ChatGPT/Gemini/OAuth 
 ## AI-8 — Suggested actions in the Claude workflows
 
 The Claude templates (`EMAIL_TRIAGE.md`, `CALENDAR_INTEL.md`, `JOB_DISCOVERY.md`) now describe optional, conservative suggestions: email may propose `create_task` or `set_status` (INTERVIEW / REJECTED), calendar may propose a preparation `create_task`, job discovery may propose `create_application` for exceptional leads. Each template states that **submission does not execute the action** and that a human confirms in JobQuest. MCP is unchanged (11 tools; the one write is still `jobquest_submit_ai_result`); there is deliberately no `jobquest_create_application` / `update_application` / `create_task` tool. See `provider-workflows/CLAUDE_SCHEDULED_TASKS.md` §6c. An optional live smoke after a Preview deployment: have Claude submit one synthetic supported suggestion, then confirm it appears in Actions, does not execute, and executes exactly once on human confirm (no real mail/calendar data).
+
+## AI-9 — Gemini and ChatGPT (subscription-native, capability-gated)
+
+- **One backend, three providers.** All providers submit `jobquest.ai-result` 1.0 through `jobquest_submit_ai_result` (provider value `claude` / `gemini` / `chatgpt`). There is no provider-specific route, SDK/API key, scheduler, table or migration. The MCP surface remains 11 tools: 10 reads and one AI-Hub-only write; no core write.
+- **Gemini operator gate:** custom-app UI **VERIFIED AVAILABLE** and the JobQuest MCP endpoint **REACHABLE**. Gemini rejected the current scoped bearer authentication and requires standard OAuth. Authenticated connection **BLOCKED**; reads, ingest and schedules `NOT TESTED — AUTH BLOCKED`; temporary token revoked.
+- **ChatGPT Plus operator gate:** Add custom MCP server, Create as a plugin and advanced OAuth UI **VERIFIED AVAILABLE**. No bearer/API-key field was offered. OAuth discovery failed because JobQuest publishes no OAuth metadata; DCR/CIMD unavailable; user-defined OAuth client not configured because JobQuest has no authorization server. Authenticated connection **BLOCKED — OAUTH 2.1 REQUIRED**; reads, ingest, schedules and Gmail trigger `NOT TESTED — AUTH BLOCKED`; no connector token created.
+- **No workaround.** No-auth was not selected; JobQuest bearer tokens were not repurposed as OAuth client secrets; no client ids, secrets or endpoints were invented; OAuth/DCR was not implemented in AI-9.
+- **Shared architecture finding:** one standards-compliant, provider-neutral JobQuest OAuth layer should serve Gemini, ChatGPT and future OAuth-capable MCP providers. Do not build separate Gemini/ChatGPT auth paths.
+- **Separation of concepts:** provider configuration UI availability ≠ authenticated JobQuest connection ≠ scheduled capability. All five JobQuest workflows remain `AVAILABLE`; Gemini/ChatGPT live integration remains blocked until OAuth exists.
+
+## AI-10 recommendation — planning only; do not start automatically
+
+After operator approval, one combined **OAuth 2.1 Provider Auth + Final Security / Release Hardening** phase should first decide whether OAuth is release-blocking, then assess:
+
+- OAuth 2.1 authorization-server behavior, Authorization Code flow and PKCE S256.
+- Authorization-server metadata and MCP protected-resource metadata where required.
+- Client registration: user-defined clients, Dynamic Client Registration (DCR) and Client Identifier Metadata Documents (CIMD).
+- Access-token issuance, refresh tokens if necessary, revocation and session invalidation.
+- Scope mapping (`jobquest:read`, `ai:read`, `ai:ingest`), user/workspace binding and connector revocation.
+- Consent UI, provider callback registration and MCP auth integration.
+- Security, rate-limit and audit tests; Gemini and ChatGPT live revalidation.
+- Final security review, migration reconciliation, final AI-Hub E2E/release matrix and Production readiness GO/NO-GO.

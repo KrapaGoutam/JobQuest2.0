@@ -7,7 +7,8 @@
 // Browser-safe; tests/unit/ai-5-digest-ui.test.ts keeps ids, scopes and template paths honest.
 
 export type AiWorkflowAvailability = 'AVAILABLE' | 'PROVIDER_SETUP_REQUIRED' | 'SOURCE_NOT_IMPLEMENTED' | 'DISABLED';
-export type ProviderCompatibility = 'template_ready' | 'pending_validation' | 'not_planned';
+/** `template_unverified`: a copyable prompt template exists, but nobody has proven this provider can run it (AI-9). It is never execution availability. */
+export type ProviderCompatibility = 'template_ready' | 'template_unverified' | 'pending_validation' | 'not_planned';
 
 export interface AiWorkflowDefinition {
   /** Canonical workflow id (the `workflow` value of a jobquest.ai-result). */
@@ -27,9 +28,19 @@ export interface AiWorkflowDefinition {
   providers: { claude: ProviderCompatibility; chatgpt: ProviderCompatibility; gemini: ProviderCompatibility };
   /** Repository path of the copyable provider task template. */
   claudeTemplate: string;
+  /** AI-9: the same schema for the other providers; the schema never forks by provider. */
+  geminiTemplate: string;
+  chatgptTemplate: string;
 }
 
-const PENDING = { chatgpt: 'pending_validation', gemini: 'pending_validation' } as const;
+// AI-9: Gemini and ChatGPT have prompt templates (same schema) but neither is proven to run them: scheduled research on
+// Gemini and the whole ChatGPT plugin path are decided by operator provider gates and recorded in PROVIDER_CAPABILITY_MATRIX.md.
+const UNVERIFIED = { chatgpt: 'template_unverified', gemini: 'template_unverified' } as const;
+const templatesOf = (file: string) => ({
+  claudeTemplate: `ai-hub/provider-workflows/claude/${file}`,
+  geminiTemplate: `ai-hub/provider-workflows/gemini/${file}`,
+  chatgptTemplate: `ai-hub/provider-workflows/chatgpt/${file}`,
+});
 
 export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
   {
@@ -42,8 +53,8 @@ export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
     requiredScopes: ['jobquest:read', 'ai:read', 'ai:ingest'],
     sourceOperational: true,
     status: 'AVAILABLE',
-    providers: { claude: 'template_ready', ...PENDING },
-    claudeTemplate: 'ai-hub/provider-workflows/claude/DAILY_DIGEST.md',
+    providers: { claude: 'template_ready', ...UNVERIFIED },
+    ...templatesOf('DAILY_DIGEST.md'),
   },
   {
     id: 'job_discovery',
@@ -55,8 +66,8 @@ export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
     requiredScopes: ['jobquest:read', 'ai:read', 'ai:ingest'],
     sourceOperational: true,
     status: 'AVAILABLE',
-    providers: { claude: 'template_ready', ...PENDING },
-    claudeTemplate: 'ai-hub/provider-workflows/claude/JOB_DISCOVERY.md',
+    providers: { claude: 'template_ready', ...UNVERIFIED },
+    ...templatesOf('JOB_DISCOVERY.md'),
   },
   {
     id: 'email_triage',
@@ -68,8 +79,8 @@ export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
     requiredScopes: ['jobquest:read', 'ai:read', 'ai:ingest'],
     sourceOperational: true,
     status: 'AVAILABLE',
-    providers: { claude: 'template_ready', ...PENDING },
-    claudeTemplate: 'ai-hub/provider-workflows/claude/EMAIL_TRIAGE.md',
+    providers: { claude: 'template_ready', ...UNVERIFIED },
+    ...templatesOf('EMAIL_TRIAGE.md'),
   },
   {
     id: 'recruiter_intel',
@@ -81,8 +92,8 @@ export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
     requiredScopes: ['jobquest:read', 'ai:read', 'ai:ingest'],
     sourceOperational: true,
     status: 'AVAILABLE',
-    providers: { claude: 'template_ready', ...PENDING },
-    claudeTemplate: 'ai-hub/provider-workflows/claude/RECRUITER_INTEL.md',
+    providers: { claude: 'template_ready', ...UNVERIFIED },
+    ...templatesOf('RECRUITER_INTEL.md'),
   },
   {
     id: 'calendar_review',
@@ -94,8 +105,8 @@ export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
     requiredScopes: ['jobquest:read', 'ai:read', 'ai:ingest'],
     sourceOperational: true,
     status: 'AVAILABLE',
-    providers: { claude: 'template_ready', ...PENDING },
-    claudeTemplate: 'ai-hub/provider-workflows/claude/CALENDAR_INTEL.md',
+    providers: { claude: 'template_ready', ...UNVERIFIED },
+    ...templatesOf('CALENDAR_INTEL.md'),
   },
 ];
 
@@ -107,7 +118,7 @@ export const AI_WORKFLOW_STATUS_LABELS: Record<AiWorkflowAvailability, string> =
 };
 
 export const PROVIDER_COMPATIBILITY_LABELS: Record<ProviderCompatibility, string> = {
-  template_ready: 'Template ready', pending_validation: 'Pending validation', not_planned: 'Not planned',
+  template_ready: 'Template ready', template_unverified: 'Template ready, provider unverified', pending_validation: 'Pending validation', not_planned: 'Not planned',
 };
 
 /** Disabled wins; otherwise a workflow that needs a provider connector says so until one exists. */

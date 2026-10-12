@@ -224,13 +224,21 @@ describe('Overview, Daily Digest and Job Leads integration', () => {
     // someone else's lead never offers the owner-only review shortcut
     expect(html(createElement(JobLeadCard, { lead: pending, timeZone: 'UTC', currentUserId: 'other', onOpen: noop, onReviewAction: noop }))).not.toContain('Review application action');
   });
-  it('the pending count uses the owner-scoped, supported-action query only', async () => {
-    const calls: string[] = [];
-    const q: Record<string, unknown> = {};
-    for (const m of ['select', 'eq', 'in']) q[m] = (...a: unknown[]) => { calls.push(`${m}:${JSON.stringify(a)}`); return q; };
-    q.then = (res: (v: unknown) => unknown) => Promise.resolve({ count: 4, error: null }).then(res);
-    expect(await fetchPendingActionCount(WS, 'u1', { from: () => q } as never)).toBe(4);
-    expect(calls).toEqual(expect.arrayContaining([`eq:["user_id","u1"]`, `eq:["status","PENDING"]`, `in:["action",["create_application","create_task","set_status"]]`]));
+  it('the pending count is the SERVER canonical actionable count (AI-9): one authenticated GET, never a raw table count', async () => {
+    const calls: Array<{ url: string; auth: string | undefined }> = [];
+    vi.stubGlobal('document', { cookie: '' });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: { headers: Record<string, string> }) => {
+      calls.push({ url, auth: init.headers.authorization });
+      return { status: 200, json: async () => ({ pendingTotal: 4 }) };
+    }));
+    try {
+      expect(await fetchPendingActionCount(WS, { access_token: 'tok', token_type: 'bearer' })).toBe(4);
+      expect(calls).toEqual([{ url: `/api/ai/actions/count?workspace_id=${WS}`, auth: 'Bearer tok' }]);
+      vi.stubGlobal('fetch', vi.fn(async () => ({ status: 500, json: async () => ({ error: { code: 'READ_FAILED' } }) })));
+      await expect(fetchPendingActionCount(WS, null)).rejects.toThrow('AI_ACTION_COUNT_FAILED');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

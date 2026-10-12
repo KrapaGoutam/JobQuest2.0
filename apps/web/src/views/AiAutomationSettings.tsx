@@ -9,11 +9,14 @@ import {
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { ClaudeConnectorPanel } from '../components/ai/ClaudeConnectorPanel';
+import { ProviderConnectorPanel } from '../components/ai/ProviderConnectorPanel';
+import { PROVIDER_CONNECTORS } from '../lib/providerConnectors';
 import type { PublicSession } from '../api';
 
 // Settings -> AI & Automation (AI-1F1). Workflows and general settings are
 // read-only. AI-4 adds the Claude connector setup (scoped connector token for the
-// remote MCP endpoint); Gemini/ChatGPT remain "Not configured". Rendered only when
+// remote MCP endpoint); AI-9 adds Gemini and ChatGPT cards on the same generic connector-token panel, each with truthful
+// capability notes (configured is not the same as automation-capable). Rendered only when
 // the AI Hub is exposed (see isAiHubExposed); failures are local to this panel.
 
 type Cfg = { status: 'loading' } | { status: 'error' } | { status: 'ready'; rows: Array<{ workflow: string; enabled: boolean }> };
@@ -58,10 +61,12 @@ export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWor
           <CardBody>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {AI_PROVIDER_LABELS.map((p) => (
-                <li key={p.id} style={p.id === 'claude' && session ? undefined : rowStyle}>
+                <li key={p.id} style={session ? { padding: '10px 0', borderTop: p.id === 'claude' ? undefined : '1px solid var(--color-border)' } : rowStyle}>
                   {p.id === 'claude' && session
                     ? <ClaudeConnectorPanel activeWorkspaceId={activeWorkspaceId} session={session} />
-                    : <><span>{p.label}</span><b>Not configured</b></>}
+                    : session
+                      ? <ProviderConnectorPanel provider={PROVIDER_CONNECTORS[p.id]} activeWorkspaceId={activeWorkspaceId} session={session} />
+                      : <><span>{p.label}</span><b>Not configured</b></>}
                 </li>
               ))}
             </ul>

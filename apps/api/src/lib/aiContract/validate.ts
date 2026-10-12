@@ -7,11 +7,14 @@ import {
   AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS,
   EMAIL_CATEGORIES, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES, JOB_SALARY_PERIODS, JOB_WORK_ARRANGEMENTS,
   RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
-  type AiFindingKind, type AiProvider, type AiSuggestionTargetType, type AiTriggerType,
+  CALENDAR_CATEGORIES, CALENDAR_CATEGORY_ALIASES, CALENDAR_DEADLINE_CATEGORIES, CALENDAR_LIMITS, CALENDAR_PAYLOAD_VERSION,
+  CALENDAR_RAW_KEYS, CALENDAR_STATUSES,
+  type AiFindingKind, type AiProvider, type AiSuggestionTargetType, type AiTriggerType, type CalendarCategory, type CalendarStatus,
 } from './constants';
-import { buildDedupeKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
+import { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
+import { isIanaTimeZone, localMidnight, localToInstant, stringOffsetMinutes, zoneOffsetMinutes } from './calendarTime';
 import type {
-  AiFinding, AiIngestRunInput, AiIssue, AiJobLeadProjection, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
+  AiCalendarProjection, AiFinding, AiIngestRunInput, AiIssue, AiJobLeadProjection, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
   JsonRecord, JsonValue,
 } from './types';
 
@@ -73,7 +76,8 @@ function timestamp(c: Ctx, v: unknown, path: string, required = false): string |
   if (typeof v !== 'string' || !ISO_TS.test(v.trim())) { c.err(path, 'timestamp', 'must be ISO-8601 with explicit timezone offset'); return null; }
   const t = Date.parse(v.trim());
   const year = new Date(t).getUTCFullYear();
-  if (Number.isNaN(t) || year < 2000 || year > 2100) { c.err(path, 'timestamp', 'invalid or out-of-range date'); return null; }
+  // Date.parse rolls impossible days over (Feb 30 -> Mar 2); an impossible calendar date is invalid, never "fixed".
+  if (Number.isNaN(t) || year < 2000 || year > 2100 || !isIsoDate(v.trim().slice(0, 10))) { c.err(path, 'timestamp', 'invalid or out-of-range date'); return null; }
   return new Date(t).toISOString();
 }
 
@@ -126,9 +130,8 @@ function boundedRecord(c: Ctx, v: unknown, path: string, maxBytes: number, reser
 // ---- typed payloads --------------------------------------------------------
 
 type PField = 'string' | 'number' | 'boolean' | 'url' | 'timestamp' | 'strings';
-const PAYLOAD_SCHEMAS: Partial<Record<AiFindingKind, Record<string, PField>>> = {
-  calendar_event: { start_at: 'timestamp', end_at: 'timestamp', location: 'string', attendee_count: 'number', join_url: 'url' },
-};
+// Kinds with dedicated validators (daily_brief, job_lead, email_event, recruiter_intel, calendar_event) do not use this table.
+const PAYLOAD_SCHEMAS: Partial<Record<AiFindingKind, Record<string, PField>>> = {};
 
 function payload(c: Ctx, kind: AiFindingKind, v: unknown, path: string, dedupeDate?: string | null): JsonRecord {
   if (kind === 'daily_brief') return digestPayload(c, v, path, dedupeDate);
@@ -567,6 +570,202 @@ function recruiterPayload(c: Ctx, v: unknown, path: string, ctx: { sourceUrl: st
   return { payload: out, identity: { name, company, role, profile_url: profileUrl } };
 }
 
+// ---- calendar_event (AI-7) -----------------------------------------------------------------
+// Calendar INTELLIGENCE about job-search events: normalized times, a closed category, a lifecycle
+// status, bounded text and safe https links. Never an attendee list, an invite body or a raw provider
+// event, and never a credential-bearing link. Nothing is invented: absent facts stay absent.
+//
+// Time contract (exact):
+//   timed event      start_at (ISO-8601 WITH offset) OR start_local + time_zone. end optional (start-only is valid).
+//   all-day event    all_day:true + start_date (YYYY-MM-DD) [+ end_date, inclusive]. Times are ignored with a warning.
+//   deadline         deadline_at | deadline_local + time_zone | deadline_date (date-only), else start_at is the due time.
+//   invalid          end before start, unknown/invalid time_zone, malformed timestamp, local time that does not exist (DST gap).
+//   ambiguous local time (DST fall-back) resolves to its first occurrence with a warning.
+//   an explicit offset is an absolute instant and always wins over a conflicting time_zone (warned).
+
+const CALENDAR_KEYS = [
+  'version', 'status', 'start_at', 'end_at', 'start_local', 'end_local', 'all_day', 'start_date', 'end_date', 'time_zone',
+  'deadline_at', 'deadline_local', 'deadline_date', 'source_event_url', 'organizer_name', 'organizer_domain', 'company', 'job_title', 'job_url',
+  'location', 'meeting_url', 'previous_event', 'cancelled_at', 'attendee_count',
+] as const;
+const CALENDAR_PREVIOUS_KEYS = ['source_event_id', 'start_at', 'start_local'] as const;
+const SECRET_URL_PARAM = /(^|[_-])(token|secret|password|passwd|pwd|auth|authorization|apikey|key|sig|signature|code|session|sid|jwt|credential|access)([_-]|$)/i;
+
+/** https only, no credentials, no fragment, and query parameters that look like secrets are removed (warned). */
+function safeHttpsUrl(c: Ctx, v: unknown, path: string): string | null {
+  const s = text(c, v, path, AI_LIMITS.url);
+  if (s === null) return null;
+  let u: URL;
+  try { u = new URL(s); } catch { c.err(path, 'url', 'invalid URL'); return null; }
+  if (u.protocol !== 'https:') { c.err(path, 'url_scheme', 'only https URLs are allowed'); return null; }
+  if (u.username || u.password) { c.err(path, 'url_credentials', 'URLs with credentials are not allowed'); return null; }
+  u.hash = '';
+  let removed = false;
+  for (const k of [...u.searchParams.keys()]) if (SECRET_URL_PARAM.test(k)) { u.searchParams.delete(k); removed = true; }
+  if (removed) c.warn(path, 'url_secret_param_removed', 'query parameters that look like secrets were removed from the link');
+  return u.toString();
+}
+
+/** One instant from an offset timestamp and/or a wall-clock time in the source zone. */
+function calendarInstant(c: Ctx, iso: unknown, local: unknown, path: string, field: string, zone: string | null): string | null {
+  const hasIso = iso !== undefined && iso !== null, hasLocal = local !== undefined && local !== null;
+  if (!hasIso && !hasLocal) return null;
+  let fromIso: string | null = null, fromLocal: string | null = null;
+  if (hasIso) {
+    fromIso = timestamp(c, iso, `${path}.${field}_at`);
+    if (fromIso && zone && typeof iso === 'string') {
+      const off = stringOffsetMinutes(iso);
+      if (off !== null && off !== zoneOffsetMinutes(fromIso, zone)) c.warn(`${path}.${field}_at`, 'offset_zone_mismatch', 'the UTC offset does not match time_zone at that instant; the offset (an absolute instant) is used');
+    }
+  }
+  if (hasLocal) {
+    if (typeof local !== 'string') c.err(`${path}.${field}_local`, 'type', 'must be a local date-time string YYYY-MM-DDTHH:mm');
+    else if (!zone) c.err(`${path}.${field}_local`, 'time_zone_required', 'a local time needs a valid IANA time_zone');
+    else {
+      const r = localToInstant(local, zone);
+      if (!r.ok) c.err(`${path}.${field}_local`, r.reason === 'nonexistent' ? 'nonexistent_local_time' : 'local_time', r.reason === 'nonexistent' ? 'that wall-clock time does not exist in the zone (daylight saving gap)' : 'must be a valid local date-time YYYY-MM-DDTHH:mm');
+      else {
+        if (r.ambiguous) c.warn(`${path}.${field}_local`, 'ambiguous_local_time', 'the wall-clock time occurs twice (daylight saving fall-back); the first occurrence is used');
+        fromLocal = r.iso;
+      }
+    }
+  }
+  if (fromIso && fromLocal && fromIso !== fromLocal) c.warn(`${path}.${field}_local`, 'local_time_ignored', 'the local time disagrees with the offset timestamp; the offset timestamp is used');
+  return fromIso ?? fromLocal;
+}
+
+interface CalendarParts extends SourceParts {
+  calendar: AiCalendarProjection | null;
+  category: string | null;
+  sortAt: string | null;
+  dueAt: string | null;
+}
+
+function calendarPayload(
+  c: Ctx, v: unknown, path: string,
+  ctx: { dedupe: DedupeInput; title: string | null; category: string | null; categoryPath: string },
+): CalendarParts {
+  const empty: CalendarParts = { payload: {}, identity: {}, calendar: null, category: null, sortAt: null, dueAt: null };
+  if (!isObj(v)) { c.err(path, 'required', 'a calendar_event payload with a start time or deadline is required'); return empty; }
+  for (const k of CALENDAR_RAW_KEYS) if (k in v) c.warn(`${path}.${k}`, 'raw_calendar_rejected', 'attendee lists, invite bodies and raw calendar events are never stored; send a concise summary instead');
+  c.strip(v, CALENDAR_KEYS, path);
+  const e0 = c.errors.length;
+  sourceVersion(c, v.version, path);
+
+  // Closed category. A lifecycle word as the category ("reschedule", "cancellation") becomes category other + that status.
+  const catSlug = ctx.category === null ? null : String(slug(ctx.category));
+  let category: CalendarCategory | null = null;
+  let aliasStatus: CalendarStatus | null = null;
+  const alias = catSlug ? (CALENDAR_CATEGORY_ALIASES as Record<string, CalendarStatus | undefined>)[catSlug] : undefined;
+  if (alias) { aliasStatus = alias; category = 'other'; c.warn(ctx.categoryPath, 'category_alias', `"${catSlug}" is a status; stored as category other with status ${alias}`); }
+  else if (catSlug && (CALENDAR_CATEGORIES as readonly string[]).includes(catSlug)) category = catSlug as CalendarCategory;
+  else c.err(ctx.categoryPath, 'calendar_category', `must be one of: ${CALENDAR_CATEGORIES.join(', ')}`);
+  const isDeadline = category !== null && (CALENDAR_DEADLINE_CATEGORIES as readonly string[]).includes(category);
+
+  // A lifecycle word used as the category wins over a default/explicit "scheduled" status (the provider is telling us it changed).
+  const explicitStatus = enumField(c, v.status, `${path}.status`, CALENDAR_STATUSES, { confirmed: 'scheduled', accepted: 'scheduled', canceled: 'cancelled', moved: 'rescheduled' });
+  const status: CalendarStatus = aliasStatus && (!explicitStatus || explicitStatus === 'scheduled') ? aliasStatus : explicitStatus ?? 'scheduled';
+
+  const zoneRaw = text(c, v.time_zone, `${path}.time_zone`, 64);
+  let zone: string | null = null;
+  if (zoneRaw) { if (isIanaTimeZone(zoneRaw)) zone = zoneRaw; else c.err(`${path}.time_zone`, 'time_zone', 'must be an IANA time zone such as America/Chicago'); }
+
+  let allDay = false;
+  if (v.all_day !== undefined && v.all_day !== null) { if (typeof v.all_day === 'boolean') allDay = v.all_day; else c.err(`${path}.all_day`, 'type', 'must be a boolean'); }
+  const startDateRaw = calendarDate(c, v.start_date, `${path}.start_date`);
+  const endDateRaw = calendarDate(c, v.end_date, `${path}.end_date`);
+  const deadlineDateRaw = calendarDate(c, v.deadline_date, `${path}.deadline_date`);
+  let startAt = calendarInstant(c, v.start_at, v.start_local, path, 'start', zone);
+  let endAt = calendarInstant(c, v.end_at, v.end_local, path, 'end', zone);
+  let deadlineAt = calendarInstant(c, v.deadline_at, v.deadline_local, path, 'deadline', zone);
+  const deadlineGiven = deadlineAt !== null || deadlineDateRaw !== null;
+
+  let startDate = startDateRaw, endDate = endDateRaw;
+  if (isDeadline && !allDay && !deadlineAt && !startAt && deadlineDateRaw) { allDay = true; startDate = deadlineDateRaw; }
+  else if (!allDay && startDate && !startAt && !(isDeadline && deadlineAt)) allDay = true; // a date with no time is an all-day item
+  if (isDeadline && allDay && deadlineDateRaw) startDate = deadlineDateRaw;
+
+  if (allDay) {
+    if (startAt || endAt || deadlineAt) { c.warn(path, 'all_day_time_ignored', 'an all-day item is a calendar date; the times were ignored'); startAt = null; endAt = null; deadlineAt = null; }
+    if (!startDate) c.err(`${path}.start_date`, 'all_day_date_required', 'an all-day item needs start_date (YYYY-MM-DD)');
+    else {
+      endDate = endDate ?? startDate;
+      if (endDate < startDate) c.err(`${path}.end_date`, 'end_before_start', 'end_date must not be before start_date');
+    }
+  } else {
+    startDate = null; endDate = null;
+    if (isDeadline) {
+      deadlineAt = deadlineAt ?? startAt;
+      if (!deadlineAt) c.err(`${path}.deadline_at`, 'calendar_time_required', 'a deadline needs deadline_at (or deadline_local + time_zone, deadline_date, or start_at)');
+    } else if (!startAt) c.err(`${path}.start_at`, 'calendar_time_required', 'start_at (or start_local with time_zone) is required');
+    if (endAt && !startAt) { c.warn(`${path}.end_at`, 'end_without_start', 'end ignored: there is no start'); endAt = null; }
+    if (endAt && startAt && endAt < startAt) c.err(`${path}.end_at`, 'end_before_start', 'end must not be before start');
+  }
+  if (!isDeadline && deadlineGiven) { c.warn(`${path}.deadline_at`, 'deadline_ignored', 'deadline fields only apply to deadline categories'); deadlineAt = null; }
+
+  const sortAt = allDay ? (startDate ? localMidnight(startDate, zone) : null) : isDeadline ? deadlineAt : startAt;
+
+  const location = text(c, v.location, `${path}.location`, CALENDAR_LIMITS.location);
+  const company = text(c, v.company, `${path}.company`, SOURCE_KEY_LIMITS.short);
+  const jobTitle = text(c, v.job_title, `${path}.job_title`, SOURCE_KEY_LIMITS.medium);
+  // The public posting this event relates to (association is resolved at read time inside the caller's scope; never a database id).
+  const jobUrl = url(c, v.job_url, `${path}.job_url`);
+  const meetingUrl = safeHttpsUrl(c, v.meeting_url, `${path}.meeting_url`);
+  const eventUrl = safeHttpsUrl(c, v.source_event_url, `${path}.source_event_url`);
+  const orgRaw = text(c, v.organizer_name, `${path}.organizer_name`, CALENDAR_LIMITS.organizerName);
+  const organizerName = orgRaw ? orgRaw.replace(/<[^>]*>/g, '').replace(/\S+@\S+/g, '').replace(/\s+/g, ' ').trim() || null : null;
+  const domRaw = text(c, v.organizer_domain, `${path}.organizer_domain`, 255);
+  let organizerDomain: string | null = null;
+  if (domRaw) {
+    const d = (domRaw.includes('@') ? domRaw.slice(domRaw.lastIndexOf('@') + 1) : domRaw).replace(/[>\s]/g, '').toLowerCase();
+    if (DOMAIN.test(d)) organizerDomain = d; else c.err(`${path}.organizer_domain`, 'domain', 'must be a domain such as example.com');
+  }
+  let attendeeCount: number | null = null;
+  if (v.attendee_count !== undefined && v.attendee_count !== null) {
+    if (typeof v.attendee_count !== 'number' || !Number.isInteger(v.attendee_count) || v.attendee_count < 0 || v.attendee_count > CALENDAR_LIMITS.attendeeCount) c.err(`${path}.attendee_count`, 'attendee_count', `must be an integer 0..${CALENDAR_LIMITS.attendeeCount} (a count only; attendee lists are never stored)`);
+    else attendeeCount = v.attendee_count;
+  }
+  const cancelledAt = timestamp(c, v.cancelled_at, `${path}.cancelled_at`);
+
+  // previous_event: the identity/time this item replaced (reschedule or cancellation). Provider ids are public calendar ids, never database ids.
+  let prevId: string | null = null, prevStart: string | null = null;
+  if (v.previous_event !== undefined && v.previous_event !== null) {
+    if (!isObj(v.previous_event)) c.err(`${path}.previous_event`, 'type', 'must be an object');
+    else {
+      c.strip(v.previous_event, CALENDAR_PREVIOUS_KEYS, `${path}.previous_event`);
+      prevId = text(c, v.previous_event.source_event_id, `${path}.previous_event.source_event_id`, AI_LIMITS.id);
+      prevStart = calendarInstant(c, v.previous_event.start_at, v.previous_event.start_local, `${path}.previous_event`, 'start', zone);
+    }
+  }
+  if (c.errors.length > e0 || !category || !sortAt) return empty;
+
+  const calendarSource = ctx.dedupe.source_name ?? null;
+  const sourceEventId = ctx.dedupe.source_id ?? null;
+  const logical = calendarLogicalKey({ company, category, title: ctx.title, start_at: sortAt });
+  const prevLogical = prevStart ? calendarLogicalKey({ company, category, title: ctx.title, start_at: prevStart }) : null;
+
+  const out: JsonRecord = { version: CALENDAR_PAYLOAD_VERSION, status, all_day: allDay };
+  const put = (k: string, val: JsonValue | null) => { if (val !== null && val !== undefined) out[k] = val; };
+  put('start_at', startAt); put('end_at', endAt); put('start_date', startDate); put('end_date', endDate); put('deadline_at', deadlineAt);
+  put('time_zone', zone); put('calendar_source', calendarSource); put('source_event_id', sourceEventId); put('source_event_url', eventUrl);
+  put('organizer_name', organizerName); put('organizer_domain', organizerDomain); put('company', company); put('job_title', jobTitle); put('job_url', jobUrl);
+  put('location', location); put('meeting_url', meetingUrl); put('cancelled_at', cancelledAt); put('attendee_count', attendeeCount);
+  if (prevId || prevStart) out.previous_event = { ...(prevId ? { source_event_id: prevId } : {}), ...(prevStart ? { start_at: prevStart } : {}) };
+  if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', 'calendar payload too large');
+
+  const calendar: AiCalendarProjection = {
+    category, is_deadline: isDeadline, status, all_day: allDay, start_at: startAt, end_at: endAt, start_date: startDate, end_date: endDate,
+    deadline_at: deadlineAt, sort_at: sortAt, time_zone: zone, calendar_source: calendarSource, source_event_id: sourceEventId,
+    previous_source_event_id: prevId, source_event_url: eventUrl, company, job_title: jobTitle, location, meeting_url: meetingUrl,
+    organizer_name: organizerName, organizer_domain: organizerDomain, original_start_at: prevStart, cancelled_at: cancelledAt,
+    logical_key: logical, previous_logical_key: prevLogical, payload_version: CALENDAR_PAYLOAD_VERSION,
+  };
+  return {
+    payload: out, calendar, category, sortAt, dueAt: isDeadline ? sortAt : null,
+    identity: { company, category, start_at: sortAt },
+  };
+}
+
 // ---- items -----------------------------------------------------------------
 
 const DEDUPE_KEYS = ['source_type', 'source_id', 'event', 'date', 'job_url', 'external_job_id', 'company', 'title', 'name', 'channel', 'source_name', 'location', 'posted_date', 'profile_url', 'role'] as const;
@@ -656,7 +855,9 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
   let identity: DedupeInput = {};
   let jobLead: AiJobLeadProjection | undefined;
   let dueAt = due_at;
+  let occurredOut = occurred_at;
   let categoryOut = category;
+  let calendar: AiCalendarProjection | undefined;
   const sourceUrl = typeof source_ref.url === 'string' ? source_ref.url : null;
   if (kind === 'job_lead') {
     const r = jobLeadPayload(c, raw.payload, `${path}.payload`, { dedupe: dedupeIn, sourceUrl });
@@ -673,6 +874,11 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
   } else if (kind === 'recruiter_intel') {
     const r = recruiterPayload(c, raw.payload, `${path}.payload`, { sourceUrl });
     body = r.payload; identity = r.identity;
+  } else if (kind === 'calendar_event') {
+    // The finding time is the item's chronological anchor (its start, or its deadline), not a provider-supplied value.
+    const r = calendarPayload(c, raw.payload, `${path}.payload`, { dedupe: dedupeIn, title, category, categoryPath: `${path}.category` });
+    body = r.payload; identity = r.identity;
+    if (r.calendar) { calendar = r.calendar; categoryOut = r.category; occurredOut = r.sortAt; dueAt = r.dueAt; }
   } else if (kind) {
     body = payload(c, kind, raw.payload, `${path}.payload`, dedupeIn.date);
   }
@@ -680,14 +886,18 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
   let dedupe_key = '';
   if (kind && title) {
     const merged: DedupeInput = { ...identity };
-    for (const [k, val] of Object.entries(dedupeIn)) if (val !== null && val !== undefined && val !== '') (merged as Record<string, unknown>)[k] = val;
-    const r = buildDedupeKey(kind, { ...merged, provider, title: kind === 'job_lead' ? merged.title ?? title : dedupeIn.title ?? title, summary });
+    for (const [k, val] of Object.entries(dedupeIn)) {
+      // Calendar identity is derived from the validated payload (company/title/start), never from free dedupe text.
+      if (kind === 'calendar_event' && (k === 'company' || k === 'title')) continue;
+      if (val !== null && val !== undefined && val !== '') (merged as Record<string, unknown>)[k] = val;
+    }
+    const r = buildDedupeKey(kind, { ...merged, provider, title: kind === 'job_lead' ? merged.title ?? title : kind === 'calendar_event' ? title : dedupeIn.title ?? title, summary });
     if (r.ok) dedupe_key = r.key; else c.err(`${path}.dedupe`, 'dedupe', r.reason);
   }
   if (c.errors.length > e0 || !kind || !title || !priority) return null;
   return {
-    kind, dedupe_key, category: categoryOut, priority, confidence: conf, title, summary, occurred_at, due_at: dueAt, source_ref,
-    match_hints: hints, evidence, payload: body, ...(jobLead ? { job_lead: jobLead } : {}),
+    kind, dedupe_key, category: categoryOut, priority, confidence: conf, title, summary, occurred_at: occurredOut, due_at: dueAt, source_ref,
+    match_hints: hints, evidence, payload: body, ...(jobLead ? { job_lead: jobLead } : {}), ...(calendar ? { calendar } : {}),
   };
 }
 

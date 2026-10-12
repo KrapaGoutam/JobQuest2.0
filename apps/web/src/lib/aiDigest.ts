@@ -7,13 +7,13 @@
 import { safeHttpUrl } from './aiHub';
 import { dayKey, isValidTimeZone } from './time';
 
-export const DIGEST_SECTION_KEYS = ['applications', 'job_leads', 'email_activity', 'recruiter_intel', 'upcoming', 'follow_ups', 'ai_suggestions'] as const;
+export const DIGEST_SECTION_KEYS = ['applications', 'job_leads', 'email_activity', 'recruiter_intel', 'calendar', 'upcoming', 'follow_ups', 'ai_suggestions'] as const;
 export type DigestSectionKey = (typeof DIGEST_SECTION_KEYS)[number];
 export type DigestSectionStatus = 'available' | 'zero' | 'not_configured';
 export const DIGEST_SECTION_STATUS_VALUES: readonly DigestSectionStatus[] = ['available', 'zero', 'not_configured'];
 export const DIGEST_SUMMARY_KEYS = [
   'applications_added', 'active_applications', 'new_job_leads', 'strong_matches', 'recruiter_replies',
-  'interviews', 'assessments', 'follow_ups', 'pending_suggestions', 'new_findings',
+  'interviews', 'assessments', 'follow_ups', 'pending_suggestions', 'new_findings', 'calendar_today', 'calendar_deadlines',
 ] as const;
 export const DIGEST_MAX_RANGE_DAYS = 366;
 
@@ -24,6 +24,7 @@ export const DIGEST_SECTION_ORDER: ReadonlyArray<{ key: DigestSectionKey; title:
   { key: 'job_leads', title: 'Job Leads' },
   { key: 'email_activity', title: 'Email Activity' },
   { key: 'recruiter_intel', title: 'Recruiter Intelligence' },
+  { key: 'calendar', title: 'Calendar' },
   { key: 'upcoming', title: 'Upcoming' },
   { key: 'ai_suggestions', title: 'AI Suggestions' },
 ];
@@ -32,6 +33,7 @@ export const DIGEST_SUMMARY_LABELS: Record<string, string> = {
   applications_added: 'Applications added', active_applications: 'Active applications', new_job_leads: 'New job leads',
   strong_matches: 'Strong matches', recruiter_replies: 'Recruiter replies', interviews: 'Interviews', assessments: 'Assessments',
   follow_ups: 'Follow-ups', pending_suggestions: 'Pending suggestions', new_findings: 'New AI findings',
+  calendar_today: 'Calendar events today', calendar_deadlines: 'Deadlines this week',
 };
 
 const SOURCE_LABELS: Record<string, string> = {

@@ -76,9 +76,10 @@ export const valid = {
     workflow: 'calendar_review',
     sources: [{ type: 'calendar', ref: 'cal-1', observed_at: null }],
     findings: [{
-      kind: 'calendar_event', dedupe: { source_type: 'calendar', source_id: 'evt-001', event: 'invite' },
-      title: 'Interview with Example Corp', occurred_at: '2026-10-05T15:00:00Z',
-      payload: { start_at: '2026-10-05T15:00:00Z', end_at: '2026-10-05T16:00:00Z', attendee_count: 3 },
+      // AI-7: closed category, calendar provider + event id identity, explicit-offset times
+      kind: 'calendar_event', category: 'interview', dedupe: { source_type: 'calendar', source_name: 'google_calendar', source_id: 'evt-001' },
+      title: 'Interview with Example Corp',
+      payload: { start_at: '2026-10-05T10:00:00-05:00', end_at: '2026-10-05T11:00:00-05:00', time_zone: 'America/Chicago', company: 'Example Corp', attendee_count: 3 },
     }],
   }),
   suggestion: base({

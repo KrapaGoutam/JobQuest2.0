@@ -77,7 +77,7 @@ describe.skipIf(!ready || !local)('AI-6 — MCP source tools (real DB)', () => {
   it('AI6M-01 · the source tools are read-only ai:read tools; there is still exactly one write tool and no source-specific write tool', async () => {
     const rw = await toolNames(tokens.carolRw!);
     expect(rw).toEqual(expect.arrayContaining(NEW_TOOLS));
-    expect(rw).toHaveLength(10);
+    expect(rw).toHaveLength(11); // AI-7 adds the calendar read
     expect(rw.filter((t: string) => /submit|create|import|delete|update|apply/.test(t))).toEqual(['jobquest_submit_ai_result']);
     const read = await toolNames(tokens.carolRead!);
     expect(read).toEqual(expect.arrayContaining(NEW_TOOLS));

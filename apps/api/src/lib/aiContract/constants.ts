@@ -92,12 +92,12 @@ export type JobEmploymentType = (typeof JOB_EMPLOYMENT_TYPES)[number];
 // product name is "Daily Digest"). One row per owner + digest_date + provider. The
 // payload below is versioned independently of the jobquest.ai-result envelope.
 export const DIGEST_PAYLOAD_VERSION = '1.0' as const;
-export const DIGEST_SECTION_KEYS = ['applications', 'job_leads', 'email_activity', 'recruiter_intel', 'upcoming', 'follow_ups', 'ai_suggestions'] as const;
+export const DIGEST_SECTION_KEYS = ['applications', 'job_leads', 'email_activity', 'recruiter_intel', 'calendar', 'upcoming', 'follow_ups', 'ai_suggestions'] as const;
 /** available = the source reported data; zero = source operational, nothing found; not_configured = no source yet. */
 export const DIGEST_SECTION_STATUSES = ['available', 'zero', 'not_configured'] as const;
 export const DIGEST_SUMMARY_KEYS = [
   'applications_added', 'active_applications', 'new_job_leads', 'strong_matches', 'recruiter_replies',
-  'interviews', 'assessments', 'follow_ups', 'pending_suggestions', 'new_findings',
+  'interviews', 'assessments', 'follow_ups', 'pending_suggestions', 'new_findings', 'calendar_today', 'calendar_deadlines',
 ] as const;
 export const DIGEST_LIMITS = { priorities: 8, itemsPerSection: 5, itemTitle: 160, itemDetail: 240, count: 100000 } as const;
 
@@ -117,3 +117,33 @@ export type AiSuggestionAction = (typeof AI_SUGGESTION_ACTIONS)[number];
 export type AiSuggestionStatus = (typeof AI_SUGGESTION_STATUSES)[number];
 export type AiSuggestionTargetType = (typeof AI_SUGGESTION_TARGET_TYPES)[number];
 export type AiSourceType = (typeof AI_SOURCE_TYPES)[number];
+
+// ---- Calendar intelligence (AI-7) -------------------------------------------------
+// Canonical workflow `calendar_review` (AI-1A CHECK; do NOT add a second `calendar_intel` id) and
+// finding kind `calendar_event`. Calendar events are `ai_findings` (parent, audited once) with a 1:1
+// child `ai_calendar_events` (migration 20261028100000) for chronological/range queries. The payload
+// shape is versioned here and stays inside jobquest.ai-result 1.0 (additive); mirrored by
+// apps/web/src/lib/aiCalendar.ts (tests/unit/ai-7-calendar-ui.test.ts fails on drift).
+
+/** Closed set of job-search calendar event categories. Free-form categories are rejected. */
+export const CALENDAR_CATEGORIES = [
+  'interview', 'recruiter_call', 'hiring_manager_call', 'networking_call',
+  'assessment_deadline', 'application_deadline', 'take_home_deadline', 'follow_up', 'other',
+] as const;
+/** Categories that describe a DUE time rather than a scheduled meeting. */
+export const CALENDAR_DEADLINE_CATEGORIES = ['assessment_deadline', 'application_deadline', 'take_home_deadline', 'follow_up'] as const;
+/** Lifecycle of the calendar item. reschedule / cancellation are states of an event, not separate events. */
+export const CALENDAR_STATUSES = ['scheduled', 'tentative', 'rescheduled', 'cancelled'] as const;
+/** A provider may name a lifecycle change as the category; it is normalised to category `other` + this status. */
+export const CALENDAR_CATEGORY_ALIASES: Record<string, (typeof CALENDAR_STATUSES)[number]> = {
+  reschedule: 'rescheduled', rescheduled: 'rescheduled', cancellation: 'cancelled', cancelled: 'cancelled', canceled: 'cancelled',
+};
+/** Attendee lists, invite bodies and raw provider events are never stored. */
+export const CALENDAR_RAW_KEYS = [
+  'attendees', 'attendee_list', 'guests', 'description', 'body', 'invite_html', 'html', 'raw', 'raw_event', 'raw_payload', 'ics', 'conference_data',
+] as const;
+export const CALENDAR_LIMITS = { sourceName: 64, location: 300, organizerName: 200, attendeeCount: 1000 } as const;
+export const CALENDAR_PAYLOAD_VERSION = '1.0' as const;
+
+export type CalendarCategory = (typeof CALENDAR_CATEGORIES)[number];
+export type CalendarStatus = (typeof CALENDAR_STATUSES)[number];

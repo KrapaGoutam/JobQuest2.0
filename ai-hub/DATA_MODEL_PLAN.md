@@ -126,3 +126,14 @@ Option C (finding + suggestion) with an **external reference** (`source_ref.even
 - **Recruiter (`recruiter_intel`):** must cite `source.url` or `payload.profile_url`; contact email/phone survive only with `contact_source_url` (never guessed); `verification` verified|uncertain with `uncertain_fields`; `related_job` is a contract-local public identity from which the server computes `related_job_key`; the link is resolved at read time inside the caller's RLS scope (a provider database id is never accepted). Identity: canonical profile URL (`recruiter:url:`), else name + company + role (`recruiter:`); the old `channel` input is no longer identity.
 - **Application matching:** deferred. No `application_id` is persisted for any source; no application is created or changed.
 - **Not created (documented decision):** `ai_email_events`, `ai_recruiters` — normalized finding columns plus payload JSON are sufficient for the required filters.
+
+## AI-7 — `ai_calendar_events` (implemented, migration `20261028100000`)
+
+1:1 child of `ai_findings` (kind `calendar_event`), composite FK `(finding_id, workspace_id, user_id)` -> parent, ON DELETE CASCADE,
+RLS select = `can_access_owned_record` (parent parity), no client writes, writers only via service_role RPCs
+(`rpc_ai_upsert_calendar_event`, `rpc_ai_resolve_calendar_key`). Columns: closed `category` (9) and `status` (scheduled, tentative,
+rescheduled, cancelled), `is_deadline` (derived from category), timed instants (`start_at`/`end_at`/`deadline_at`) OR all-day dates
+(`start_date`/`end_date`, inclusive), `sort_at` (chronological anchor), source `time_zone`, calendar source + event id (+ previous id), company/
+job title/location, https meeting/event links, organizer name+domain, `original_start_at`, `reschedule_count`, `cancelled_at`, `logical_key`.
+CHECKs enforce shape (all-day = dates, timed = instants), end >= start, cancelled_at iff cancelled, https-only links. Indexes (query-driven only):
+`(workspace_id, sort_at, id)`, source identity, logical key. No raw payload, attendee list or description is stored anywhere.

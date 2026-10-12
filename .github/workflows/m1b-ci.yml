@@ -176,3 +176,52 @@ jobs:
           if-no-files-found: ignore
       - if: always()
         run: pnpm exec supabase stop --no-backup
+
+  ai-hub-e2e:
+    # AI-7: dedicated, isolated AI Hub browser job. The AI Hub flags are OFF for every other job (including the
+    # `database` job's full browser suite, where the AI Hub specs skip themselves). They are turned ON here, only in
+    # this job's own env file on its own runner, and only the focused AI Hub specs run. All data is synthetic and is
+    # seeded into this job's disposable local Supabase stack; no provider, mailbox, calendar, token or Production/Dev
+    # database is involved, and no new secret is used (the local stack's keys are generated on the runner).
+    name: AI Hub browser (flags ON · isolated · synthetic data)
+    needs: [classify, static]
+    if: needs.classify.outputs.full_ci == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - name: Generate an ephemeral ES256 signing key for the disposable stack (never uploaded)
+        run: pnpm local:key
+      - name: Start disposable Supabase stack (applies supabase/migrations; trusts the key)
+        run: pnpm exec supabase start -x studio,imgproxy,vector,logflare,realtime,storage-api,edge-runtime,postgres-meta,supavisor
+      - name: Write local env, then enable the AI Hub for THIS job only
+        shell: bash
+        run: |
+          pnpm local:env
+          printf 'AI_HUB_ENABLED=true\nVITE_AI_HUB_ENABLED=true\n' >> .env.m1b-local
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: AI Hub focused specs (Daily Digest · Job Leads · Email · Recruiter Intel · Calendar · shell/clipping · axe · 375/768/1280)
+        run: pnpm exec playwright test e2e/ai5-digest.spec.ts e2e/ai6-sources.spec.ts e2e/ai7-calendar.spec.ts
+        env:
+          M1B_ENV_FILE: .env.m1b-local
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-hub-e2e-evidence
+          path: |
+            test-results/evidence/
+            test-results/screenshots/
+          if-no-files-found: ignore
+      - name: Upload Playwright failure context (ARIA snapshots; no credentials)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-hub-e2e-failure-context
+          path: test-results/**/error-context.md
+          if-no-files-found: ignore
+      - if: always()
+        run: pnpm exec supabase stop --no-backup

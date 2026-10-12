@@ -85,6 +85,8 @@ export interface AiHubSnapshot {
   recentRunCount?: number;
   /** FAILED or PARTIAL runs created in the same window. */
   attentionRunCount?: number;
+  /** AI-6 source counts; absent when they could not be loaded (the rest of the Overview still renders). */
+  sources?: { newJobLeads: number; emailAttention: number; recruiterIntel: number };
 }
 
 export const RECENT_WINDOW_DAYS = 7;
@@ -244,14 +246,23 @@ export function isAiHubEmpty(s: AiHubSnapshot): boolean {
   return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0;
 }
 
-export type AiHubTab = 'overview' | 'digest' | 'history';
+export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'history';
+
+/** Tab order is the navigation order. Calendar stays hidden until it is implemented. */
+export const AI_HUB_TABS: ReadonlyArray<{ id: AiHubTab; label: string; path: string }> = [
+  { id: 'overview', label: 'Overview', path: '/ai-hub' },
+  { id: 'digest', label: 'Daily Digest', path: '/ai-hub/digest' },
+  { id: 'job-leads', label: 'Job Leads', path: '/ai-hub/job-leads' },
+  { id: 'email', label: 'Email', path: '/ai-hub/email' },
+  { id: 'recruiters', label: 'Recruiter Intel', path: '/ai-hub/recruiters' },
+  { id: 'history', label: 'History', path: '/ai-hub/history' },
+];
+export const AI_HUB_PATHS: readonly string[] = AI_HUB_TABS.map((t) => t.path);
 
 export function aiHubTabFromPath(path: string): AiHubTab {
-  if (path === '/ai-hub/history') return 'history';
-  return path === '/ai-hub/digest' ? 'digest' : 'overview';
+  return AI_HUB_TABS.find((t) => t.path === path)?.id ?? 'overview';
 }
 
 export function aiHubPathForTab(tab: AiHubTab): string {
-  if (tab === 'history') return '/ai-hub/history';
-  return tab === 'digest' ? '/ai-hub/digest' : '/ai-hub';
+  return AI_HUB_TABS.find((t) => t.id === tab)?.path ?? '/ai-hub';
 }

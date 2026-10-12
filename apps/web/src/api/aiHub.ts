@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
+import { fetchSourceCounts } from './aiSources';
 import {
   HISTORY_PAGE_SIZE, RECENT_WINDOW_DAYS, pageRange, sliceRunsPage,
   type AiFindingDetailRow, type AiFindingRow, type AiHubSnapshot, type AiRunDetailRow, type AiRunFilters,
@@ -28,7 +29,7 @@ export async function fetchAiHubSnapshot(
   now: Date = new Date(),
 ): Promise<AiHubSnapshot> {
   const since = new Date(now.getTime() - RECENT_WINDOW_DAYS * 86_400_000).toISOString();
-  const [runs, findings, pending, pendingRows, recent, attention] = await Promise.all([
+  const [runs, findings, pending, pendingRows, recent, attention, sources] = await Promise.all([
     client.from('ai_runs').select(RUN_COLUMNS).eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false }).limit(10),
     client.from('ai_findings').select(FINDING_COLUMNS).eq('workspace_id', workspaceId)
@@ -41,6 +42,8 @@ export async function fetchAiHubSnapshot(
       .eq('workspace_id', workspaceId).gte('created_at', since),
     client.from('ai_runs').select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId).gte('created_at', since).in('status', ['FAILED', 'PARTIAL']),
+    // Isolated: a source-count failure must not break the rest of the Overview.
+    fetchSourceCounts(workspaceId, client).catch(() => undefined),
   ]);
   if ([runs, findings, pending, pendingRows, recent, attention].some((r) => r.error)) throw fail();
   return {
@@ -50,6 +53,7 @@ export async function fetchAiHubSnapshot(
     pendingSuggestionRows: (pendingRows.data ?? []) as unknown as AiSuggestionRow[],
     recentRunCount: recent.count ?? 0,
     attentionRunCount: attention.count ?? 0,
+    ...(sources ? { sources } : {}),
   };
 }
 

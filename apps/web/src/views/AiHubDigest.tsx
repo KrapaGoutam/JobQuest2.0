@@ -185,7 +185,7 @@ function LiveCard({ live, onGenerate, generate }: { live: NonNullable<DigestPane
         {onGenerate && (
           <div style={{ marginTop: '12px', display: 'grid', gap: '6px' }}>
             <div><Button variant="secondary" onClick={onGenerate} isLoading={generate?.status === 'working'}>Save a JobQuest digest for today</Button></div>
-            <span className="muted small">Stores today’s numbers above as a snapshot. Email, job leads and recruiter data stay “Not configured” until those sources exist.</span>
+            <span className="muted small">Stores today’s numbers above as a snapshot. Job leads, email and recruiter sections show “Not configured” until that source’s first successful run, and “None found” when it ran and found nothing.</span>
           </div>
         )}
         {generate?.status === 'error' && <p role="alert" style={{ margin: '8px 0 0' }}>{generate.message ?? 'Could not save the digest.'}</p>}

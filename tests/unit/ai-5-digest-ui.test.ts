@@ -193,11 +193,11 @@ describe('AI Hub navigation', () => {
     const shell = renderToStaticMarkup(createElement(AiHubShell, { tab: 'digest', onTabChange: noop, state: { status: 'loading' }, digest: createElement('p', null, 'DIGEST-SLOT') }));
     for (const label of ['Overview', 'Daily Digest', 'History']) expect(shell).toContain(label);
     expect(shell).toContain('DIGEST-SLOT');
-    for (const hidden of ['Job Leads', 'Recruiter Intel', 'Calendar']) expect(shell).not.toContain(hidden); // no empty fake product pages
+    expect(shell).not.toContain('Calendar'); // calendar stays hidden until implemented (AI-6 adds Job Leads, Email and Recruiter Intel)
   });
   it('is registered behind the existing AI Hub exposure check only', () => {
     const app = readFileSync('apps/web/src/App.tsx', 'utf8');
-    expect(app).toMatch(/routePath === '\/ai-hub\/digest'/);
+    expect(app).toMatch(/AI_HUB_PATHS\.includes\(routePath\)/);
     expect(app).toMatch(/if \(!isAiHubExposed\(\)\) return notFoundView/);
   });
 });

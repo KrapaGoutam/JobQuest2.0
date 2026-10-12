@@ -104,7 +104,7 @@ describe('AI Hub read layer', () => {
     const snap = await fetchAiHubSnapshot('ws-1', client);
     expect(snap.pendingSuggestions).toBe(3);
     expect(snap.runs).toHaveLength(1);
-    expect([...new Set(calls.filter((c) => c.startsWith('from:')))].sort()).toEqual(['from:ai_findings', 'from:ai_runs', 'from:ai_suggestions']);
+    expect([...new Set(calls.filter((c) => c.startsWith('from:')))].sort()).toEqual(['from:ai_findings', 'from:ai_job_leads', 'from:ai_runs', 'from:ai_suggestions']);
     expect(calls.some((c) => /insert|update|delete|upsert|rpc/.test(c))).toBe(false);
     expect(calls).toContain('eq:"workspace_id","ws-1"');
   });
@@ -125,7 +125,7 @@ describe('navigation wiring', () => {
     expect(readFileSync('apps/web/src/components/shell/Sidebar.tsx', 'utf8')).toContain("path: '/ai-hub', label: 'AI Hub'");
     expect(readFileSync('apps/web/src/components/shell/MobileNav.tsx', 'utf8')).toContain("path: '/ai-hub', label: 'AI Hub'");
     const app = readFileSync('apps/web/src/App.tsx', 'utf8');
-    expect(app).toContain("routePath === '/ai-hub'");
+    expect(app).toContain('AI_HUB_PATHS.includes(routePath)');
     expect(app).toContain('<AiHubView');
   });
 });

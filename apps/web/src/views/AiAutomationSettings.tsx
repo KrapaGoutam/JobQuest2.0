@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { fetchAiWorkflowConfigs } from '../api/aiHub';
 import {
-  AI_PROVIDER_LABELS, AI_WORKFLOW_LABELS, AI_WRITE_ACTIONS_ENABLED, workflowStatus,
+  AI_PROVIDER_LABELS, AI_WRITE_ACTIONS_ENABLED,
 } from '../lib/aiHubFlags';
+import {
+  AI_WORKFLOW_DEFINITIONS, AI_WORKFLOW_STATUS_LABELS, PROVIDER_COMPATIBILITY_LABELS, workflowAvailability,
+} from '../lib/aiWorkflowDefinitions';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { ClaudeConnectorPanel } from '../components/ai/ClaudeConnectorPanel';
 import type { PublicSession } from '../api';
@@ -73,13 +77,25 @@ export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWor
                 Couldn’t load AI workflow settings. The rest of Settings is unaffected.
               </p>
             )}
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {Object.entries(AI_WORKFLOW_LABELS).map(([id, label]) => (
-                <li key={id} style={rowStyle}>
-                  <span>{label}</span>
-                  <span>{workflowStatus(stored.get(id))}</span>
-                </li>
-              ))}
+            <p className="muted" style={{ margin: '0 0 8px', fontSize: '13px' }}>
+              Workflows are descriptions of what an AI provider can do for you. JobQuest does not run them: you create the
+              schedule in the provider (for example a Claude scheduled task), and results arrive as AI findings.
+            </p>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '12px' }}>
+              {AI_WORKFLOW_DEFINITIONS.map((def) => {
+                const status = workflowAvailability(def, { disabled: stored.get(def.id) === false });
+                return (
+                  <li key={def.id} style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <b style={{ fontSize: '14px' }}>{def.name}</b>
+                      <StatusBadge variant={status === 'AVAILABLE' ? 'success' : status === 'DISABLED' ? 'danger' : 'muted'}>{AI_WORKFLOW_STATUS_LABELS[status]}</StatusBadge>
+                    </div>
+                    <span>{def.purpose}</span>
+                    <span className="muted">Recommended cadence: {def.recommendedCadence}. Provider schedule state is not tracked by JobQuest.</span>
+                    <span className="muted">Claude: {PROVIDER_COMPATIBILITY_LABELS[def.providers.claude]} · ChatGPT: {PROVIDER_COMPATIBILITY_LABELS[def.providers.chatgpt]} · Gemini: {PROVIDER_COMPATIBILITY_LABELS[def.providers.gemini]}</span>
+                  </li>
+                );
+              })}
             </ul>
           </CardBody>
         </Card>

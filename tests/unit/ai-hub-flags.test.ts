@@ -60,7 +60,10 @@ describe('Settings -> AI & Automation', () => {
     for (const p of ['Claude', 'Gemini', 'ChatGPT']) expect(html).toContain(p);
     expect((html.match(/Not configured<\/b>/g) ?? []).length).toBe(3);
     expect(html).not.toMatch(/Connected|Authorized|Scheduled|>Active</);
-    expect(html).toContain('Unavailable until provider setup');
+    // AI-5: workflow definitions with honest readiness; JobQuest owns no scheduler so nothing is ever "Running".
+    expect(html).toContain('Daily Digest');
+    expect(html).toContain('Source integration not implemented');
+    expect(html).not.toMatch(/Running|Next run|Last run/);
     expect(html).toContain('Disabled');
   });
   it('has no controls that could enable anything', () => {

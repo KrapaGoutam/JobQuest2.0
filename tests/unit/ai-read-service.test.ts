@@ -157,7 +157,7 @@ describe('DTO safety and errors', () => {
 describe('read-only guarantee', () => {
   it('exports only reads/counts and the source has no write, rpc or service-role path', () => {
     const fns = Object.entries(read).filter(([, v]) => typeof v === 'function').map(([k]) => k);
-    expect(fns.sort()).toEqual(['countPendingAiSuggestions', 'getAiFinding', 'getAiRun', 'getAiSuggestion', 'listAiFindings', 'listAiRuns', 'listAiSuggestions']);
+    expect(fns.sort()).toEqual(['countPendingAiSuggestions', 'getAiDigest', 'getAiFinding', 'getAiRun', 'getAiSuggestion', 'listAiDigests', 'listAiFindings', 'listAiRuns', 'listAiSuggestions']);
     const src = readFileSync('apps/api/src/services/aiReadService.ts', 'utf8');
     expect(src).not.toMatch(/\.(insert|update|upsert|delete|rpc)\(|admin\(|SUPABASE_SECRET_KEY|service_role/);
     expect(src).toContain('userClient');

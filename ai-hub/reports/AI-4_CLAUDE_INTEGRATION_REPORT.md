@@ -88,5 +88,11 @@ Tested against the stable branch alias MCP endpoint (Preview `jobquest2-d4ys3g5j
 
 **Cleanup:** the temporary credential is revoked (no active validation credential). The operator should remove or repoint the `JobQuest2DEV` connector in Claude if it targets an ephemeral Preview; the branch alias is not a permanent provider endpoint.
 
+## Development integration and CI closure
+- First development merge `ddec2093` (base `ed517594`): development CI `38149316322` **FAILED** (rerun failed identically). Only failure: `e2e/pl4b-planning.spec.ts:70`, calendar-tablet accessibility audit, `.calendar-today` colour contrast 2.67:1 (white text on dark-theme accent `#8098ff`, required 4.5:1). AI-4 touched no calendar, theme or CSS files; classified as a **pre-existing, unrelated accessibility defect** exposed during AI-4 development CI (why it passed on Oct 9 was not determined; a date-dependent trigger is suspected, unconfirmed). It was NOT caused by AI-4.
+- Fix `fix/calendar-today-contrast` `019cbaba`: one line in `apps/web/src/styles/globals.css`, `.calendar-today { color: white }` -> `color: var(--color-on-accent)` (existing token already used by primary buttons: white on `#3157d5` in light, `#0b1030` on `#8098ff` in dark). Assertion not weakened, no date special-casing. Targeted spec `pl4b-planning` passed locally; fix branch CI `38200664445` PASS. Recorded as an unrelated development stabilization fix.
+- Merged to development once: `498d3342765deb252cceefb287940d3d83382814`. **Final development CI `38201400116` PASS.**
+- AI-4 was not retested: the certified executable AI-4 state (`4c3a5778`) and the Claude remote smoke were reused. Main (`26e517ea`) and Production unchanged; no migration.
+
 ## Deferred
 Scheduled Claude workflow / Morning Brief and workflow-config mutation; OAuth; Claude Skill (not created; live evaluation decides); suggestion cross-run re-proposal policy; application matching; core AI writes (AI-11); Gemini and ChatGPT provider phases (separate architectures, not extrapolated from Claude); Production rollout.

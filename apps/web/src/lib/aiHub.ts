@@ -97,11 +97,11 @@ export const AI_PROVIDER_LABELS: Record<string, string> = {
   claude: 'Claude', gemini: 'Gemini', chatgpt: 'ChatGPT', manual: 'Manual', system: 'System',
 };
 export const AI_WORKFLOW_LABELS: Record<string, string> = {
-  daily_brief: 'Daily brief', email_triage: 'Email triage', job_discovery: 'Job discovery',
+  daily_brief: 'Daily Digest', email_triage: 'Email triage', job_discovery: 'Job discovery',
   recruiter_intel: 'Recruiter intel', calendar_review: 'Calendar review', other: 'Other',
 };
 export const AI_FINDING_KIND_LABELS: Record<string, string> = {
-  daily_brief: 'Daily brief', email_event: 'Email event', job_lead: 'Job lead',
+  daily_brief: 'Daily Digest', email_event: 'Email event', job_lead: 'Job lead',
   recruiter_intel: 'Recruiter intel', calendar_event: 'Calendar event', note: 'Note', other: 'Other',
 };
 export const AI_ERROR_CATEGORY_LABELS: Record<string, string> = {
@@ -147,7 +147,7 @@ export function safeHttpUrl(raw: unknown): string | null {
 export type PayloadFieldType = 'string' | 'number' | 'boolean' | 'url' | 'timestamp' | 'strings';
 /** Allowlist per finding kind; mirrors the AI-1C payload schemas. note/other/unknown kinds show nothing. */
 export const AI_PAYLOAD_FIELDS: Record<string, Array<[key: string, label: string, type: PayloadFieldType]>> = {
-  daily_brief: [['date', 'Date', 'string'], ['highlights', 'Highlights', 'strings'], ['total_items', 'Items', 'number']],
+  daily_brief: [['digest_date', 'Digest date', 'string'], ['time_zone', 'Time zone', 'string'], ['version', 'Digest version', 'string']],
   email_event: [['from_domain', 'From domain', 'string'], ['company', 'Company', 'string'], ['role_title', 'Role', 'string'], ['next_step', 'Next step', 'string'], ['deadline', 'Deadline', 'timestamp']],
   job_lead: [['company', 'Company', 'string'], ['role_title', 'Role', 'string'], ['location', 'Location', 'string'], ['salary_text', 'Salary', 'string'], ['remote', 'Remote', 'boolean'], ['job_url', 'Job posting', 'url'], ['fit_notes', 'Fit notes', 'string']],
   recruiter_intel: [['recruiter_name', 'Recruiter', 'string'], ['company', 'Company', 'string'], ['channel', 'Channel', 'string'], ['role_title', 'Role', 'string']],
@@ -244,12 +244,14 @@ export function isAiHubEmpty(s: AiHubSnapshot): boolean {
   return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0;
 }
 
-export type AiHubTab = 'overview' | 'history';
+export type AiHubTab = 'overview' | 'digest' | 'history';
 
 export function aiHubTabFromPath(path: string): AiHubTab {
-  return path === '/ai-hub/history' ? 'history' : 'overview';
+  if (path === '/ai-hub/history') return 'history';
+  return path === '/ai-hub/digest' ? 'digest' : 'overview';
 }
 
 export function aiHubPathForTab(tab: AiHubTab): string {
-  return tab === 'history' ? '/ai-hub/history' : '/ai-hub';
+  if (tab === 'history') return '/ai-hub/history';
+  return tab === 'digest' ? '/ai-hub/digest' : '/ai-hub';
 }

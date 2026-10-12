@@ -86,3 +86,20 @@ D-1 pull-model, provider-out-of-process · D-2 Option C data model · D-3 findin
 
 ## 11. Remote MCP boundary (AI-3, implemented)
 `/api/mcp` (Streamable HTTP, official SDK 1.32.1) lives in the existing Hono/Vercel function: `routes/mcp.ts` (lazy import, so an MCP failure cannot affect boot or `/api/health`) -> `mcp/server.ts` (kill switch -> Origin allow-list -> bearer auth -> POST-only -> body bound -> scope pre-check (HTTP 403) -> SDK transport, one stateless server per request, 25 s timeout) -> `mcp/tools.ts` (static registry of 6 tools) -> existing services (`aiReadService`, `applicationReadService`, `ingestAiResult`). Tools receive only an `McpPrincipal` (`mcp/principal.ts`); reads run as the principal's user under RLS via a 120 s user JWT bound to the connector token's own `auth_sessions` row. Capabilities: tools only. No core mutation tool exists. See `reports/AI-3_FINAL_REPORT.md`.
+
+## 12. Scheduled intelligence and Daily Digest (AI-5, implemented)
+
+```text
+Claude scheduled task / future ChatGPT or Gemini task / JobQuest deterministic service
+        -> jobquest.ai-result (workflow daily_brief ...)
+        -> jobquest_submit_ai_result (MCP) | ingestAiResult (internal)
+        -> ai_runs / ai_findings / ai_suggestions   (daily digest = finding kind daily_brief)
+        -> AI Hub -> Daily Digest (stored snapshots; combined view computed deterministically in the UI)
+```
+
+- **JobQuest owns no scheduler.** Scheduling is provider-owned (a Claude scheduled task). No cron library, background loop or Vercel cron was added; no screen says "Running". JobQuest does not know a provider's next run.
+- **Two layers:** (A) deterministic JobQuest aggregation (`apps/api/src/services/aiDigestService.ts`: applications added/active, follow-up dates, interviews, pending suggestions, AI findings, in the owner's profile time zone, owner-scoped, RLS-as-user), persisted only through `ingestAiResult` as provider `system` (never a direct table write); (B) external-AI narrative submitted by a provider. Both are provider-neutral and coexist per date.
+- **No fake data:** each section is `available`, `zero` (source checked, empty) or `not_configured` (no source). Email, job discovery and recruiter sources are `not_configured` in JobQuest's own digest because no such integration exists yet.
+- **Reads:** `aiReadService.listAiDigests/getAiDigest` (RLS as caller, stable `dedupe_key desc, id desc` order, date range prefix on the dedupe key) and one MCP tool `jobquest_list_daily_digests` (scope `ai:read`). No "generate digest" MCP tool. The only JobQuest-side write is the user-initiated, CSRF-protected `POST /api/ai/digest/generate` (today only; owner session; stores the deterministic digest).
+- **Workflow definitions** (`apps/web/src/lib/aiWorkflowDefinitions.ts`): Daily Digest, Job Discovery, Email Triage, Recruiter Intelligence, Calendar Intelligence, with purpose, source, output, cadence recommendation, scopes, source readiness and provider compatibility. Statuses: Available / Provider setup required / Source integration not implemented / Disabled.
+- **Failure isolation:** the digest tab, its queries and the generate route fail independently (AI-only; applications, auth, tasks, dashboard and History are unaffected).

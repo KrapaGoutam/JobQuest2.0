@@ -102,3 +102,14 @@ Purge is a scheduled job introduced in a later phase (AI-1 only defines `expires
 ## 8. Calendar storage recommendation
 
 Option C (finding + suggestion) with an **external reference** (`source_ref.event_id`) — never copy descriptions/attendees. Accepting creates a JobQuest interview via existing `rpc_schedule_interview`. Copying external events (A) is rejected as privacy-heavy and sync-prone.
+
+## 9. Daily Digest (AI-5, implemented; supersedes the `daily_brief:YYYY-MM-DD` note in section 5)
+
+- **A digest is a finding. No `ai_daily_digests` table exists.** Kind and workflow keep the existing canonical value `daily_brief` (the product name is "Daily Digest"); no enum change and **no migration** were needed.
+- **Identity:** `dedupe_key = daily_brief:<digest_date>:<provider>` (provider is part of a digest's identity; this is the single exception to "provider is not a dedupe input"), unique per `(workspace_id, user_id, kind, dedupe_key)`. So: one digest per owner + date + provider; ChatGPT/Gemini/Claude/JobQuest digests coexist with their own provenance. A retry with the same `external_run_id` is an idempotent run; a later run on the same date refreshes the same row while it is still NEW; a closed (non-NEW) digest is never reopened (`unchanged_closed`).
+- **Date:** `digest_date` is the calendar date in the owner's profile time zone (`profiles.timezone`, UTC when unset). `payload.digest_date` must equal `dedupe.date`.
+- **Payload 1.0** (validator: `apps/api/src/lib/aiContract/validate.ts`, constants `DIGEST_*`): `version`, `digest_date`, `time_zone?`, `generated_at?`, `summary` (optional integer counts; absent = not reported), `priorities[]` (<= 8), `sections` keyed by `applications|job_leads|email_activity|recruiter_intel|upcoming|follow_ups|ai_suggestions`, each `{status: available|zero|not_configured, count?, items[] (<= 5)}`. Consistency rules: `zero` has no items/count>0, `not_configured` has no items/count, `available` has items or a count>0. Items: `title, detail?, priority?, source?, url?, occurred_at?`. Whole payload <= 16 KiB (DB cap).
+- **Snapshot:** stored payload is returned as stored; history is never recomputed from current state.
+- **Providers:** `system` (existing value) is JobQuest's own deterministic digest; JobQuest content is never attributed to `claude`.
+- **Job leads:** remain generic `job_lead` finding payloads (company, role_title, location, salary_text, remote, job_url, external_job_id, fit_notes). A dedicated `ai_job_leads` child table stays an AI-8 decision and was not created.
+- **`ai_workflow_configs` mutation:** assessed in AI-5 and deliberately NOT added (see report); the table stays read-only.

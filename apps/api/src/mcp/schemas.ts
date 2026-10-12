@@ -10,7 +10,7 @@ import {
 import {
   APPLICATION_STAGES, APPLICATION_STATUSES, APP_READ_MAX_PAGE, APP_READ_MAX_PAGE_SIZE, APP_SEARCH_MAX_LENGTH,
 } from '../services/applicationReadService';
-import { AI_READ_MAX_PAGE, AI_READ_MAX_PAGE_SIZE } from '../services/aiReadService';
+import { AI_DIGEST_MAX_PAGE_SIZE, AI_READ_MAX_PAGE, AI_READ_MAX_PAGE_SIZE } from '../services/aiReadService';
 
 const iso = z.string().max(40).describe('ISO-8601 timestamp with offset, e.g. 2026-10-01T12:00:00Z');
 const id = z.uuid();
@@ -46,6 +46,14 @@ export const listAiFindingsInput = z.strictObject({
   priority: z.enum(AI_PRIORITIES).optional(),
   runId: id.optional(),
   ...aiPaging,
+});
+const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('Calendar date YYYY-MM-DD in the owner profile time zone');
+export const listDailyDigestsInput = z.strictObject({
+  dateFrom: calendarDate.optional(),
+  dateTo: calendarDate.optional(),
+  provider: z.enum(AI_PROVIDERS).optional(),
+  page: z.number().int().min(0).max(AI_READ_MAX_PAGE).optional().describe('0-based page index'),
+  pageSize: z.number().int().min(1).max(AI_DIGEST_MAX_PAGE_SIZE).optional().describe(`Digests per page (max ${AI_DIGEST_MAX_PAGE_SIZE}, default 7)`),
 });
 export const listAiSuggestionsInput = z.strictObject({
   status: z.enum(AI_SUGGESTION_STATUSES).optional(),

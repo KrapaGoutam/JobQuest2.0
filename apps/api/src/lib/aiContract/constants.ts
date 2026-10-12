@@ -53,7 +53,25 @@ export const AI_LIMITS = {
   dedupeKey: 255,
 } as const;
 
-export type AiProvider = (typeof AI_PROVIDERS)[number];
+// ---- Daily Digest (AI-5) ----------------------------------------------------
+// A digest is an `ai_findings` row (kind/workflow `daily_brief`, AI-0 decision; the
+// product name is "Daily Digest"). One row per owner + digest_date + provider. The
+// payload below is versioned independently of the jobquest.ai-result envelope.
+export const DIGEST_PAYLOAD_VERSION = '1.0' as const;
+export const DIGEST_SECTION_KEYS = ['applications', 'job_leads', 'email_activity', 'recruiter_intel', 'upcoming', 'follow_ups', 'ai_suggestions'] as const;
+/** available = the source reported data; zero = source operational, nothing found; not_configured = no source yet. */
+export const DIGEST_SECTION_STATUSES = ['available', 'zero', 'not_configured'] as const;
+export const DIGEST_SUMMARY_KEYS = [
+  'applications_added', 'active_applications', 'new_job_leads', 'strong_matches', 'recruiter_replies',
+  'interviews', 'assessments', 'follow_ups', 'pending_suggestions', 'new_findings',
+] as const;
+export const DIGEST_LIMITS = { priorities: 8, itemsPerSection: 5, itemTitle: 160, itemDetail: 240, count: 100000 } as const;
+
+export type DigestSectionKey = (typeof DIGEST_SECTION_KEYS)[number];
+export type DigestSectionStatus = (typeof DIGEST_SECTION_STATUSES)[number];
+export type DigestSummaryKey = (typeof DIGEST_SUMMARY_KEYS)[number];
+
+export type AiProvider =(typeof AI_PROVIDERS)[number];
 export type AiWorkflow = (typeof AI_WORKFLOWS)[number];
 export type AiRunStatus = (typeof AI_RUN_STATUSES)[number];
 export type AiTriggerType = (typeof AI_TRIGGER_TYPES)[number];

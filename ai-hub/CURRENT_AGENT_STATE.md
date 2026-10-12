@@ -2,35 +2,73 @@
 
 ```
 CURRENT PHASE:
+AI-5 (Scheduled Intelligence + Daily Digest Foundation; re-sequenced from "Gemini")
+
+CURRENT SUB-PHASE:
+AI-5 READY FOR BRANCH CI
+
+STATUS:
+AI-5 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI (not complete until branch CI, development merge and development CI pass; those results are recorded in the chat checkpoint and the closure docs carried by the next phase)
+
+BASE BRANCH:
+development (498d3342765deb252cceefb287940d3d83382814)
+
+WORKING BRANCH:
+feature/ai-5-scheduled-digest (AI-4 closure docs cherry-picked as 76322f69 from d3f90f3b)
+
+NEXT SUB-PHASE:
+Push branch once, observe the one branch CI run by exact run ID, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP; AI-6 External Intelligence Sources needs operator approval.
+
+DO NOT REPEAT:
+AI-1..AI-4 work, the Claude connector smoke, connector token creation, the digest design/validation below.
+
+NEXT EXACT STEP:
+git push -u origin feature/ai-5-scheduled-digest (once). Do not push docs-only commits while an exact application SHA is certifying.
+```
+
+## AI-5 facts (this branch)
+
+- Roadmap re-sequenced (operator): AI-5 = Scheduled Intelligence + Daily Digest; AI-6 = External Intelligence Sources (email + job discovery + recruiter; calendar may be separate); Gemini/ChatGPT provider phases move after AI-6 (historical labels kept in ROADMAP/PHASE_REGISTRY).
+- Daily Digest = `ai_findings` kind/workflow `daily_brief` (existing canonical value; product name "Daily Digest"); dedupe key `daily_brief:<date>:<provider>`; payload 1.0; **no digest table, no migration** (Dev head `20261026100000`, Prod `20261022100000`, Prod untouched). Digest date = owner profile time zone (UTC when unset).
+- New code: `apps/api/src/lib/aiContract` (digest payload validator + per-provider dedupe), `apps/api/src/lib/calendarDate.ts`, `aiReadService.listAiDigests/getAiDigest`, `apps/api/src/services/aiDigestService.ts` (deterministic aggregation + system digest through `ingestAiResult`), `routes/aiDigest.ts` (`POST /api/ai/digest/generate`, owner+CSRF, today only), MCP tool `jobquest_list_daily_digests` (7 tools total), web `lib/aiDigest.ts`, `lib/aiWorkflowDefinitions.ts`, `api/aiDigest.ts`, `views/AiHubDigest.tsx`, tab `/ai-hub/digest`.
+- Provider-owned scheduling only: no cron/background loop; templates in `ai-hub/provider-workflows/` (Claude). Workflow-config mutation deliberately NOT added.
+- Local validation: unit 496/496 (35 files); integration AI suites (1B, 2A, 2B, 3, 4, 5) 67/67 on local Supabase; e2e `e2e/ai5-digest.spec.ts` PASS (375/768/1280, 0 horizontal overflow, 0 serious/critical axe); root typecheck, eslint, build, check:bundle clean. See `reports/AI-5_SCHEDULED_DIGEST_REPORT.md`.
+
+(Previous state, AI-4, kept for history:)
+
+```
+CURRENT PHASE:
 AI-4
 
 CURRENT SUB-PHASE:
-AI-4 PROVIDER SMOKE PASS — READY FOR DEVELOPMENT INTEGRATION
+AI-4 COMPLETE
 
 STATUS:
-AI-4 PROVIDER SMOKE PASS — READY FOR DEVELOPMENT INTEGRATION
+AI-4 COMPLETE — CLAUDE REMOTE CONNECTOR INTEGRATED TO DEVELOPMENT — AWAITING OPERATOR APPROVAL FOR NEXT PROVIDER PHASE
 
 BASE BRANCH:
-development (ed517594d58dedf26b6144d61b2e9ac2f8e60a58; unchanged at fetch 2026-10-11)
+development (498d3342765deb252cceefb287940d3d83382814)
 
 WORKING BRANCH:
-feature/ai-4-claude-integration (executable commit 4c3a5778, certified by branch CI 37947672506; later commits are docs-only)
-
-BRANCH PUSHED:
-YES (4c3a5778); docs-only commits go to development with the merge
+none (feature/ai-4-claude-integration and fix/calendar-today-contrast merged)
 
 CI:
-Branch CI 37947672506 PASS @4c3a5778; 37945994001 PASS @3687b048. Development CI pending (see chat checkpoint).
+Development CI 38201400116 PASS @498d3342. See facts below.
 
 NEXT SUB-PHASE:
-Merge --no-ff to development once, push once, development CI once, STOP (no next provider without operator approval).
+Await operator decision on the next provider phase (do not assume Gemini/ChatGPT match Claude).
 
 DO NOT REPEAT:
-Implementation, local suites, remote Claude smoke, token creation. The temporary credential is revoked.
+AI-1..AI-4 work, the Claude remote smoke, connector token creation, the calendar contrast fix.
 
 NEXT EXACT STEP:
-git fetch; confirm development unchanged; git merge --no-ff feature/ai-4-claude-integration into development; push once; observe development CI by run ID.
+Operator review. This closure doc is carried by the next phase branch (it was not pushed, to avoid a CI cycle on the certified development SHA).
 ```
+
+## AI-4 closure facts (persisted; docs-only, unpushed at closure)
+
+AI-4 COMPLETE — CLAUDE REMOTE CONNECTOR INTEGRATED TO DEVELOPMENT. Executable SHA `4c3a5778` (branch CI `37947672506` PASS); first development merge `ddec2093` CI `38149316322` FAILED on an unrelated pre-existing calendar today-badge contrast defect (white on #8098ff, 2.67:1; `e2e/pl4b-planning.spec.ts:70`; failed-job rerun failed the same way); narrow fix branch `fix/calendar-today-contrast` (`019cbaba`, `.calendar-today` now uses existing `--color-on-accent`), branch CI `38200664445` PASS; merged to development `498d3342765deb252cceefb287940d3d83382814`; final development CI `38201400116` PASS. AI-4 provider functionality needed no further change; Claude smoke NOT repeated. Main `26e517ea` and Production unchanged; Dev migration head `20261026100000`, Prod `20261022100000`.
+
 
 ## AI-3 final facts (persisted at AI-4 start)
 

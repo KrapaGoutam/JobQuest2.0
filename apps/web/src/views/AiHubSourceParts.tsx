@@ -175,7 +175,8 @@ export function PriorityBadge({ priority }: { priority: string }) {
 
 /** A link to an external page. The visible text never contains the raw URL's credentials (they are rejected upstream). */
 export function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
-  return <a href={href} target="_blank" rel="noopener noreferrer">{children}<span className="sr-only"> (opens in a new tab)</span></a>;
+  // 24px minimum target height (WCAG 2.2 target size) even when the link sits alone in a row.
+  return <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', minHeight: '24px' }}>{children}<span className="sr-only"> (opens in a new tab)</span></a>;
 }
 
 /** Two-step dismiss: the only write on these pages (an AI review action; core records are never touched). */

@@ -5,10 +5,10 @@ CURRENT PHASE:
 AI-6 (External Intelligence Sources: Email Intelligence + Job Discovery + Recruiter Intelligence; one cumulative branch)
 
 CURRENT SUB-PHASE:
-AI-6 IMPLEMENTATION IN PROGRESS
+AI-6 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI
 
 STATUS:
-AI-6 IN PROGRESS (not complete until branch CI, development merge and development CI pass)
+AI-6 READY FOR BRANCH CI (not complete until branch CI, development merge and development CI pass; results go in the chat checkpoint and the closure docs carried by the next phase)
 
 BASE BRANCH:
 development (ce3c16a6e4a96e8ccfe2bc13752df1998822a218)
@@ -17,8 +17,14 @@ WORKING BRANCH:
 feature/ai-6-external-intelligence
 
 NEXT EXACT STEP:
-Continue the AI-6 task list; see reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md once written.
+Push the branch once, observe the one branch CI run by exact run ID, apply migration 20261027100000 to Dev only, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP; the next phase needs operator approval. Do not push docs-only commits while an exact application SHA is certifying.
 ```
+
+## AI-6 facts (this branch)
+
+- Email + job discovery + recruiter intel through the single `jobquest.ai-result` 1.0 path (no enum change, no new write tool, no scheduler, no scraper). Migration `20261027100000_ai_hub_external_intelligence.sql` (`ai_job_leads` child of `ai_findings`, composite FK, RLS = parent, projection + key-resolve RPCs, service_role only): applied to the LOCAL stack; Dev only after branch CI; Production head stays `20261022100000`.
+- New code: `aiContract` payload validators/dedupe, `aiExternalIntelligenceService` + `aiReadSupport`, ingestion projection, 3 read-only MCP tools (10 tools, 1 write), Daily Digest source integration, web pages `/ai-hub/job-leads|email|recruiters`, Claude templates. Report: `reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md`.
+- Local validation: unit 600/600 (40 files), integration AI suites 88/88, focused e2e PASS (375/768/1280, axe 0 serious/critical), typecheck, eslint, build, bundle, secret scan clean.
 
 ## AI-5 FINAL FACTS (persisted at AI-6 start)
 

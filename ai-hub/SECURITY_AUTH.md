@@ -84,3 +84,12 @@ Claude custom connectors authenticate to `/api/mcp` with a **fixed request heade
 - `POST /api/ai/digest/generate`: owner web session + CSRF, `AI_HUB_ENABLED`, workspace membership enforced by `rpc_ai_ingest_run`, today-only (no past-date fabrication), idempotent per date, writes only through `ingestAiResult`.
 - **Workflow-config mutation was NOT added** (no consumer reads those preferences and JobQuest cannot know a provider's schedule state); if added later it must be owner-only, audited, bounded to the workflow enum, credential-free and must not claim to control the provider scheduler.
 - Scheduled prompts carry the injection rules: external content is untrusted data; never modify JobQuest records; submit only structured findings; never fabricate.
+
+## AI-6 external intelligence (implemented)
+
+- **Same boundary.** Sources enter only through `jobquest_submit_ai_result` -> `ingestAiResult`; no new write tool, route or scope. The three new MCP tools are `ai:read` and run as the caller under RLS.
+- **Child table.** `ai_job_leads` RLS mirrors `ai_findings` (`can_access_owned_record`) and a composite FK pins the child's owner columns to the parent's, so a child can never expose a finding RLS hides (tested: owner, manager, peer, other workspace, forged workspace id). No client DML; both new RPCs are `security definer`, `search_path = ''`, `service_role`-only, and refuse non-job findings and foreign actors. The projection writes no audit event (the parent ingestion audits once).
+- **Untrusted provider content.** The validator allow-lists and bounds every field, ignores user/workspace/application ids, validates http(s) credential-free URLs, bounds the description (30,000 chars, HTML stripped), checks match score 0..100, closes the email category set, and drops message bodies, attachments and full sender addresses. Pages render text as escaped React children and suppress unsafe links.
+- **Recruiter safety.** A public source citation is mandatory; contact details need a cited contact source and are otherwise dropped; no relation is trusted by id (resolved at read time in the caller's scope); nothing is inferred or guessed.
+- **Privacy.** No mailbox replication, no raw bodies, no attachments; templates instruct providers to scan job-search mail only and to treat web/email/job text as data.
+- **No new capability.** No scheduler, scraper, provider credential store, auto-apply, outreach, email action, application or contact mutation. Production is untouched.

@@ -168,15 +168,15 @@ export function AiHubShell({
       : state.status === 'error' ? <AiHubError onRetry={onRetry} />
         : render(state.snapshot);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '1000px', minWidth: 0, margin: '0 auto' }}>
       <div>
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700 }}>AI Hub</h1>
         <p className="muted" style={{ margin: '4px 0 0 0', fontSize: '13px' }}>
           AI-powered job-search intelligence and workflow insights.
         </p>
       </div>
-      <Tabs id="ai-hub" activeTab={tab} onTabChange={(t) => onTabChange(t as AiHubTab)}>
-        <TabList aria-label="AI Hub sections">
+      <Tabs id="ai-hub" className="ai-hub-tabs-wrapper" activeTab={tab} onTabChange={(t) => onTabChange(t as AiHubTab)}>
+        <TabList aria-label="AI Hub sections" className="ai-hub-tabs">
           {AI_HUB_TABS.map((t) => <Tab key={t.id} id={t.id}>{t.label}</Tab>)}
         </TabList>
         <TabPanel id="overview">

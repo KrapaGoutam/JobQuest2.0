@@ -32,8 +32,12 @@ STEPS
    note what is new or awaiting my decision.
 4. jobquest_list_daily_digests with dateFrom/dateTo = yesterday: skip priorities I was already told
    about unless they are still unresolved.
-5. If I enabled email, calendar, or job-search connectors for this task, check them for TODAY only and add
-   short summaries (see the section keys below). Otherwise leave those sections "not_configured".
+5. Stored sources (AI-6): call jobquest_list_job_leads (discoveredSince = start of DATE), jobquest_list_email_intelligence
+   (receivedSince = start of DATE) and jobquest_list_recruiter_intel (discoveredSince = start of DATE). Summarize ONLY
+   what those tools return; do not re-search the web or my mailbox for the digest. A strong job match means a stored
+   match score of at least 80; a lead with no score is never strong. If a stored source has never produced anything,
+   leave its section "not_configured"; use "zero" only when you know that source ran and found nothing.
+   If I also enabled a calendar connector for this task, add short calendar summaries; otherwise leave the calendar-derived parts out.
 6. Build ONE jobquest.ai-result and submit it with jobquest_submit_ai_result.
 
 RESULT SHAPE (exact)

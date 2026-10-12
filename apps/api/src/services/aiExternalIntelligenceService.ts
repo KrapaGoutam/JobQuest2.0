@@ -15,10 +15,8 @@ import {
   AI_PROVIDERS, EMAIL_ATTENTION_CATEGORIES, EMAIL_CATEGORIES, JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
   STRONG_MATCH_THRESHOLD, type AiFindingStatus, type AiPriority, type AiProvider, type JsonRecord,
 } from '../lib/aiContract';
-import {
-  dbFail, fail, num, parsePage, prepare, rec, s, sliced, sn,
-  type AiPage, type AiPageRequest, type AiReadContext, type AiReadDeps, type AiReadResult,
-} from './aiReadService';
+import type { AiPage, AiPageRequest, AiReadContext, AiReadDeps, AiReadResult } from './aiReadService';
+import { dbFail, fail, num, parsePage, prepare, rec, s, sliced, sn } from './aiReadSupport';
 
 // ---- shared shapes ------------------------------------------------------------------
 

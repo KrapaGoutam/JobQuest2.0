@@ -62,3 +62,9 @@ The provider-neutral MCP server exists at `/api/mcp` (Streamable HTTP, stateless
 - Whether a given Claude plan lets scheduled tasks use a custom connector is **not verified by JobQuest**; the operator's first manual "Run now" is the validation (kept optional; AI-5 completion does not depend on it).
 - **ChatGPT:** custom MCP availability differs by plan/product; the Claude fixed-header workflow must not be assumed; do not build against a Plus-only assumption; integration waits for capability validation.
 - **Gemini:** Gemini API / managed-agent remote MCP exists, but consumer Google AI Pro scheduled integration must be validated separately; API capability is not subscription capability.
+
+## AI-6 status (implemented): external intelligence sources
+
+- One contract, one write tool. `jobquest_submit_ai_result` accepts `job_lead`, `email_event` and `recruiter_intel` findings (and a multi-source envelope). Three read-only `ai:read` tools give provider workflows dedupe context: `jobquest_list_job_leads`, `jobquest_list_email_intelligence`, `jobquest_list_recruiter_intel` (ten tools total, one write; bounded pages <= 50; workspace-scoped under RLS; sanitized; no job descriptions, bodies or provider ids).
+- Claude templates (exact schema, safety rules, cadence guidance): `ai-hub/provider-workflows/claude/JOB_DISCOVERY.md`, `EMAIL_TRIAGE.md`, `RECRUITER_INTEL.md`; the Daily Digest template now reads the stored sources. A unit test validates every template's example against the real validator.
+- Scheduled or manual makes no difference to JobQuest. JobQuest stores no next-run time and has no scheduler or scraper. ChatGPT/Gemini are not implemented.

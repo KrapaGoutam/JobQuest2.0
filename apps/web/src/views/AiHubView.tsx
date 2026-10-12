@@ -10,6 +10,8 @@ import {
   FindingDetailDialog, FindingList, RunDetailDialog, fmtTime, type DetailState,
 } from './AiHubDetails';
 import { AiHubHistory } from './AiHubHistory';
+import { AiHubDigest } from './AiHubDigest';
+import type { PublicSession } from '../api';
 import { Tabs, TabList, Tab, TabPanel } from '../components/ui/Tabs';
 import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -129,11 +131,11 @@ export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun }: {
 
 /** Presentational shell: no data fetching, easy to render in every state. */
 export function AiHubShell({
-  tab, onTabChange, state, onRetry, history, onOpenFinding, onOpenRun,
+  tab, onTabChange, state, onRetry, history, digest, onOpenFinding, onOpenRun,
 }: {
   tab: AiHubTab; onTabChange: (t: AiHubTab) => void; state: AiHubLoadState; onRetry?: () => void;
   /** History owns its own data/failure state so it is isolated from Overview. */
-  history?: ReactNode; onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
+  history?: ReactNode; digest?: ReactNode; onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
 }) {
   const body = (render: (s: AiHubSnapshot) => ReactNode) =>
     state.status === 'loading' ? <AiHubLoading />
@@ -150,11 +152,13 @@ export function AiHubShell({
       <Tabs id="ai-hub" activeTab={tab} onTabChange={(t) => onTabChange(t as AiHubTab)}>
         <TabList aria-label="AI Hub sections">
           <Tab id="overview">Overview</Tab>
+          <Tab id="digest">Daily Digest</Tab>
           <Tab id="history">History</Tab>
         </TabList>
         <TabPanel id="overview">
           {body((s) => <AiHubOverview snapshot={s} onOpenFinding={onOpenFinding} onOpenRun={onOpenRun} />)}
         </TabPanel>
+        <TabPanel id="digest">{digest}</TabPanel>
         <TabPanel id="history">{history}</TabPanel>
       </Tabs>
     </div>
@@ -165,9 +169,11 @@ export interface AiHubViewProps {
   activeWorkspaceId: string | null;
   initialTab: AiHubTab;
   onNavigate: (path: string) => void;
+  currentUserId?: string | null;
+  session?: PublicSession | null;
 }
 
-export function AiHubView({ activeWorkspaceId, initialTab, onNavigate }: AiHubViewProps) {
+export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUserId = null, session = null }: AiHubViewProps) {
   const [state, setState] = useState<AiHubLoadState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -219,6 +225,7 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate }: AiHubVi
         onOpenFinding={openFinding}
         onOpenRun={openRun}
         history={<AiHubHistory activeWorkspaceId={activeWorkspaceId} onOpenRun={openRun} />}
+        digest={initialTab === 'digest' ? <AiHubDigest activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} /> : null}
       />
       {selection?.kind === 'run' && (
         <RunDetailDialog state={runDetail} onClose={close} onRetry={retryDetail} onOpenFinding={openFinding} />

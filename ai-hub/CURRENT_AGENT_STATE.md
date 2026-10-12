@@ -2,6 +2,42 @@
 
 ```
 CURRENT PHASE:
+AI-5 (Scheduled Intelligence + Daily Digest Foundation; re-sequenced from "Gemini")
+
+CURRENT SUB-PHASE:
+AI-5 READY FOR BRANCH CI
+
+STATUS:
+AI-5 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI (not complete until branch CI, development merge and development CI pass; those results are recorded in the chat checkpoint and the closure docs carried by the next phase)
+
+BASE BRANCH:
+development (498d3342765deb252cceefb287940d3d83382814)
+
+WORKING BRANCH:
+feature/ai-5-scheduled-digest (AI-4 closure docs cherry-picked as 76322f69 from d3f90f3b)
+
+NEXT SUB-PHASE:
+Push branch once, observe the one branch CI run by exact run ID, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP; AI-6 External Intelligence Sources needs operator approval.
+
+DO NOT REPEAT:
+AI-1..AI-4 work, the Claude connector smoke, connector token creation, the digest design/validation below.
+
+NEXT EXACT STEP:
+git push -u origin feature/ai-5-scheduled-digest (once). Do not push docs-only commits while an exact application SHA is certifying.
+```
+
+## AI-5 facts (this branch)
+
+- Roadmap re-sequenced (operator): AI-5 = Scheduled Intelligence + Daily Digest; AI-6 = External Intelligence Sources (email + job discovery + recruiter; calendar may be separate); Gemini/ChatGPT provider phases move after AI-6 (historical labels kept in ROADMAP/PHASE_REGISTRY).
+- Daily Digest = `ai_findings` kind/workflow `daily_brief` (existing canonical value; product name "Daily Digest"); dedupe key `daily_brief:<date>:<provider>`; payload 1.0; **no digest table, no migration** (Dev head `20261026100000`, Prod `20261022100000`, Prod untouched). Digest date = owner profile time zone (UTC when unset).
+- New code: `apps/api/src/lib/aiContract` (digest payload validator + per-provider dedupe), `apps/api/src/lib/calendarDate.ts`, `aiReadService.listAiDigests/getAiDigest`, `apps/api/src/services/aiDigestService.ts` (deterministic aggregation + system digest through `ingestAiResult`), `routes/aiDigest.ts` (`POST /api/ai/digest/generate`, owner+CSRF, today only), MCP tool `jobquest_list_daily_digests` (7 tools total), web `lib/aiDigest.ts`, `lib/aiWorkflowDefinitions.ts`, `api/aiDigest.ts`, `views/AiHubDigest.tsx`, tab `/ai-hub/digest`.
+- Provider-owned scheduling only: no cron/background loop; templates in `ai-hub/provider-workflows/` (Claude). Workflow-config mutation deliberately NOT added.
+- Local validation: unit 496/496 (35 files); integration AI suites (1B, 2A, 2B, 3, 4, 5) 67/67 on local Supabase; e2e `e2e/ai5-digest.spec.ts` PASS (375/768/1280, 0 horizontal overflow, 0 serious/critical axe); root typecheck, eslint, build, check:bundle clean. See `reports/AI-5_SCHEDULED_DIGEST_REPORT.md`.
+
+(Previous state, AI-4, kept for history:)
+
+```
+CURRENT PHASE:
 AI-4
 
 CURRENT SUB-PHASE:

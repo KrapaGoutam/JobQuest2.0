@@ -3,6 +3,8 @@
 Statuses: NOT STARTED · IN PROGRESS · BLOCKED · READY FOR REVIEW · COMPLETE · SHELVED · INTERRUPTED. Attributes: `PHASE_REGISTRY.md`. Gates: `IMPLEMENTATION_PHASES.md`.
 Update this file in the same commit as the phase it reflects.
 
+> **Approved re-sequencing (operator, AI-5).** The original order below (AI-5 Gemini, AI-6 ChatGPT, AI-7 Email, AI-8 Job discovery, AI-9 Recruiter, AI-10 Calendar) is preserved as history. Because Claude is integrated and verified, **AI-5 is now "Scheduled Intelligence + Daily Digest Foundation"** (provider-neutral scheduled-result/digest model), **AI-6 is "External Intelligence Sources"** (email + job discovery + recruiter, one common AI-result path; calendar may stay separate), and the Gemini / ChatGPT provider phases move **after** AI-6 with numbers assigned when approved. Reason: a provider-neutral digest/scheduled-result storage model must exist before more providers are added, so provider capabilities do not dictate JobQuest's storage. ChatGPT custom MCP availability differs by plan/product and Gemini API remote MCP does not imply consumer Google AI Pro scheduled integration; both need capability validation first.
+
 ```
 AI-0 Architecture                                       READY FOR REVIEW (integrated to development; awaiting operator approval for AI-1)
 [x] AI-0A Repository audit
@@ -38,11 +40,20 @@ AI-4 Claude Integration (combined)                  COMPLETE (branch CI 37947672
 [x] branch CI  [x] remote Claude connector smoke (PASS, token revoked)  [x] development integration + CI
 (Deferred, not started: scheduled Morning Brief, workflow-config mutation, OAuth)
 
-AI-5 Gemini                                             NOT STARTED   (conditional: plan eligibility)
+AI-5 Scheduled Intelligence + Daily Digest (combined; re-sequenced)   AI-5 READY FOR BRANCH CI (see reports/AI-5_SCHEDULED_DIGEST_REPORT.md) (feature/ai-5-scheduled-digest)
+[x] Daily Digest = ai_finding (kind/workflow daily_brief; versioned payload 1.0; one digest per owner+date+provider; NO digest table, NO migration)
+[x] aiReadService digest reads + jobquest_list_daily_digests (read-only) + deterministic aggregation service + user-initiated "save JobQuest digest for today" (provider system)
+[x] AI Hub -> Daily Digest tab (/ai-hub/digest): Today/Yesterday/Last 7/custom, provider filter, combined view, source availability states
+[x] workflow definitions (5) + Claude scheduled-task templates (ai-hub/provider-workflows/) ; no JobQuest scheduler (provider-owned scheduling)
+(Deferred: ai_workflow_configs mutation, cross-run suggestion policy, closed-finding supersession, application matching, any external source integration)
+
+[historical label] Former AI-5 Gemini                  RE-SEQUENCED (after AI-6; conditional on plan eligibility; consumer scheduled capability unvalidated)
 [ ] 5A  [ ] 5B  [ ] 5C  [ ] 5D  [ ] 5E
 
-AI-6 ChatGPT                                            NOT STARTED   (expect attended-only)
+[historical label] Former AI-6 ChatGPT                 RE-SEQUENCED (after AI-6; expect attended-only; custom MCP availability differs by plan/product)
 [ ] 6A  [ ] 6B  [ ] 6C  [ ] 6D  [ ] 6E
+
+AI-6 (new) External Intelligence Sources              NOT STARTED   (awaiting operator approval; email + job discovery + recruiter over the AI-5 digest/result path; calendar may be separate)
 
 AI-7 Email triage                                       NOT STARTED
 [ ] 7A Rules  [ ] 7B Classification  [ ] 7C Priority  [ ] 7D Matching  [ ] 7E Review UX  [ ] 7F Dedupe

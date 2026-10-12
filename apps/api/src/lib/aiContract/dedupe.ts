@@ -1,5 +1,7 @@
 // Deterministic dedupe keys (DATA_MODEL_PLAN §5). Provider is deliberately NOT an
-// input: two providers seeing the same event must converge on one finding.
+// input for events/leads/recruiters: two providers seeing the same event must converge
+// on one finding. The single exception is the Daily Digest (AI-5): each provider's
+// digest is its own snapshot, so provider is part of the daily_brief identity.
 import { sha256Hex } from './canonical';
 import { AI_LIMITS, type AiFindingKind } from './constants';
 
@@ -8,6 +10,7 @@ export interface DedupeInput {
   source_id?: string | null;
   event?: string | null;
   date?: string | null; // YYYY-MM-DD (daily_brief)
+  provider?: string | null; // daily_brief only
   job_url?: string | null;
   external_job_id?: string | null;
   company?: string | null;
@@ -40,7 +43,7 @@ export const normalizeIdentityText = (s: string | null | undefined): string =>
   (s ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 
 const clean = (s: string | null | undefined): string => (s ?? '').trim();
-const isIsoDate = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) &&
+export const isIsoDate = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) &&
   new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
 
 export type DedupeResult = { ok: true; key: string } | { ok: false; reason: string };
@@ -72,8 +75,10 @@ export function buildDedupeKey(kind: AiFindingKind, i: DedupeInput): DedupeResul
       return ok(`jobct:${sha256Hex(`${co}|${ti}`)}`);
     }
     case 'daily_brief': {
-      const d = clean(i.date);
-      return isIsoDate(d) ? ok(`daily_brief:${d}`) : { ok: false, reason: 'daily_brief requires date YYYY-MM-DD' };
+      const d = clean(i.date), pr = clean(i.provider).toLowerCase();
+      if (!isIsoDate(d)) return { ok: false, reason: 'daily_brief requires date YYYY-MM-DD' };
+      if (!/^[a-z]{2,16}$/.test(pr)) return { ok: false, reason: 'daily_brief requires a provider' };
+      return ok(`daily_brief:${d}:${pr}`);
     }
     case 'recruiter_intel': {
       const n = normalizeIdentityText(i.name), c = normalizeIdentityText(i.company), ch = normalizeIdentityText(i.channel);

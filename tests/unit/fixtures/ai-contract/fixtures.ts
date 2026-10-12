@@ -27,10 +27,26 @@ const gmailFinding = (event: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** AI-5 Daily Digest payload 1.0 (sanitized). */
+export const digestPayload = (over: Record<string, unknown> = {}) => ({
+  version: '1.0',
+  digest_date: '2026-10-01',
+  time_zone: 'America/Chicago',
+  generated_at: '2026-10-01T12:00:00Z',
+  summary: { applications_added: 2, active_applications: 14, follow_ups: 1, pending_suggestions: 3 },
+  priorities: [{ title: 'Follow up with Example Corp', detail: 'Next action due today', priority: 'HIGH', source: 'jobquest' }],
+  sections: {
+    applications: { status: 'available', count: 2, items: [{ title: 'Example Corp — Engineer', source: 'jobquest' }] },
+    job_leads: { status: 'not_configured', items: [] },
+    email_activity: { status: 'zero', count: 0, items: [] },
+  },
+  ...over,
+});
+
 export const valid = {
   dailyBrief: base({
     workflow: 'daily_brief',
-    findings: [{ kind: 'daily_brief', dedupe: { date: '2026-10-01' }, title: 'Daily brief 2026-10-01', priority: 'INFO', payload: { date: '2026-10-01', highlights: ['One interview today'], total_items: 3 } }],
+    findings: [{ kind: 'daily_brief', dedupe: { date: '2026-10-01' }, title: 'Daily brief 2026-10-01', priority: 'INFO', payload: digestPayload() }],
   }),
   rejection: base({ findings: [gmailFinding('rejection', { priority: 'LOW' })] }),
   interview: base({ findings: [gmailFinding('interview', { priority: 'HIGH', due_at: '2026-10-05T15:00:00Z' })] }),

@@ -38,3 +38,11 @@ Every finding card shows: what was detected, matched record + match confidence, 
 ## 6. Design-system reuse
 
 Use existing `components/ui` primitives, tokens in `styles/tokens.css`, toasts via `ToastContext`. Manual UI acceptance gate per UI phase (operator checks desktop + mobile).
+
+## AI-5 update: Daily Digest tab (implemented)
+
+- Navigation is now **Overview | Daily Digest | History** (`/ai-hub`, `/ai-hub/digest`, `/ai-hub/history`). This supersedes the earlier "merge Daily Brief into Overview" proposal because stored digests have their own date history. Job Leads, Recruiter Intel, Email and Calendar tabs stay hidden until their sources are operational (no empty fake pages).
+- Daily Digest: Today / Yesterday / Last 7 days / Custom range (labelled date inputs, inline accessible validation), provider filter (All, Claude, ChatGPT, Gemini, JobQuest), per-digest header (date, provider, generated time in the profile zone, source-availability chips, summary metrics), sections in a fixed order (Top Priorities, Applications, Follow-ups, Job Leads, Email Activity, Recruiter Intelligence, Upcoming, AI Suggestions). Sections the digest does not report are omitted; `Not configured` and `None found` are different labels and never collapse. "All providers" shows a deterministic **Combined view** (max counts, deduplicated items with provenance) above the individual digests.
+- Today without a stored digest: "No Daily Digest has been generated for today." plus separately labelled **live** metrics (not a stored digest) and an explicit "Save a JobQuest digest for today" action. Historical dates render the stored payload only.
+- States: loading (status role), error (alert + retry, isolated), empty, unsupported payload. Layout verified at 375 / 768 / 1280 with no horizontal scroll and zero serious/critical axe findings (`e2e/ai5-digest.spec.ts`).
+- Settings -> AI & Automation -> Workflows now lists the five workflow definitions with honest readiness and the note that JobQuest does not run schedules.

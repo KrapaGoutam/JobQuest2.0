@@ -2,12 +2,12 @@
 // dependency) because unknown-field COUNTING is a contract requirement that
 // zod's strip mode does not report. Never throws on provider input.
 import {
-  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, AI_EVENT_PATTERN, AI_FINDING_KINDS, AI_LIMITS,
+  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, AI_EVENT_PATTERN, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION, DIGEST_SECTION_KEYS, DIGEST_SECTION_STATUSES, DIGEST_SUMMARY_KEYS, AI_FINDING_KINDS, AI_LIMITS,
   AI_MAX_SUPPORTED_MINOR, AI_PRIORITIES, AI_PROVIDERS, AI_SOURCE_TYPES, AI_SUGGESTION_ACTIONS,
   AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS,
-  type AiFindingKind, type AiSuggestionTargetType, type AiTriggerType,
+  type AiFindingKind, type AiProvider, type AiSuggestionTargetType, type AiTriggerType,
 } from './constants';
-import { buildDedupeKey, canonicalizeUrl, type DedupeInput } from './dedupe';
+import { buildDedupeKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
 import type {
   AiFinding, AiIngestRunInput, AiIssue, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
   JsonRecord, JsonValue,
@@ -125,14 +125,14 @@ function boundedRecord(c: Ctx, v: unknown, path: string, maxBytes: number, reser
 
 type PField = 'string' | 'number' | 'boolean' | 'url' | 'timestamp' | 'strings';
 const PAYLOAD_SCHEMAS: Partial<Record<AiFindingKind, Record<string, PField>>> = {
-  daily_brief: { date: 'string', highlights: 'strings', total_items: 'number' },
   email_event: { from_domain: 'string', company: 'string', role_title: 'string', next_step: 'string', deadline: 'timestamp' },
   job_lead: { company: 'string', role_title: 'string', location: 'string', salary_text: 'string', remote: 'boolean', job_url: 'url', external_job_id: 'string', fit_notes: 'string' },
   recruiter_intel: { recruiter_name: 'string', company: 'string', channel: 'string', role_title: 'string' },
   calendar_event: { start_at: 'timestamp', end_at: 'timestamp', location: 'string', attendee_count: 'number', join_url: 'url' },
 };
 
-function payload(c: Ctx, kind: AiFindingKind, v: unknown, path: string): JsonRecord {
+function payload(c: Ctx, kind: AiFindingKind, v: unknown, path: string, dedupeDate?: string | null): JsonRecord {
+  if (kind === 'daily_brief') return digestPayload(c, v, path, dedupeDate);
   const schema = PAYLOAD_SCHEMAS[kind];
   // note/other: bounded free-form record. Server-owned `seen_by` is always reserved.
   if (!schema) return boundedRecord(c, v, path, AI_LIMITS.payloadBytes, ['seen_by']);
@@ -159,12 +159,120 @@ function payload(c: Ctx, kind: AiFindingKind, v: unknown, path: string): JsonRec
   return out;
 }
 
+// ---- Daily Digest payload (AI-5) ---------------------------------------------
+
+const DIGEST_KEYS = ['version', 'digest_date', 'time_zone', 'generated_at', 'summary', 'priorities', 'sections'] as const;
+const DIGEST_ITEM_KEYS = ['title', 'detail', 'priority', 'source', 'url', 'occurred_at'] as const;
+const DIGEST_SECTION_FIELDS = ['status', 'count', 'items'] as const;
+
+function isValidTimeZone(z: string): boolean {
+  try { new Intl.DateTimeFormat('en-US', { timeZone: z }); return true; } catch { return false; }
+}
+
+function digestItem(c: Ctx, raw: unknown, path: string): JsonRecord | null {
+  if (!isObj(raw)) { c.err(path, 'type', 'must be an object'); return null; }
+  c.strip(raw, DIGEST_ITEM_KEYS, path);
+  const e0 = c.errors.length;
+  const title = text(c, raw.title, `${path}.title`, DIGEST_LIMITS.itemTitle, { required: true });
+  const detail = text(c, raw.detail, `${path}.detail`, DIGEST_LIMITS.itemDetail, { truncate: true });
+  const priority = raw.priority === undefined || raw.priority === null ? null : oneOf(c, raw.priority, `${path}.priority`, AI_PRIORITIES);
+  const source = raw.source === undefined || raw.source === null ? null : oneOf(c, raw.source, `${path}.source`, AI_SOURCE_TYPES);
+  const u = url(c, raw.url, `${path}.url`);
+  const occurred = timestamp(c, raw.occurred_at, `${path}.occurred_at`);
+  if (c.errors.length > e0 || !title) return null;
+  const out: JsonRecord = { title };
+  if (detail) out.detail = detail;
+  if (priority) out.priority = priority;
+  if (source) out.source = source;
+  if (u) out.url = u;
+  if (occurred) out.occurred_at = occurred;
+  return out;
+}
+
+function digestItems(c: Ctx, raw: unknown, path: string, max: number): JsonRecord[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) { c.err(path, 'type', 'must be an array'); return []; }
+  if (raw.length > max) { c.err(path, 'too_many', `max ${max} items (keep the digest concise)`); return []; }
+  return raw.map((x, i) => digestItem(c, x, `${path}[${i}]`)).filter((x): x is JsonRecord => x !== null);
+}
+
+const digestCount = (c: Ctx, v: unknown, path: string): number | null => {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > DIGEST_LIMITS.count) { c.err(path, 'count', `must be an integer 0..${DIGEST_LIMITS.count}`); return null; }
+  return v;
+};
+
+/**
+ * Normalizes a versioned Daily Digest payload. The server never invents counts or
+ * items: absent summary keys stay absent (= not reported), and a section's status
+ * must agree with its items so "zero" and "not configured" can never be conflated.
+ */
+function digestPayload(c: Ctx, v: unknown, path: string, dedupeDate: string | null | undefined): JsonRecord {
+  if (!isObj(v)) { c.err(path, 'required', 'a Daily Digest payload object is required'); return {}; }
+  c.strip(v, DIGEST_KEYS, path);
+  const out: JsonRecord = {};
+
+  const ver = typeof v.version === 'string' ? /^(\d{1,3})\.(\d{1,3})$/.exec(v.version) : null;
+  if (!ver || Number(ver[1]) !== 1) c.err(`${path}.version`, 'version', `must be "${DIGEST_PAYLOAD_VERSION}" (major 1)`);
+  else if (Number(ver[2]) > 0) c.warn(`${path}.version`, 'version_minor_ahead', 'digest minor is newer than 1.0; additive fields dropped');
+  out.version = DIGEST_PAYLOAD_VERSION;
+
+  const date = text(c, v.digest_date, `${path}.digest_date`, 10) ?? dedupeDate ?? null;
+  if (!date || !isIsoDate(date)) c.err(`${path}.digest_date`, 'digest_date', 'must be a valid calendar date YYYY-MM-DD');
+  else if (dedupeDate && date !== dedupeDate) c.err(`${path}.digest_date`, 'digest_date_mismatch', 'must equal dedupe.date');
+  else out.digest_date = date;
+
+  const tz = text(c, v.time_zone, `${path}.time_zone`, 64);
+  if (tz) { if (isValidTimeZone(tz)) out.time_zone = tz; else c.err(`${path}.time_zone`, 'time_zone', 'must be an IANA time zone'); }
+  const generated = timestamp(c, v.generated_at, `${path}.generated_at`);
+  if (generated) out.generated_at = generated;
+
+  if (v.summary !== undefined && v.summary !== null) {
+    if (!isObj(v.summary)) c.err(`${path}.summary`, 'type', 'must be an object');
+    else {
+      c.strip(v.summary, DIGEST_SUMMARY_KEYS, `${path}.summary`);
+      const sum: JsonRecord = {};
+      for (const k of DIGEST_SUMMARY_KEYS) { const n = digestCount(c, v.summary[k], `${path}.summary.${k}`); if (n !== null) sum[k] = n; }
+      out.summary = sum;
+    }
+  }
+
+  out.priorities = digestItems(c, v.priorities, `${path}.priorities`, DIGEST_LIMITS.priorities);
+
+  const sections: JsonRecord = {};
+  if (v.sections !== undefined && v.sections !== null) {
+    if (!isObj(v.sections)) c.err(`${path}.sections`, 'type', 'must be an object');
+    else {
+      c.strip(v.sections, DIGEST_SECTION_KEYS, `${path}.sections`);
+      for (const key of DIGEST_SECTION_KEYS) {
+        const raw = v.sections[key];
+        if (raw === undefined || raw === null) continue;
+        const sp = `${path}.sections.${key}`;
+        if (!isObj(raw)) { c.err(sp, 'type', 'must be an object'); continue; }
+        c.strip(raw, DIGEST_SECTION_FIELDS, sp);
+        const status = oneOf(c, raw.status, `${sp}.status`, DIGEST_SECTION_STATUSES);
+        const count = digestCount(c, raw.count, `${sp}.count`);
+        const items = digestItems(c, raw.items, `${sp}.items`, DIGEST_LIMITS.itemsPerSection);
+        if (!status) continue;
+        if (status === 'available' && items.length === 0 && !(count && count > 0)) c.err(sp, 'section_inconsistent', '"available" needs items or a count > 0');
+        else if (status === 'zero' && (items.length > 0 || (count ?? 0) > 0)) c.err(sp, 'section_inconsistent', '"zero" cannot carry items or a count > 0');
+        else if (status === 'not_configured' && (items.length > 0 || count !== null)) c.err(sp, 'section_inconsistent', '"not_configured" cannot carry items or a count');
+        else sections[key] = { status, ...(status === 'zero' ? { count: 0 } : count !== null ? { count } : {}), items };
+      }
+    }
+  }
+  out.sections = sections;
+
+  if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', `digest payload exceeds ${AI_LIMITS.payloadBytes} bytes; shorten items`);
+  return out;
+}
+
 // ---- items -----------------------------------------------------------------
 
 const DEDUPE_KEYS = ['source_type', 'source_id', 'event', 'date', 'job_url', 'external_job_id', 'company', 'title', 'name', 'channel'] as const;
 const FINDING_KEYS = ['kind', 'dedupe', 'category', 'priority', 'confidence', 'title', 'summary', 'occurred_at', 'due_at', 'source', 'match', 'evidence', 'payload'] as const;
 
-function finding(c: Ctx, raw: unknown, path: string): AiFinding | null {
+function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null): AiFinding | null {
   if (!isObj(raw)) { c.err(path, 'type', 'must be an object'); return null; }
   c.strip(raw, FINDING_KEYS, path);
   const e0 = c.errors.length;
@@ -238,11 +346,11 @@ function finding(c: Ctx, raw: unknown, path: string): AiFinding | null {
     }
   }
 
-  const body = kind ? payload(c, kind, raw.payload, `${path}.payload`) : {};
+  const body = kind ? payload(c, kind, raw.payload, `${path}.payload`, dedupeIn.date) : {};
 
   let dedupe_key = '';
   if (kind && title) {
-    const r = buildDedupeKey(kind, { ...dedupeIn, title: dedupeIn.title ?? title, summary });
+    const r = buildDedupeKey(kind, { ...dedupeIn, provider, title: dedupeIn.title ?? title, summary });
     if (r.ok) dedupe_key = r.key; else c.err(`${path}.dedupe`, 'dedupe', r.reason);
   }
   if (c.errors.length > e0 || !kind || !title || !priority) return null;
@@ -345,7 +453,7 @@ export function validateAiResult(input: unknown): AiValidationResult {
   if (c.errors.length || !Array.isArray(rawFindings) || !Array.isArray(rawSug)) return fail();
 
   rawFindings.forEach((f: unknown, i: number) => {
-    const r = finding(c, f, `findings[${i}]`);
+    const r = finding(c, f, `findings[${i}]`, provider);
     if (!r) { rejected++; return; }
     // Same-run duplicate identity: keep the first.
     if (findings.some((x) => x.kind === r.kind && x.dedupe_key === r.dedupe_key)) { c.warn(`findings[${i}]`, 'duplicate_in_run', 'duplicate identity within run; dropped'); return; }

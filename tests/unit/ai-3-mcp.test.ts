@@ -96,17 +96,18 @@ describe('AI-3 MCP static security boundary', () => {
     expect(src).toContain('ingestAiResult(');
   });
 
-  it('the registry is a fixed allow-list: six named tools, no generic SQL/RPC/HTTP/command/mutation tool', async () => {
+  it('the registry is a fixed allow-list: seven named tools, no generic SQL/RPC/HTTP/command/mutation tool', async () => {
     const { MCP_TOOLS, requiredScope } = await import('../../apps/api/src/mcp/tools');
     const names = MCP_TOOLS.map((t) => t.name).sort();
     expect(names).toEqual([
       'jobquest_get_application', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
-      'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_submit_ai_result',
+      'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_daily_digests', 'jobquest_submit_ai_result',
     ]);
     expect(names.join()).not.toMatch(/sql|rpc|http|fetch|exec|run_|command|delete|update|create_|status|accept|approve/);
     expect(new Set(names).size).toBe(names.length);
     expect(requiredScope('jobquest_list_applications')).toBe('jobquest:read');
     expect(requiredScope('jobquest_list_ai_runs')).toBe('ai:read');
+    expect(requiredScope('jobquest_list_daily_digests')).toBe('ai:read');
     expect(requiredScope('jobquest_submit_ai_result')).toBe('ai:ingest');
     expect(requiredScope('execute_sql')).toBeUndefined();
     const reads = MCP_TOOLS.filter((t) => t.name !== 'jobquest_submit_ai_result');

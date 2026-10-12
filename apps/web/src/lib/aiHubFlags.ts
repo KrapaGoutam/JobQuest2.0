@@ -40,7 +40,7 @@ export function isAiHubPath(path: string): boolean {
 export const AI_WRITE_ACTIONS_ENABLED = false as const;
 
 export const AI_WORKFLOW_LABELS: Record<string, string> = {
-  daily_brief: 'Morning brief',
+  daily_brief: 'Daily Digest',
   email_triage: 'Email triage',
   job_discovery: 'Job discovery',
   recruiter_intel: 'Recruiter research',

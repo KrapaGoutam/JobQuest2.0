@@ -65,7 +65,7 @@ describe.skipIf(!ready || !local)('AI-2B — AI read service (RLS) and audit sco
     const first = await seed({ findings: [finding(uniq('s'), { priority: 'LOW' })], suggestions: [{ finding_index: 0, action: 'create_task', proposed: { title: 'Follow up' } }] });
     ids.run = first.runId!;
     for (let i = 0; i < 4; i++) await seed({ findings: [finding(uniq('s'))] });
-    await seed({ provider: 'gemini', workflow: 'daily_brief', findings: [{ kind: 'daily_brief', dedupe: { date: `2026-10-0${1 + (n % 8)}` }, title: 'Daily brief', priority: 'INFO', payload: { date: '2026-10-01' } }] });
+    await seed({ provider: 'gemini', workflow: 'daily_brief', findings: [{ kind: 'daily_brief', dedupe: { date: '2026-10-01' }, title: 'Daily brief', priority: 'INFO', payload: { version: '1.0', digest_date: '2026-10-01', sections: {} } }] });
     const partial = await seed({ findings: [finding(uniq('s')), { kind: 'email_event', title: '', dedupe: {} }] });
     ids.partialRun = partial.runId!;
     expect(partial.status).toBe('PARTIAL');

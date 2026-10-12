@@ -406,6 +406,7 @@ function AppContent() {
       case '/analytics/aging':
         return 'Analytics';
       case '/ai-hub':
+      case '/ai-hub/digest':
       case '/ai-hub/history':
         return 'AI Hub';
       case '/workspace':
@@ -608,13 +609,15 @@ function AppContent() {
       );
     }
 
-    if (routePath === '/ai-hub' || routePath === '/ai-hub/history') {
+    if (routePath === '/ai-hub' || routePath === '/ai-hub/digest' || routePath === '/ai-hub/history') {
       if (!isAiHubExposed()) return notFoundView;
       return (
         <AiHubView
           activeWorkspaceId={activeWs}
           initialTab={aiHubTabFromPath(routePath)}
           onNavigate={navigate}
+          currentUserId={user?.id ?? null}
+          session={session}
         />
       );
     }

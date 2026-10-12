@@ -177,8 +177,9 @@ describe('dedupe', () => {
     expect(buildDedupeKey('email_event', { source_type: 'GMAIL', source_id: ' m1 ', event: 'Rejection' })).toEqual(buildDedupeKey('email_event', { source_type: 'gmail', source_id: 'm1', event: 'rejection' }));
   });
   it('daily brief, job fallbacks and keys fit DB shape', () => {
-    expect(ok(valid.dailyBrief).data!.findings[0]!.dedupe_key).toBe('daily_brief:2026-10-01');
-    expect(buildDedupeKey('daily_brief', { date: '2026-02-30' }).ok).toBe(false);
+    expect(ok(valid.dailyBrief).data!.findings[0]!.dedupe_key).toBe('daily_brief:2026-10-01:claude');
+    expect(buildDedupeKey('daily_brief', { date: '2026-02-30', provider: 'claude' }).ok).toBe(false);
+    expect(buildDedupeKey('daily_brief', { date: '2026-10-01' }).ok).toBe(false); // provider is part of a digest's identity
     expect(buildDedupeKey('job_lead', { company: 'A', title: 'B' }).ok).toBe(true);
     expect(buildDedupeKey('job_lead', {}).ok).toBe(false);
     const long = buildDedupeKey('job_lead', { job_url: `https://x.com/${'a'.repeat(400)}` });

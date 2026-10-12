@@ -9,6 +9,7 @@
 // There are no writes and no RPCs here. Mutation stays in the AI-1B RPCs.
 import { userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
+import { isCalendarDate, nextCalendarDate } from '../lib/calendarDate';
 import {
   AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
   AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS,
@@ -27,6 +28,11 @@ export const AI_READ_MAX_PAGE_SIZE = 50;
 export const AI_READ_MAX_PAGE = 500;
 /** Findings embedded in a run detail (one bounded query). */
 export const AI_READ_RUN_DETAIL_FINDINGS = 50;
+/** Digest payloads are large; digest pages are smaller than the generic AI pages. */
+export const AI_DIGEST_DEFAULT_PAGE_SIZE = 7;
+export const AI_DIGEST_MAX_PAGE_SIZE = 14;
+/** A digest range may not exceed this many calendar days (history is paged, never unbounded). */
+export const AI_DIGEST_MAX_RANGE_DAYS = 366;
 
 export interface AiReadContext {
   /** Decided by trusted server code (session/workspace context), never taken from a URL or payload. */
@@ -53,6 +59,9 @@ export interface AiRunListFilters {
 }
 export interface AiFindingListFilters { status?: AiFindingStatus; kind?: AiFindingKind; priority?: AiPriority; runId?: string }
 export interface AiSuggestionListFilters { status?: AiSuggestionStatus; findingId?: string; action?: AiSuggestionAction }
+
+/** Digest dates are calendar dates (YYYY-MM-DD) in the digest owner's profile time zone, inclusive. */
+export interface AiDigestListFilters { dateFrom?: string; dateTo?: string; provider?: AiProvider }
 
 export type AiReadErrorCode = 'AI_HUB_DISABLED' | 'INVALID_CONTEXT' | 'INVALID_FILTER' | 'NOT_FOUND' | 'FORBIDDEN' | 'READ_FAILED';
 export interface AiReadError { code: AiReadErrorCode; message: string }
@@ -88,11 +97,21 @@ export interface AiSuggestionDto {
   targetType: AiSuggestionTargetType | null; targetId: string | null; proposed: JsonRecord;
   confidence: number | null; createdAt: string;
 }
+/**
+ * A stored Daily Digest snapshot. `payload` is returned exactly as stored (validator
+ * output at write time); it is NEVER recomputed from current application state.
+ */
+export interface AiDigestDto {
+  id: string; ownerId: string; runId: string; provider: AiProvider; status: AiFindingStatus;
+  /** YYYY-MM-DD, from the stored payload (falls back to the dedupe key). */
+  digestDate: string; title: string; summary: string | null; createdAt: string; payload: JsonRecord;
+}
 export interface AiRunDetailResult { run: AiRunDetailDto; findings: AiFindingDto[]; findingsTruncated: boolean }
 
 // ---- validation helpers -------------------------------------------------------
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/;
 
 const err = (code: AiReadErrorCode, message: string): { ok: false; error: AiReadError } => ({ ok: false, error: { code, message } });
@@ -117,7 +136,7 @@ function prepare(ctx: AiReadContext, deps: AiReadDeps): Prepared {
 }
 
 /** Strict: unknown keys, wrong types and out-of-contract values are rejected. */
-function parseFilters(raw: unknown, spec: Record<string, readonly string[] | 'uuid' | 'iso'>): { ok: true; value: Record<string, string> } | { ok: false; error: AiReadError } {
+function parseFilters(raw: unknown, spec: Record<string, readonly string[] | 'uuid' | 'iso' | 'date'>): { ok: true; value: Record<string, string> } | { ok: false; error: AiReadError } {
   if (raw === undefined || raw === null) return { ok: true, value: {} };
   if (typeof raw !== 'object' || Array.isArray(raw)) return fail('INVALID_FILTER');
   const out: Record<string, string> = {};
@@ -126,18 +145,18 @@ function parseFilters(raw: unknown, spec: Record<string, readonly string[] | 'uu
     const rule = spec[k];
     if (!rule) return fail('INVALID_FILTER', `unknown filter ${k}`);
     if (typeof v !== 'string') return fail('INVALID_FILTER', k);
-    const good = rule === 'uuid' ? UUID.test(v) : rule === 'iso' ? ISO.test(v) && !Number.isNaN(Date.parse(v)) : rule.includes(v);
+    const good = rule === 'uuid' ? UUID.test(v) : rule === 'date' ? isCalendarDate(v) : rule === 'iso' ? ISO.test(v) && !Number.isNaN(Date.parse(v)) : rule.includes(v);
     if (!good) return fail('INVALID_FILTER', k);
     out[k] = rule === 'uuid' ? v.toLowerCase() : v;
   }
   return { ok: true, value: out };
 }
 
-function parsePage(raw: AiPageRequest | undefined): { ok: true; page: number; size: number; from: number; to: number } | { ok: false; error: AiReadError } {
+function parsePage(raw: AiPageRequest | undefined, limits: { def: number; max: number } = { def: AI_READ_DEFAULT_PAGE_SIZE, max: AI_READ_MAX_PAGE_SIZE }): { ok: true; page: number; size: number; from: number; to: number } | { ok: false; error: AiReadError } {
   const page = raw?.page ?? 0;
-  const size = raw?.pageSize ?? AI_READ_DEFAULT_PAGE_SIZE;
+  const size = raw?.pageSize ?? limits.def;
   if (!Number.isInteger(page) || page < 0 || page > AI_READ_MAX_PAGE) return fail('INVALID_FILTER', 'page');
-  if (!Number.isInteger(size) || size < 1 || size > AI_READ_MAX_PAGE_SIZE) return fail('INVALID_FILTER', 'pageSize');
+  if (!Number.isInteger(size) || size < 1 || size > limits.max) return fail('INVALID_FILTER', 'pageSize');
   return { ok: true, page, size, from: page * size, to: page * size + size }; // size+1 rows: lookahead
 }
 
@@ -250,6 +269,52 @@ export async function getAiFinding(ctx: AiReadContext, findingId: string, deps: 
   const { data, error } = await p.db.from('ai_findings').select(FINDING_DETAIL_COLUMNS).eq('workspace_id', p.ws).eq('id', findingId.toLowerCase()).maybeSingle();
   if (error) return dbFail(error);
   return data ? { ok: true, data: toFindingDetail(data as Row) } : fail('NOT_FOUND');
+}
+
+// ---- daily digests (AI-5) ----------------------------------------------------------
+// A digest is an ai_findings row (kind daily_brief). These reads return the STORED snapshot;
+// nothing here recomputes counts from current state.
+
+const DIGEST_COLUMNS = 'id, user_id, run_id, provider, status, title, summary, created_at, payload, dedupe_key'; // dedupe_key is read to derive the date, never exposed
+const DIGEST_FILTERS = { dateFrom: 'date', dateTo: 'date', provider: AI_PROVIDERS } as const;
+const KEY_DATE = /^daily_brief:(\d{4}-\d{2}-\d{2})/;
+
+const toDigest = (r: Row): AiDigestDto => {
+  const payload = rec(r.payload);
+  const fromKey = KEY_DATE.exec(s(r.dedupe_key))?.[1];
+  const stored = typeof payload.digest_date === 'string' && DATE.test(payload.digest_date) ? payload.digest_date : undefined;
+  return {
+    id: s(r.id), ownerId: s(r.user_id), runId: s(r.run_id), provider: r.provider as AiProvider, status: r.status as AiFindingStatus,
+    digestDate: stored ?? fromKey ?? '', title: s(r.title), summary: sn(r.summary), createdAt: s(r.created_at), payload,
+  };
+};
+
+/** Newest digest date first, then provider, with id as a stable tiebreaker across owners (manager view). */
+export async function listAiDigests(ctx: AiReadContext, filters?: AiDigestListFilters, page?: AiPageRequest, deps: AiReadDeps = {}): Promise<AiReadResult<AiPage<AiDigestDto>>> {
+  const p = prepare(ctx, deps); if (!p.ok) return p;
+  const f = parseFilters(filters, DIGEST_FILTERS); if (!f.ok) return f;
+  const pg = parsePage(page, { def: AI_DIGEST_DEFAULT_PAGE_SIZE, max: AI_DIGEST_MAX_PAGE_SIZE }); if (!pg.ok) return pg;
+  const { dateFrom, dateTo } = f.value;
+  if (dateFrom && dateTo) {
+    const days = (Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000;
+    if (days < 0 || days > AI_DIGEST_MAX_RANGE_DAYS) return fail('INVALID_FILTER', 'date range');
+  }
+  let q = p.db.from('ai_findings').select(DIGEST_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'daily_brief');
+  // The dedupe key is daily_brief:YYYY-MM-DD:provider, so a prefix range selects whole calendar dates.
+  if (dateFrom) q = q.gte('dedupe_key', `daily_brief:${dateFrom}`);
+  if (dateTo) q = q.lt('dedupe_key', `daily_brief:${nextCalendarDate(dateTo)}`);
+  if (f.value.provider) q = q.eq('provider', f.value.provider);
+  const { data, error } = await q.order('dedupe_key', { ascending: false }).order('id', { ascending: false }).range(pg.from, pg.to);
+  if (error) return dbFail(error);
+  return { ok: true, data: sliced(((data ?? []) as Row[]).map(toDigest), pg.page, pg.size) };
+}
+
+export async function getAiDigest(ctx: AiReadContext, digestId: string, deps: AiReadDeps = {}): Promise<AiReadResult<AiDigestDto>> {
+  const p = prepare(ctx, deps); if (!p.ok) return p;
+  if (typeof digestId !== 'string' || !UUID.test(digestId)) return fail('INVALID_FILTER', 'digestId');
+  const { data, error } = await p.db.from('ai_findings').select(DIGEST_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'daily_brief').eq('id', digestId.toLowerCase()).maybeSingle();
+  if (error) return dbFail(error);
+  return data ? { ok: true, data: toDigest(data as Row) } : fail('NOT_FOUND');
 }
 
 // ---- suggestions (read-only; there is deliberately no accept/decide here) -----------------

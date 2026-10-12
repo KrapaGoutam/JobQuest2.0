@@ -5,10 +5,10 @@ CURRENT PHASE:
 AI-7 (Calendar Intelligence + dedicated AI-Hub browser CI; one cumulative branch)
 
 CURRENT SUB-PHASE:
-AI-7 IN PROGRESS (implementation)
+AI-7 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI
 
 STATUS:
-AI-7 IN PROGRESS. Not complete until branch CI (incl. the dedicated AI-Hub e2e job), development merge and development CI pass; results go in the chat checkpoint.
+AI-7 READY FOR BRANCH CI. Not complete until branch CI (incl. the dedicated AI-Hub e2e job), development merge and development CI pass; results go in the chat checkpoint.
 
 BASE BRANCH:
 development (f0a0ec898088c33c918601c51025f913f6ed586b)
@@ -17,7 +17,7 @@ WORKING BRANCH:
 feature/ai-7-calendar-intelligence
 
 NEXT EXACT STEP:
-Calendar contract/validator -> migration 20261028100000 (ai_calendar_events) -> ingestion projection -> read service + MCP tool -> UI -> digest -> dedicated CI job -> local validation -> push once.
+Push the branch once, observe the one branch CI run by exact run ID (incl. job ai-hub-e2e), apply migration 20261028100000 to Dev only, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP. See reports/AI-7_CALENDAR_INTELLIGENCE_REPORT.md.
 ```
 
 ## AI-6 FINAL FACTS (persisted at AI-7 start)

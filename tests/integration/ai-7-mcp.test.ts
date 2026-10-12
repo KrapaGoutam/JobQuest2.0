@@ -11,7 +11,7 @@ const record = makeRecorder('test-results/evidence', 'integration');
 const URL_ = 'http://localhost/api/mcp';
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const TOOL = 'jobquest_list_calendar_intelligence';
-type AnyJson = any; // eslint-disable-line @typescript-eslint/no-explicit-any
+type AnyJson = any;
 
 describe.skipIf(!ready || !local)('AI-7 — MCP calendar tool (real DB)', () => {
   const run = randomBytes(3).toString('hex');

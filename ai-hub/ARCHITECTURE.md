@@ -123,3 +123,17 @@ Job Leads / Email / Recruiter Intel pages  +  Daily Digest (deterministic aggreg
 - Only job leads get a child table (`ai_job_leads`): real filtering, identity lookups and a bounded description need columns. Email events and recruiter intel filter on real finding columns (`category`, `provider`, `status`, `priority`, `occurred_at`, `due_at`, `created_at`) plus `payload->>…` and need no table.
 - Failure isolation: each page owns its load/error state; one malformed finding is rejected (run PARTIAL) and never blocks the others; a projection failure leaves the finding stored and heals on re-submit.
 - Read services: `aiExternalIntelligenceService` (MCP reads, Daily Digest helpers); the browser reads the same shapes under RLS (`apps/web/src/api/aiSources.ts`).
+
+## AI-7 — Calendar intelligence (addendum)
+
+```text
+Claude scheduled/manual run (future providers) + external calendar (read by the PROVIDER, never by JobQuest)
+        -> jobquest.ai-result 1.0 (workflow calendar_review, kind calendar_event)
+        -> jobquest_submit_ai_result -> ingestAiResult -> ai_findings (parent, audited once)
+        -> rpc_ai_resolve_calendar_key (identity) + rpc_ai_upsert_calendar_event (child projection, no audit)
+        -> AI Hub Calendar (/ai-hub/calendar) | Overview card | Daily Digest "calendar" section | jobquest_list_calendar_intelligence
+```
+
+JobQuest stores intelligence only: no Google/Microsoft OAuth or API, no event creation/edit/delete, no RSVP, no scheduler.
+One write boundary remains (`jobquest_submit_ai_result`); the eleventh MCP tool is a read. Dedicated browser CI job: `ai-hub-e2e`
+(flags ON only there). Details: `reports/AI-7_CALENDAR_INTELLIGENCE_REPORT.md`.

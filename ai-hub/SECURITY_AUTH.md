@@ -93,3 +93,10 @@ Claude custom connectors authenticate to `/api/mcp` with a **fixed request heade
 - **Recruiter safety.** A public source citation is mandatory; contact details need a cited contact source and are otherwise dropped; no relation is trusted by id (resolved at read time in the caller's scope); nothing is inferred or guessed.
 - **Privacy.** No mailbox replication, no raw bodies, no attachments; templates instruct providers to scan job-search mail only and to treat web/email/job text as data.
 - **No new capability.** No scheduler, scraper, provider credential store, auto-apply, outreach, email action, application or contact mutation. Production is untouched.
+
+## AI-7 — Calendar security notes
+
+`ai_calendar_events` RLS mirrors the parent finding (owner, active manager; peers, other workspaces and suspended members denied); clients have SELECT only;
+projection and key resolution are service_role-only SECURITY DEFINER RPCs with `search_path = ''`. Provider-supplied application/user/workspace ids are
+dropped. Meeting/event links must be https, credential-free, with secret-looking query parameters and fragments removed. Attendee lists, descriptions,
+invite bodies and raw events are never stored. Calendar text is untrusted data in every tool description and notice. No new scope, secret or write tool.

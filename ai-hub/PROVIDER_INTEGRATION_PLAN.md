@@ -68,3 +68,9 @@ The provider-neutral MCP server exists at `/api/mcp` (Streamable HTTP, stateless
 - One contract, one write tool. `jobquest_submit_ai_result` accepts `job_lead`, `email_event` and `recruiter_intel` findings (and a multi-source envelope). Three read-only `ai:read` tools give provider workflows dedupe context: `jobquest_list_job_leads`, `jobquest_list_email_intelligence`, `jobquest_list_recruiter_intel` (ten tools total, one write; bounded pages <= 50; workspace-scoped under RLS; sanitized; no job descriptions, bodies or provider ids).
 - Claude templates (exact schema, safety rules, cadence guidance): `ai-hub/provider-workflows/claude/JOB_DISCOVERY.md`, `EMAIL_TRIAGE.md`, `RECRUITER_INTEL.md`; the Daily Digest template now reads the stored sources. A unit test validates every template's example against the real validator.
 - Scheduled or manual makes no difference to JobQuest. JobQuest stores no next-run time and has no scheduler or scraper. ChatGPT/Gemini are not implemented.
+
+## AI-7 — Claude Calendar workflow
+
+Workflow id `calendar_review` (canonical; no `calendar_intel`), kind `calendar_event`, template `provider-workflows/claude/CALENDAR_INTEL.md`
+(exact schema, time rules, reschedule/cancellation, privacy, safety). Cadence guidance: weekday morning, optionally afternoon; the provider owns
+the schedule. Live provider test: optional, not performed. ChatGPT/Gemini/OAuth unchanged (deferred).

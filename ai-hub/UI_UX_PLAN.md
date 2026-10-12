@@ -56,3 +56,11 @@ Use existing `components/ui` primitives, tokens in `styles/tokens.css`, toasts v
 - Recruiter Intel: search, company, provider, status, discovered dates; shows public source and profile links, verification ("Public source cited" / "Unverified"), uncertain fields, cited contact only, and the related job lead when it resolves in scope. No "contactable" state.
 - Overview gains three small cards (new job leads, email needing attention, recruiter intel); a source-count failure does not break the rest of the Overview.
 - Verified at 375 / 768 / 1280: no horizontal overflow and no clipped container; axe 0 serious/critical; keyboard operable. Fix found during verification: the six-tab row widened the page (content clipped inside `main`); the shell is now `width: 100%` and the tab row scrolls.
+
+## AI-7 — Calendar page
+
+Tabs: Overview, Daily Digest, Job Leads, Email, Recruiter Intel, **Calendar**, History (tab row scrolls inside itself; AI-6 clipping fix preserved and
+regression-tested). `/ai-hub/calendar`: views Upcoming / Today / This week / Past / Date range, filters (category, event status, company, provider,
+review status), day-grouped list, 20 per page, states loading/error/not configured/zero (per view)/populated. Scheduled events and deadlines are labelled
+differently; rescheduled items show where they moved from; cancelled items are struck through with the original time kept. Times render in the owner's
+profile zone (source zone noted when different); all-day items are dates. Read-only: only the shared owner-only Dismiss. Overview gains one Calendar card.

@@ -13,7 +13,7 @@ const record = makeRecorder('test-results/evidence', 'integration');
 const ON = { AI_HUB_ENABLED: 'true' };
 const quiet = { env: ON, log: () => undefined };
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
-type AnyRow = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+type AnyRow = Record<string, any>;
 
 describe.skipIf(!ready || !local)('AI-7 — calendar intelligence (real DB, RLS)', () => {
   const run = randomBytes(3).toString('hex');

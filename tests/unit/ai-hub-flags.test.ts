@@ -62,7 +62,9 @@ describe('Settings -> AI & Automation', () => {
     expect(html).not.toMatch(/Connected|Authorized|Scheduled|>Active</);
     // AI-5: workflow definitions with honest readiness; JobQuest owns no scheduler so nothing is ever "Running".
     expect(html).toContain('Daily Digest');
-    expect(html).toContain('Source integration not implemented');
+    // AI-8: every source (digest, job discovery, email, recruiter, calendar) is operational, so none claims a missing integration.
+    expect(html).not.toContain('Source integration not implemented');
+    expect((html.match(/>Available</g) ?? []).length).toBe(5);
     expect(html).not.toMatch(/Running|Next run|Last run/);
     expect(html).toContain('Disabled');
   });

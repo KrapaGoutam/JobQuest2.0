@@ -98,7 +98,7 @@ export interface JobLeadRow {
   salary_min: number | null; salary_max: number | null; salary_currency: string | null; salary_period: string | null;
   experience_level: string | null; match_score: number | null; required_skills: unknown; preferred_skills: unknown;
   description_truncated: boolean; description_length: number | null; description?: string | null;
-  finding: { provider: string; status: string; priority: string; confidence: number | string | null; summary: string | null; payload: Record<string, unknown> | null };
+  finding: { provider: string; status: string; priority: string; confidence: number | string | null; summary: string | null; payload: Record<string, unknown> | null; application_id?: string | null };
 }
 
 export interface JobLeadView {
@@ -107,6 +107,10 @@ export interface JobLeadView {
   experienceLevel: string | null; matchScore: number | null; strongMatch: boolean; requiredSkills: string[]; preferredSkills: string[];
   provider: string; status: string; summary: string | null; matchReasoning: string | null; hasDescription: boolean; descriptionTruncated: boolean;
   descriptionLength: number | null; description: string | null;
+  /** AI-8: the Application JobQuest created (or the human linked) from this lead; set only by JobQuest, never by a provider. */
+  applicationId: string | null;
+  /** AI-8: a create_application suggestion is waiting in the Actions queue (the lead itself is never executed from here). */
+  pendingAction: boolean;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -138,6 +142,7 @@ export function toJobLeadView(r: JobLeadRow): JobLeadView {
     summary: text(f.summary, 1000), matchReasoning: text(payload.match_reasoning, 1000),
     hasDescription: desc !== null || (typeof r.description_length === 'number' && r.description_length > 0),
     descriptionTruncated: r.description_truncated === true, descriptionLength: typeof r.description_length === 'number' ? r.description_length : null, description: desc,
+    applicationId: typeof f.application_id === 'string' && f.application_id !== '' ? f.application_id : null, pendingAction: false,
   };
 }
 

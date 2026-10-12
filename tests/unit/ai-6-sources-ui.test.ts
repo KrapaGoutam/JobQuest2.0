@@ -85,9 +85,9 @@ describe('client/server contract sync', () => {
 });
 
 describe('navigation', () => {
-  it('exposes Overview, Daily Digest, Job Leads, Email, Recruiter Intel, Calendar (AI-7) and History', () => {
-    expect(AI_HUB_TABS.map((t) => t.label)).toEqual(['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'History']);
-    expect(AI_HUB_TABS.map((t) => t.path)).toEqual(['/ai-hub', '/ai-hub/digest', '/ai-hub/job-leads', '/ai-hub/email', '/ai-hub/recruiters', '/ai-hub/calendar', '/ai-hub/history']);
+  it('exposes Overview, Daily Digest, Job Leads, Email, Recruiter Intel, Calendar (AI-7), Actions (AI-8) and History', () => {
+    expect(AI_HUB_TABS.map((t) => t.label)).toEqual(['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'Actions', 'History']);
+    expect(AI_HUB_TABS.map((t) => t.path)).toEqual(['/ai-hub', '/ai-hub/digest', '/ai-hub/job-leads', '/ai-hub/email', '/ai-hub/recruiters', '/ai-hub/calendar', '/ai-hub/actions', '/ai-hub/history']);
     for (const t of AI_HUB_TABS) { expect(aiHubTabFromPath(t.path)).toBe(t.id); expect(aiHubPathForTab(t.id)).toBe(t.path); }
     expect(aiHubTabFromPath('/ai-hub/calendar')).toBe('calendar');
     expect(aiHubTabFromPath('/ai-hub/unknown')).toBe('overview');

@@ -411,6 +411,7 @@ function AppContent() {
       case '/ai-hub/email':
       case '/ai-hub/recruiters':
       case '/ai-hub/calendar':
+      case '/ai-hub/actions':
       case '/ai-hub/history':
         return 'AI Hub';
       case '/workspace':

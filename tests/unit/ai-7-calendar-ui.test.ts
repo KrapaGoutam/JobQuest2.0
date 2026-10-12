@@ -297,8 +297,8 @@ describe('Calendar page', () => {
 });
 
 describe('navigation, overview and wiring', () => {
-  it('Calendar is the sixth tab and every tab path round-trips', () => {
-    expect(AI_HUB_TABS.map((t) => t.label)).toEqual(['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'History']);
+  it('Calendar is the sixth tab (AI-8 inserts Actions after it) and every tab path round-trips', () => {
+    expect(AI_HUB_TABS.map((t) => t.label)).toEqual(['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'Actions', 'History']);
     expect(aiHubTabFromPath('/ai-hub/calendar')).toBe('calendar');
     expect(aiHubPathForTab('calendar')).toBe('/ai-hub/calendar');
     const shell = html(createElement(AiHubShell, { tab: 'calendar', onTabChange: noop, state: { status: 'loading' }, calendar: createElement('p', null, 'CAL-SLOT') }));

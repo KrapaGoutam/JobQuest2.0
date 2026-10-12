@@ -2,6 +2,40 @@
 
 ```
 CURRENT PHASE:
+AI-8 (Human-approved controlled actions + Application matching; one cumulative branch)
+
+CURRENT SUB-PHASE:
+AI-8 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI
+
+STATUS:
+AI-8 READY FOR BRANCH CI. Not complete until branch CI (incl. the dedicated AI-Hub e2e job with the new action spec), development merge and development CI pass; results go in the chat checkpoint.
+
+BASE BRANCH:
+development (4eac989c364a59982bd49c6ea81b13ffd6bff4a7)
+
+WORKING BRANCH:
+feature/ai-8-controlled-actions
+
+NEXT EXACT STEP:
+Push the branch once, observe the one branch CI run by exact run ID (incl. job ai-hub-e2e), apply migration 20261029100000 to Dev only, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP. See reports/AI-8_CONTROLLED_ACTIONS_REPORT.md.
+```
+
+## AI-7 FINAL FACTS (persisted at AI-8 start)
+
+- AI-7 COMPLETE — integrated to development. Development SHA `4eac989c364a59982bd49c6ea81b13ffd6bff4a7` (merge of `feature/ai-7-calendar-intelligence`); development CI `38253737675` PASS; AI-7 executable feature SHA `01dc9a18a1c48936d1d4bf8daa9efb9df85d7d81`, branch CI `38252291451` PASS (incl. the dedicated `ai-hub-e2e` job); main `26e517ea…` and Production unchanged; Dev head `20261028100000`, Prod `20261022100000`. Operational sources: Daily Digest (`daily_brief`), Job Leads, Email Intelligence, Recruiter Intelligence, Calendar Intelligence. No internal scheduler (provider-owned scheduling is intentional).
+- Stale AI-6 workflow definitions (job discovery / email triage / recruiter intelligence said "source integration not implemented") were corrected in AI-8: all five workflows are `AVAILABLE`; scheduling stays provider-owned.
+
+## AI-8 facts (this branch)
+
+- Human-approved controlled actions: `create_application` (from a job lead), `create_task`, `set_status` (an existing stage, or outcome REJECTED). AI proposes (`ai_suggestions`) → JobQuest previews (read-only) → the human confirms in **AI Hub → Actions** → JobQuest re-reads, re-authorizes and compares a state fingerprint → performs the mutation AS THE CALLER through the existing core paths → records provenance in `ai_action_executions`. No bulk approval, no unattended path, **no MCP core-write tool** (MCP stays 11 tools / 10 reads / 1 AI-Hub-only write).
+- Migration `20261029100000_ai_hub_controlled_actions.sql`: `ai_action_executions` (unique live indexes per suggestion / key / converted lead), `rpc_ai_action_claim` + `rpc_ai_action_complete` (service_role only), `rpc_ai_apply_status_change` (SECURITY INVOKER guard around the existing stage/outcome RPCs). Applied to the LOCAL stack; Dev only after branch CI; Production head stays `20261022100000`.
+- New code: `aiContract/actions.ts` (closed vocabulary + strict payloads), `aiApplicationMatchService`, `aiActionService`, `routes/aiActions.ts` (`/api/ai/actions/{queue,history,preview,execute}`), web `/ai-hub/actions`, Overview "Pending actions" card, Daily Digest line, Job Leads conversion badge, Claude template notes. Report: `reports/AI-8_CONTROLLED_ACTIONS_REPORT.md`.
+- Local validation: unit 743/743 (46 files), AI integration suites green (ai-8: 21/21), focused AI-8 e2e PASS (375/768/1280, axe 0 serious/critical), typecheck, eslint. Known local-only: `ai5-digest` and `ai7-calendar` e2e fail a colour-contrast audit on this Windows machine on `development` too (pre-existing, hover/transition timing; they pass in CI).
+
+(Previous state, AI-7 pre-CI, kept for history:)
+
+```
+CURRENT PHASE:
 AI-7 (Calendar Intelligence + dedicated AI-Hub browser CI; one cumulative branch)
 
 CURRENT SUB-PHASE:

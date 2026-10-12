@@ -86,7 +86,7 @@ describe.skipIf(!ready || !local)('AI-2A — internal AI integration service (re
     const doc = envelope({
       run: { external_run_id: ext, generated_at: '2026-10-01T12:00:00Z' },
       findings: [finding(sid, { match: { application_id: aliceApp, hints: { company: 'Acme' } } })],
-      suggestions: [{ finding_index: 0, action: 'set_status', target: { type: 'application', id: aliceApp }, proposed: { status: 'INTERVIEW' }, confidence: 0.9 }],
+      suggestions: [{ finding_index: 0, action: 'schedule_interview', target: { type: 'application', id: aliceApp }, proposed: { note: 'INTERVIEW' }, confidence: 0.9 }],
     });
     const r = await go(doc);
     expect(r).toMatchObject({ success: true, status: 'SUCCEEDED', finalized: true, duplicateRun: false, errors: [] });
@@ -106,7 +106,7 @@ describe.skipIf(!ready || !local)('AI-2A — internal AI integration service (re
     expect(f!.source_ref).toMatchObject({ type: 'gmail', provider_message_id: sid, thread_id: `thr-${sid}`, canonical_url: `https://mail.example.com/t/${sid}` });
     const sug = (await admin.from('ai_suggestions').select('*').eq('finding_id', f!.id)).data!;
     expect(sug).toHaveLength(1);
-    expect(sug[0]).toMatchObject({ status: 'PENDING', action: 'set_status', target_type: 'application', target_id: aliceApp, proposed: { status: 'INTERVIEW' } });
+    expect(sug[0]).toMatchObject({ status: 'PENDING', action: 'schedule_interview', target_type: 'application', target_id: aliceApp, proposed: { note: 'INTERVIEW' } });
 
     // Audit: exactly the RPC rows, once each (the service writes none of its own).
     expect((await audit(r.runId!)).map((a) => a.action).sort()).toEqual(['AI_RUN_CREATED', 'AI_RUN_STATUS_CHANGED']);
@@ -203,7 +203,7 @@ describe.skipIf(!ready || !local)('AI-2A — internal AI integration service (re
     const doc = envelope({
       findings: [finding(uniq('s')), { kind: 'email_event', title: '', dedupe: {} }],
       suggestions: [
-        { finding_index: 0, action: 'set_status', target: { type: 'application', id: bobApp }, proposed: { status: 'REJECTED' } }, // another user's app
+        { finding_index: 0, action: 'schedule_interview', target: { type: 'application', id: bobApp }, proposed: { note: 'REJECTED' } }, // another user's app
         { finding_index: 1, action: 'create_task', proposed: { title: 'orphan' } }, // finding was rejected
       ],
     });

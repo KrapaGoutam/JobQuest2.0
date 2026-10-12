@@ -137,3 +137,28 @@ Claude scheduled/manual run (future providers) + external calendar (read by the 
 JobQuest stores intelligence only: no Google/Microsoft OAuth or API, no event creation/edit/delete, no RSVP, no scheduler.
 One write boundary remains (`jobquest_submit_ai_result`); the eleventh MCP tool is a read. Dedicated browser CI job: `ai-hub-e2e`
 (flags ON only there). Details: `reports/AI-7_CALENDAR_INTELLIGENCE_REPORT.md`.
+
+## AI-8 — Human-approved controlled actions (addendum)
+
+**Rule: AI proposes. JobQuest previews. A human explicitly confirms. JobQuest re-validates authorization and current state. JobQuest performs the mutation with its existing core logic.** There is no AI-proposes → automatic-mutation path anywhere.
+
+```
+ai_suggestions (inert proposal, strict payload)
+   → aiActionService.buildPlan      read-only: reload suggestion + finding, resolve the target (aiApplicationMatchService),
+                                     current vs proposed state, warnings, choices, state fingerprint
+   → GET  /api/ai/actions/preview   (browser; bearer session)
+   → human reviews, chooses, clicks the action-specific Confirm
+   → POST /api/ai/actions/execute   (CSRF-protected; strict body: suggestion id + fingerprint + the human's choices)
+   → buildPlan AGAIN (never trust the browser's preview), fingerprint compare → ACTION_STALE
+   → rpc_ai_action_claim            idempotency gate (service_role; row-locks the suggestion; unique live indexes)
+   → the ONE core mutation, as the caller (userClient): applications / tasks RLS insert, or rpc_ai_apply_status_change
+                                     → existing rpc_move_application_stage / rpc_set_application_outcome
+   → rpc_ai_action_complete         provenance + suggestion ACCEPTED (+ lead link) + audit
+```
+
+- **Executable actions (closed set):** `create_application` (job lead only), `create_task`, `set_status` (an existing stage, or outcome REJECTED). Everything else a provider can propose stays inert (`ACTION_NOT_SUPPORTED`).
+- **Core audit is authoritative for the record change** (`application_events` CREATED / CAPTURED / STAGE_CHANGED / OUTCOME_CHANGED, the tasks table itself); `ai_action_executions` + `audit_events` (`AI_ACTION_EXECUTED|FAILED|CONFLICT`) are the AI-specific *who approved what* provenance. They are deliberately not duplicated.
+- **No MCP core write.** MCP keeps submitting findings/suggestions only (11 tools, 1 AI-Hub-only write). A scheduled provider therefore cannot bypass human approval. Enforced by `tests/unit/ai-8-actions.test.ts`.
+- **Stale protection** is a fingerprint (sha256 of the suggestion/finding/target versions and the match candidates), recomputed server-side at confirm. For status changes the guard is also atomic in the database (`rpc_ai_apply_status_change` row-locks the application and compares `updated_at`).
+- **Idempotency** is a database guarantee: at most one live (PENDING|SUCCEEDED) execution per suggestion, per idempotency key and per converted lead. A double click, an HTTP retry, a second tab or a second suggestion for the same lead yields ONE mutation. A crash between "mutate" and "record" is reconciled on the next attempt (applications by their pre-generated id, tasks by an execution reference line in the task notes).
+- **Failure isolation:** the Actions page is its own lazy surface; it can fail without affecting the rest of AI Hub or any core page.

@@ -89,5 +89,12 @@ NOTES
 - Omit every optional field you did not actually find (no nulls, no guesses, no placeholders).
 - Resubmitting the same posting is safe: it is deduplicated. A lead I have already dismissed stays dismissed.
 - Do NOT send application_id, user_id or workspace_id; JobQuest ignores them.
+- A job lead is never an application. For at most a few exceptional leads per run (match_score >= 80 AND confidence >= 0.8)
+  you may add { "finding_index": 0, "action": "create_application", "proposed": { "reason": "<short>", "priority": "LOW|MEDIUM|HIGH" } }
+  pointing at that lead's finding. It is only a proposal.
+- Submitting a suggestion does NOT execute it. It only appears in JobQuest > AI Hub > Actions, where I review the
+  current and proposed state and confirm each one myself. JobQuest finds the matching application itself: never send
+  "target", application_id or any other database id (they are ignored), and never claim in your reply that anything
+  was changed.
 - Reply with one line: how many leads were stored, how many were duplicates, and any rejected items.
 ```

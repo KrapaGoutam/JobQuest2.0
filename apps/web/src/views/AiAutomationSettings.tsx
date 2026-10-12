@@ -41,9 +41,10 @@ export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWor
         <Card>
           <CardHeader><CardTitle><span id="ai-general">General</span></CardTitle></CardHeader>
           <CardBody>
-            <div style={rowStyle}><span>AI Hub</span><b>Enabled in this build (read-only views)</b></div>
+            <div style={rowStyle}><span>AI Hub</span><b>Enabled in this build</b></div>
             <div style={rowStyle}><span>Automation</span><b>Not configured yet</b></div>
-            <div style={rowStyle}><span>Write actions</span><b>{AI_WRITE_ACTIONS_ENABLED ? 'Enabled' : 'Disabled'}</b></div>
+            <div style={rowStyle}><span>Automatic write actions</span><b>{AI_WRITE_ACTIONS_ENABLED ? 'Enabled' : 'Disabled'}</b></div>
+            <div style={rowStyle}><span>Human-approved actions</span><b>Available: you review and confirm each change in Actions</b></div>
             <p className="muted" style={{ margin: '8px 0 0', fontSize: '13px' }}>
               Workflow settings can’t be changed yet. Workspace settings can never override a system-level shutdown.
             </p>

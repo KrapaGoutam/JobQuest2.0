@@ -11,6 +11,7 @@ import {
   CALENDAR_RAW_KEYS, CALENDAR_STATUSES,
   type AiFindingKind, type AiProvider, type AiSuggestionTargetType, type AiTriggerType, type CalendarCategory, type CalendarStatus,
 } from './constants';
+import { isActionType, validateActionProposal } from './actions';
 import { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
 import { isIanaTimeZone, localMidnight, localToInstant, stringOffsetMinutes, zoneOffsetMinutes } from './calendarTime';
 import type {
@@ -902,7 +903,8 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
 }
 
 const SUGGESTION_KEYS = ['finding_index', 'action', 'target', 'proposed', 'confidence'] as const;
-function suggestion(c: Ctx, raw: unknown, path: string, findingCount: number): AiSuggestion | null {
+function suggestion(c: Ctx, raw: unknown, path: string, findingKinds: readonly AiFindingKind[]): AiSuggestion | null {
+  const findingCount = findingKinds.length;
   if (!isObj(raw)) { c.err(path, 'type', 'must be an object'); return null; }
   c.strip(raw, SUGGESTION_KEYS, path); // `status` etc. are dropped: a suggestion can never arrive pre-decided
   const e0 = c.errors.length;
@@ -925,8 +927,20 @@ function suggestion(c: Ctx, raw: unknown, path: string, findingCount: number): A
       }
     }
   }
-  const proposed = boundedRecord(c, raw.proposed, `${path}.proposed`, AI_LIMITS.proposedBytes);
+  let proposed = boundedRecord(c, raw.proposed, `${path}.proposed`, AI_LIMITS.proposedBytes);
   const conf = confidence(c, raw.confidence, `${path}.confidence`);
+  // AI-8: a human-approvable action has a strict payload schema, and the SERVER resolves every internal record.
+  // A provider-supplied target is therefore ignored (never trusted) for these actions.
+  if (action && isActionType(action)) {
+    const checked = validateActionProposal(action, raw.proposed === undefined || raw.proposed === null ? {} : raw.proposed);
+    if (!checked.ok) c.err(`${path}.proposed`, 'action_invalid', checked.message);
+    else {
+      proposed = checked.normalized;
+      if (target) { c.warn(`${path}.target`, 'target_ignored', 'the server resolves the target of an executable action; the provided target is ignored'); target = null; }
+      const kind = Number.isInteger(idx) ? findingKinds[idx as number] : undefined;
+      if (action === 'create_application' && kind !== undefined && kind !== 'job_lead') c.err(`${path}.action`, 'action_invalid', 'create_application applies only to a job_lead finding');
+    }
+  }
   if (c.errors.length > e0 || !action) return null;
   return { finding_index: idx as number, action, target, proposed, confidence: conf };
 }
@@ -1010,7 +1024,7 @@ export function validateAiResult(input: unknown): AiValidationResult {
     // finding_index refers to the INPUT array; remap to accepted findings.
     const inIdx = isObj(s) ? s.finding_index : undefined;
     const mapped = typeof inIdx === 'number' ? findingIdx.get(inIdx) : undefined;
-    const r = suggestion(c, isObj(s) && mapped !== undefined ? { ...s, finding_index: mapped } : s, `suggestions[${i}]`, findings.length);
+    const r = suggestion(c, isObj(s) && mapped !== undefined ? { ...s, finding_index: mapped } : s, `suggestions[${i}]`, findings.map((f) => f.kind));
     if (r) suggestions.push(r); else rejected++;
   });
 

@@ -197,7 +197,9 @@ const standard: Handler = (table, ops) => {
       return head ? { count: 1 } : { data: [{ application_id: 'a1', interview_type: 'TECHNICAL', scheduled_at: '2026-10-13T15:00:00Z' }] };
     case 'ai_suggestions':
       return head ? { count: 4 } : { data: [{ action: 'set_status', target_type: 'application', created_at: '2026-10-11T10:00:00Z' }] };
-    case 'ai_findings': return { count: 6 };
+    case 'ai_findings': return hasOp(ops, 'eq', 'kind', 'email_event') || hasOp(ops, 'eq', 'kind', 'recruiter_intel') ? (head ? { count: 0 } : { data: [] }) : { count: 6 };
+    case 'ai_job_leads': return head ? { count: 0 } : { data: [] };
+    case 'ai_runs': return { data: [] };
     default: return {};
   }
 };
@@ -211,7 +213,7 @@ describe('deterministic JobQuest aggregation', () => {
     expect(r.data.timeZone).toBe('America/Chicago');
     const p = r.data.payload as any;
     expect(p.summary).toEqual({ applications_added: 3, active_applications: 9, follow_ups: 2, interviews: 1, pending_suggestions: 4, new_findings: 6 });
-    // not-yet-integrated sources are NOT zero
+    // sources that never ran are NOT zero (AI-6 keeps the AI-5 semantics)
     expect(p.sections.job_leads).toEqual({ status: 'not_configured', items: [] });
     expect(p.sections.email_activity).toEqual({ status: 'not_configured', items: [] });
     expect(p.sections.recruiter_intel).toEqual({ status: 'not_configured', items: [] });

@@ -223,10 +223,10 @@ describe('MCP tool descriptions for Claude (deterministic contract)', () => {
   const load = async () => (await import('../../apps/api/src/mcp/tools')).MCP_TOOLS;
   const byName = async (n: string) => (await load()).find((t) => t.name === n)!;
 
-  it('the surface stays minimal: the six AI-4 tools plus the read-only Daily Digest list (AI-5); nothing Claude-specific', async () => {
+  it('the surface stays minimal: the AI-4 tools, the read-only Daily Digest list (AI-5) and the read-only source lists (AI-6); one write tool; nothing Claude-specific', async () => {
     expect((await load()).map((t) => t.name).sort()).toEqual([
       'jobquest_get_application', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
-      'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_daily_digests', 'jobquest_submit_ai_result',
+      'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel', 'jobquest_submit_ai_result',
     ]);
   });
   it('descriptions are concise, static and non-coercive', async () => {

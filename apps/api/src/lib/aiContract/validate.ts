@@ -5,11 +5,13 @@ import {
   AI_CONTRACT_NAME, AI_CONTRACT_VERSION, AI_EVENT_PATTERN, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION, DIGEST_SECTION_KEYS, DIGEST_SECTION_STATUSES, DIGEST_SUMMARY_KEYS, AI_FINDING_KINDS, AI_LIMITS,
   AI_MAX_SUPPORTED_MINOR, AI_PRIORITIES, AI_PROVIDERS, AI_SOURCE_TYPES, AI_SUGGESTION_ACTIONS,
   AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS,
+  EMAIL_CATEGORIES, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES, JOB_SALARY_PERIODS, JOB_WORK_ARRANGEMENTS,
+  RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
   type AiFindingKind, type AiProvider, type AiSuggestionTargetType, type AiTriggerType,
 } from './constants';
 import { buildDedupeKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
 import type {
-  AiFinding, AiIngestRunInput, AiIssue, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
+  AiFinding, AiIngestRunInput, AiIssue, AiJobLeadProjection, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
   JsonRecord, JsonValue,
 } from './types';
 
@@ -125,9 +127,6 @@ function boundedRecord(c: Ctx, v: unknown, path: string, maxBytes: number, reser
 
 type PField = 'string' | 'number' | 'boolean' | 'url' | 'timestamp' | 'strings';
 const PAYLOAD_SCHEMAS: Partial<Record<AiFindingKind, Record<string, PField>>> = {
-  email_event: { from_domain: 'string', company: 'string', role_title: 'string', next_step: 'string', deadline: 'timestamp' },
-  job_lead: { company: 'string', role_title: 'string', location: 'string', salary_text: 'string', remote: 'boolean', job_url: 'url', external_job_id: 'string', fit_notes: 'string' },
-  recruiter_intel: { recruiter_name: 'string', company: 'string', channel: 'string', role_title: 'string' },
   calendar_event: { start_at: 'timestamp', end_at: 'timestamp', location: 'string', attendee_count: 'number', join_url: 'url' },
 };
 
@@ -267,9 +266,310 @@ function digestPayload(c: Ctx, v: unknown, path: string, dedupeDate: string | nu
   return out;
 }
 
+// ---- External intelligence payloads (AI-6) ------------------------------------
+// job_lead / email_event / recruiter_intel. Providers submit untrusted text; everything below
+// is allow-listed, bounded and normalized. Nothing is invented: absent facts stay absent.
+
+const SOURCE_KEY_LIMITS = { short: 200, medium: 300, long: 1000, skill: 100, skills: 30 } as const;
+const slug = (v: unknown): unknown => (typeof v === 'string' ? v.trim().toLowerCase().replace(/[\s-]+/g, '_') : v);
+
+function sourceVersion(c: Ctx, v: unknown, path: string) {
+  if (v === undefined || v === null) return;
+  const m = typeof v === 'string' ? /^(\d{1,3})\.(\d{1,3})$/.exec(v) : null;
+  if (!m || Number(m[1]) !== 1) c.err(`${path}.version`, 'version', `must be "${SOURCE_PAYLOAD_VERSION}" (major 1)`);
+}
+
+function enumField<T extends string>(c: Ctx, v: unknown, path: string, allowed: readonly T[], aliases: Record<string, T> = {}): T | null {
+  if (v === undefined || v === null) return null;
+  const s = slug(v);
+  return oneOf(c, typeof s === 'string' ? aliases[s] ?? s : s, path, allowed, false);
+}
+
+function stringList(c: Ctx, v: unknown, path: string, maxItems: number, maxLen: number): string[] {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v)) { c.err(path, 'type', 'must be an array of strings'); return []; }
+  if (v.length > maxItems) c.warn(path, 'truncated', `only the first ${maxItems} entries are kept`);
+  const out: string[] = [];
+  v.slice(0, maxItems).forEach((x, i) => {
+    const t = text(c, x, `${path}[${i}]`, maxLen, { truncate: true });
+    if (t && !out.some((o) => o.toLowerCase() === t.toLowerCase())) out.push(t);
+  });
+  return out;
+}
+
+const hostOf = (u: string | null): string | null => {
+  if (!u) return null;
+  try { return new URL(u).hostname.toLowerCase().replace(/^www\./, '') || null; } catch { return null; }
+};
+
+/** Calendar date as stated by the source: YYYY-MM-DD, or the date part of an ISO timestamp. */
+function calendarDate(c: Ctx, v: unknown, path: string): string | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'string') { c.err(path, 'type', 'must be a YYYY-MM-DD date'); return null; }
+  const s = v.trim();
+  const d = isIsoDate(s) ? s : ISO_TS.test(s) ? s.slice(0, 10) : '';
+  if (!d || !isIsoDate(d) || Number(d.slice(0, 4)) < 2000 || Number(d.slice(0, 4)) > 2100) { c.err(path, 'date', 'must be a valid YYYY-MM-DD date'); return null; }
+  return d;
+}
+
+/**
+ * Plain-text job description. HTML is never stored: tags are removed (block tags become line
+ * breaks), entities decoded once, control characters dropped, whitespace tidied. Over-long text
+ * is truncated and FLAGGED (never silently presented as complete).
+ */
+export function normalizeJobDescription(raw: string): { text: string | null; truncated: boolean; length: number; htmlStripped: boolean } {
+  let s = raw.normalize('NFC').replace(/\r\n?/g, '\n');
+  const htmlStripped = /<\/?[a-z][^>]*>|<!--/i.test(s);
+  if (htmlStripped) {
+    s = s.replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, ' ')
+      .replace(/<li\b[^>]*>/gi, '\n- ')
+      .replace(/<\/?(p|div|br|ul|ol|li|h[1-6]|tr|table|section|article|header|footer)\b[^>]*>/gi, '\n')
+      .replace(/<\/?[a-z][^>]*>/gi, '');
+  }
+  s = s.replace(/&nbsp;/gi, ' ').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/&amp;/gi, '&');
+  s = s.replace(/<\/?[a-z][^>]*>/gi, ''); // also removes tags that arrived entity-encoded
+  s = s.replace(CONTROL, '').replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (!s) return { text: null, truncated: false, length: 0, htmlStripped };
+  const cps = [...s];
+  if (cps.length <= JOB_DESCRIPTION_MAX_CHARS) return { text: s, truncated: false, length: cps.length, htmlStripped };
+  return { text: cps.slice(0, JOB_DESCRIPTION_MAX_CHARS).join('').trimEnd(), truncated: true, length: cps.length, htmlStripped };
+}
+
+interface SourceParts { payload: JsonRecord; identity: DedupeInput }
+
+const JOB_KEYS = [
+  'version', 'company', 'role_title', 'location', 'work_arrangement', 'remote', 'employment_type', 'source_name', 'job_url',
+  'external_job_id', 'posted_date', 'salary_min', 'salary_max', 'salary_currency', 'salary_period', 'salary_text',
+  'experience_level', 'required_experience', 'match_score', 'match_reasoning', 'required_skills', 'preferred_skills',
+  'fit_notes', 'description',
+] as const;
+
+function salaryInt(c: Ctx, v: unknown, path: string): number | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 10_000_000) { c.err(path, 'salary', 'must be an integer between 0 and 10,000,000 (only if the posting publishes it)'); return null; }
+  return v;
+}
+
+function jobLeadPayload(
+  c: Ctx, v: unknown, path: string, ctx: { dedupe: DedupeInput; sourceUrl: string | null },
+): SourceParts & { job: AiJobLeadProjection | null } {
+  const empty = { payload: {}, identity: {}, job: null };
+  if (!isObj(v)) { c.err(path, 'required', 'a job_lead payload with company and role_title is required'); return empty; }
+  c.strip(v, JOB_KEYS, path);
+  const e0 = c.errors.length;
+  sourceVersion(c, v.version, path);
+  const company = text(c, v.company, `${path}.company`, SOURCE_KEY_LIMITS.short) ?? ctx.dedupe.company ?? null;
+  const title = text(c, v.role_title, `${path}.role_title`, SOURCE_KEY_LIMITS.medium) ?? ctx.dedupe.title ?? null;
+  if (!company || !title) { c.err(path, 'job_lead_identity', 'company and role_title are required'); return empty; }
+  const location = text(c, v.location, `${path}.location`, SOURCE_KEY_LIMITS.short);
+  let arrangement = enumField(c, v.work_arrangement, `${path}.work_arrangement`, JOB_WORK_ARRANGEMENTS, { on_site: 'onsite', in_office: 'onsite', office: 'onsite' });
+  if (v.remote !== undefined && v.remote !== null) {
+    if (typeof v.remote !== 'boolean') c.err(`${path}.remote`, 'type', 'must be a boolean');
+    else if (v.remote && !arrangement) arrangement = 'remote'; // legacy 1.0 flag
+  }
+  const employment = enumField(c, v.employment_type, `${path}.employment_type`, JOB_EMPLOYMENT_TYPES, { fulltime: 'full_time', parttime: 'part_time', intern: 'internship', contractor: 'contract' });
+  const jobUrl = url(c, v.job_url, `${path}.job_url`);
+  const canonical = jobUrl ? canonicalizeUrl(jobUrl) : null;
+  const externalId = text(c, v.external_job_id, `${path}.external_job_id`, AI_LIMITS.id);
+  const sourceName = (text(c, v.source_name, `${path}.source_name`, 64) ?? hostOf(jobUrl ?? ctx.sourceUrl))?.toLowerCase() ?? null;
+  const posted = calendarDate(c, v.posted_date, `${path}.posted_date`);
+
+  // Salary: only what the posting explicitly publishes. An inverted range is dropped, not "fixed".
+  let salaryMin = salaryInt(c, v.salary_min, `${path}.salary_min`);
+  let salaryMax = salaryInt(c, v.salary_max, `${path}.salary_max`);
+  if (salaryMin !== null && salaryMax !== null && salaryMin > salaryMax) {
+    c.warn(`${path}.salary_min`, 'salary_range', 'salary_min is greater than salary_max; salary dropped');
+    salaryMin = null; salaryMax = null;
+  }
+  const curRaw = text(c, v.salary_currency, `${path}.salary_currency`, 3);
+  let currency: string | null = null;
+  if (curRaw) { if (/^[A-Za-z]{3}$/.test(curRaw)) currency = curRaw.toUpperCase(); else c.err(`${path}.salary_currency`, 'currency', 'must be a 3-letter ISO 4217 code'); }
+  const period = enumField(c, v.salary_period, `${path}.salary_period`, JOB_SALARY_PERIODS, { yearly: 'year', annual: 'year', annually: 'year', monthly: 'month', weekly: 'week', daily: 'day', hourly: 'hour' });
+  const salaryText = text(c, v.salary_text, `${path}.salary_text`, SOURCE_KEY_LIMITS.short);
+
+  const experience = text(c, v.experience_level, `${path}.experience_level`, 60);
+  const requiredExp = text(c, v.required_experience, `${path}.required_experience`, SOURCE_KEY_LIMITS.medium);
+  let score: number | null = null;
+  if (v.match_score !== undefined && v.match_score !== null) {
+    if (typeof v.match_score !== 'number' || !Number.isFinite(v.match_score) || v.match_score < 0 || v.match_score > 100) c.err(`${path}.match_score`, 'match_score', 'must be a number between 0 and 100');
+    else score = Math.round(v.match_score);
+  }
+  const reasoning = text(c, v.match_reasoning, `${path}.match_reasoning`, SOURCE_KEY_LIMITS.long, { truncate: true });
+  const required = stringList(c, v.required_skills, `${path}.required_skills`, SOURCE_KEY_LIMITS.skills, SOURCE_KEY_LIMITS.skill);
+  const preferred = stringList(c, v.preferred_skills, `${path}.preferred_skills`, SOURCE_KEY_LIMITS.skills, SOURCE_KEY_LIMITS.skill);
+  const fit = text(c, v.fit_notes, `${path}.fit_notes`, SOURCE_KEY_LIMITS.long, { truncate: true });
+
+  let desc: ReturnType<typeof normalizeJobDescription> | null = null;
+  if (v.description !== undefined && v.description !== null) {
+    if (typeof v.description !== 'string') c.err(`${path}.description`, 'type', 'must be a plain-text string');
+    else {
+      desc = normalizeJobDescription(v.description);
+      if (desc.htmlStripped) c.warn(`${path}.description`, 'html_stripped', 'HTML markup removed; only plain text is stored');
+      if (desc.truncated) c.warn(`${path}.description`, 'description_truncated', `description truncated to ${JOB_DESCRIPTION_MAX_CHARS} characters (original ${desc.length})`);
+    }
+  }
+
+  const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION, company, role_title: title };
+  const put = (k: string, val: JsonValue | null) => { if (val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0)) out[k] = val; };
+  put('location', location); put('work_arrangement', arrangement); put('employment_type', employment);
+  put('source_name', sourceName); put('job_url', jobUrl); put('external_job_id', externalId); put('posted_date', posted);
+  put('salary_min', salaryMin); put('salary_max', salaryMax); put('salary_currency', currency); put('salary_period', period); put('salary_text', salaryText);
+  put('experience_level', experience); put('required_experience', requiredExp);
+  put('match_score', score); put('match_reasoning', reasoning);
+  put('required_skills', required); put('preferred_skills', preferred); put('fit_notes', fit);
+  if (desc?.text) { out.description_truncated = desc.truncated; out.description_length = desc.length; }
+  if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', `job_lead payload (without description) exceeds ${AI_LIMITS.payloadBytes} bytes`);
+  if (c.errors.length > e0) return empty;
+
+  const job: AiJobLeadProjection = {
+    company, title, location, work_arrangement: arrangement, employment_type: employment, source_name: sourceName,
+    source_url: jobUrl ?? ctx.sourceUrl, canonical_url: canonical ?? (ctx.sourceUrl ? canonicalizeUrl(ctx.sourceUrl) : null),
+    external_job_id: externalId, posted_date: posted, salary_min: salaryMin, salary_max: salaryMax, salary_currency: currency,
+    salary_period: period, experience_level: experience, match_score: score, description: desc?.text ?? null,
+    description_truncated: desc?.truncated ?? false, description_length: desc?.text ? desc.length : null,
+    required_skills: required, preferred_skills: preferred, payload_version: SOURCE_PAYLOAD_VERSION,
+  };
+  return {
+    payload: out, job,
+    identity: { company, title, location, posted_date: posted, source_name: sourceName, external_job_id: externalId, job_url: ctx.dedupe.job_url ?? jobUrl },
+  };
+}
+
+// ---- email_event ------------------------------------------------------------------------
+// Intelligence about a job-search email, NOT a mailbox copy: no body, no attachments, no
+// full address (display name + sender domain only), bounded subject/summary/evidence.
+
+const EMAIL_KEYS = ['version', 'sender_name', 'sender_domain', 'from_domain', 'subject', 'company', 'role_title', 'next_step', 'deadline', 'needs_attention'] as const;
+const RAW_BODY_KEYS = new Set(['body', 'raw_body', 'body_text', 'body_html', 'html', 'html_body', 'full_text', 'message_body', 'email_body', 'content', 'text', 'attachments']);
+const DOMAIN = /^(?=.{3,255}$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+function warnRawBody(c: Ctx, o: Obj, path: string) {
+  for (const k of Object.keys(o)) if (RAW_BODY_KEYS.has(k)) c.warn(`${path}.${k}`, 'raw_body_rejected', 'message bodies and attachments are never stored; send a concise summary and a short evidence excerpt instead');
+}
+
+function emailPayload(c: Ctx, v: unknown, path: string, raw: Obj): SourceParts & { dueFromDeadline: string | null } {
+  warnRawBody(c, raw, path.replace(/\.payload$/, ''));
+  const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION };
+  const empty = { payload: {}, identity: {}, dueFromDeadline: null };
+  if (v !== undefined && v !== null && !isObj(v)) { c.err(path, 'type', 'must be an object'); return empty; }
+  const o: Obj = isObj(v) ? v : {};
+  warnRawBody(c, o, path);
+  c.strip(o, EMAIL_KEYS, path);
+  sourceVersion(c, o.version, path);
+  // Display name only: drop any address-like text so a full address is never retained.
+  const nameRaw = text(c, o.sender_name, `${path}.sender_name`, SOURCE_KEY_LIMITS.short);
+  const senderName = nameRaw ? nameRaw.replace(/<[^>]*>/g, '').replace(/\S+@\S+/g, '').replace(/\s+/g, ' ').trim() || null : null;
+  const domRaw = text(c, o.sender_domain ?? o.from_domain, `${path}.sender_domain`, 255);
+  let domain: string | null = null;
+  if (domRaw) {
+    const d = (domRaw.includes('@') ? domRaw.slice(domRaw.lastIndexOf('@') + 1) : domRaw).replace(/[>\s]/g, '').toLowerCase();
+    if (DOMAIN.test(d)) domain = d; else c.err(`${path}.sender_domain`, 'domain', 'must be a sender domain such as example.com');
+  }
+  const subject = text(c, o.subject, `${path}.subject`, SOURCE_KEY_LIMITS.short, { truncate: true });
+  const company = text(c, o.company, `${path}.company`, SOURCE_KEY_LIMITS.short);
+  const role = text(c, o.role_title, `${path}.role_title`, SOURCE_KEY_LIMITS.medium);
+  const next = text(c, o.next_step, `${path}.next_step`, SOURCE_KEY_LIMITS.medium, { truncate: true });
+  const deadline = timestamp(c, o.deadline, `${path}.deadline`);
+  let attention: boolean | null = null;
+  if (o.needs_attention !== undefined && o.needs_attention !== null) {
+    if (typeof o.needs_attention === 'boolean') attention = o.needs_attention; else c.err(`${path}.needs_attention`, 'type', 'must be a boolean');
+  }
+  const put = (k: string, val: JsonValue | null) => { if (val !== null) out[k] = val; };
+  put('sender_name', senderName); put('sender_domain', domain); put('subject', subject); put('company', company);
+  put('role_title', role); put('next_step', next); put('deadline', deadline); put('needs_attention', attention);
+  if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', 'email payload too large');
+  return { payload: out, identity: { sender: [senderName, domain].filter(Boolean).join('|'), subject }, dueFromDeadline: deadline };
+}
+
+// ---- recruiter_intel -----------------------------------------------------------------------
+
+const RECRUITER_KEYS = [
+  'version', 'recruiter_name', 'role_title', 'company', 'relationship', 'verification', 'uncertain_fields', 'source_name',
+  'profile_url', 'channel', 'contact_email', 'contact_phone', 'contact_source_url', 'related_job',
+] as const;
+const RELATED_JOB_KEYS = ['job_url', 'external_job_id', 'source_name', 'company', 'title', 'location', 'posted_date'] as const;
+const EMAIL_ADDR = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
+const PHONE = /^\+?[0-9][0-9 ().-]{5,24}[0-9]$/;
+
+function recruiterPayload(c: Ctx, v: unknown, path: string, ctx: { sourceUrl: string | null }): SourceParts {
+  const empty = { payload: {}, identity: {} };
+  if (!isObj(v)) { c.err(path, 'required', 'a recruiter_intel payload with recruiter_name and company is required'); return empty; }
+  c.strip(v, RECRUITER_KEYS, path);
+  const e0 = c.errors.length;
+  sourceVersion(c, v.version, path);
+  const name = text(c, v.recruiter_name, `${path}.recruiter_name`, SOURCE_KEY_LIMITS.short, { required: true });
+  const company = text(c, v.company, `${path}.company`, SOURCE_KEY_LIMITS.short, { required: true });
+  const role = text(c, v.role_title, `${path}.role_title`, SOURCE_KEY_LIMITS.short);
+  const relationship = enumField(c, v.relationship, `${path}.relationship`, RECRUITER_RELATIONSHIPS, { talent: 'talent_acquisition', ta: 'talent_acquisition', hiring_manager: 'hiring_manager' });
+  const profileUrl = url(c, v.profile_url, `${path}.profile_url`);
+  const sourceName = text(c, v.source_name, `${path}.source_name`, 100);
+  const channel = text(c, v.channel, `${path}.channel`, 64);
+  // A recruiter is only ever reported with a public source citation (profile or source URL).
+  if (!profileUrl && !ctx.sourceUrl) c.err(path, 'recruiter_source_required', 'a public source URL (source.url or payload.profile_url) is required; do not report recruiters without one');
+
+  // Public contact details only when a cited source URL accompanies them. Never guessed or inferred.
+  const emailRaw = text(c, v.contact_email, `${path}.contact_email`, 254);
+  const phoneRaw = text(c, v.contact_phone, `${path}.contact_phone`, 32);
+  const contactSource = url(c, v.contact_source_url, `${path}.contact_source_url`);
+  let email: string | null = null, phone: string | null = null;
+  if (emailRaw) { if (EMAIL_ADDR.test(emailRaw)) email = emailRaw.toLowerCase(); else c.err(`${path}.contact_email`, 'email', 'not a valid email address'); }
+  if (phoneRaw) { if (PHONE.test(phoneRaw)) phone = phoneRaw; else c.err(`${path}.contact_phone`, 'phone', 'not a valid phone number'); }
+  if ((email || phone) && !contactSource) {
+    c.warn(`${path}.contact_email`, 'contact_uncited_dropped', 'contact details without contact_source_url are dropped; never guess or infer contact details');
+    email = null; phone = null;
+  }
+
+  let verification = enumField(c, v.verification, `${path}.verification`, RECRUITER_VERIFICATIONS) ?? 'uncertain';
+  if (verification === 'verified' && (!name || !company || (!profileUrl && !ctx.sourceUrl))) verification = 'uncertain';
+  let uncertain: string[] = [];
+  if (v.uncertain_fields !== undefined && v.uncertain_fields !== null) {
+    if (!Array.isArray(v.uncertain_fields)) c.err(`${path}.uncertain_fields`, 'type', 'must be an array');
+    else uncertain = [...new Set(v.uncertain_fields.map((x) => oneOf(c, slug(x), `${path}.uncertain_fields`, RECRUITER_UNCERTAIN_FIELDS, false)).filter((x): x is (typeof RECRUITER_UNCERTAIN_FIELDS)[number] => x !== null))];
+  }
+  if (uncertain.length > 0) verification = 'uncertain';
+
+  // related_job: a contract-local reference by public job identity. JobQuest computes the lead's
+  // dedupe key itself and resolves it inside the caller's own workspace at read time; a database id
+  // supplied by the provider is never accepted.
+  let relatedJob: JsonRecord | null = null;
+  let relatedKey: string | null = null;
+  if (v.related_job !== undefined && v.related_job !== null) {
+    if (!isObj(v.related_job)) c.err(`${path}.related_job`, 'type', 'must be an object');
+    else {
+      const r = v.related_job;
+      c.strip(r, RELATED_JOB_KEYS, `${path}.related_job`);
+      const rp = `${path}.related_job`;
+      const rUrl = url(c, r.job_url, `${rp}.job_url`);
+      const rExt = text(c, r.external_job_id, `${rp}.external_job_id`, AI_LIMITS.id);
+      const rSrc = (text(c, r.source_name, `${rp}.source_name`, 64) ?? hostOf(rUrl))?.toLowerCase() ?? null;
+      const rCo = text(c, r.company, `${rp}.company`, SOURCE_KEY_LIMITS.short);
+      const rTitle = text(c, r.title, `${rp}.title`, SOURCE_KEY_LIMITS.medium);
+      const rLoc = text(c, r.location, `${rp}.location`, SOURCE_KEY_LIMITS.short);
+      const rPosted = calendarDate(c, r.posted_date, `${rp}.posted_date`);
+      const rel: JsonRecord = {};
+      for (const [k, val] of Object.entries({ job_url: rUrl, external_job_id: rExt, source_name: rSrc, company: rCo, title: rTitle, location: rLoc, posted_date: rPosted })) if (val) rel[k] = val;
+      if (Object.keys(rel).length > 0) {
+        relatedJob = rel;
+        const k = buildDedupeKey('job_lead', { job_url: rUrl, external_job_id: rExt, source_name: rSrc, company: rCo, title: rTitle, location: rLoc, posted_date: rPosted });
+        if (k.ok) relatedKey = k.key; else c.warn(rp, 'related_job_unresolvable', 'related_job does not identify a job strongly enough to link');
+      }
+    }
+  }
+  if (c.errors.length > e0 || !name || !company) return empty;
+
+  const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION, recruiter_name: name, company, verification };
+  const put = (k: string, val: JsonValue | null) => { if (val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0)) out[k] = val; };
+  put('role_title', role); put('relationship', relationship); put('uncertain_fields', uncertain); put('source_name', sourceName);
+  put('profile_url', profileUrl); put('channel', channel); put('contact_email', email); put('contact_phone', phone);
+  put('contact_source_url', email || phone ? contactSource : null); put('related_job', relatedJob); put('related_job_key', relatedKey);
+  if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', 'recruiter payload too large');
+  return { payload: out, identity: { name, company, role, profile_url: profileUrl } };
+}
+
 // ---- items -----------------------------------------------------------------
 
-const DEDUPE_KEYS = ['source_type', 'source_id', 'event', 'date', 'job_url', 'external_job_id', 'company', 'title', 'name', 'channel'] as const;
+const DEDUPE_KEYS = ['source_type', 'source_id', 'event', 'date', 'job_url', 'external_job_id', 'company', 'title', 'name', 'channel', 'source_name', 'location', 'posted_date', 'profile_url', 'role'] as const;
 const FINDING_KEYS = ['kind', 'dedupe', 'category', 'priority', 'confidence', 'title', 'summary', 'occurred_at', 'due_at', 'source', 'match', 'evidence', 'payload'] as const;
 
 function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null): AiFinding | null {
@@ -303,6 +603,11 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
       title: text(c, d.title, `${path}.dedupe.title`, 300),
       name: text(c, d.name, `${path}.dedupe.name`, 200),
       channel: text(c, d.channel, `${path}.dedupe.channel`, 64),
+      source_name: text(c, d.source_name, `${path}.dedupe.source_name`, 64)?.toLowerCase() ?? null,
+      location: text(c, d.location, `${path}.dedupe.location`, 200),
+      posted_date: text(c, d.posted_date, `${path}.dedupe.posted_date`, 10),
+      profile_url: text(c, d.profile_url, `${path}.dedupe.profile_url`, AI_LIMITS.url),
+      role: text(c, d.role, `${path}.dedupe.role`, 200),
     };
     if (dedupeIn.event && !AI_EVENT_PATTERN.test(dedupeIn.event.toLowerCase())) c.err(`${path}.dedupe.event`, 'event', 'must be a short snake_case token');
     if (dedupeIn.source_type && !(AI_SOURCE_TYPES as readonly string[]).includes(dedupeIn.source_type.toLowerCase())) c.err(`${path}.dedupe.source_type`, 'enum', `must be one of: ${AI_SOURCE_TYPES.join(', ')}`);
@@ -346,15 +651,44 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
     }
   }
 
-  const body = kind ? payload(c, kind, raw.payload, `${path}.payload`, dedupeIn.date) : {};
+  // External-source kinds (AI-6) get dedicated validators that also contribute identity inputs.
+  let body: JsonRecord = {};
+  let identity: DedupeInput = {};
+  let jobLead: AiJobLeadProjection | undefined;
+  let dueAt = due_at;
+  let categoryOut = category;
+  const sourceUrl = typeof source_ref.url === 'string' ? source_ref.url : null;
+  if (kind === 'job_lead') {
+    const r = jobLeadPayload(c, raw.payload, `${path}.payload`, { dedupe: dedupeIn, sourceUrl });
+    body = r.payload; identity = r.identity; if (r.job) jobLead = r.job;
+  } else if (kind === 'email_event') {
+    // Classification is a closed set; the received time is required (it anchors date filters and the fallback identity).
+    const cat = category === null ? null : String(slug(category));
+    if (!cat || !(EMAIL_CATEGORIES as readonly string[]).includes(cat)) c.err(`${path}.category`, 'email_category', `must be one of: ${EMAIL_CATEGORIES.join(', ')}`);
+    else categoryOut = cat;
+    if (!occurred_at) c.err(`${path}.occurred_at`, 'required', 'the email received time is required');
+    const r = emailPayload(c, raw.payload, `${path}.payload`, raw);
+    body = r.payload; identity = { ...r.identity, occurred_at };
+    if (!dueAt && r.dueFromDeadline) dueAt = r.dueFromDeadline;
+  } else if (kind === 'recruiter_intel') {
+    const r = recruiterPayload(c, raw.payload, `${path}.payload`, { sourceUrl });
+    body = r.payload; identity = r.identity;
+  } else if (kind) {
+    body = payload(c, kind, raw.payload, `${path}.payload`, dedupeIn.date);
+  }
 
   let dedupe_key = '';
   if (kind && title) {
-    const r = buildDedupeKey(kind, { ...dedupeIn, provider, title: dedupeIn.title ?? title, summary });
+    const merged: DedupeInput = { ...identity };
+    for (const [k, val] of Object.entries(dedupeIn)) if (val !== null && val !== undefined && val !== '') (merged as Record<string, unknown>)[k] = val;
+    const r = buildDedupeKey(kind, { ...merged, provider, title: kind === 'job_lead' ? merged.title ?? title : dedupeIn.title ?? title, summary });
     if (r.ok) dedupe_key = r.key; else c.err(`${path}.dedupe`, 'dedupe', r.reason);
   }
   if (c.errors.length > e0 || !kind || !title || !priority) return null;
-  return { kind, dedupe_key, category, priority, confidence: conf, title, summary, occurred_at, due_at, source_ref, match_hints: hints, evidence, payload: body };
+  return {
+    kind, dedupe_key, category: categoryOut, priority, confidence: conf, title, summary, occurred_at, due_at: dueAt, source_ref,
+    match_hints: hints, evidence, payload: body, ...(jobLead ? { job_lead: jobLead } : {}),
+  };
 }
 
 const SUGGESTION_KEYS = ['finding_index', 'action', 'target', 'proposed', 'confidence'] as const;

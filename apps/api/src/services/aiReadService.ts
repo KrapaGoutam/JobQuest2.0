@@ -110,8 +110,8 @@ export interface AiRunDetailResult { run: AiRunDetailDto; findings: AiFindingDto
 
 // ---- validation helpers -------------------------------------------------------
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/;
 
 const err = (code: AiReadErrorCode, message: string): { ok: false; error: AiReadError } => ({ ok: false, error: { code, message } });
@@ -123,10 +123,10 @@ const MESSAGES: Record<AiReadErrorCode, string> = {
   FORBIDDEN: 'Not permitted',
   READ_FAILED: 'AI data could not be read',
 };
-const fail = (code: AiReadErrorCode, detail?: string) => err(code, detail ? `${MESSAGES[code]}: ${detail}` : MESSAGES[code]);
+export const fail = (code: AiReadErrorCode, detail?: string) => err(code, detail ? `${MESSAGES[code]}: ${detail}` : MESSAGES[code]);
 
 type Prepared = { ok: true; ws: string; db: AiReadClient } | { ok: false; error: AiReadError };
-function prepare(ctx: AiReadContext, deps: AiReadDeps): Prepared {
+export function prepare(ctx: AiReadContext, deps: AiReadDeps): Prepared {
   if (!isAiHubServerEnabled(deps.env)) return fail('AI_HUB_DISABLED');
   if (typeof ctx?.workspaceId !== 'string' || !UUID.test(ctx.workspaceId)) return fail('INVALID_CONTEXT');
   if (!deps.client && (typeof ctx.accessToken !== 'string' || ctx.accessToken.length < 20)) return fail('INVALID_CONTEXT');
@@ -136,7 +136,7 @@ function prepare(ctx: AiReadContext, deps: AiReadDeps): Prepared {
 }
 
 /** Strict: unknown keys, wrong types and out-of-contract values are rejected. */
-function parseFilters(raw: unknown, spec: Record<string, readonly string[] | 'uuid' | 'iso' | 'date'>): { ok: true; value: Record<string, string> } | { ok: false; error: AiReadError } {
+export function parseFilters(raw: unknown, spec: Record<string, readonly string[] | 'uuid' | 'iso' | 'date'>): { ok: true; value: Record<string, string> } | { ok: false; error: AiReadError } {
   if (raw === undefined || raw === null) return { ok: true, value: {} };
   if (typeof raw !== 'object' || Array.isArray(raw)) return fail('INVALID_FILTER');
   const out: Record<string, string> = {};
@@ -152,7 +152,7 @@ function parseFilters(raw: unknown, spec: Record<string, readonly string[] | 'uu
   return { ok: true, value: out };
 }
 
-function parsePage(raw: AiPageRequest | undefined, limits: { def: number; max: number } = { def: AI_READ_DEFAULT_PAGE_SIZE, max: AI_READ_MAX_PAGE_SIZE }): { ok: true; page: number; size: number; from: number; to: number } | { ok: false; error: AiReadError } {
+export function parsePage(raw: AiPageRequest | undefined, limits: { def: number; max: number } = { def: AI_READ_DEFAULT_PAGE_SIZE, max: AI_READ_MAX_PAGE_SIZE }): { ok: true; page: number; size: number; from: number; to: number } | { ok: false; error: AiReadError } {
   const page = raw?.page ?? 0;
   const size = raw?.pageSize ?? limits.def;
   if (!Number.isInteger(page) || page < 0 || page > AI_READ_MAX_PAGE) return fail('INVALID_FILTER', 'page');
@@ -161,15 +161,15 @@ function parsePage(raw: AiPageRequest | undefined, limits: { def: number; max: n
 }
 
 /** DB errors map to coarse codes; raw messages/SQL are never returned. */
-const dbFail = (e: { code?: string } | null | undefined) => (e?.code === '42501' ? fail('FORBIDDEN') : fail('READ_FAILED'));
+export const dbFail = (e: { code?: string } | null | undefined) => (e?.code === '42501' ? fail('FORBIDDEN') : fail('READ_FAILED'));
 
 // ---- row mapping ----------------------------------------------------------------
 
 type Row = Record<string, unknown>;
-const rec = (v: unknown): JsonRecord => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as JsonRecord) : {});
-const s = (v: unknown): string => String(v);
-const sn = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
-const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
+export const rec = (v: unknown): JsonRecord => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as JsonRecord) : {});
+export const s = (v: unknown): string => String(v);
+export const sn = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+export const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 const numericCounts = (v: unknown): Record<string, number> =>
   Object.fromEntries(Object.entries(rec(v)).filter(([, n]) => typeof n === 'number' && Number.isFinite(n))) as Record<string, number>;
 
@@ -204,7 +204,7 @@ const toSuggestion = (r: Row): AiSuggestionDto => ({
   targetId: sn(r.target_id), proposed: rec(r.proposed), confidence: num(r.confidence), createdAt: s(r.created_at),
 });
 
-const sliced = <T,>(rows: T[], page: number, size: number): AiPage<T> => ({ items: rows.slice(0, size), page, pageSize: size, hasNext: rows.length > size });
+export const sliced = <T,>(rows: T[], page: number, size: number): AiPage<T> => ({ items: rows.slice(0, size), page, pageSize: size, hasNext: rows.length > size });
 // Newest first with a stable tiebreaker, so equal timestamps never reorder across pages.
 const newestFirst = (q: any) => q.order('created_at', { ascending: false }).order('id', { ascending: false }); // eslint-disable-line @typescript-eslint/no-explicit-any
 

@@ -11,6 +11,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { ClaudeConnectorPanel } from '../components/ai/ClaudeConnectorPanel';
 import { ProviderConnectorPanel } from '../components/ai/ProviderConnectorPanel';
 import { PROVIDER_CONNECTORS } from '../lib/providerConnectors';
+import { OAuthProviderPanel } from '../components/ai/OAuthProviderPanel';
 import type { PublicSession } from '../api';
 
 // Settings -> AI & Automation (AI-1F1). Workflows and general settings are
@@ -64,8 +65,10 @@ export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWor
                 <li key={p.id} style={session ? { padding: '10px 0', borderTop: p.id === 'claude' ? undefined : '1px solid var(--color-border)' } : rowStyle}>
                   {p.id === 'claude' && session
                     ? <ClaudeConnectorPanel activeWorkspaceId={activeWorkspaceId} session={session} />
-                    : session
-                      ? <ProviderConnectorPanel provider={PROVIDER_CONNECTORS[p.id]} activeWorkspaceId={activeWorkspaceId} session={session} />
+                    : session && (p.id === 'gemini' || p.id === 'chatgpt')
+                      ? <OAuthProviderPanel provider={p.id} activeWorkspaceId={activeWorkspaceId} session={session} />
+                      : session
+                        ? <ProviderConnectorPanel provider={PROVIDER_CONNECTORS[p.id]} activeWorkspaceId={activeWorkspaceId} session={session} />
                       : <><span>{p.label}</span><b>Not configured</b></>}
                 </li>
               ))}

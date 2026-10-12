@@ -6,3 +6,4 @@ export const GET = vercelHandler;
 export const POST = vercelHandler;
 export const OPTIONS = vercelHandler;
 export const DELETE = vercelHandler;
+export const HEAD = vercelHandler;

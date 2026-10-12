@@ -331,10 +331,11 @@ describe('no provider APIs, no new scheduler, no new credential tables, no migra
     expect(read('vercel.json')).not.toMatch(/"crons"/);
     for (const m of ['package.json', 'apps/api/package.json']) expect(read(m), m).not.toMatch(/node-cron|node-schedule|bull|agenda|cron/i);
   });
-  it('no provider credential tables and no AI-9 migration', () => {
+  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration', () => {
     const migrations = readdirSync('supabase/migrations').sort();
-    expect(migrations[migrations.length - 1]).toBe('20261029100000_ai_hub_controlled_actions.sql');
+    expect(migrations[migrations.length - 1]).toBe('20261030100000_ai_hub_oauth_21.sql');
     const sql = migrations.map((m) => read(`supabase/migrations/${m}`)).join('\n');
     expect(sql).not.toMatch(/gemini_tokens|chatgpt_tokens|openai_tokens/i);
+    expect(sql).toMatch(/create table public\.oauth_clients/);
   });
 });

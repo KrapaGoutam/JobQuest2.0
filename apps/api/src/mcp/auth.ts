@@ -1,11 +1,11 @@
 // AI-3: MCP authentication boundary. Everything under /api/mcp passes through
 // `authenticateMcp` BEFORE any tool or protocol handling. Verifiers produce an
 // McpPrincipal; today only the scoped connector token exists. Full OAuth is
-// deferred (see AI-3_AUTH_DECISION.md): nothing here advertises an authorization
-// server, and a future bearer verifier only has to return the same principal.
+// AI-10 adds an OAuth verifier alongside (never instead of) connector tokens.
 import type { Context } from 'hono';
 import { env } from '../env';
 import { resolveConnectorToken, touchConnectorToken } from '../lib/aiConnectorTokens';
+import { mcpResource, requestOrigin, resolveOAuthAccessToken, touchOAuthGrant } from '../lib/oauth';
 import { limiter } from '../lib/rateLimit';
 import { bearer, clientIp } from '../lib/security';
 import type { McpPrincipal } from './principal';
@@ -44,7 +44,26 @@ export async function authenticateMcp(c: Context): Promise<McpAuthResult> {
   } catch {
     return { ok: false, reason: 'UNAVAILABLE' };
   }
-  if (!resolved) return rejected('INVALID');
+  if (!resolved) {
+    const issuer = requestOrigin(c);
+    if (!issuer) return rejected('INVALID');
+    let oauth;
+    try { oauth = await resolveOAuthAccessToken(token, issuer, mcpResource(issuer)); }
+    catch { return { ok: false, reason: 'UNAVAILABLE' }; }
+    if (!oauth) return rejected('INVALID');
+    const hit = await tokenLimit.hit(`oauth:${oauth.grantId}`).catch(() => null);
+    if (!hit) return { ok: false, reason: 'UNAVAILABLE' };
+    if (!hit.allowed) return { ok: false, reason: 'RATE_LIMITED', retryAfterSeconds: Math.max(1, hit.retryAfterSeconds) };
+    touchOAuthGrant(oauth.grantId);
+    return {
+      ok: true,
+      principal: {
+        userId: oauth.userId, workspaceId: oauth.workspaceId, scopes: oauth.scopes,
+        credentialType: 'oauth', credentialId: oauth.grantId,
+        credentialPrefix: oauth.clientId.slice(0, 24), sessionId: oauth.sessionId,
+      },
+    };
+  }
 
   const hit = await tokenLimit.hit(resolved.tokenId).catch(() => null);
   if (!hit) return { ok: false, reason: 'UNAVAILABLE' };

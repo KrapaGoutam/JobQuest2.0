@@ -30,6 +30,7 @@ import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import { JournalView } from './views/JournalView';
 import { AiHubView } from './views/AiHubView';
+import { OAuthConsentView } from './views/OAuthConsentView';
 import { AI_HUB_PATHS, aiHubTabFromPath } from './lib/aiHub';
 import { isAiHubExposed } from './lib/aiHubFlags';
 import {
@@ -434,6 +435,8 @@ function AppContent() {
         return 'Settings';
       case '/design-system':
         return 'Design System';
+      case '/oauth/authorize':
+        return 'Authorize provider';
       default:
         return 'JobQuest 2.0';
     }
@@ -479,6 +482,10 @@ function AppContent() {
         onAction={() => navigate('/applications')}
       />
     );
+
+    if (routePath === '/oauth/authorize') {
+      return <OAuthConsentView requestId={routeParams.get('request_id')} session={session} />;
+    }
 
     if (currentPath === '/design-system') {
       return <DesignSystemShowcase />;

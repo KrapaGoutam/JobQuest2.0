@@ -28,6 +28,9 @@ export const requireSameOriginJson: MiddlewareHandler = async (c, next) => {
   // MCP clients are not browsers: they authenticate with an explicit connector bearer
   // token (never ambient cookies) and the handler enforces its own Origin allow-list.
   if (c.req.path === '/api/mcp' || c.req.path === '/api/mcp/') return next();
+  // OAuth token and revocation calls are non-browser, form-encoded requests
+  // authenticated by a pre-registered client secret and PKCE/grant token.
+  if (c.req.path === '/api/oauth/token' || c.req.path === '/api/oauth/revoke') return next();
   // Extension bearer tokens are explicit Authorization credentials, never ambient
   // cookies. Their route performs its own optional extension-origin allow-list check.
   if (c.req.path.startsWith('/api/ext/v1/')) {

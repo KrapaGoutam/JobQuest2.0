@@ -103,3 +103,23 @@ Claude scheduled task / future ChatGPT or Gemini task / JobQuest deterministic s
 - **Reads:** `aiReadService.listAiDigests/getAiDigest` (RLS as caller, stable `dedupe_key desc, id desc` order, date range prefix on the dedupe key) and one MCP tool `jobquest_list_daily_digests` (scope `ai:read`). No "generate digest" MCP tool. The only JobQuest-side write is the user-initiated, CSRF-protected `POST /api/ai/digest/generate` (today only; owner session; stores the deterministic digest).
 - **Workflow definitions** (`apps/web/src/lib/aiWorkflowDefinitions.ts`): Daily Digest, Job Discovery, Email Triage, Recruiter Intelligence, Calendar Intelligence, with purpose, source, output, cadence recommendation, scopes, source readiness and provider compatibility. Statuses: Available / Provider setup required / Source integration not implemented / Disabled.
 - **Failure isolation:** the digest tab, its queries and the generate route fail independently (AI-only; applications, auth, tasks, dashboard and History are unaffected).
+
+## 13. External intelligence sources (AI-6, implemented)
+
+```
+Claude scheduled task / manual run (future ChatGPT / Gemini)
+   |  job search | email triage | recruiter research   (the provider does ALL discovery; JobQuest has no scraper)
+   v
+jobquest.ai-result 1.x  ->  /api/mcp  jobquest_submit_ai_result   (the ONE write boundary; no per-source write tool)
+   v
+ingestAiResult -> rpc_ai_ingest_finding (parent finding, audited once)
+   v                          \-> job_lead only: rpc_ai_resolve_job_lead_key (reuse an existing lead's key) then rpc_ai_upsert_job_lead (child, no audit)
+ai_findings (system of record)  +  ai_job_leads (child of a job_lead finding)
+   v
+Job Leads / Email / Recruiter Intel pages  +  Daily Digest (deterministic aggregation of stored data; never re-searches)
+```
+
+- Workflows `job_discovery`, `email_triage`, `recruiter_intel` and kinds `job_lead`, `email_event`, `recruiter_intel` already existed in the AI-1A CHECKs: **no enum change**. `daily_brief` stays the only digest workflow.
+- Only job leads get a child table (`ai_job_leads`): real filtering, identity lookups and a bounded description need columns. Email events and recruiter intel filter on real finding columns (`category`, `provider`, `status`, `priority`, `occurred_at`, `due_at`, `created_at`) plus `payload->>…` and need no table.
+- Failure isolation: each page owns its load/error state; one malformed finding is rejected (run PARTIAL) and never blocks the others; a projection failure leaves the finding stored and heals on re-submit.
+- Read services: `aiExternalIntelligenceService` (MCP reads, Daily Digest helpers); the browser reads the same shapes under RLS (`apps/web/src/api/aiSources.ts`).

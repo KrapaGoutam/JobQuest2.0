@@ -19,6 +19,39 @@ export interface AiMatchHints {
   external_job_id: string | null;
 }
 
+/**
+ * Normalized job-lead child row (ai_job_leads) derived from a job_lead finding. The
+ * plain-text description is kept OUT of finding.payload (16 KiB cap) and is written by
+ * rpc_ai_upsert_job_lead after the parent finding is ingested.
+ */
+export interface AiJobLeadProjection {
+  company: string;
+  title: string;
+  location: string | null;
+  work_arrangement: string | null;
+  employment_type: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  canonical_url: string | null;
+  external_job_id: string | null;
+  /** YYYY-MM-DD, only when the source states it. */
+  posted_date: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  experience_level: string | null;
+  /** Provider analysis, integer 0..100. */
+  match_score: number | null;
+  description: string | null;
+  description_truncated: boolean;
+  /** Characters of normalized text before truncation. */
+  description_length: number | null;
+  required_skills: string[];
+  preferred_skills: string[];
+  payload_version: string;
+}
+
 export interface AiFinding {
   kind: AiFindingKind;
   /** Computed by JobQuest from deterministic fields; never taken from the provider. */
@@ -34,6 +67,8 @@ export interface AiFinding {
   match_hints: AiMatchHints;
   evidence: string | null; // <= 500 chars
   payload: JsonRecord;
+  /** Present only for kind job_lead. */
+  job_lead?: AiJobLeadProjection;
 }
 
 /** A PROPOSAL only. No status: nothing here is executable (AI-11). */

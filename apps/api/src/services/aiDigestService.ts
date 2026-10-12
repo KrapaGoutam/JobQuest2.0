@@ -18,12 +18,13 @@
 import { userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION,
+  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION, EMAIL_ATTENTION_CATEGORIES, STRONG_MATCH_THRESHOLD,
   type JsonRecord,
 } from '../lib/aiContract';
 import { isCalendarDate, nextCalendarDate, shiftCalendarDate } from '../lib/calendarDate';
 import type { AiReadClient } from './aiReadService';
 import { ingestAiResult, type AiIngestResult, type AiIntegrationDeps } from './aiIntegrationService';
+import { safeUrl } from './aiExternalIntelligenceService';
 
 // ---- date / time zone -------------------------------------------------------------
 
@@ -112,10 +113,22 @@ export async function resolveOwnerTimeZone(db: AiReadClient, userId: string): Pr
   }
 }
 
+/** Findings still open to the user; dismissed/closed ones are not part of a digest. */
+const ACTIVE_STATUSES = ['NEW', 'REVIEWED'];
+/** Mirrors aiExternalIntelligenceService (one definition of "needs attention"). */
+const ATTENTION_OR = `priority.in.(HIGH,CRITICAL),category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null,payload->>needs_attention.eq.true`;
+const SOURCE_WORKFLOWS = { job_leads: 'job_discovery', email_activity: 'email_triage', recruiter_intel: 'recruiter_intel' } as const;
+const label = (v: unknown) => text(v, 48).replace(/_/g, ' ');
+
 /**
- * Computes the facts JobQuest owns for `digestDate`. Sources JobQuest does not have yet
- * (job discovery, email, recruiter intelligence) are reported `not_configured`, never as
- * zero. Nothing is fabricated: every count comes from a query below.
+ * Computes the facts JobQuest owns for `digestDate`. Nothing is fabricated: every count comes
+ * from a query below.
+ *
+ * External sources (AI-6) keep the three AI-5 states exactly:
+ *   available       the source stored items for the day
+ *   zero            the source has run successfully before and found nothing for the day
+ *   not_configured  no run of that source workflow has ever succeeded for this owner
+ * "Strong job match" = provider match score >= STRONG_MATCH_THRESHOLD; a lead without a score is never strong.
  */
 export async function buildDeterministicDigest(
   ctx: AiDigestContext,
@@ -164,14 +177,91 @@ export async function buildDeterministicDigest(
     for (const r of (lookup.data ?? []) as Row[]) titleById.set(String(r.id), appTitle(r));
   }
 
+  // ---- AI-6 external intelligence (job leads, email events, recruiter intel), owner-scoped under RLS ----
+  const owned = (table: string, cols: string, head = false) => {
+    const q = head ? db.from(table).select(cols, { count: 'exact', head: true }) : db.from(table).select(cols);
+    return q.eq('workspace_id', ws).eq('user_id', me);
+  };
+  const leadsIn = (cols: string, head = false) =>
+    owned('ai_job_leads', `${cols}, finding:ai_findings!inner(status)`, head).in('finding.status', ACTIVE_STATUSES).gte('discovered_at', day.start).lt('discovered_at', day.end);
+  const emailIn = (cols: string, head = false) =>
+    owned('ai_findings', cols, head).eq('kind', 'email_event').in('status', ACTIVE_STATUSES).gte('occurred_at', day.start).lt('occurred_at', day.end);
+  const ran = (workflow: string) =>
+    db.from('ai_runs').select('id').eq('workspace_id', ws).eq('user_id', me).eq('workflow', workflow).in('status', ['SUCCEEDED', 'PARTIAL']).limit(1);
+  const [
+    leadCount, strongCount, leadRows, emailCount, attentionCount, emailRows, replyCount, assessmentCount,
+    deadlineCount, deadlineRows, recruiterCount, recruiterRows, ranLeads, ranEmail, ranRecruiter,
+  ] = await Promise.all([
+    leadsIn('id', true),
+    leadsIn('id', true).gte('match_score', STRONG_MATCH_THRESHOLD),
+    leadsIn('company, title, location, match_score, source_url, discovered_at')
+      .order('match_score', { ascending: false, nullsFirst: false }).order('discovered_at', { ascending: false }).limit(DIGEST_LIMITS.itemsPerSection),
+    emailIn('id', true),
+    emailIn('id', true).eq('status', 'NEW').or(ATTENTION_OR),
+    emailIn('title, category, priority, due_at, occurred_at, payload')
+      .order('occurred_at', { ascending: false }).order('id', { ascending: false }).limit(DIGEST_LIMITS.itemsPerSection),
+    emailIn('id', true).eq('category', 'recruiter_reply'),
+    emailIn('id', true).eq('category', 'assessment'),
+    owned('ai_findings', 'id', true).eq('kind', 'email_event').in('status', ACTIVE_STATUSES).gte('due_at', day.start).lt('due_at', weekEnd),
+    owned('ai_findings', 'title, category, due_at, payload').eq('kind', 'email_event').in('status', ACTIVE_STATUSES).gte('due_at', day.start).lt('due_at', weekEnd)
+      .order('due_at', { ascending: true }).order('id', { ascending: true }).limit(DIGEST_LIMITS.itemsPerSection),
+    owned('ai_findings', 'id', true).eq('kind', 'recruiter_intel').in('status', ACTIVE_STATUSES).gte('created_at', day.start).lt('created_at', day.end),
+    owned('ai_findings', 'title, source_ref, created_at, payload').eq('kind', 'recruiter_intel').in('status', ACTIVE_STATUSES).gte('created_at', day.start).lt('created_at', day.end)
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(DIGEST_LIMITS.itemsPerSection),
+    ran(SOURCE_WORKFLOWS.job_leads), ran(SOURCE_WORKFLOWS.email_activity), ran(SOURCE_WORKFLOWS.recruiter_intel),
+  ]);
+  const external = [leadCount, strongCount, leadRows, emailCount, attentionCount, emailRows, replyCount, assessmentCount, deadlineCount, deadlineRows, recruiterCount, recruiterRows, ranLeads, ranEmail, ranRecruiter];
+  if (external.some((r) => r.error)) return bad('READ_FAILED', 'JobQuest data could not be read');
+  const rowsOf = (r: { data?: unknown }) => (Array.isArray(r.data) ? (r.data as Row[]) : []);
+  const hasRun = (r: { data?: unknown }) => rowsOf(r).length > 0;
+
   const addedCount = added.count ?? 0;
   const dueCount = due.count ?? 0;
   const pendingCount = pending.count ?? 0;
-  const upcomingCount = upcoming.length;
+  const deadlines = rowsOf(deadlineRows);
+  const upcomingCount = upcoming.length + (deadlineCount.count ?? 0);
+  const leadsTotal = leadCount.count ?? 0, strongTotal = strongCount.count ?? 0, emailTotal = emailCount.count ?? 0;
+  const attentionTotal = attentionCount.count ?? 0, recruiterTotal = recruiterCount.count ?? 0;
 
   const section = (count: number, items: JsonRecord[]): JsonRecord =>
     count > 0 || items.length > 0 ? { status: 'available', count: Math.max(count, items.length), items } : { status: 'zero', count: 0, items: [] };
   const NOT_CONFIGURED: JsonRecord = { status: 'not_configured', items: [] };
+  /** available when it reported items, zero when the source ran successfully before, otherwise not_configured. */
+  const sourceSection = (count: number, items: JsonRecord[], configured: boolean): JsonRecord =>
+    count > 0 || items.length > 0 ? section(count, items) : configured ? section(0, []) : NOT_CONFIGURED;
+  const leadsConfigured = hasRun(ranLeads), emailConfigured = hasRun(ranEmail), recruiterConfigured = hasRun(ranRecruiter);
+
+  const leadItems: JsonRecord[] = rowsOf(leadRows).map((r) => {
+    const score = r.match_score === null || r.match_score === undefined ? null : Number(r.match_score);
+    const url = safeUrl(r.source_url);
+    return {
+      title: text(`${text(r.company, 80)} — ${text(r.title, 70)}`, DIGEST_LIMITS.itemTitle),
+      detail: text([score === null ? '' : `AI match ${score}/100`, text(r.location, 80)].filter(Boolean).join(' · ') || 'Job lead', DIGEST_LIMITS.itemDetail),
+      source: 'job_site', priority: score !== null && score >= STRONG_MATCH_THRESHOLD ? 'HIGH' : 'NORMAL',
+      ...(url ? { url } : {}), occurred_at: new Date(String(r.discovered_at)).toISOString(),
+    };
+  });
+  const emailItem = (r: Row, when: 'occurred_at' | 'due_at'): JsonRecord => {
+    const payload = (r.payload ?? {}) as Row;
+    const company = text(payload.company, 80);
+    return {
+      title: text(r.title, DIGEST_LIMITS.itemTitle),
+      detail: text([label(r.category), company, when === 'due_at' ? '' : r.due_at ? `due ${String(r.due_at).slice(0, 10)}` : ''].filter(Boolean).join(' · '), DIGEST_LIMITS.itemDetail),
+      source: 'gmail', ...(r.priority === 'HIGH' || r.priority === 'CRITICAL' ? { priority: String(r.priority) } : {}),
+      ...(r[when] ? { occurred_at: new Date(String(r[when])).toISOString() } : {}),
+    };
+  };
+  const emailItems: JsonRecord[] = rowsOf(emailRows).map((r) => emailItem(r, 'occurred_at'));
+  const deadlineItems: JsonRecord[] = deadlines.map((r) => ({ ...emailItem(r, 'due_at'), title: text(`Deadline: ${text(r.title, 130)}`, DIGEST_LIMITS.itemTitle), priority: 'HIGH' }));
+  const recruiterItems: JsonRecord[] = rowsOf(recruiterRows).map((r) => {
+    const payload = (r.payload ?? {}) as Row;
+    const url = safeUrl(payload.profile_url) ?? safeUrl(((r.source_ref ?? {}) as Row).url);
+    return {
+      title: text(`${text(payload.recruiter_name, 80) || text(r.title, 80)} — ${text(payload.company, 70)}`, DIGEST_LIMITS.itemTitle),
+      detail: text([label(payload.role_title || payload.relationship), payload.verification === 'verified' ? 'public source cited' : 'unverified'].filter((x) => x !== '').join(' · '), DIGEST_LIMITS.itemDetail),
+      source: 'web', ...(url ? { url } : {}), occurred_at: new Date(String(r.created_at)).toISOString(),
+    };
+  });
 
   const appItems: JsonRecord[] = ((addedRows.data ?? []) as Row[]).map((r) => ({
     title: appTitle(r), detail: `Added to JobQuest (${text(r.stage, 32).toLowerCase().replace(/_/g, ' ')})`, source: 'jobquest', occurred_at: new Date(String(r.created_at)).toISOString(),
@@ -181,10 +271,13 @@ export async function buildDeterministicDigest(
     detail: text(`${r.next_action ? `${text(r.next_action, 120)} · ` : ''}due ${String(r.next_action_date)}`, DIGEST_LIMITS.itemDetail),
     source: 'jobquest', priority: String(r.next_action_date) < digestDate ? 'HIGH' : 'NORMAL',
   }));
-  const upcomingItems: JsonRecord[] = upcoming.map((r) => ({
+  const interviewItems: JsonRecord[] = upcoming.map((r) => ({
     title: text(`${titleById.get(String(r.application_id)) ?? 'Interview'}`, DIGEST_LIMITS.itemTitle),
     detail: `${text(r.interview_type, 32).toLowerCase().replace(/_/g, ' ')} interview`, source: 'jobquest', occurred_at: new Date(String(r.scheduled_at)).toISOString(),
   }));
+  // Interviews and email deadlines share "Upcoming", soonest first.
+  const upcomingItems: JsonRecord[] = [...interviewItems, ...deadlineItems]
+    .sort((a, b) => String(a.occurred_at ?? '').localeCompare(String(b.occurred_at ?? ''))).slice(0, DIGEST_LIMITS.itemsPerSection);
   const suggestionItems: JsonRecord[] = ((pendingRows.data ?? []) as Row[]).map((r) => ({
     title: `${ACTION_LABEL[String(r.action)] ?? 'Suggestion'} awaiting your decision`,
     detail: r.target_type ? `Target: ${text(r.target_type, 32).replace(/_/g, ' ')}` : undefined, source: 'provider',
@@ -192,6 +285,8 @@ export async function buildDeterministicDigest(
 
   const priorities: JsonRecord[] = [
     ...dueItems.filter((i) => i.priority === 'HIGH').slice(0, 3).map((i) => ({ title: `Follow up: ${i.title}`, detail: i.detail, priority: 'HIGH', source: 'jobquest' })),
+    ...(attentionTotal > 0 ? [{ title: `${attentionTotal} job-search email${attentionTotal === 1 ? '' : 's'} need${attentionTotal === 1 ? 's' : ''} your attention`, priority: 'HIGH', source: 'gmail' }] : []),
+    ...(strongTotal > 0 ? [{ title: `${strongTotal} strong job match${strongTotal === 1 ? '' : 'es'} (AI match ${STRONG_MATCH_THRESHOLD}+)`, priority: 'NORMAL', source: 'job_site' }] : []),
     ...(pendingCount > 0 ? [{ title: `${pendingCount} AI suggestion${pendingCount === 1 ? '' : 's'} awaiting your decision`, priority: 'NORMAL', source: 'jobquest' }] : []),
   ].slice(0, DIGEST_LIMITS.priorities) as JsonRecord[];
 
@@ -200,17 +295,19 @@ export async function buildDeterministicDigest(
     digest_date: digestDate,
     time_zone: timeZone,
     generated_at: (deps.now?.() ?? new Date()).toISOString(),
-    // Only facts JobQuest owns are summarized; email/job/recruiter counts are deliberately absent.
+    // A count is only present when its source is configured: absent means "not reported", never zero.
     summary: {
       applications_added: addedCount, active_applications: active.count ?? 0, follow_ups: dueCount,
       interviews: interviewsToday.count ?? 0, pending_suggestions: pendingCount, new_findings: newFindings.count ?? 0,
+      ...(leadsConfigured || leadsTotal > 0 ? { new_job_leads: leadsTotal, strong_matches: strongTotal } : {}),
+      ...(emailConfigured || emailTotal > 0 ? { recruiter_replies: replyCount.count ?? 0, assessments: assessmentCount.count ?? 0 } : {}),
     },
     priorities,
     sections: {
       applications: section(addedCount, appItems),
-      job_leads: NOT_CONFIGURED,
-      email_activity: NOT_CONFIGURED,
-      recruiter_intel: NOT_CONFIGURED,
+      job_leads: sourceSection(leadsTotal, leadItems, leadsConfigured),
+      email_activity: sourceSection(emailTotal, emailItems, emailConfigured),
+      recruiter_intel: sourceSection(recruiterTotal, recruiterItems, recruiterConfigured),
       upcoming: section(upcomingCount, upcomingItems),
       follow_ups: section(dueCount, dueItems),
       ai_suggestions: section(pendingCount, suggestionItems),

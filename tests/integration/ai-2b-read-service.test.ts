@@ -25,7 +25,7 @@ describe.skipIf(!ready || !local)('AI-2B — AI read service (RLS) and audit sco
   const uniq = (p: string) => `${p}-${run}-${++n}`;
   const as = (a: Actor, workspaceId = ws) => ({ workspaceId, accessToken: a.token! }); // default path: real userClient under RLS
   const finding = (sid: string, over: Record<string, unknown> = {}) => ({
-    kind: 'email_event', dedupe: { source_type: 'gmail', source_id: sid, event: 'interview' }, priority: 'HIGH', title: `Finding ${sid}`,
+    kind: 'email_event', dedupe: { source_type: 'gmail', source_id: sid, event: 'interview' }, category: 'interview_invitation', occurred_at: '2026-10-01T10:00:00Z', priority: 'HIGH', title: `Finding ${sid}`,
     summary: 'Sanitized summary.', payload: { company: 'Acme' }, ...over,
   });
   const envelope = (over: Record<string, unknown> = {}) => ({

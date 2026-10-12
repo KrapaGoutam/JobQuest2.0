@@ -171,8 +171,8 @@ describe('dedupe', () => {
     expect(canonicalizeUrl('https://x.com/Job')).not.toBe(canonicalizeUrl('https://x.com/job'));
   });
   it('equivalent normalized inputs yield the same key', () => {
-    const a = buildDedupeKey('recruiter_intel', { name: '  Pat   Recruiter ', company: 'EXAMPLE corp', channel: 'Email' });
-    const b = buildDedupeKey('recruiter_intel', { name: 'pat recruiter', company: 'Example Corp', channel: 'email' });
+    const a = buildDedupeKey('recruiter_intel', { name: '  Pat   Recruiter ', company: 'EXAMPLE corp', role: 'Recruiter' });
+    const b = buildDedupeKey('recruiter_intel', { name: 'pat recruiter', company: 'Example Corp', role: ' recruiter' });
     expect(a).toEqual(b);
     expect(buildDedupeKey('email_event', { source_type: 'GMAIL', source_id: ' m1 ', event: 'Rejection' })).toEqual(buildDedupeKey('email_event', { source_type: 'gmail', source_id: 'm1', event: 'rejection' }));
   });
@@ -180,7 +180,7 @@ describe('dedupe', () => {
     expect(ok(valid.dailyBrief).data!.findings[0]!.dedupe_key).toBe('daily_brief:2026-10-01:claude');
     expect(buildDedupeKey('daily_brief', { date: '2026-02-30', provider: 'claude' }).ok).toBe(false);
     expect(buildDedupeKey('daily_brief', { date: '2026-10-01' }).ok).toBe(false); // provider is part of a digest's identity
-    expect(buildDedupeKey('job_lead', { company: 'A', title: 'B' }).ok).toBe(true);
+    expect(buildDedupeKey('job_lead', { company: 'A', title: 'B', source_name: 'board' }).ok).toBe(true); // AI-6: company+title alone is not an identity
     expect(buildDedupeKey('job_lead', {}).ok).toBe(false);
     const long = buildDedupeKey('job_lead', { job_url: `https://x.com/${'a'.repeat(400)}` });
     expect(long.ok && /^[\x21-\x7e]{1,255}$/.test(long.key)).toBe(true);

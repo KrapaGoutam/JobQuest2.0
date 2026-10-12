@@ -53,6 +53,40 @@ export const AI_LIMITS = {
   dedupeKey: 255,
 } as const;
 
+// ---- External intelligence sources (AI-6) -----------------------------------
+// Job leads, email events and recruiter intel stay `ai_findings` (the system-of-record
+// parent). Only job leads get a child table (`ai_job_leads`, migration 20261027100000)
+// because they need real filtering/uniqueness. Payload shapes are versioned here and
+// stay inside jobquest.ai-result 1.0 (additive); mirrored by apps/web/src/lib/aiSources.ts
+// (tests/unit/ai-6-sources-ui.test.ts fails on drift).
+export const SOURCE_PAYLOAD_VERSION = '1.0' as const;
+
+/** Email classification. A closed set: free-form categories are rejected for email_event. */
+export const EMAIL_CATEGORIES = [
+  'recruiter_reply', 'interview_invitation', 'assessment', 'rejection', 'application_confirmation',
+  'follow_up', 'scheduling', 'reschedule', 'deadline', 'other_job_search',
+] as const;
+/** Categories that normally need the user to act (used with priority HIGH/CRITICAL and the provider hint). */
+export const EMAIL_ATTENTION_CATEGORIES = [
+  'recruiter_reply', 'interview_invitation', 'assessment', 'scheduling', 'reschedule', 'deadline', 'follow_up',
+] as const;
+
+export const JOB_WORK_ARRANGEMENTS = ['remote', 'hybrid', 'onsite'] as const;
+export const JOB_EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'temporary', 'internship', 'freelance', 'other'] as const;
+export const JOB_SALARY_PERIODS = ['year', 'month', 'week', 'day', 'hour'] as const;
+/** Stored job description cap (characters of normalized plain text). Longer text is truncated and flagged. */
+export const JOB_DESCRIPTION_MAX_CHARS = 30000;
+/** A "strong match" is a provider match score of at least this value (0..100). No score => never strong. */
+export const STRONG_MATCH_THRESHOLD = 80;
+
+export const RECRUITER_RELATIONSHIPS = ['recruiter', 'talent_acquisition', 'hiring_manager', 'sourcer', 'other'] as const;
+export const RECRUITER_VERIFICATIONS = ['verified', 'uncertain'] as const;
+export const RECRUITER_UNCERTAIN_FIELDS = ['name', 'role', 'company', 'relationship', 'contact'] as const;
+
+export type EmailCategory = (typeof EMAIL_CATEGORIES)[number];
+export type JobWorkArrangement = (typeof JOB_WORK_ARRANGEMENTS)[number];
+export type JobEmploymentType = (typeof JOB_EMPLOYMENT_TYPES)[number];
+
 // ---- Daily Digest (AI-5) ----------------------------------------------------
 // A digest is an `ai_findings` row (kind/workflow `daily_brief`, AI-0 decision; the
 // product name is "Daily Digest"). One row per owner + digest_date + provider. The

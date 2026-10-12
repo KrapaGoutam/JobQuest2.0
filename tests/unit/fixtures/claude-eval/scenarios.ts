@@ -40,10 +40,11 @@ export const CLAUDE_SUBMISSION_FIXTURE = {
   findings: [{
     kind: 'email_event',
     dedupe: { source_type: 'gmail', source_id: 'synthetic-msg-001', event: 'interview' },
-    category: 'INTERVIEW',
+    category: 'interview_invitation',
     priority: 'NORMAL',
     confidence: 0.9,
     title: 'Synthetic interview invitation',
+    occurred_at: '2026-10-09T11:50:00Z',
     summary: 'Synthetic, sanitized summary for the AI-4 validation run.',
     payload: { company: 'Example Corp' },
   }],

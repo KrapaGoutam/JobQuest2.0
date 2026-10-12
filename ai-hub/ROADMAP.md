@@ -40,7 +40,7 @@ AI-4 Claude Integration (combined)                  COMPLETE (branch CI 37947672
 [x] branch CI  [x] remote Claude connector smoke (PASS, token revoked)  [x] development integration + CI
 (Deferred, not started: scheduled Morning Brief, workflow-config mutation, OAuth)
 
-AI-5 Scheduled Intelligence + Daily Digest (combined; re-sequenced)   AI-5 READY FOR BRANCH CI (see reports/AI-5_SCHEDULED_DIGEST_REPORT.md) (feature/ai-5-scheduled-digest)
+AI-5 Scheduled Intelligence + Daily Digest (combined; re-sequenced)   COMPLETE (branch CI 38205261995 @6c8196f7; development CI 38205932872; development ce3c16a6) (feature/ai-5-scheduled-digest). `daily_brief` = canonical workflow id for the Daily Digest feature.
 [x] Daily Digest = ai_finding (kind/workflow daily_brief; versioned payload 1.0; one digest per owner+date+provider; NO digest table, NO migration)
 [x] aiReadService digest reads + jobquest_list_daily_digests (read-only) + deterministic aggregation service + user-initiated "save JobQuest digest for today" (provider system)
 [x] AI Hub -> Daily Digest tab (/ai-hub/digest): Today/Yesterday/Last 7/custom, provider filter, combined view, source availability states
@@ -53,7 +53,10 @@ AI-5 Scheduled Intelligence + Daily Digest (combined; re-sequenced)   AI-5 READY
 [historical label] Former AI-6 ChatGPT                 RE-SEQUENCED (after AI-6; expect attended-only; custom MCP availability differs by plan/product)
 [ ] 6A  [ ] 6B  [ ] 6C  [ ] 6D  [ ] 6E
 
-AI-6 (new) External Intelligence Sources              NOT STARTED   (awaiting operator approval; email + job discovery + recruiter over the AI-5 digest/result path; calendar may be separate)
+AI-6 (new) External Intelligence Sources              READY FOR BRANCH CI (feature/ai-6-external-intelligence; see reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md)
+[x] job_lead child table ai_job_leads (migration 20261027100000)  [x] email_event + recruiter_intel as findings  [x] one ingestion path, 3 read-only MCP tools
+[x] Job Leads / Email / Recruiter Intel pages + Overview cards  [x] Daily Digest integration (available/zero/not_configured preserved)  [x] Claude templates
+(Deferred: calendar, application matching/conversion, email send/reply, recruiter outreach, ChatGPT/Gemini, controlled AI actions, Production rollout)
 
 AI-7 Email triage                                       NOT STARTED
 [ ] 7A Rules  [ ] 7B Classification  [ ] 7C Priority  [ ] 7D Matching  [ ] 7E Review UX  [ ] 7F Dedupe

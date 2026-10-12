@@ -31,7 +31,7 @@ describe.skipIf(!ready || !local)('AI-2A — internal AI integration service (re
 
   const finding = (sid: string, over: Record<string, unknown> = {}) => ({
     kind: 'email_event', dedupe: { source_type: 'gmail', source_id: sid, event: 'interview' },
-    category: 'INTERVIEW', priority: 'HIGH', confidence: 0.9, title: 'Interview invite', summary: CANARY, evidence: CANARY,
+    category: 'interview_invitation', priority: 'HIGH', confidence: 0.9, title: 'Interview invite', summary: CANARY, evidence: CANARY,
     occurred_at: '2026-10-01T10:00:00Z', source: { thread_id: `thr-${sid}`, url: `https://mail.example.com/t/${sid}?utm_source=x` },
     match: { hints: { company: 'Acme' } }, payload: { company: 'Acme', next_step: CANARY }, ...over,
   });

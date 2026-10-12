@@ -5,8 +5,9 @@
 import { z } from 'zod';
 import {
   AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
-  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS,
+  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, EMAIL_CATEGORIES, JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
 } from '../lib/aiContract';
+import { SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
 import {
   APPLICATION_STAGES, APPLICATION_STATUSES, APP_READ_MAX_PAGE, APP_READ_MAX_PAGE_SIZE, APP_SEARCH_MAX_LENGTH,
 } from '../services/applicationReadService';
@@ -54,6 +55,42 @@ export const listDailyDigestsInput = z.strictObject({
   provider: z.enum(AI_PROVIDERS).optional(),
   page: z.number().int().min(0).max(AI_READ_MAX_PAGE).optional().describe('0-based page index'),
   pageSize: z.number().int().min(1).max(AI_DIGEST_MAX_PAGE_SIZE).optional().describe(`Digests per page (max ${AI_DIGEST_MAX_PAGE_SIZE}, default 7)`),
+});
+// ---- AI-6 external intelligence reads (ai:read). Bounded pages; no ids that cross scope. ----
+const sourceCommon = {
+  provider: z.enum(AI_PROVIDERS).optional(),
+  status: z.enum(SOURCE_STATUS_FILTERS).optional().describe('ACTIVE = NEW or REVIEWED; ALL includes dismissed. Default ALL.'),
+  ...aiPaging,
+};
+const searchText = z.string().max(SOURCE_SEARCH_MAX);
+export const listJobLeadsInput = z.strictObject({
+  search: searchText.optional().describe('Matches company or title'),
+  company: searchText.optional(),
+  title: searchText.optional(),
+  location: searchText.optional(),
+  workArrangement: z.enum(JOB_WORK_ARRANGEMENTS).optional(),
+  employmentType: z.enum(JOB_EMPLOYMENT_TYPES).optional(),
+  minMatchScore: z.number().int().min(0).max(100).optional().describe('Provider match score 0-100'),
+  discoveredSince: iso.optional(),
+  discoveredBefore: iso.optional(),
+  postedSince: calendarDate.optional(),
+  postedBefore: calendarDate.optional(),
+  ...sourceCommon,
+});
+export const listEmailIntelligenceInput = z.strictObject({
+  category: z.enum(EMAIL_CATEGORIES).optional(),
+  company: searchText.optional(),
+  needsAttention: z.boolean().optional(),
+  receivedSince: iso.optional(),
+  receivedBefore: iso.optional(),
+  ...sourceCommon,
+});
+export const listRecruiterIntelInput = z.strictObject({
+  search: searchText.optional().describe('Matches recruiter name or company'),
+  company: searchText.optional(),
+  discoveredSince: iso.optional(),
+  discoveredBefore: iso.optional(),
+  ...sourceCommon,
 });
 export const listAiSuggestionsInput = z.strictObject({
   status: z.enum(AI_SUGGESTION_STATUSES).optional(),

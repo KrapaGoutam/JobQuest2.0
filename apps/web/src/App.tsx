@@ -30,7 +30,7 @@ import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import { JournalView } from './views/JournalView';
 import { AiHubView } from './views/AiHubView';
-import { aiHubTabFromPath } from './lib/aiHub';
+import { AI_HUB_PATHS, aiHubTabFromPath } from './lib/aiHub';
 import { isAiHubExposed } from './lib/aiHubFlags';
 import {
   UserPlus,
@@ -407,6 +407,9 @@ function AppContent() {
         return 'Analytics';
       case '/ai-hub':
       case '/ai-hub/digest':
+      case '/ai-hub/job-leads':
+      case '/ai-hub/email':
+      case '/ai-hub/recruiters':
       case '/ai-hub/history':
         return 'AI Hub';
       case '/workspace':
@@ -609,7 +612,7 @@ function AppContent() {
       );
     }
 
-    if (routePath === '/ai-hub' || routePath === '/ai-hub/digest' || routePath === '/ai-hub/history') {
+    if (AI_HUB_PATHS.includes(routePath)) {
       if (!isAiHubExposed()) return notFoundView;
       return (
         <AiHubView

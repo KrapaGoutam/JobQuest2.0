@@ -12,10 +12,13 @@ const base = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** AI-6: email categories are a closed set; the fixture event maps onto it. */
+const EVENT_CATEGORY: Record<string, string> = { rejection: 'rejection', interview: 'interview_invitation', assessment: 'assessment', reschedule: 'reschedule' };
+
 const gmailFinding = (event: string, over: Record<string, unknown> = {}) => ({
   kind: 'email_event',
   dedupe: { source_type: 'gmail', source_id: 'gmail-msg-001', event },
-  category: event.toUpperCase(),
+  category: EVENT_CATEGORY[event] ?? 'other_job_search',
   priority: 'NORMAL',
   confidence: 0.97,
   title: `Example Corp: ${event}`,
@@ -63,7 +66,11 @@ export const valid = {
   }),
   recruiter: base({
     workflow: 'recruiter_intel',
-    findings: [{ kind: 'recruiter_intel', dedupe: { name: 'Pat Recruiter', company: 'Example Corp', channel: 'email' }, title: 'Recruiter contact: Pat Recruiter', payload: { recruiter_name: 'Pat Recruiter', company: 'Example Corp' } }],
+    findings: [{
+      kind: 'recruiter_intel', dedupe: { name: 'Pat Recruiter', company: 'Example Corp' }, title: 'Recruiter contact: Pat Recruiter',
+      source: { url: 'https://example.com/team/pat-recruiter' },
+      payload: { recruiter_name: 'Pat Recruiter', company: 'Example Corp' },
+    }],
   }),
   calendar: base({
     workflow: 'calendar_review',

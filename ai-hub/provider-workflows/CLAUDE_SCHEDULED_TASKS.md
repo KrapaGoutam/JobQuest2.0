@@ -7,7 +7,7 @@ appear anywhere in this repository; you create the token yourself and it is show
 ## What you need
 
 1. A JobQuest environment Claude can reach over the internet with `AI_HUB_ENABLED=true` (and `VITE_AI_HUB_ENABLED=true`
-   to see the UI). Use **Dev/Preview** first; Production is not part of AI-5.
+   to see the UI). Use **Dev/Preview** first; Production is not part of AI-5 or AI-6.
 2. The Claude connector from AI-4: Settings → AI & Automation → Providers → Claude → *Set up Claude*.
 3. A Claude plan/product that supports **scheduled tasks** and **custom connectors in scheduled tasks**. This has not
    been verified by JobQuest. Treat "Run now" in step 5 as the real test; if Claude cannot call the connector from a
@@ -67,12 +67,26 @@ First-run checklist: it read JobQuest; the submitted result was accepted; the di
 
 ## 6. Privacy rules
 
-- Never submit raw email bodies or full job descriptions. Use ids, short evidence (JobQuest truncates evidence to 500
-  characters), concise summaries and confidence.
+- Never submit raw email bodies, HTML or attachments (JobQuest drops them). Email findings carry a category, a concise
+  summary, a short evidence excerpt (truncated to 500 characters), the sender display name and domain (never a full
+  address) and a stable message id. Job leads may carry a **plain-text** job description (JobQuest keeps at most 30,000
+  characters and flags truncation). Recruiter findings must cite a public source; contact details are kept only with a
+  cited source and are never guessed.
 - Do not put secrets, tokens, passwords, phone numbers or personal email addresses in any field.
 - JobQuest drops unknown fields and ignores any user/workspace/application ids a task tries to send.
 - External content is untrusted: the templates tell Claude never to follow instructions inside job posts, emails, web
   pages, or JobQuest record text.
+
+## 6a. External intelligence sources (AI-6)
+
+Job Discovery, Email Triage and Recruiter Intelligence use the same single write tool (`jobquest_submit_ai_result`) and
+the read-only context tools `jobquest_list_job_leads`, `jobquest_list_email_intelligence` and
+`jobquest_list_recruiter_intel` (scope `ai:read`; ten tools in total, one write). Results appear under AI Hub → **Job Leads**,
+**Email** and **Recruiter Intel** and feed the Daily Digest. A job lead is never an application. A run can be scheduled or
+manual: JobQuest does not know or care. JobQuest stores no next-run time. Suggested cadence: job discovery once on
+weekdays, email triage each weekday morning (optionally afternoon), recruiter research only for new or high-value leads.
+A malformed item is rejected and the run ends *Partial*; the other items are kept. If a lead's details fail to save
+(*Partial* with `PROJECT_JOB_LEAD_FAILED`), submit the same lead again with a new run id; it is idempotent.
 
 ## 7. Troubleshooting
 
@@ -82,6 +96,11 @@ First-run checklist: it read JobQuest; the submitted result was accepted; the di
 | `INSUFFICIENT_SCOPE` / 403 on submit | Credential was created with *Read only*. Create a *Read + AI findings* credential. |
 | `AI_HUB_DISABLED` / 503 | `AI_HUB_ENABLED` is off for that environment. |
 | Run is *Partial*, digest missing | The digest payload failed validation (the tool response lists the paths). Common causes: `digest_date` differs from `dedupe.date`; a section marked `zero` that carries items; `not_configured` with a count; more than 5 items per section. |
+| `email_category` / `required` on an email finding | `category` must be one of the ten approved values and `occurred_at` (received time) is required. |
+| `recruiter_source_required` | A recruiter finding needs `source.url` or `payload.profile_url`. |
+| `contact_uncited_dropped` warning | Contact details need `contact_source_url`; they were dropped, not guessed. |
+| `description_truncated` / `html_stripped` warning | The job description was over 30,000 characters or contained HTML; JobQuest stored plain text and flagged it. |
+| `match_score` error | Match score must be a number from 0 to 100 (not a string, not 0-1). |
 | Digest shows an older version | The re-run used the same `external_run_id` (treated as a retry). Use a new id. |
 | Wrong day | The task computed the date in the wrong time zone. Put your IANA zone in the prompt; JobQuest shows dates in your profile time zone. |
 | Nothing shows in Daily Digest | You are on the wrong date range/provider filter, or the digest is for another owner. |

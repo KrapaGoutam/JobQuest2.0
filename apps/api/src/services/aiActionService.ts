@@ -706,6 +706,42 @@ export interface AiActionQueue { items: AiActionCard[]; page: number; pageSize: 
 const SOURCE_KINDS = ['job_lead', 'email_event', 'recruiter_intel', 'calendar_event', 'daily_brief', 'note', 'other'];
 const PROVIDERS = ['claude', 'gemini', 'chatgpt', 'manual', 'system'];
 
+/** Upper bound on pending suggestions evaluated per owner. Far above any realistic queue; keeps the loader bounded. */
+export const AI_ACTIONABLE_CAP = 500;
+type ActionableRow = { suggestionId: string };
+
+/**
+ * THE canonical definition of an "actionable pending action" (AI-9). A suggestion is actionable when ALL hold:
+ *  - it is the caller's own (workspace + user), status PENDING, with a supported action type;
+ *  - its finding is still open (NEW / REVIEWED / ACCEPTED);
+ *  - its stored proposal satisfies the strict AI-8 payload schema (a legacy free-form proposal does not).
+ * The Actions queue, the Overview "Pending actions" count and the Daily Digest line all derive from this one loader, so
+ * a count can never exceed what the queue lists. Legacy rows stay visible in History / the finding detail, not here.
+ */
+async function loadActionable(db: AiActionClient, ctx: AiActionContext, filters: AiActionQueueFilters): Promise<AiActionResult<ActionableRow[]>> {
+  let q = db.from('ai_suggestions')
+    .select('id, action, proposed, created_at, ai_findings!inner(id, kind, provider, status)')
+    .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).eq('status', 'PENDING')
+    .in('action', filters.action ? [filters.action] : [...AI_ACTION_TYPES])
+    .in('ai_findings.status', [...OPEN_FINDING]);
+  if (filters.provider) q = q.eq('ai_findings.provider', filters.provider);
+  if (filters.kind) q = q.eq('ai_findings.kind', filters.kind);
+  if (filters.dateFrom) q = q.gte('created_at', `${filters.dateFrom}T00:00:00Z`);
+  if (filters.dateTo) q = q.lt('created_at', `${new Date(Date.parse(`${filters.dateTo}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)}T00:00:00Z`);
+  const r = await q.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(AI_ACTIONABLE_CAP);
+  if (r.error) return aiActionError('READ_FAILED');
+  const rows = ((r.data ?? []) as Row[]).filter((x) => validateActionProposal(x.action, x.proposed ?? {}).ok);
+  return ok(rows.map((row) => ({ suggestionId: String(row.id) })));
+}
+
+/** Count of actionable pending actions for the caller (same definition as the queue, no filters). */
+export async function countActionablePendingActions(ctx: AiActionContext, deps: AiActionDeps = {}): Promise<AiActionResult<{ pendingTotal: number }>> {
+  const p = prepare(ctx, deps);
+  if (!p.ok) return p;
+  const all = await loadActionable(p.db, ctx, {});
+  return all.ok ? ok({ pendingTotal: all.data.length }) : all;
+}
+
 export async function listAiActionQueue(ctx: AiActionContext, filters: AiActionQueueFilters = {}, page = 0, deps: AiActionDeps = {}): Promise<AiActionResult<AiActionQueue>> {
   const p = prepare(ctx, deps);
   if (!p.ok) return p;
@@ -715,19 +751,18 @@ export async function listAiActionQueue(ctx: AiActionContext, filters: AiActionQ
   if (filters.kind !== undefined && !SOURCE_KINDS.includes(filters.kind)) return aiActionError('ACTION_VALIDATION_FAILED', 'Invalid source filter.');
   for (const d of [filters.dateFrom, filters.dateTo]) if (d !== undefined && !isDate(d)) return aiActionError('ACTION_VALIDATION_FAILED', 'Invalid date filter.');
   const size = AI_ACTION_QUEUE_PAGE_SIZE;
-  let q = p.db.from('ai_suggestions')
-    .select('id, finding_id, action, proposed, confidence, created_at, ai_findings!inner(id, kind, provider, status, priority, title, evidence, confidence, application_id, payload, due_at, occurred_at)', { count: 'exact' })
-    .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).eq('status', 'PENDING')
-    .in('action', filters.action ? [filters.action] : [...AI_ACTION_TYPES])
-    .in('ai_findings.status', [...OPEN_FINDING]);
-  if (filters.provider) q = q.eq('ai_findings.provider', filters.provider);
-  if (filters.kind) q = q.eq('ai_findings.kind', filters.kind);
-  if (filters.dateFrom) q = q.gte('created_at', `${filters.dateFrom}T00:00:00Z`);
-  if (filters.dateTo) q = q.lt('created_at', `${new Date(Date.parse(`${filters.dateTo}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)}T00:00:00Z`);
-  const r = await q.order('created_at', { ascending: false }).order('id', { ascending: false }).range(page * size, page * size + size);
+  const actionable = await loadActionable(p.db, ctx, filters);
+  if (!actionable.ok) return actionable;
+  const pageIds = actionable.data.slice(page * size, page * size + size).map((x) => x.suggestionId);
+  const hasNext = actionable.data.length > (page + 1) * size;
+  const pendingTotal = actionable.data.length;
+  if (pageIds.length === 0) return ok({ items: [], page, pageSize: size, hasNext, pendingTotal });
+  const r = await p.db.from('ai_suggestions')
+    .select('id, finding_id, action, proposed, confidence, created_at, ai_findings!inner(id, kind, provider, status, priority, title, evidence, confidence, application_id, payload, due_at, occurred_at)')
+    .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).in('id', pageIds);
   if (r.error) return aiActionError('READ_FAILED');
-  const rows = (r.data ?? []) as Row[];
-  const visible = rows.slice(0, size);
+  const byId = new Map<string, Row>(((r.data ?? []) as Row[]).map((x) => [String(x.id), x]));
+  const visible = pageIds.map((id) => byId.get(id)).filter((x): x is Row => Boolean(x));
   const ids = visible.map((x) => x.finding_id as string);
   const [leads, cals] = ids.length
     ? await Promise.all([
@@ -741,7 +776,7 @@ export async function listAiActionQueue(ctx: AiActionContext, filters: AiActionQ
   await Promise.all(visible.map(async (row, i) => {
     const f = row.ai_findings as Row;
     const checked = validateActionProposal(row.action, row.proposed ?? {});
-    if (!checked.ok) return; // a legacy / malformed proposal is not actionable and is not shown
+    if (!checked.ok) return; // unreachable (the loader already filtered); kept as defence in depth
     const b: Bundle = { suggestion: row, finding: f, lead: leadBy.get(f.id) ?? null, calendar: calBy.get(f.id) ?? null };
     const v = checked.value;
     let summary: string;
@@ -759,10 +794,7 @@ export async function listAiActionQueue(ctx: AiActionContext, filters: AiActionQ
       findingTitle: String(f.title), createdAt: String(row.created_at), target,
     };
   }));
-  const shown = items.filter(Boolean);
-  // On a single page the total is exactly what is listed (a legacy, non-actionable proposal is counted by the database but never shown).
-  const pendingTotal = page === 0 && rows.length <= size ? shown.length : r.count ?? shown.length;
-  return ok({ items: shown, page, pageSize: size, hasNext: rows.length > size, pendingTotal });
+  return ok({ items: items.filter(Boolean), page, pageSize: size, hasNext, pendingTotal });
 }
 
 export interface AiActionHistoryItem {

@@ -2,6 +2,60 @@
 
 **Update this file when provider behavior changes; do not change architecture docs for it.**
 
+Statuses (never collapsed into “Supported”): `VERIFIED` (observed in a real test in the operator’s account) · `DOCUMENTED` (official documentation says so; not tested here) · `APPROVAL-GATED` (works only with a human approval click) · `PLAN-GATED` (the operator’s plan does not offer it) · `NOT SUPPORTED` · `NOT TESTED`.
+
+## AI-9 capability matrix (current)
+
+**Verification date: 2026-10-12.** Method: current official documentation read by the agent (Google Gemini Apps Help; OpenAI Help and OpenAI developer docs). Anything not marked `VERIFIED` was **not** exercised against the operator’s accounts. Operator provider-gate results are recorded in the “AI-9 provider gate results” section below as they are reported — until then those rows stay `NOT TESTED`.
+
+| Dimension | Claude (Pro/Max) | Gemini (personal Google AI plan) | ChatGPT Plus |
+|---|---|---|---|
+| Remote MCP / custom app | **VERIFIED** (AI-4): custom connector → `/api/mcp` | **DOCUMENTED**: “Custom apps” by MCP server URL in the Gemini web app; personal account, 18+, US, English, Keep Activity on. Live add: NOT TESTED | **PLAN-GATED** (direct developer-mode MCP with write tools is documented for Business / Enterprise / Edu). Personal plugin with “Add custom MCP server”: documented in the plugin quickstart, plan eligibility unstated → **NOT TESTED** |
+| Authentication mechanism | **VERIFIED** (AI-4): fixed `Authorization: Bearer` header | **NOT TESTED / unknown**: Google documents Dynamic Client Registration and an “advanced credentials” form; bearer/header is not mentioned. JobQuest has no OAuth/DCR (deferred) | Plugin manifest declares `api_key` + `bearer`; OpenAI’s auth guide also says ChatGPT apps cannot present custom API keys and prefers OAuth 2.1 (DCR/CIMD) → **conflicting, NOT TESTED**. OAuth would be a STOP/decision |
+| Read tools | **VERIFIED** (AI-4) | NOT TESTED | NOT TESTED (depends on plugin gate) |
+| AI-ingest write (`jobquest_submit_ai_result`) | **VERIFIED** (AI-4) | NOT TESTED; writes need manual confirmation (**APPROVAL-GATED**, documented) | NOT TESTED; plugin writes may pause for approval (**APPROVAL-GATED** expected) |
+| Core writes exposed to the provider | **NONE** (11 tools, 1 AI-Hub-only write) | **NONE** (same surface) | **NONE** (same surface; AI-8 execution endpoints are not provider tools) |
+| Scheduled tasks exist | Claude scheduled tasks: operator-owned, optional live test not performed (AI-5) | **DOCUMENTED**: Scheduled Actions (Google AI Pro/Ultra or eligible Workspace; Keep Activity on; limited number of active actions) | **DOCUMENTED**: scheduled tasks (Plus: 5 active) and event-triggered Work tasks (Gmail / Slack / GitHub) |
+| Scheduled use of the JobQuest connector / plugin | NOT TESTED | **NOT TESTED** (Google does not document custom-app use inside Scheduled Actions) | **NOT TESTED** (“depends on plan, plugin composition, task mode”) |
+| Unattended read | NOT TESTED | NOT TESTED | NOT TESTED |
+| Unattended AI-ingest write | NOT TESTED | **APPROVAL-GATED** (documented; `GEMINI_UNATTENDED_JOBQUEST_PUSH` stays unverified until a real run proves otherwise) | **APPROVAL-GATED** expected (“if an action needs approval, the task pauses”) |
+| Email access | connector-dependent (Gmail connector observed in the operator’s Claude) | DOCUMENTED (Gmail via Connected Apps) | DOCUMENTED (Gmail connected app; also a Work event trigger) |
+| Calendar access | connector-dependent | DOCUMENTED (Google Calendar via Connected Apps) | NOT TESTED |
+| Job web research | provider-dependent | provider-dependent | provider-dependent |
+| Manual approval behavior | per-tool Allow / Ask | “requires manual confirmation for any write actions” (**documented**) | pauses for approval on writes (documented for connected apps) |
+| Plan requirement | Pro/Max for the operator | personal Google account (not work/school), US, English, 18+, Keep Activity on | Plus: personal plugins/tasks only; direct full MCP = Business/Enterprise/Edu |
+| Verified date | 2026-10-11 (AI-4) | 2026-10-12 (docs only) | 2026-10-12 (docs only) |
+
+### Sources (read 2026-10-12)
+
+- Gemini: <https://support.google.com/gemini/answer/17209137> (“Connect & manage custom apps for Gemini Apps”: eligibility, steps, DCR/advanced credentials, “Gemini requires manual confirmation for any write actions”). Scheduled Actions: Google’s launch post <https://blog.google/products/gemini/scheduled-actions-gemini-app/> (no custom-app statement found).
+- OpenAI Help: <https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt> (full MCP incl. write: Business / Enterprise / Edu), <https://help.openai.com/en/articles/20001256-plugins-in-chatgpt>, <https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt>. These help pages returned HTTP 403 to the agent’s fetch tool; their content was taken from search excerpts and **must be re-confirmed in the operator’s account**.
+- OpenAI developers: <https://developers.openai.com/plugins/quickstart>, <https://developers.openai.com/plugins/build/plugins> (package format, `api_key`/`bearer` auth declaration), <https://developers.openai.com/plugins/build/auth> (OAuth 2.1 preferred; “does not support … custom API keys”), <https://developers.openai.com/plugins/build/mcp-events>.
+
+### What changed since the AI-0 assumptions
+
+1. Gemini: a Google primary source now exists (the AI-0 note said none). Custom apps are documented for personal accounts — not Ultra-only.
+2. ChatGPT: “developer mode” full MCP is documented for workspace plans (Business / Enterprise / Edu). Plus has plugins and scheduled/event tasks but no documented direct MCP connector. A plugin package format and auth declarations are now documented.
+3. Neither provider’s scheduled mode is documented to call a custom MCP app/plugin or to bypass write approvals.
+
+### AI-9 provider gate results (operator-reported; no token values, no private content)
+
+| Item | Result |
+|---|---|
+| GEMINI custom app connected | NOT TESTED |
+| GEMINI tool discovery / read / AI ingest / unsupported core write / prompt injection / revocation | NOT TESTED |
+| GEMINI_SCHEDULED_READ | NOT TESTED |
+| GEMINI_SCHEDULED_JOBQUEST_PUSH / GEMINI_UNATTENDED_JOBQUEST_PUSH | NOT TESTED (documented APPROVAL-GATED) |
+| CHATGPT PLUGIN | NOT TESTED |
+| CHATGPT JOBQUEST READ / AI INGEST | NOT TESTED |
+| CHATGPT SCHEDULED READ / SCHEDULED AI INGEST | NOT TESTED |
+| CHATGPT GMAIL EVENT-TRIGGER | NOT TESTED |
+| CORE WRITE BYPASS (any provider) | NONE |
+
+---
+
+# Historical detail (AI-0 / AI-4) — kept for reference; the AI-9 matrix above supersedes it where they differ
+
 Verification dates are `2026-10-07`. Method: one standard web search per provider during AI-0 (search-engine summaries of vendor and third-party pages — **not** hands-on tests in the operator's accounts). Nothing here has been verified against the operator's actual plans. Anything marked NEEDS RECHECK must be confirmed in the operator's account (or official docs) before an implementation phase relies on it.
 
 Readiness: `VERIFIED / READY NOW` · `LIMITED` · `NEEDS RECHECK` · `FUTURE` · `UNSUPPORTED`. "Observed" = seen directly in this Claude Code session's connected tools.

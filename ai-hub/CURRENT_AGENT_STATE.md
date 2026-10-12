@@ -1,4 +1,28 @@
-# AI Hub — Current Agent State
+```
+CURRENT PHASE:
+AI-9 (Subscription provider expansion: Gemini + ChatGPT Plus capability validation; one cumulative branch)
+
+CURRENT SUB-PHASE:
+AI-9 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI
+
+STATUS:
+AI-9 READY FOR BRANCH CI. Not complete until branch CI, Gemini/ChatGPT operator gates (results recorded truthfully), development merge and development CI pass.
+
+BASE BRANCH:
+development (5656bd468e09ea07fc61cdf241174879e36055e0)
+
+WORKING BRANCH:
+feature/ai-9-provider-expansion
+
+NEXT EXACT STEP:
+Push the branch once, observe the one branch CI run by exact run ID (incl. job ai-hub-e2e with the new ai9-providers spec), then operator provider gates (Gemini first, then ChatGPT; results into PROVIDER_CAPABILITY_MATRIX.md and reports/AI-9_PROVIDER_EXPANSION_REPORT.md), revoke temp credentials, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP. No main/Production work, no migration.
+```
+
+## AI-8 FINAL FACTS (persisted at AI-9 start)
+
+- AI-8 COMPLETE — integrated to development. Development SHA `5656bd468e09ea07fc61cdf241174879e36055e0` (merge of `feature/ai-8-controlled-actions`); development CI `38264986612` PASS; AI-8 executable feature SHA `fe3b4df06c902c1adcc8354844179fa05d76f068`, branch CI `38263782230` PASS; main `26e517ea…` and Production unchanged; Dev head `20261029100000`, Prod `20261022100000`.
+
+(Previous state, AI-8 pre-CI, kept for history:)
 
 ```
 CURRENT PHASE:

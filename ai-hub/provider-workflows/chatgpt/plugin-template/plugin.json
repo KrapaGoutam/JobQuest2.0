@@ -1,0 +1,7 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "jobquest",
+  "version": "0.1.0",
+  "description": "JobQuest AI Hub: read your job-search data and save structured findings. It cannot change applications, tasks or contacts.",
+  "keywords": ["jobquest", "job-search"]
+}

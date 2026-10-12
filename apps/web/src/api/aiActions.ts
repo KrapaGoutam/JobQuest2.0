@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { api, type PublicSession } from '../api';
 import { supabase } from '../supabase';
 import {
-  actionQueueQuery, AI_ACTION_TYPE_VALUES,
+  actionQueueQuery,
   type ActionFilters, type ActionHistoryPage, type ActionPreviewData, type ActionQueuePage,
 } from '../lib/aiActions';
 
@@ -47,10 +47,12 @@ export async function ignoreSuggestion(suggestionId: string, client: Pick<Supaba
   if (error) throw new Error('AI_ACTION_IGNORE_FAILED');
 }
 
-/** Pending, supported actions awaiting THIS user's review (RLS-scoped head count; drives the Overview card and Daily Digest line). */
-export async function fetchPendingActionCount(workspaceId: string, userId: string, client: Pick<SupabaseClient, 'from'> = supabase): Promise<number> {
-  const { count, error } = await client.from('ai_suggestions').select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId).eq('user_id', userId).eq('status', 'PENDING').in('action', [...AI_ACTION_TYPE_VALUES]);
-  if (error) throw new Error('AI_ACTION_COUNT_FAILED');
-  return count ?? 0;
+/**
+ * Actionable pending actions awaiting THIS user's review. The SERVER owns the definition (open finding + strict, valid
+ * proposal), so this is exactly what the Actions queue lists; legacy / malformed suggestions never inflate it.
+ */
+export async function fetchPendingActionCount(workspaceId: string, session: PublicSession | null): Promise<number> {
+  const r = await api<{ pendingTotal?: number } & Err>(`/ai/actions/count?workspace_id=${encodeURIComponent(workspaceId)}`, undefined, token(session));
+  if (r.status !== 200 || typeof r.data.pendingTotal !== 'number') throw new Error('AI_ACTION_COUNT_FAILED');
+  return r.data.pendingTotal;
 }

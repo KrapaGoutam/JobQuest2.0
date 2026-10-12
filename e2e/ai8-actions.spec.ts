@@ -186,6 +186,9 @@ test.describe('AI-8 controlled actions', () => {
     expect((await admin.from('applications').insert({ ...owner, company_name: 'Stale Co', role_title: 'Developer', stage: 'APPLIED' })).error).toBeNull();
     const staleFinding = await email('stale', 'Stale Co', 'Developer', null);
     await suggest(staleFinding, 'set_status', { stage: 'OFFER' });
+    // AI-9: a PENDING legacy suggestion whose free-form proposal fails the strict action schema is not actionable. It must not
+    // appear in the queue and must not inflate any count (the 7 / 1 assertions below would show 8 / 2 if it did).
+    expect((await admin.from('ai_suggestions').insert({ ...owner, finding_id: staleFinding, action: 'create_task', proposed: { anything: 'goes' }, confidence: 0.5 })).error).toBeNull();
     void orbitSuggestion; void deltaSuggestion; void orbitLeadTwin;
 
     // ---- 2) PENDING: cards, Review-only, filters, no bulk controls ---------------------------------------------------------------

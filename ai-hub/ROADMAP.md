@@ -55,13 +55,15 @@ AI-5 Scheduled Intelligence + Daily Digest (combined; re-sequenced)   COMPLETE (
 
 AI-6 (new) External Intelligence Sources              COMPLETE (branch CI 38211220785 @a507bf3f; development CI 38212006797; development f0a0ec89) (feature/ai-6-external-intelligence; see reports/AI-6_EXTERNAL_INTELLIGENCE_REPORT.md)
 AI-7 (new) Calendar Intelligence + dedicated AI-Hub e2e CI  COMPLETE (branch CI 38252291451 @01dc9a18; development CI 38253737675; development 4eac989c) (feature/ai-7-calendar-intelligence; see reports/AI-7_CALENDAR_INTELLIGENCE_REPORT.md)
-AI-8 (new) Human-approved controlled actions + Application matching  READY FOR BRANCH CI (feature/ai-8-controlled-actions; see reports/AI-8_CONTROLLED_ACTIONS_REPORT.md)
+AI-8 (new) Human-approved controlled actions + Application matching  COMPLETE (branch CI 38263782230 @fe3b4df0; development CI 38264986612; development 5656bd46) (feature/ai-8-controlled-actions; see reports/AI-8_CONTROLLED_ACTIONS_REPORT.md)
 [x] actions: create_application (job lead) / create_task / set_status (existing stage or REJECTED)  [x] preview -> human confirm -> revalidate -> execute as the caller  [x] state fingerprint (ACTION_STALE)  [x] idempotent (DB unique live indexes)
 [x] application matching (EXACT / STRONG / AMBIGUOUS / NONE; ambiguity never auto-selected)  [x] ai_action_executions provenance  [x] /ai-hub/actions + Overview/Digest/Job Leads integration  [x] dedicated AI-Hub e2e extended  [x] still NO core-write MCP tool
 (Deferred: email send/reply, calendar mutation / RSVP, recruiter outreach, bulk or autonomous actions, universal undo, other status outcomes, ChatGPT/Gemini, Production rollout)
 [x] job_lead child table ai_job_leads (migration 20261027100000)  [x] email_event + recruiter_intel as findings  [x] one ingestion path, 3 read-only MCP tools
 [x] Job Leads / Email / Recruiter Intel pages + Overview cards  [x] Daily Digest integration (available/zero/not_configured preserved)  [x] Claude templates
 (Deferred: calendar, application matching/conversion, email send/reply, recruiter outreach, ChatGPT/Gemini, controlled AI actions, Production rollout)
+
+AI-9 (new) Subscription provider expansion (Gemini + ChatGPT Plus) + scheduled-automation validation  READY FOR BRANCH CI (feature/ai-9-provider-expansion; see reports/AI-9_PROVIDER_EXPANSION_REPORT.md)
 
 AI-7 Email triage                                       NOT STARTED
 [ ] 7A Rules  [ ] 7B Classification  [ ] 7C Priority  [ ] 7D Matching  [ ] 7E Review UX  [ ] 7F Dedupe

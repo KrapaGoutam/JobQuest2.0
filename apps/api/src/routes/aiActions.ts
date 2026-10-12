@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import { requireCsrfToken } from '../lib/security';
 import {
-  confirmAiAction, listAiActionHistory, listAiActionQueue, previewAiAction,
+  confirmAiAction, countActionablePendingActions, listAiActionHistory, listAiActionQueue, previewAiAction,
   type AiActionContext, type AiActionError, type AiActionQueueFilters,
 } from '../services/aiActionService';
 import { isActionType } from '../lib/aiContract';
@@ -58,6 +58,16 @@ aiActions.get('/queue', async (c) => {
     ...(c.req.query('date_from') ? { dateFrom: c.req.query('date_from')! } : {}), ...(c.req.query('date_to') ? { dateTo: c.req.query('date_to')! } : {}),
   };
   const out = await listAiActionQueue(ctx, filters, Number(c.req.query('page') ?? 0));
+  return out.ok ? c.json(out.data) : fail(c, out.error);
+});
+
+/** The canonical actionable-pending count (same definition as the queue). Drives the Overview card and the Daily Digest line. */
+aiActions.get('/count', async (c) => {
+  const q = workspaceQuery.safeParse({ workspace_id: c.req.query('workspace_id') });
+  if (!q.success) return fail(c, { code: 'INVALID_CONTEXT', message: 'A workspace is required.' });
+  const ctx = await context(c, q.data.workspace_id);
+  if (!ctx) return unauth(c);
+  const out = await countActionablePendingActions(ctx);
   return out.ok ? c.json(out.data) : fail(c, out.error);
 });
 

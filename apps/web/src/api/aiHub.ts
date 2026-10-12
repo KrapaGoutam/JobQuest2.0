@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { fetchSourceCounts } from './aiSources';
 import { fetchCalendarCounts } from './aiCalendar';
 import { fetchPendingActionCount } from './aiActions';
+import type { PublicSession } from '../api';
 import {
   HISTORY_PAGE_SIZE, RECENT_WINDOW_DAYS, pageRange, sliceRunsPage,
   type AiFindingDetailRow, type AiFindingRow, type AiHubSnapshot, type AiRunDetailRow, type AiRunFilters,
@@ -31,8 +32,8 @@ export async function fetchAiHubSnapshot(
   now: Date = new Date(),
   /** The owner's profile zone (calendar counts are "from now" and all-day items are dates in this zone). */
   timeZone = 'UTC',
-  /** The signed-in user; the pending-actions card counts only THEIR actions (the Actions page is owner-only). */
-  userId: string | null = null,
+  /** The signed-in session; the pending-actions card uses the server's canonical actionable count for THIS user (the Actions page is owner-only). */
+  session: PublicSession | null = null,
 ): Promise<AiHubSnapshot> {
   const since = new Date(now.getTime() - RECENT_WINDOW_DAYS * 86_400_000).toISOString();
   const [runs, findings, pending, pendingRows, recent, attention, sources, calendar, pendingActions] = await Promise.all([
@@ -52,7 +53,7 @@ export async function fetchAiHubSnapshot(
     fetchSourceCounts(workspaceId, client).catch(() => undefined),
     fetchCalendarCounts(workspaceId, timeZone, now, client).catch(() => undefined),
     // AI-8, isolated like the other source counts: a failure here must not break the rest of the Overview.
-    userId ? fetchPendingActionCount(workspaceId, userId, client).catch(() => undefined) : Promise.resolve(undefined),
+    session ? fetchPendingActionCount(workspaceId, session).catch(() => undefined) : Promise.resolve(undefined),
   ]);
   if ([runs, findings, pending, pendingRows, recent, attention].some((r) => r.error)) throw fail();
   return {

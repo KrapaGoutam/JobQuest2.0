@@ -590,6 +590,32 @@ describe.skipIf(!ready || !local)('AI-8 — controlled actions (real DB, RLS)', 
     expect(after.some((i) => i.suggestionId === ins.data!.id)).toBe(false);
     expect(errCode(await preview(carol, ins.data!.id))).toBe('OK'); // previewable only as a BLOCKED, never-executable plan
     expect((await mustPreview(carol, ins.data!.id)).state).toBe('BLOCKED');
+
+    // AI-9: ONE canonical definition of an actionable pending action. The legacy row is PENDING in the table, yet it must not
+    // inflate the count that the Overview card and the Daily Digest line show.
+    const queueNow = must(await svc.listAiActionQueue(ctxOf(carol), {}, 0, D));
+    const counted = must(await svc.countActionablePendingActions(ctxOf(carol), D));
+    expect(counted.pendingTotal).toBe(queueNow.pendingTotal);
+    expect(queueNow.pendingTotal).toBeGreaterThan(0);
+    const raw = await admin.from('ai_suggestions').select('id', { count: 'exact', head: true })
+      .eq('workspace_id', ws).eq('user_id', carol.userId!).eq('status', 'PENDING').in('action', ['create_application', 'create_task', 'set_status']);
+    expect(raw.count!).toBeGreaterThan(counted.pendingTotal);
+    // the legacy row is still readable (History / finding detail), only absent from the actionable set
+    expect((await admin.from('ai_suggestions').select('id').eq('id', ins.data!.id).single()).data).not.toBeNull();
+    // a peer's count never includes the owner's actions
+    expect(must(await svc.countActionablePendingActions(ctxOf(eve), D)).pendingTotal).not.toBe(counted.pendingTotal);
+  });
+  it('AI9-1 · the count follows the queue: completing an action and dismissing a finding both lower it', async () => {
+    const before = must(await svc.countActionablePendingActions(ctxOf(carol), D)).pendingTotal;
+    const t = await task('9a', { noCompany: true });
+    expect(must(await svc.countActionablePendingActions(ctxOf(carol), D)).pendingTotal).toBe(before + 1);
+    must(await confirmFresh(carol, t.suggestionId));
+    expect(must(await svc.countActionablePendingActions(ctxOf(carol), D)).pendingTotal).toBe(before);
+    const t2 = await task('9b', { noCompany: true });
+    expect(must(await svc.countActionablePendingActions(ctxOf(carol), D)).pendingTotal).toBe(before + 1);
+    expect((await admin.from('ai_findings').update({ status: 'DISMISSED' }).eq('id', t2.findingId)).error).toBeNull();
+    expect(must(await svc.countActionablePendingActions(ctxOf(carol), D)).pendingTotal).toBe(before);
+    expect(must(await svc.listAiActionQueue(ctxOf(carol), {}, 0, D)).pendingTotal).toBe(before);
   });
   // ---- HTTP surface (the real Hono app) -----------------------------------------------------------------------------
 
@@ -597,10 +623,15 @@ describe.skipIf(!ready || !local)('AI-8 — controlled actions (real DB, RLS)', 
     const ids = await task('19', { noCompany: true });
     const q = `workspace_id=${ws}`;
     expect((await carol.call(`/ai/actions/queue?${q}`, undefined, { bearer: null })).status).toBe(401);
+    expect((await carol.call(`/ai/actions/count?${q}`, undefined, { bearer: null })).status).toBe(401);
     expect((await carol.call(`/ai/actions/preview?${q}&suggestion_id=${ids.suggestionId}`, undefined, { bearer: null })).status).toBe(401);
     const queue = await carol.call(`/ai/actions/queue?${q}`);
     expect(queue.status).toBe(200);
     expect(queue.json.items.some((i: AnyRow) => i.suggestionId === ids.suggestionId)).toBe(true);
+    const cnt = await carol.call(`/ai/actions/count?${q}`);
+    expect(cnt.status).toBe(200);
+    expect(cnt.json).toEqual({ pendingTotal: queue.json.pendingTotal });
+    expect((await carol.call('/ai/actions/count?workspace_id=not-a-uuid')).status).toBe(400);
     expect((await carol.call(`/ai/actions/queue?${q}&action=delete_everything`)).status).toBe(422);
     expect((await carol.call('/ai/actions/queue?workspace_id=not-a-uuid')).status).toBe(400);
     expect((await carol.call(`/ai/actions/preview?${q}&suggestion_id=${ids.suggestionId}`, undefined, {})).json.fingerprint).toMatch(/^[0-9a-f]{64}$/);

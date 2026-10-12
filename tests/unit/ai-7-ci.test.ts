@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const wf = readFileSync('.github/workflows/m1b-ci.yml', 'utf8').replace(/\r\n/g, '\n');
 const jobsStart = wf.indexOf('\njobs:\n');
 // AI-8 extends the same isolated job with its action spec; nothing else about the job changes.
-const SPECS = ['e2e/ai5-digest.spec.ts', 'e2e/ai6-sources.spec.ts', 'e2e/ai7-calendar.spec.ts', 'e2e/ai8-actions.spec.ts'];
+const SPECS = ['e2e/ai5-digest.spec.ts', 'e2e/ai6-sources.spec.ts', 'e2e/ai7-calendar.spec.ts', 'e2e/ai8-actions.spec.ts', 'e2e/ai9-providers.spec.ts'];
 const jobs: Record<string, string> = {};
 {
   const body = wf.slice(jobsStart + 1);

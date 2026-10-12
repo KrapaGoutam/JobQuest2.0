@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { existsSync, readFileSync } from 'node:fs';
@@ -18,6 +18,8 @@ import {
 import { AiHubDigestPanel, type DigestPanelProps } from '../../apps/web/src/views/AiHubDigest';
 import { AiHubShell } from '../../apps/web/src/views/AiHubView';
 import { digestPayload } from './fixtures/ai-contract/fixtures';
+
+vi.mock('../../apps/web/src/supabase', () => ({ supabase: { from: () => { throw new Error('unexpected'); } } }));
 
 const noop = () => undefined;
 const row = (over: Partial<DigestRow> & { payload?: Record<string, unknown> } = {}): DigestRow => ({

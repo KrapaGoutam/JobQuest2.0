@@ -3,10 +3,10 @@ CURRENT PHASE:
 AI-9 (Subscription provider expansion: Gemini + ChatGPT Plus capability validation; one cumulative branch)
 
 CURRENT SUB-PHASE:
-AI-9 LOCAL VALIDATION COMPLETE - READY FOR BRANCH CI
+AI-9 PROVIDER GATES COMPLETE — READY FOR DOCS CHECKPOINT AND DEVELOPMENT INTEGRATION
 
 STATUS:
-AI-9 READY FOR BRANCH CI. Not complete until branch CI, Gemini/ChatGPT operator gates (results recorded truthfully), development merge and development CI pass.
+AI-9 IN PROGRESS. Branch CI `38279984981` PASS at certified executable SHA `519ab2e3199ce42202bb5e66b898afacd5733a47`. Gemini custom-app UI and ChatGPT Plus custom-MCP/create-as-plugin UI were VERIFIED AVAILABLE, but both authenticated JobQuest connections are BLOCKED because the providers require standard OAuth and cannot use the current scoped bearer authentication. Reads, AI ingest and schedules remain NOT TESTED — AUTH BLOCKED. OAuth/DCR was not implemented. Repository-side AI-9 work and provider gates are complete; docs-only checkpoint, development merge and development CI remain.
 
 BASE BRANCH:
 development (5656bd468e09ea07fc61cdf241174879e36055e0)
@@ -15,7 +15,7 @@ WORKING BRANCH:
 feature/ai-9-provider-expansion
 
 NEXT EXACT STEP:
-Push the branch once, observe the one branch CI run by exact run ID (incl. job ai-hub-e2e with the new ai9-providers spec), then operator provider gates (Gemini first, then ChatGPT; results into PROVIDER_CAPABILITY_MATRIX.md and reports/AI-9_PROVIDER_EXPANSION_REPORT.md), revoke temp credentials, pre-merge fetch, --no-ff merge to development, one development CI. Then STOP. No main/Production work, no migration.
+Review the provider-gate docs-only diff, run `git diff --check`, commit once as `docs(ai-hub): record AI-9 Gemini and ChatGPT OAuth gates` without `.artifacts/`, fetch and verify `origin/development`, merge the feature branch into development with `--no-ff`, push development once, observe the single development CI, then STOP. Do not push the feature branch merely to recertify the docs-only commit. No main/Production work and no migration.
 ```
 
 ## AI-8 FINAL FACTS (persisted at AI-9 start)

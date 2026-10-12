@@ -2,29 +2,30 @@
 
 **Update this file when provider behavior changes; do not change architecture docs for it.**
 
-Statuses (never collapsed into “Supported”): `VERIFIED` (observed in a real test in the operator’s account) · `DOCUMENTED` (official documentation says so; not tested here) · `APPROVAL-GATED` (works only with a human approval click) · `PLAN-GATED` (the operator’s plan does not offer it) · `NOT SUPPORTED` · `NOT TESTED`.
+Statuses (never collapsed into “Supported”): `VERIFIED` (observed in a real test in the operator’s account) · `DOCUMENTED` (official documentation says so; not tested here) · `APPROVAL-GATED` (works only with a human approval click) · `PLAN-GATED` (the operator’s plan does not offer it) · `BLOCKED` (the provider requires a capability JobQuest deliberately does not implement in this phase) · `NOT SUPPORTED` · `NOT TESTED`.
 
 ## AI-9 capability matrix (current)
 
-**Verification date: 2026-10-12.** Method: current official documentation read by the agent (Google Gemini Apps Help; OpenAI Help and OpenAI developer docs). Anything not marked `VERIFIED` was **not** exercised against the operator’s accounts. Operator provider-gate results are recorded in the “AI-9 provider gate results” section below as they are reported — until then those rows stay `NOT TESTED`.
+**Verification date: 2026-10-12.** Method: current official documentation read by the agent (Google Gemini Apps Help; OpenAI Help and OpenAI developer docs), plus operator-reported live provider gates. Anything not marked `VERIFIED` or `BLOCKED` was **not** exercised against the operator’s accounts. Operator provider-gate results are recorded in the “AI-9 provider gate results” section below.
 
 | Dimension | Claude (Pro/Max) | Gemini (personal Google AI plan) | ChatGPT Plus |
 |---|---|---|---|
-| Remote MCP / custom app | **VERIFIED** (AI-4): custom connector → `/api/mcp` | **DOCUMENTED**: “Custom apps” by MCP server URL in the Gemini web app; personal account, 18+, US, English, Keep Activity on. Live add: NOT TESTED | **PLAN-GATED** (direct developer-mode MCP with write tools is documented for Business / Enterprise / Edu). Personal plugin with “Add custom MCP server”: documented in the plugin quickstart, plan eligibility unstated → **NOT TESTED** |
-| Authentication mechanism | **VERIFIED** (AI-4): fixed `Authorization: Bearer` header | **NOT TESTED / unknown**: Google documents Dynamic Client Registration and an “advanced credentials” form; bearer/header is not mentioned. JobQuest has no OAuth/DCR (deferred) | Plugin manifest declares `api_key` + `bearer`; OpenAI’s auth guide also says ChatGPT apps cannot present custom API keys and prefers OAuth 2.1 (DCR/CIMD) → **conflicting, NOT TESTED**. OAuth would be a STOP/decision |
-| Read tools | **VERIFIED** (AI-4) | NOT TESTED | NOT TESTED (depends on plugin gate) |
-| AI-ingest write (`jobquest_submit_ai_result`) | **VERIFIED** (AI-4) | NOT TESTED; writes need manual confirmation (**APPROVAL-GATED**, documented) | NOT TESTED; plugin writes may pause for approval (**APPROVAL-GATED** expected) |
+| Custom MCP / plugin configuration UI | **VERIFIED** (AI-4): custom connector | **VERIFIED AVAILABLE** (operator gate): custom-app UI accepted the JobQuest MCP URL and reached the endpoint | **VERIFIED AVAILABLE** (operator gate): Plus account exposed Add custom MCP server, Create as a plugin and advanced OAuth configuration |
+| Authenticated JobQuest connection | **VERIFIED** (AI-4): fixed `Authorization: Bearer` header | **BLOCKED — STANDARD OAUTH REQUIRED**; current scoped bearer auth rejected | **BLOCKED — OAUTH 2.1 REQUIRED**; no bearer/API-key field was offered in the observed custom-MCP flow |
+| OAuth discovery / registration | Not required for verified Claude path | JobQuest publishes no OAuth/DCR metadata; OAuth not implemented | Discovery **FAILED**; DCR unavailable; CIMD unavailable; user-defined OAuth client not configured because JobQuest has no authorization server |
+| Read tools | **VERIFIED** (AI-4) | NOT TESTED — AUTH BLOCKED | NOT TESTED — AUTH BLOCKED |
+| AI-ingest write (`jobquest_submit_ai_result`) | **VERIFIED** (AI-4) | NOT TESTED — AUTH BLOCKED | NOT TESTED — AUTH BLOCKED |
 | Core writes exposed to the provider | **NONE** (11 tools, 1 AI-Hub-only write) | **NONE** (same surface) | **NONE** (same surface; AI-8 execution endpoints are not provider tools) |
 | Scheduled tasks exist | Claude scheduled tasks: operator-owned, optional live test not performed (AI-5) | **DOCUMENTED**: Scheduled Actions (Google AI Pro/Ultra or eligible Workspace; Keep Activity on; limited number of active actions) | **DOCUMENTED**: scheduled tasks (Plus: 5 active) and event-triggered Work tasks (Gmail / Slack / GitHub) |
-| Scheduled use of the JobQuest connector / plugin | NOT TESTED | **NOT TESTED** (Google does not document custom-app use inside Scheduled Actions) | **NOT TESTED** (“depends on plan, plugin composition, task mode”) |
-| Unattended read | NOT TESTED | NOT TESTED | NOT TESTED |
-| Unattended AI-ingest write | NOT TESTED | **APPROVAL-GATED** (documented; `GEMINI_UNATTENDED_JOBQUEST_PUSH` stays unverified until a real run proves otherwise) | **APPROVAL-GATED** expected (“if an action needs approval, the task pauses”) |
+| Scheduled use of the JobQuest connector / plugin | NOT TESTED | **NOT TESTED — AUTH BLOCKED** | **NOT TESTED — AUTH BLOCKED** |
+| Unattended read | NOT TESTED | NOT TESTED — AUTH BLOCKED | NOT TESTED — AUTH BLOCKED |
+| Unattended AI-ingest write | NOT TESTED | NOT TESTED — AUTH BLOCKED | NOT TESTED — AUTH BLOCKED |
 | Email access | connector-dependent (Gmail connector observed in the operator’s Claude) | DOCUMENTED (Gmail via Connected Apps) | DOCUMENTED (Gmail connected app; also a Work event trigger) |
 | Calendar access | connector-dependent | DOCUMENTED (Google Calendar via Connected Apps) | NOT TESTED |
 | Job web research | provider-dependent | provider-dependent | provider-dependent |
 | Manual approval behavior | per-tool Allow / Ask | “requires manual confirmation for any write actions” (**documented**) | pauses for approval on writes (documented for connected apps) |
-| Plan requirement | Pro/Max for the operator | personal Google account (not work/school), US, English, 18+, Keep Activity on | Plus: personal plugins/tasks only; direct full MCP = Business/Enterprise/Edu |
-| Verified date | 2026-10-11 (AI-4) | 2026-10-12 (docs only) | 2026-10-12 (docs only) |
+| Plan requirement | Pro/Max for the operator | eligible personal Google account; UI verified in operator account | Plus operator account exposed custom-MCP/plugin creation UI; authenticated use still requires OAuth |
+| Verified date | 2026-10-11 (AI-4) | 2026-10-12 operator gate (UI/auth only) | 2026-10-12 operator gate (UI/auth only) |
 
 ### Sources (read 2026-10-12)
 
@@ -42,15 +43,28 @@ Statuses (never collapsed into “Supported”): `VERIFIED` (observed in a real 
 
 | Item | Result |
 |---|---|
-| GEMINI custom app connected | NOT TESTED |
-| GEMINI tool discovery / read / AI ingest / unsupported core write / prompt injection / revocation | NOT TESTED |
-| GEMINI_SCHEDULED_READ | NOT TESTED |
-| GEMINI_SCHEDULED_JOBQUEST_PUSH / GEMINI_UNATTENDED_JOBQUEST_PUSH | NOT TESTED (documented APPROVAL-GATED) |
-| CHATGPT PLUGIN | NOT TESTED |
-| CHATGPT JOBQUEST READ / AI INGEST | NOT TESTED |
-| CHATGPT SCHEDULED READ / SCHEDULED AI INGEST | NOT TESTED |
-| CHATGPT GMAIL EVENT-TRIGGER | NOT TESTED |
+| GEMINI custom-app UI | **VERIFIED AVAILABLE** |
+| GEMINI MCP endpoint | **REACHABLE** |
+| GEMINI authenticated JobQuest connection | **BLOCKED — STANDARD OAUTH REQUIRED** |
+| GEMINI current bearer auth | **NOT SUPPORTED BY GEMINI** |
+| GEMINI tool discovery / read / AI ingest | NOT TESTED — AUTH BLOCKED |
+| GEMINI scheduled read / scheduled JobQuest push | NOT TESTED — AUTH BLOCKED |
+| GEMINI temporary credential | **REVOKED — operator confirmed**; post-revocation test not required because Gemini never accepted it |
+| CHATGPT PLUS custom-MCP / plugin UI | **VERIFIED AVAILABLE** |
+| CHATGPT create-as-plugin flow | **VERIFIED AVAILABLE** |
+| CHATGPT authentication | **OAUTH 2.1 REQUIRED**; no bearer/API-key field offered |
+| CHATGPT current JobQuest bearer auth | **NOT COMPATIBLE** with the observed custom-MCP flow |
+| CHATGPT temporary connector token | **NONE CREATED** |
+| CHATGPT OAuth discovery | **FAILED** — JobQuest publishes no OAuth metadata |
+| CHATGPT DCR / CIMD | **UNAVAILABLE** with current JobQuest server |
+| CHATGPT user-defined OAuth client | NOT CONFIGURED — JobQuest has no OAuth authorization server |
+| CHATGPT JobQuest read / AI ingest | NOT TESTED — AUTH BLOCKED |
+| CHATGPT scheduled read / scheduled AI ingest / Gmail event trigger | NOT TESTED — AUTH BLOCKED |
 | CORE WRITE BYPASS (any provider) | NONE |
+
+### Shared AI-9 authentication finding
+
+Both Gemini and ChatGPT expose provider-side custom MCP integration paths, but neither can authenticate to JobQuest's current scoped bearer-token MCP server. Both require a standards-based OAuth authorization layer. The future architecture is **one provider-neutral, standards-compliant JobQuest OAuth layer** for Gemini, ChatGPT and future OAuth-capable providers — not separate provider auth implementations, no-auth mode or bearer workarounds. OAuth was not implemented in AI-9.
 
 ---
 

@@ -81,8 +81,22 @@ The Claude templates (`EMAIL_TRIAGE.md`, `CALENDAR_INTEL.md`, `JOB_DISCOVERY.md`
 
 ## AI-9 — Gemini and ChatGPT (subscription-native, capability-gated)
 
-- **One backend, three providers.** All providers submit `jobquest.ai-result` 1.0 through `jobquest_submit_ai_result` (provider value `claude` / `gemini` / `chatgpt`); the tool description now tells the caller to set the provider to the calling product. There is no `/api/gemini/*` or `/api/chatgpt/*` route, no provider SDK/API key, no scheduler, no new table and no migration.
-- **Gemini:** a *custom app* (Gemini web → Settings → Connected Apps → Custom apps → MCP URL `<origin>/api/mcp`). Auth acceptance (bearer vs OAuth/DCR) is an operator-gate question; if only OAuth is accepted the integration is recorded as blocked. Google requires manual confirmation for custom-app writes → scheduled JobQuest push is **APPROVAL-GATED** unless a real scheduled run proves otherwise. Guide: `provider-workflows/GEMINI_SCHEDULED_ACTIONS.md`; templates `gemini/`.
-- **ChatGPT (Plus):** no direct Claude-style MCP connector (full MCP is Business/Enterprise/Edu). Supported route = a private **plugin** the operator creates (documented package format prepared in `chatgpt/plugin-template/`) with the JobQuest MCP URL and a bearer/API-key credential **if the account accepts one**; OAuth-only = stop and decide. Scheduled tasks and Gmail event-triggered Work tasks are provider features, live-tested by the operator. Guides: `CHATGPT_PLUGIN_SETUP.md`, `CHATGPT_SCHEDULED_TASKS.md`; templates `chatgpt/`.
-- **Separation of concepts:** JobQuest workflow availability (all five `AVAILABLE`) ≠ provider can schedule it. Gemini/ChatGPT templates are shown as *Template ready, provider unverified* until a gate result says otherwise.
-- **Operator gates** (results in `reports/AI-9_PROVIDER_EXPANSION_REPORT.md` and the matrix): Gemini first, then ChatGPT.
+- **One backend, three providers.** All providers submit `jobquest.ai-result` 1.0 through `jobquest_submit_ai_result` (provider value `claude` / `gemini` / `chatgpt`). There is no provider-specific route, SDK/API key, scheduler, table or migration. The MCP surface remains 11 tools: 10 reads and one AI-Hub-only write; no core write.
+- **Gemini operator gate:** custom-app UI **VERIFIED AVAILABLE** and the JobQuest MCP endpoint **REACHABLE**. Gemini rejected the current scoped bearer authentication and requires standard OAuth. Authenticated connection **BLOCKED**; reads, ingest and schedules `NOT TESTED — AUTH BLOCKED`; temporary token revoked.
+- **ChatGPT Plus operator gate:** Add custom MCP server, Create as a plugin and advanced OAuth UI **VERIFIED AVAILABLE**. No bearer/API-key field was offered. OAuth discovery failed because JobQuest publishes no OAuth metadata; DCR/CIMD unavailable; user-defined OAuth client not configured because JobQuest has no authorization server. Authenticated connection **BLOCKED — OAUTH 2.1 REQUIRED**; reads, ingest, schedules and Gmail trigger `NOT TESTED — AUTH BLOCKED`; no connector token created.
+- **No workaround.** No-auth was not selected; JobQuest bearer tokens were not repurposed as OAuth client secrets; no client ids, secrets or endpoints were invented; OAuth/DCR was not implemented in AI-9.
+- **Shared architecture finding:** one standards-compliant, provider-neutral JobQuest OAuth layer should serve Gemini, ChatGPT and future OAuth-capable MCP providers. Do not build separate Gemini/ChatGPT auth paths.
+- **Separation of concepts:** provider configuration UI availability ≠ authenticated JobQuest connection ≠ scheduled capability. All five JobQuest workflows remain `AVAILABLE`; Gemini/ChatGPT live integration remains blocked until OAuth exists.
+
+## AI-10 recommendation — planning only; do not start automatically
+
+After operator approval, one combined **OAuth 2.1 Provider Auth + Final Security / Release Hardening** phase should first decide whether OAuth is release-blocking, then assess:
+
+- OAuth 2.1 authorization-server behavior, Authorization Code flow and PKCE S256.
+- Authorization-server metadata and MCP protected-resource metadata where required.
+- Client registration: user-defined clients, Dynamic Client Registration (DCR) and Client Identifier Metadata Documents (CIMD).
+- Access-token issuance, refresh tokens if necessary, revocation and session invalidation.
+- Scope mapping (`jobquest:read`, `ai:read`, `ai:ingest`), user/workspace binding and connector revocation.
+- Consent UI, provider callback registration and MCP auth integration.
+- Security, rate-limit and audit tests; Gemini and ChatGPT live revalidation.
+- Final security review, migration reconciliation, final AI-Hub E2E/release matrix and Production readiness GO/NO-GO.

@@ -280,8 +280,7 @@ test.describe('AI-6 external intelligence sources', () => {
     await expect(page.getByText('New job leads').first()).toBeVisible();
     await expect(page.getByText('Email needing attention')).toBeVisible();
     await expect(page.getByText('Recruiter intel').first()).toBeVisible();
-    for (const tab of ['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'History']) await expect(page.getByRole('tab', { name: tab })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /Calendar/ })).toHaveCount(0);
+    for (const tab of ['Overview', 'Daily Digest', 'Job Leads', 'Email', 'Recruiter Intel', 'Calendar', 'History']) await expect(page.getByRole('tab', { name: tab })).toBeVisible(); // AI-7: Calendar is operational
     await page.getByRole('button', { name: 'Open Job Leads' }).click();
     await expect(page).toHaveURL(/\/ai-hub\/job-leads$/);
 

@@ -198,6 +198,6 @@ test.describe('AI-10 OAuth provider cards and consent', () => {
 
     expect(a11y.flatMap((x) => x.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious').map((v) => `${x.context}:${v.id}`))).toEqual([]);
     evidence.a11y = a11y.map((x) => ({ context: x.context, violations: x.violations.length, blocking: x.blocking }));
-    writeFileSync(resolve(evidenceDir, 'ai10-oauth.json'), JSON.stringify(evidence, null, 2)); // no secret or token value is ever part of the evidence
+    writeFileSync(resolve(evidenceDir, 'ai10-provider-auth.json'), JSON.stringify(evidence, null, 2)); // no secret or token value is ever part of the evidence
   });
 });

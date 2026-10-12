@@ -52,8 +52,13 @@ const payload = (date: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+// The AI Hub is OFF by default (CI's .env.m1b-local sets no AI flags and other specs assert the default shell),
+// so this spec runs only when the env file or process enables BOTH flags (see header comment).
+const aiHubEnabled = (environment().VITE_AI_HUB_ENABLED ?? process.env.VITE_AI_HUB_ENABLED) === 'true'
+  && (environment().AI_HUB_ENABLED ?? process.env.AI_HUB_ENABLED) === 'true';
+
 test.describe('AI-5 Daily Digest', () => {
-  test.setTimeout(300_000);
+  test.skip(!aiHubEnabled, 'AI Hub flags are off in this environment (default); run locally with AI_HUB_ENABLED and VITE_AI_HUB_ENABLED set in M1B_ENV_FILE');  test.setTimeout(300_000);
   test.use({ timezoneId: 'Europe/Berlin', reducedMotion: 'reduce', actionTimeout: 20_000 });
 
   test('states, filters, snapshot history, responsive layout and accessibility', async ({ page }) => {

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { env } from '../env';
 import { admin } from '../lib/db';
 import {
-  OAUTH_OFFLINE_SCOPE, OAUTH_SCOPES, OAUTH_TOKEN_AUTH_METHODS, authorizationCodeHash,
+  OAUTH_OFFLINE_SCOPE, OAUTH_SCOPES, OAUTH_STATE_MAX_LENGTH, OAUTH_STATE_MIN_LENGTH, OAUTH_TOKEN_AUTH_METHODS, authorizationCodeHash,
   mcpResource, mintAuthorizationCode, mintOAuthAccessToken, mintOAuthClient,
   mintOAuthRefreshToken, normalizeScopes, oauthRefreshHash, oauthSecretHash,
   requestOrigin, validClientCredentials, validRedirectUri,
@@ -97,7 +97,7 @@ oauth.get('/authorize', async (c) => {
   if (!issuer) return oauthError(c, 400, 'invalid_request', 'Unknown authorization server origin.');
   const q = c.req.query();
   if (q.response_type !== 'code' || !q.client_id || !q.redirect_uri || !q.scope
-    || !q.state || q.state.length < 8 || q.state.length > 512
+    || !q.state || q.state.length < OAUTH_STATE_MIN_LENGTH || q.state.length > OAUTH_STATE_MAX_LENGTH
     || q.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(q.code_challenge ?? '')) {
     return oauthError(c, 400, 'invalid_request', 'Authorization Code, state, resource and PKCE S256 are required.');
   }

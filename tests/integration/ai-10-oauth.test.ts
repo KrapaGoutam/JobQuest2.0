@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Actor, loadEnv, ORIGIN, serviceDb } from './harness';
 
 const ready = loadEnv();
@@ -306,5 +306,42 @@ describe.skipIf(!ready || !local)('AI-10 — OAuth 2.1 authorization and revocat
     expect((await jsonCall(alice, `/oauth/clients/${client.id}/revoke`, {})).json.revoked).toBe(true);
     expect((await mcp(live.access_token)).status).toBe(401);
     expect((await form('/oauth/token', { grant_type: 'refresh_token', refresh_token: live.refresh_token, resource })).status).toBe(400);
+  });
+
+  it('AI10-07 · Gemini-size state (up to 2048) round-trips exactly; state bounds, PKCE, redirect, resource and scope stay enforced', async () => {
+    client = await createClient(); // AI10-06 revoked the shared client
+    const stateOf = (n: number) => randomBytes(n).toString('base64url').slice(0, n);
+    const geminiState = stateOf(1182); // the length Gemini sent in Production
+    const maxState = stateOf(2048);
+    const consoleSpies = (['log', 'info', 'warn', 'error'] as const).map((m) => vi.spyOn(console, m));
+    try {
+      for (const state of ['', 'short77', stateOf(2049)]) {
+        expect((await authorize({ state })).start.status, `state length ${state.length}`).toBe(400);
+      }
+      const strict: Array<Record<string, string>> = [
+        { code_challenge_method: 'plain' }, { code_challenge: '' }, { redirect_uri: 'https://evil.example/callback' },
+        { resource: `${issuer}/api/other` }, { scope: 'jobquest:read ai:ingest' }, { scope: 'jobquest:write' },
+      ];
+      for (const over of strict) {
+        expect((await authorize({ ...over, state: geminiState })).start.status, Object.keys(over).join()).toBe(400);
+      }
+
+      for (const state of [randomBytes(16).toString('base64url'), geminiState, maxState]) {
+        const a = await authorize({ state });
+        expect(a.start.status, `state length ${state.length}`).toBe(302);
+        const requestId = new URLSearchParams(new URL(a.start.headers.get('location')!).hash.split('?')[1]).get('request_id')!;
+        const row = (await admin.from('oauth_authorization_requests').select('state').eq('id', requestId).single()).data!;
+        expect(row.state).toBe(state); // persisted unchanged
+        const detail = await jsonCall(alice, `/oauth/requests/${requestId}`);
+        expect(detail.status).toBe(200);
+        expect(detail.text).not.toContain(state); // never shown on the consent screen
+        const decision = await jsonCall(alice, `/oauth/requests/${requestId}/decision`, { approve: true });
+        expect(decision.status).toBe(200);
+        expect(new URL(decision.json.redirect_to).searchParams.get('state')).toBe(state); // returned byte-for-byte
+      }
+      for (const spy of consoleSpies) expect(JSON.stringify(spy.mock.calls)).not.toContain(geminiState);
+    } finally {
+      for (const spy of consoleSpies) spy.mockRestore();
+    }
   });
 });

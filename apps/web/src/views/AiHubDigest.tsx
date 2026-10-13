@@ -8,9 +8,10 @@ import { aiPriorityLabel } from '../lib/aiHub';
 import { pendingActionsText } from '../lib/aiActions';
 import { fetchPendingActionCount } from '../api/aiActions';
 import {
-  DIGEST_PRESETS, DIGEST_PROVIDER_FILTERS, DIGEST_SECTION_ORDER, DIGEST_SECTION_STATUS_LABELS, combineDigests, digestProviderLabel,
-  digestSourceLabel, formatDigestDate, groupDigestsByDate, resolveDigestRange, sourceAvailability, todayKey,
-  type DigestDayGroup, type DigestEntry, type DigestItem, type DigestPreset, type DigestRow, type DigestSectionStatus, type ParsedDigest,
+  DIGEST_PRESETS, DIGEST_PROVIDER_FILTERS, DIGEST_SECTION_STATUS_LABELS, combineDigests, digestEmptyText, digestKindLabel, digestLayout, digestProviderLabel,
+  digestSourceLabel, formatDigestDate, groupByUrgency, groupDigestsByDate, headlineMetrics, hiddenCount, resolveDigestRange, sourceAvailability, todayKey,
+  type DigestDayGroup, type DigestEntry, type DigestItem, type DigestPreset, type DigestRow, type DigestSection, type DigestSectionKey, type DigestSectionStatus,
+  type DigestUrgency, type ParsedDigest,
 } from '../lib/aiDigest';
 import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -26,9 +27,14 @@ export type DigestLoadState =
   | { status: 'ready'; rows: DigestRow[]; hasNext: boolean };
 
 const wrap = { overflowWrap: 'anywhere' as const, minWidth: 0 };
-const statusVariant = (s: DigestSectionStatus) => (s === 'available' ? 'success' : s === 'zero' ? 'info' : 'muted');
+const statusVariant = (s: DigestSectionStatus) => (s === 'available' ? 'success' : s === 'zero' ? 'info' : s === 'unavailable' ? 'warning' : 'muted');
+const URGENCY_VARIANT: Record<DigestUrgency, 'danger' | 'info' | 'muted'> = { HIGH: 'danger', MEDIUM: 'info', LOW: 'muted' };
+const URGENCY_LABEL: Record<DigestUrgency, string> = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
 
-// ---- pieces ---------------------------------------------------------------------------
+/** What the digest card needs to act on an item. Every handler only NAVIGATES; the digest never changes a record. */
+interface DigestActions { timeZone: string; onOpenApplication?: (id: string) => void; onOpenTab?: (path: string) => void }
+
+// ---- legacy layout (payload 1.0, e.g. provider narratives) ------------------------------------------------------------
 
 function ItemList({ items }: { items: DigestItem[] }) {
   return (
@@ -51,7 +57,7 @@ function ItemList({ items }: { items: DigestItem[] }) {
   );
 }
 
-function Section({ title, section }: { title: string; section: NonNullable<ParsedDigest['sections'][keyof ParsedDigest['sections']]> }) {
+function Section({ title, section }: { title: string; section: DigestSection }) {
   return (
     <section aria-label={title} style={{ display: 'grid', gap: '6px' }}>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -64,11 +70,135 @@ function Section({ title, section }: { title: string; section: NonNullable<Parse
       {section.status === 'available' && section.items.length === 0 && <span className="muted small">Counted by the provider; no item details were included.</span>}
       {section.status === 'zero' && <span className="muted small">Checked: nothing to report.</span>}
       {section.status === 'not_configured' && <span className="muted small">This source is not configured yet, so nothing was checked.</span>}
+      {section.status === 'unavailable' && <span className="muted small">The last run for this source failed, so nothing could be checked.</span>}
     </section>
   );
 }
 
-function DigestBody({ digest }: { digest: ParsedDigest }) {
+// ---- canonical layout (AI-11C) -----------------------------------------------------------------------------------------
+// Every string below comes from stored digest data and is rendered as React text (escaped): email subjects, job titles,
+// recruiter names and calendar titles are untrusted DATA, never instructions, and nothing here changes a record.
+
+function ItemCard({ item, actions, compact }: { item: DigestItem; actions: DigestActions; compact?: boolean }) {
+  const kind = digestKindLabel(item.kind);
+  const app = item.application;
+  return (
+    <li style={{ display: 'grid', gap: '4px', padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: '8px', ...wrap }}>
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline', flexWrap: 'wrap' }}>
+        {item.url
+          ? <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, ...wrap }}>{item.title}<span className="sr-only"> (opens in a new tab)</span></a>
+          : <span style={{ fontWeight: 600, ...wrap }}>{item.title}</span>}
+        {item.urgency && <StatusBadge variant={URGENCY_VARIANT[item.urgency]}>{URGENCY_LABEL[item.urgency]} urgency</StatusBadge>}
+        {!item.urgency && (item.priority === 'CRITICAL' || item.priority === 'HIGH') && <StatusBadge variant={item.priority === 'CRITICAL' ? 'danger' : 'warning'}>{aiPriorityLabel(item.priority)}</StatusBadge>}
+        {typeof item.score === 'number' && <StatusBadge variant={item.score >= 80 ? 'success' : 'muted'}>AI match {item.score}/100</StatusBadge>}
+        {item.verification && <StatusBadge variant={item.verification === 'verified' ? 'success' : 'muted'}>{item.verification === 'verified' ? 'Public source cited' : 'Unverified'}</StatusBadge>}
+      </div>
+      <span className="muted small" style={wrap}>{[kind, item.company].filter(Boolean).join(' · ')}</span>
+      {item.attention && compact ? (
+        <span className="muted small">Also listed under Needs attention.</span>
+      ) : (
+        <>
+          {item.detail && <span className="small" style={wrap}>{item.detail}</span>}
+          {item.deadlineAt && <span className="small" style={wrap}><strong>Due</strong> {formatInZone(item.deadlineAt, actions.timeZone, { dateStyle: 'medium', timeStyle: 'short' })}</span>}
+          {item.action && <span className="small" style={wrap}><strong>Next:</strong> {item.action}</span>}
+          {item.tags && item.tags.length > 0 && <span className="muted small" style={wrap}>{item.tags.join(' · ')}</span>}
+        </>
+      )}
+      {app && actions.onOpenApplication && !(item.attention && compact) && (
+        <div>
+          <Button
+            variant="link" size="sm" onClick={() => actions.onOpenApplication!(app.id)} aria-label={`Open application ${app.label}`}
+            style={{ whiteSpace: 'normal', textAlign: 'left', height: 'auto', minHeight: '24px', maxWidth: '100%', ...wrap }}
+          >{app.label}</Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+const cardList = { listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '8px' } as const;
+
+function CardList({ items, actions, label, compact }: { items: DigestItem[]; actions: DigestActions; label: string; compact?: boolean }) {
+  return <ul aria-label={label} style={cardList}>{items.map((it, i) => <ItemCard key={`${it.ref?.id ?? it.title}-${i}`} item={it} actions={actions} compact={compact} />)}</ul>;
+}
+
+function CanonicalSection({ sectionKey, title, tab, section, actions }: { sectionKey: DigestSectionKey; title: string; tab?: string; section: DigestSection; actions: DigestActions }) {
+  const id = `digest-sec-${sectionKey}`;
+  const hidden = hiddenCount(section);
+  const grouped = sectionKey === 'job_email' || sectionKey === 'other_email';
+  const groups = grouped ? groupByUrgency(section.items) : [];
+  return (
+    <section aria-labelledby={id} style={{ display: 'grid', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <h4 id={id} style={{ margin: 0, fontSize: '14px' }}>{title}</h4>
+        <StatusBadge variant={statusVariant(section.status)}>
+          {section.status === 'available' && section.count !== null ? `${section.count} · ` : ''}{DIGEST_SECTION_STATUS_LABELS[section.status]}
+        </StatusBadge>
+        {tab && actions.onOpenTab && (
+          <Button variant="link" size="sm" onClick={() => actions.onOpenTab!(tab)} aria-label={`View all ${title.toLowerCase()} in AI Hub`}>View all</Button>
+        )}
+      </div>
+      {section.status === 'available' && section.items.length > 0 && !grouped && <CardList items={section.items} actions={actions} label={title} />}
+      {section.status === 'available' && section.items.length > 0 && grouped && groups.map((g) => {
+        const gid = `${id}-${g.urgency}`;
+        const body = <CardList items={g.items} actions={actions} label={`${title}, ${URGENCY_LABEL[g.urgency]} urgency`} compact />;
+        return g.urgency === 'LOW' && sectionKey === 'other_email' ? (
+          <details key={g.urgency}>
+            <summary className="small" style={{ cursor: 'pointer' }}>{URGENCY_LABEL[g.urgency]} urgency ({g.items.length}), collapsed</summary>
+            <div style={{ marginTop: '8px' }}>{body}</div>
+          </details>
+        ) : (
+          <div key={g.urgency} role="group" aria-labelledby={gid} style={{ display: 'grid', gap: '6px' }}>
+            <h5 id={gid} style={{ margin: 0, fontSize: '13px' }}>{URGENCY_LABEL[g.urgency]} urgency <span className="muted small">({g.items.length})</span></h5>
+            {body}
+          </div>
+        );
+      })}
+      {section.status === 'available' && section.items.length === 0 && <span className="muted small">Counted, but no item details were stored.</span>}
+      {hidden > 0 && <span className="muted small">Showing {section.items.length} of {section.count}.</span>}
+      {section.status !== 'available' && <span className="muted small">{digestEmptyText(sectionKey, section.status)}</span>}
+    </section>
+  );
+}
+
+function CanonicalBody({ digest, actions }: { digest: ParsedDigest; actions: DigestActions }) {
+  const sources = sourceAvailability(digest);
+  const metrics = headlineMetrics(digest);
+  return (
+    <div style={{ display: 'grid', gap: '20px' }}>
+      {metrics.length > 0 && (
+        <dl aria-label="Summary" style={{ margin: 0, display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
+          {metrics.map((m) => (
+            <div key={m.key} style={{ display: 'grid', gap: '2px' }}>
+              <dd style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>{m.value}</dd>
+              <dt className="muted small">{m.label}</dt>
+            </div>
+          ))}
+        </dl>
+      )}
+      {sources.length > 0 && (
+        <ul aria-label="Source availability" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {sources.map((s) => <li key={s.key}><StatusBadge variant={statusVariant(s.status)}>{s.title}: {DIGEST_SECTION_STATUS_LABELS[s.status]}</StatusBadge></li>)}
+        </ul>
+      )}
+      {digest.priorities.length > 0 && (
+        <section aria-label="Top Priorities" style={{ display: 'grid', gap: '6px' }}>
+          <h4 style={{ margin: 0, fontSize: '14px' }}>Top Priorities</h4>
+          <ItemList items={digest.priorities} />
+        </section>
+      )}
+      {digestLayout(digest).map(({ key, title, tab }) => {
+        const section = digest.sections[key];
+        return section ? <CanonicalSection key={key} sectionKey={key} title={title} tab={tab} section={section} actions={actions} /> : null;
+      })}
+    </div>
+  );
+}
+
+// ---- body / cards ---------------------------------------------------------------------------------------------------------
+
+function DigestBody({ digest, actions }: { digest: ParsedDigest; actions: DigestActions }) {
+  if (digest.canonical) return <CanonicalBody digest={digest} actions={actions} />;
   const sources = sourceAvailability(digest);
   return (
     <div style={{ display: 'grid', gap: '16px' }}>
@@ -93,7 +223,7 @@ function DigestBody({ digest }: { digest: ParsedDigest }) {
           <ItemList items={digest.priorities} />
         </section>
       )}
-      {DIGEST_SECTION_ORDER.map(({ key, title }) => {
+      {digestLayout(digest).map(({ key, title }) => {
         const section = digest.sections[key];
         return section ? <Section key={key} title={title} section={section} /> : null;
       })}
@@ -104,7 +234,8 @@ function DigestBody({ digest }: { digest: ParsedDigest }) {
   );
 }
 
-function DigestCard({ date, heading, entry, digest, timeZone }: { date: string; heading: string; entry: Pick<DigestEntry, 'provider' | 'createdAt'> | null; digest: ParsedDigest | null; timeZone: string }) {
+function DigestCard({ date, heading, entry, digest, actions }: { date: string; heading: string; entry: Pick<DigestEntry, 'provider' | 'createdAt'> | null; digest: ParsedDigest | null; actions: DigestActions }) {
+  const timeZone = actions.timeZone;
   const generated = digest?.generatedAt ?? entry?.createdAt ?? null;
   return (
     <Card>
@@ -116,14 +247,14 @@ function DigestCard({ date, heading, entry, digest, timeZone }: { date: string; 
       </header>
       <CardBody>
         {digest
-          ? <DigestBody digest={digest} />
+          ? <DigestBody digest={digest} actions={actions} />
           : <span className="muted">This digest uses a format this version of JobQuest cannot display.</span>}
       </CardBody>
     </Card>
   );
 }
 
-function DayGroup({ group, provider, timeZone }: { group: DigestDayGroup; provider: string; timeZone: string }) {
+function DayGroup({ group, provider, actions }: { group: DigestDayGroup; provider: string; actions: DigestActions }) {
   const parsed = group.entries.filter((e): e is DigestEntry & { digest: ParsedDigest } => e.digest !== null);
   const combine = provider === 'ALL' && parsed.length > 1;
   return (
@@ -134,11 +265,11 @@ function DayGroup({ group, provider, timeZone }: { group: DigestDayGroup; provid
           heading={`Combined view of ${parsed.length} providers (${parsed.map((p) => digestProviderLabel(p.provider)).join(', ')})`}
           entry={null}
           digest={combineDigests(parsed.map((p) => ({ provider: p.provider, digest: p.digest })))}
-          timeZone={timeZone}
+          actions={actions}
         />
       )}
       {group.entries.map((e) => (
-        <DigestCard key={e.id} date={group.date} heading={digestProviderLabel(e.provider)} entry={e} digest={e.digest} timeZone={timeZone} />
+        <DigestCard key={e.id} date={group.date} heading={digestProviderLabel(e.provider)} entry={e} digest={e.digest} actions={actions} />
       ))}
     </div>
   );
@@ -167,6 +298,9 @@ export interface DigestPanelProps {
   /** AI-8: supported actions awaiting THIS user's review (null/absent = unknown or none to show). The digest never executes anything. */
   pendingActions?: number | null;
   onOpenActions?: () => void;
+  /** Navigation only (the digest never changes a record): open one of the owner's applications, or an AI Hub tab. */
+  onOpenApplication?: (id: string) => void;
+  onOpenTab?: (path: string) => void;
 }
 
 function LiveCard({ live, onGenerate, generate }: { live: NonNullable<DigestPanelProps['live']>; onGenerate?: () => void; generate?: DigestPanelProps['generate'] }) {
@@ -190,7 +324,7 @@ function LiveCard({ live, onGenerate, generate }: { live: NonNullable<DigestPane
         {onGenerate && (
           <div style={{ marginTop: '12px', display: 'grid', gap: '6px' }}>
             <div><Button variant="secondary" onClick={onGenerate} isLoading={generate?.status === 'working'}>Save a JobQuest digest for today</Button></div>
-            <span className="muted small">Stores today’s numbers above as a snapshot. Job leads, email and recruiter sections show “Not configured” until that source’s first successful run, and “None found” when it ran and found nothing.</span>
+            <span className="muted small">Builds today’s snapshot from what JobQuest already holds: needs attention, job and other email, upcoming, recent job leads, recruiters and follow-ups. A section reads “Not configured” until its source has run, “Unavailable” when its last run failed, and “None found” when it ran and found nothing. Nothing is searched or changed.</span>
           </div>
         )}
         {generate?.status === 'error' && <p role="alert" style={{ margin: '8px 0 0' }}>{generate.message ?? 'Could not save the digest.'}</p>}
@@ -266,7 +400,9 @@ export function AiHubDigestPanel(p: DigestPanelProps) {
       )}
       {range.ok && noDigestToday && p.live && <LiveCard live={p.live} onGenerate={p.onGenerate} generate={p.generate} />}
       {p.generate?.status === 'done' && <p role="status" style={{ margin: 0 }}>{p.generate.message}</p>}
-      {range.ok && p.state.status === 'ready' && groups.map((g) => <DayGroup key={g.date || 'undated'} group={g} provider={p.provider} timeZone={p.timeZone} />)}
+      {range.ok && p.state.status === 'ready' && groups.map((g) => (
+        <DayGroup key={g.date || 'undated'} group={g} provider={p.provider} actions={{ timeZone: p.timeZone, onOpenApplication: p.onOpenApplication, onOpenTab: p.onOpenTab }} />
+      ))}
       {range.ok && p.state.status === 'ready' && (p.page > 0 || p.state.hasNext) && (
         <nav aria-label="Digest pagination" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Button variant="secondary" disabled={p.page === 0} onClick={() => p.onPage(p.page - 1)}>Previous</Button>
@@ -351,6 +487,8 @@ export function AiHubDigest({ activeWorkspaceId, currentUserId, session, onNavig
       onGenerate={session ? onGenerate : undefined}
       pendingActions={pendingActions}
       onOpenActions={onNavigate ? () => onNavigate('/ai-hub/actions') : undefined}
+      onOpenApplication={onNavigate && activeWorkspaceId ? (id) => onNavigate(`/w/${activeWorkspaceId}/applications/${id}`) : undefined}
+      onOpenTab={onNavigate}
     />
   );
 }

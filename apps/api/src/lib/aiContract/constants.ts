@@ -129,15 +129,42 @@ export type JobEmploymentType = (typeof JOB_EMPLOYMENT_TYPES)[number];
 // A digest is an `ai_findings` row (kind/workflow `daily_brief`, AI-0 decision; the
 // product name is "Daily Digest"). One row per owner + digest_date + provider. The
 // payload below is versioned independently of the jobquest.ai-result envelope.
-export const DIGEST_PAYLOAD_VERSION = '1.0' as const;
-export const DIGEST_SECTION_KEYS = ['applications', 'job_leads', 'email_activity', 'recruiter_intel', 'calendar', 'upcoming', 'follow_ups', 'ai_suggestions'] as const;
-/** available = the source reported data; zero = source operational, nothing found; not_configured = no source yet. */
-export const DIGEST_SECTION_STATUSES = ['available', 'zero', 'not_configured'] as const;
+/**
+ * 1.1 (AI-11C) is additive over 1.0: canonical attention/email sections, richer items, `unavailable`. Both are accepted;
+ * a stored 1.0 digest (including a provider narrative) keeps rendering. Mirrored by apps/web/src/lib/aiDigest.ts
+ * (tests/unit/ai-5-digest-ui.test.ts + ai-11c-digest-ui.test.ts fail on drift).
+ */
+export const DIGEST_PAYLOAD_VERSION = '1.1' as const;
+export const DIGEST_MAX_MINOR = 1;
+/**
+ * Canonical (AI-11C) sections first, in display order. `applications`, `email_activity`, `calendar` and `ai_suggestions`
+ * are the AI-5/6/7 sections: still valid for provider-submitted digests, no longer produced by the JobQuest digest.
+ */
+export const DIGEST_SECTION_KEYS = [
+  'needs_attention', 'job_email', 'other_email', 'upcoming', 'job_leads', 'recruiter_intel', 'follow_ups',
+  'applications', 'email_activity', 'calendar', 'ai_suggestions',
+] as const;
+/**
+ * available = the source reported data; zero = source operational, nothing found; not_configured = the source has never
+ * produced a successful run; unavailable = the source's most recent run FAILED (nothing could be checked).
+ */
+export const DIGEST_SECTION_STATUSES = ['available', 'zero', 'not_configured', 'unavailable'] as const;
 export const DIGEST_SUMMARY_KEYS = [
   'applications_added', 'active_applications', 'new_job_leads', 'strong_matches', 'recruiter_replies',
   'interviews', 'assessments', 'follow_ups', 'pending_suggestions', 'new_findings', 'calendar_today', 'calendar_deadlines',
+  'needs_attention', 'job_emails', 'other_emails', 'upcoming', 'recent_jobs', 'recruiters',
 ] as const;
 export const DIGEST_LIMITS = { priorities: 8, itemsPerSection: 5, itemTitle: 160, itemDetail: 240, count: 100000 } as const;
+/** Items kept per section (a stored digest is a bounded snapshot, not a mailbox). Sections not listed use itemsPerSection. */
+export const DIGEST_SECTION_ITEM_LIMITS: Readonly<Record<string, number>> = {
+  needs_attention: 6, job_email: 8, other_email: 4, upcoming: 6, job_leads: 6, recruiter_intel: 4, follow_ups: 5,
+};
+/** Provenance of an item: the canonical source record it summarizes (1.1; optional). */
+export const DIGEST_REF_TYPES = ['email', 'calendar', 'job_lead', 'recruiter', 'application', 'task', 'interview'] as const;
+/** Headline lookbacks (whole local days ending with the digest date). Documented in the AI-11C report. */
+export const DIGEST_LOOKBACK_DAYS = { attention: 7, email: 3, jobLeads: 7, recruiters: 14, upcoming: 7 } as const;
+/** Serialized-size target for a composed digest: under AI_LIMITS.payloadBytes so the ingest RPC never rejects it. */
+export const DIGEST_BYTE_BUDGET = 15000;
 
 export type DigestSectionKey = (typeof DIGEST_SECTION_KEYS)[number];
 export type DigestSectionStatus = (typeof DIGEST_SECTION_STATUSES)[number];

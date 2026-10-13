@@ -159,13 +159,15 @@ describe.skipIf(!ready || !local)('AI-5 — Daily Digest (real DB, RLS)', () => 
     expect(two.ok && two.data.ingest.duplicateRun).toBe(true); // same date -> same run id -> no duplicate
     const rows = (await admin.from('ai_findings').select('provider, dedupe_key, payload').eq('workspace_id', ws).eq('user_id', carol.userId!).eq('provider', 'system').eq('dedupe_key', `daily_brief:${one.data.digestDate}:system`)).data!;
     expect(rows).toHaveLength(1);
-    const p = rows[0]!.payload as { summary: Record<string, number>; sections: Record<string, { status: string; items: { title: string }[]; }> & Record<'job_leads' | 'email_activity' | 'follow_ups', { status: string; items: { title: string }[] }> };
-    expect(p.summary.applications_added).toBeGreaterThanOrEqual(5); // GenA, GenB + 3 Snap* (carol only; Eve excluded)
+    // AI-11C: the JobQuest digest is payload 1.1 (canonical sections); the AI-5 facts it still reports are follow-ups (carol only; Eve excluded)
+    const p = rows[0]!.payload as { version: string; summary: Record<string, number>; sections: Record<'job_leads' | 'job_email' | 'follow_ups' | 'needs_attention', { status: string; items: { title: string }[] }> };
+    expect(p.version).toBe('1.1');
     expect(p.summary.follow_ups).toBe(2);
     expect(JSON.stringify(p)).not.toContain('EveOnly');
     expect(p.sections.job_leads.status).toBe('not_configured');
-    expect(p.sections.email_activity.status).toBe('not_configured');
+    expect(p.sections.job_email.status).toBe('not_configured');
     expect(p.sections.follow_ups.items.map((i) => i.title).sort()).toEqual(['GenA — Engineer', 'GenB — Engineer']);
+    expect(p.sections.needs_attention.items.map((i) => i.title).sort()).toEqual(['GenA — Engineer', 'GenB — Engineer']); // overdue follow-ups need attention
     const runRow = (await admin.from('ai_runs').select('provider, workflow, external_run_id').eq('id', one.data.ingest.runId!).single()).data!;
     expect(runRow).toMatchObject({ provider: 'system', workflow: 'daily_brief' });
 

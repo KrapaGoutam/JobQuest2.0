@@ -405,10 +405,12 @@ describe.skipIf(!ready || !local)('AI-6 — external intelligence sources (real 
     // dave has job leads from AI6-13 but no email/recruiter runs
     expect(fresh.ok).toBe(true);
     const fp = (fresh as any).data.payload;
-    expect(fp.sections.email_activity).toEqual({ status: 'not_configured', items: [] });
+    // AI-11C: email is now the job_email / other_email pair; the 7-day lead lookback ends with the digest date
+    expect(fp.sections.job_email).toEqual({ status: 'not_configured', items: [] });
+    expect(fp.sections.other_email).toEqual({ status: 'not_configured', items: [] });
     expect(fp.sections.recruiter_intel).toEqual({ status: 'not_configured', items: [] });
-    expect(fp.sections.job_leads.status).toBe('zero'); // job_discovery ran, but the lead was discovered today, not on 2026-10-01
-    expect(fp.summary).not.toHaveProperty('recruiter_replies');
+    expect(fp.sections.job_leads.status).toBe('zero'); // job_discovery ran, but the lead was discovered today, not in the 7 days up to 2026-10-01
+    expect(fp.summary).toMatchObject({ recruiters: 0, recent_jobs: 0 });
 
     // Carol: generate today's JobQuest digest (provider system) through the ingestion boundary.
     const gen = await digestSvc.generateSystemDigest({ workspaceId: ws, userId: carol.userId!, accessToken: carol.token! }, { env: ON, ingest: quiet });
@@ -417,12 +419,11 @@ describe.skipIf(!ready || !local)('AI-6 — external intelligence sources (real 
     const stored = (await admin.from('ai_findings').select('id, payload').eq('user_id', carol.userId!).eq('kind', 'daily_brief').eq('dedupe_key', `daily_brief:${gen.data.digestDate}:system`).single()).data!;
     const p = stored.payload as any;
     expect(p.sections.job_leads.status).toBe('available');
-    expect(p.summary.new_job_leads).toBeGreaterThan(0);
-    expect(p.summary.strong_matches).toBeGreaterThan(0);
-    expect(p.summary.strong_matches).toBeLessThanOrEqual(p.summary.new_job_leads);
-    expect(p.sections.job_leads.items.some((i: any) => i.detail.startsWith('AI match'))).toBe(true);
-    // email events were received on 2026-09/10, not today: email triage has run => zero, not available
-    expect(p.sections.email_activity.status).toBe('zero');
+    expect(p.summary.recent_jobs).toBeGreaterThan(0);
+    expect(p.sections.job_leads.items.some((i: any) => typeof i.score === 'number' && i.score >= 80)).toBe(true);
+    expect(p.sections.job_leads.items.every((i: any) => i.ref.type === 'job_lead' && i.application === undefined)).toBe(true);
+    // email events were received on 2026-09/10, outside the email lookback: email triage has run => zero, not available
+    expect(p.sections.job_email.status).toBe('zero');
     expect(p.sections.recruiter_intel.status).toBe('available'); // recruiter findings were created today
     // snapshot immutability: new data later must not rewrite the stored digest
     await submit(jobDoc('15-late', { payload: { match_score: 99 } }));
@@ -430,6 +431,6 @@ describe.skipIf(!ready || !local)('AI-6 — external intelligence sources (real 
     expect(regen.ok && regen.data.ingest.duplicateRun).toBe(true);
     const after = (await admin.from('ai_findings').select('payload, content_hash').eq('id', stored.id).single()).data!;
     expect(after.payload).toEqual(stored.payload);
-    record('ai6-15-digest', { jobLeads: p.sections.job_leads.status, email: p.sections.email_activity.status, recruiter: p.sections.recruiter_intel.status, snapshotStable: true });
+    record('ai6-15-digest', { jobLeads: p.sections.job_leads.status, email: p.sections.job_email.status, recruiter: p.sections.recruiter_intel.status, snapshotStable: true });
   });
 });

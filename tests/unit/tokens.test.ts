@@ -69,10 +69,12 @@ describe('service-role boundary (static)', () => {
       'apps/api/src/lib/aiConnectorTokens.ts', // AI-3: connector-token resolve/touch via service-role-only RPCs (no table reads)
       'apps/api/src/lib/db.ts',
       'apps/api/src/lib/extensionTokens.ts',
+      'apps/api/src/lib/oauth.ts', // AI-10: OAuth grant resolve/touch via service-role-only RPCs
       'apps/api/src/lib/rateLimit.ts',
       'apps/api/src/routes/aiConnectors.ts', // AI-3: owner-only connector-token create/revoke RPC facade
       'apps/api/src/routes/auth.ts',
       'apps/api/src/routes/extension.ts',
+      'apps/api/src/routes/oauth.ts', // AI-10: OAuth authorization-server and client-management facade
       'apps/api/src/routes/scope.ts',
       'apps/api/src/services/aiIntegrationService.ts', // AI-2A: internal ingestion via service-role-only rpc_ai_ingest_* (never reads)
     ]);

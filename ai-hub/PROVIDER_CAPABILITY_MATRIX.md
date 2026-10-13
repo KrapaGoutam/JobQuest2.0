@@ -4,7 +4,29 @@
 
 Statuses (never collapsed into “Supported”): `VERIFIED` (observed in a real test in the operator’s account) · `DOCUMENTED` (official documentation says so; not tested here) · `APPROVAL-GATED` (works only with a human approval click) · `PLAN-GATED` (the operator’s plan does not offer it) · `BLOCKED` (the provider requires a capability JobQuest deliberately does not implement in this phase) · `NOT SUPPORTED` · `NOT TESTED`.
 
-## AI-9 capability matrix (current)
+## AI-10 capability matrix (current — supersedes the AI-9 authentication rows below)
+
+**Verification date: 2026-10-12/13.** Method: operator live tests against the Dev Preview (stable alias) and the Dev database, cross-checked with read-only Dev database evidence (runs, findings, grants, refresh-token chains, audit events). Details: `reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md`. Nothing here was exercised against Production.
+
+| Dimension | Claude | Gemini | ChatGPT Plus |
+|---|---|---|---|
+| Custom MCP / plugin | **VERIFIED** | **VERIFIED** | **VERIFIED** (custom MCP / plugin created) |
+| Auth | existing scoped bearer connector token — **VERIFIED** | **OAuth VERIFIED** (user-defined confidential client, PKCE S256; DCR/CIMD not used) | **OAuth VERIFIED** (User-Defined OAuth Client; discovery VERIFIED; DCR/CIMD unavailable by design; OIDC not implemented / not required) |
+| Reads (applications, job leads, email, recruiter, calendar, Daily Digest) | **VERIFIED** | **VERIFIED** (zero-record reads are successes) | **VERIFIED** (zero-record reads are successes) |
+| AI ingest (`jobquest_submit_ai_result`) | **VERIFIED** | **VERIFIED — APPROVAL-GATED** | **VERIFIED**; approval behaviour **NOT RECORDED** |
+| Malformed-contract rejection (`SCHEMA_INVALID`, 0 findings persisted) | VERIFIED (AI-4) | **VERIFIED** | **VERIFIED** |
+| Core writes (create application / task / set status) | **UNAVAILABLE BY DESIGN** | **UNAVAILABLE BY DESIGN — VERIFIED** | **UNAVAILABLE — VERIFIED** (provider reported not exposed) |
+| Revocation (post-revocation read denied) | VERIFIED (AI-4) | **VERIFIED** | **VERIFIED** |
+| Hostile stored-content ingest | not run | **PASS** (operator transcript; stored string no longer present in Dev) | **NOT TESTED LIVE** |
+| Fresh-chat stored-content injection | not run | **NOT FULLY VERIFIED** | **NOT TESTED LIVE** (POST-RELEASE, non-blocking) |
+| Refresh-token rotation | n/a (static token) | **VERIFIED LIVE** (server-side: 2 single-use rotations, chain intact) | **VERIFIED LIVE** (server-side: 2 single-use rotations; ingest succeeded after rotation) |
+| Refresh-reuse detection / 30-day expiry live | n/a | **NOT TESTED LIVE** (integration tests only) | **NOT TESTED LIVE** (integration tests only) |
+| Scheduled read / scheduled ingest | NOT TESTED | **NOT TESTED — SHELVED** | **NOT TESTED — SHELVED** |
+| Gmail event trigger | n/a | n/a | **NOT TESTED — SHELVED** |
+
+Not a release claim: scheduled/unattended provider automation is **not verified** for any provider and is not advertised as production-ready. It stays provider-owned and POST-RELEASE.
+
+## AI-9 capability matrix (historical — authentication rows superseded by AI-10 above)
 
 **Verification date: 2026-10-12.** Method: current official documentation read by the agent (Google Gemini Apps Help; OpenAI Help and OpenAI developer docs), plus operator-reported live provider gates. Anything not marked `VERIFIED` or `BLOCKED` was **not** exercised against the operator’s accounts. Operator provider-gate results are recorded in the “AI-9 provider gate results” section below.
 

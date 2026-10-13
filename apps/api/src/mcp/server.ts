@@ -14,6 +14,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { allowedOrigins, env } from '../env';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
+import { protectedResourceMetadataUrl, requestOrigin } from '../lib/oauth';
 import { authenticateMcp, type McpAuthFailure } from './auth';
 import { hasMcpScope, type McpPrincipal } from './principal';
 import { createToolContext, registerTools, requiredScope } from './tools';
@@ -47,10 +48,12 @@ export function buildMcpServer(principal: McpPrincipal, correlationId: string): 
 }
 
 function insufficientScope(c: Context, scope: string) {
+  const issuer = requestOrigin(c);
+  const metadata = issuer ? `, resource_metadata="${protectedResourceMetadataUrl(issuer)}"` : '';
   return c.json(
     { jsonrpc: '2.0', error: { code: -32001, message: `Insufficient scope: ${scope} required.` }, id: null },
     403,
-    { 'WWW-Authenticate': `Bearer realm="jobquest-mcp", error="insufficient_scope", scope="${scope}"` },
+    { 'WWW-Authenticate': `Bearer realm="jobquest-mcp", error="insufficient_scope", scope="${scope}"${metadata}` },
   );
 }
 
@@ -92,7 +95,11 @@ export async function handleMcpRequest(c: Context): Promise<Response> {
       done({ outcome: `auth_${auth.reason.toLowerCase()}` });
       if (auth.reason === 'RATE_LIMITED') return fail(c, 429, 'RATE_LIMITED', AUTH_MESSAGES.RATE_LIMITED, { 'Retry-After': String(auth.retryAfterSeconds ?? 60) });
       if (auth.reason === 'UNAVAILABLE') return fail(c, 503, 'AUTH_UNAVAILABLE', AUTH_MESSAGES.UNAVAILABLE);
-      return fail(c, 401, 'UNAUTHENTICATED', AUTH_MESSAGES[auth.reason], { 'WWW-Authenticate': 'Bearer realm="jobquest-mcp"' });
+      const issuer = requestOrigin(c);
+      const challenge = issuer
+        ? `Bearer realm="jobquest-mcp", resource_metadata="${protectedResourceMetadataUrl(issuer)}", scope="jobquest:read ai:read"`
+        : 'Bearer realm="jobquest-mcp"';
+      return fail(c, 401, 'UNAUTHENTICATED', AUTH_MESSAGES[auth.reason], { 'WWW-Authenticate': challenge });
     }
     const { principal } = auth;
     const who = {

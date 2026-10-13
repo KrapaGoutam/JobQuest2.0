@@ -139,9 +139,11 @@ describe('AI-3 MCP static security boundary', () => {
     expect(s.submitAiResultInput.safeParse({ result: { contract: 'jobquest.ai-result', schema_version: '1.0', provider: 'claude', workflow: 'other', findings: new Array(201).fill({}) } }).success).toBe(false);
   });
 
-  it('OAuth is deferred honestly: no fake authorization-server or protected-resource metadata is advertised', () => {
+  it('AI-10 OAuth is additive: metadata is advertised while connector-token auth remains present', () => {
     const everything = [...mcpSources().map((x) => x.src), strip(read('apps/api/src/routes/mcp.ts')), strip(read('apps/api/src/app.ts'))].join('\n');
-    expect(everything).not.toMatch(/\.well-known|authorization_servers|resource_metadata|oauth-protected-resource|\/authorize|\/token\b|registration_endpoint/i);
+    expect(everything).toMatch(/oauth-protected-resource|resource_metadata|resolveOAuthAccessToken/i);
+    expect(everything).toMatch(/resolveConnectorToken|credentialType: 'connector_token'/);
+    expect(everything).not.toMatch(/registration_endpoint/); // pre-registered clients only
   });
 
   it('MCP is failure-isolated: app.ts mounts a lazy route and never imports the SDK or MCP server module', () => {

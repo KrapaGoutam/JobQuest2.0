@@ -47,6 +47,14 @@ const schema = z.object({
   MCP_AUTH_FAILURE_IP_MAX_PER_MINUTE: z.coerce.number().int().positive().default(30),
   MCP_MAX_BODY_BYTES: z.coerce.number().int().min(1024).max(4_194_304).default(1_048_576),
   MCP_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(25_000),
+  /** AI-10 OAuth 2.1 authorization server lifetimes and abuse ceilings. */
+  OAUTH_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(300).max(3600).default(900),
+  OAUTH_REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().min(3600).max(60 * 60 * 24 * 90).default(60 * 60 * 24 * 30),
+  OAUTH_AUTHORIZATION_CODE_TTL_SECONDS: z.coerce.number().int().min(30).max(300).default(120),
+  OAUTH_AUTHORIZATION_REQUEST_TTL_SECONDS: z.coerce.number().int().min(60).max(600).default(600),
+  OAUTH_AUTHORIZE_IP_MAX_PER_MINUTE: z.coerce.number().int().positive().default(30),
+  OAUTH_TOKEN_IP_MAX_PER_MINUTE: z.coerce.number().int().positive().default(60),
+  OAUTH_CLIENT_USER_MAX_PER_HOUR: z.coerce.number().int().positive().default(10),
   /** Minimum response time for failed auth, to blunt username-enumeration timing. */
   AUTH_FAILURE_FLOOR_MS: z.coerce.number().int().nonnegative().default(600),
 });

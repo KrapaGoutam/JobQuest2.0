@@ -27,6 +27,7 @@ interface SigningMaterial {
   kid: string;
   privateKey: CryptoKey;
   publicKey: CryptoKey;
+  publicJwk: JWK;
 }
 
 let material: Promise<SigningMaterial> | undefined;
@@ -52,9 +53,16 @@ export function signingMaterial(): Promise<SigningMaterial> {
       kid: jwk.kid,
       privateKey: (await importJWK({ ...publicJwk, d: jwk.d, alg: ACCESS_ALG }, ACCESS_ALG)) as CryptoKey,
       publicKey: (await importJWK({ ...publicJwk, alg: ACCESS_ALG }, ACCESS_ALG)) as CryptoKey,
+      publicJwk: { ...publicJwk, kid: jwk.kid, alg: ACCESS_ALG, use: 'sig' },
     };
   })();
   return material;
+}
+
+/** Public signing keys for OAuth/JWT discovery. Never contains private `d`. */
+export async function signingJwks(): Promise<{ keys: JWK[] }> {
+  const { publicJwk } = await signingMaterial();
+  return { keys: [{ ...publicJwk }] };
 }
 
 /** Test hook. */

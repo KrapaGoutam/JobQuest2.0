@@ -12,9 +12,12 @@
 // sender addresses, provider ids) can appear. Job descriptions are NOT returned by the
 // list reads (they can be 30,000 characters); the UI reads them for one lead at a time.
 import {
-  AI_PROVIDERS, EMAIL_ATTENTION_CATEGORIES, EMAIL_CATEGORIES, JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
-  STRONG_MATCH_THRESHOLD, type AiFindingStatus, type AiPriority, type AiProvider, type JsonRecord,
+  AI_PROVIDERS, EMAIL_ACTION_STATES, EMAIL_ATTENTION_CATEGORIES, EMAIL_ATTENTION_OR, EMAIL_CATEGORIES, EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_STAGE_HINTS, EMAIL_URGENCIES,
+  JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS, STRONG_MATCH_THRESHOLD, emailCategoryGroup, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency, urgencyFromPriority,
+  type AiFindingStatus, type AiPriority, type AiProvider, type EmailActionState, type EmailGroup, type EmailStageHint, type EmailUrgency, type JsonRecord,
 } from '../lib/aiContract';
+import type { MatchClient } from './aiApplicationMatchService';
+import { matchEmailsToApplications, type EmailApplicationMatch } from './aiEmailMatchService';
 import type { AiPage, AiPageRequest, AiReadContext, AiReadDeps, AiReadResult } from './aiReadService';
 import { dbFail, fail, num, parsePage, prepare, rec, s, sliced, sn } from './aiReadSupport';
 
@@ -173,7 +176,13 @@ export async function listJobLeads(ctx: AiReadContext, filters?: JobLeadFilters,
 export interface EmailFilters extends CommonFilters {
   category?: (typeof EMAIL_CATEGORIES)[number]; company?: string; needsAttention?: boolean;
   receivedSince?: string; receivedBefore?: string; // ISO-8601 with offset
+  group?: EmailGroup; urgency?: EmailUrgency; actionState?: EmailActionState;
+  /** Derived at read time from the owner's applications; evaluated over a bounded window (EMAIL_MATCH_FILTER_WINDOW). */
+  applicationMatch?: (typeof EMAIL_MATCH_STATES)[number];
 }
+
+/** Most recent items examined when filtering by application match (the match is derived, so it cannot be a SQL filter). */
+export const EMAIL_MATCH_FILTER_WINDOW = 200;
 
 export interface EmailEventDto {
   id: string; ownerId: string; provider: AiProvider; status: AiFindingStatus; priority: AiPriority; confidence: number | null;
@@ -181,18 +190,39 @@ export interface EmailEventDto {
   /** When the email was received (the finding's occurred_at). */
   receivedAt: string | null; deadline: string | null; discoveredAt: string;
   senderName: string | null; senderDomain: string | null; subject: string | null;
-  company: string | null; roleTitle: string | null; nextStep: string | null; needsAttention: boolean;
+  company: string | null; roleTitle: string | null;
+  /** What the person should do (AI-11B `action_summary`; stored as `next_step`). Never an instruction to JobQuest. */
+  nextStep: string | null; needsAttention: boolean;
+  /** AI-11B. job_related | other, derived from the category (null for an unknown category). */
+  group: EmailGroup | null;
+  /** HIGH | MEDIUM | LOW: the stored priority seen through a fixed mapping. */
+  urgency: EmailUrgency;
+  /** needs_action | no_action | null (the provider did not say). */
+  actionState: EmailActionState | null;
+  /** The provider suggests a reply draft. A recommendation only: JobQuest never drafts or sends mail. */
+  draftRecommended: boolean;
+  /** A pipeline signal the email suggests. A hint only: it never changes an application. */
+  stageHint: EmailStageHint | null;
+  /** The run that produced this item. */
+  runId: string | null;
+  /** Derived from the owner's applications. Null = not evaluated (e.g. the lookup failed); never guessed. */
+  applicationMatch: EmailApplicationMatch | null;
 }
 
-const EMAIL_COLUMNS = 'id, user_id, provider, status, priority, confidence, category, title, summary, evidence, occurred_at, due_at, created_at, payload';
-const ATTENTION_OR = `priority.in.(HIGH,CRITICAL),category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null,payload->>needs_attention.eq.true`;
+const EMAIL_COLUMNS = 'id, user_id, run_id, provider, status, priority, confidence, category, title, summary, evidence, occurred_at, due_at, created_at, payload';
 
-/** Mirrors the `needsAttention` list filter exactly (a NEW email that is urgent, actionable, dated or flagged by the provider). */
+/**
+ * Mirrors the `needsAttention` list filter exactly: an open email that is urgent or provider-flagged, or - only when the
+ * provider gave no explicit action state - in an actionable category or dated. An explicit `no_action` is authoritative.
+ */
 export function emailNeedsAttention(e: { status: string; priority: string; category: string | null; dueAt: string | null; payload: JsonRecord }): boolean {
   if (e.status !== 'NEW') return false;
-  return e.priority === 'HIGH' || e.priority === 'CRITICAL' || (e.category !== null && (EMAIL_ATTENTION_CATEGORIES as readonly string[]).includes(e.category))
-    || e.dueAt !== null || e.payload.needs_attention === true;
+  if (e.priority === 'HIGH' || e.priority === 'CRITICAL' || e.payload.needs_attention === true) return true;
+  if (e.payload.action_state !== undefined && e.payload.action_state !== null) return false;
+  return (e.category !== null && (EMAIL_ATTENTION_CATEGORIES as readonly string[]).includes(e.category)) || e.dueAt !== null;
 }
+
+const oneOfList = <T extends string>(v: unknown, allowed: readonly T[]): T | null => (typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : null);
 
 export function toEmailEvent(r: Row): EmailEventDto {
   const payload = rec(r.payload);
@@ -203,13 +233,32 @@ export function toEmailEvent(r: Row): EmailEventDto {
     senderName: str(payload.sender_name, 200), senderDomain: str(payload.sender_domain, 255), subject: str(payload.subject, 200),
     company: str(payload.company, 200), roleTitle: str(payload.role_title, 300), nextStep: str(payload.next_step, 300),
     needsAttention: emailNeedsAttention({ status: s(r.status), priority: s(r.priority), category: sn(r.category), dueAt: sn(r.due_at), payload }),
+    group: emailCategoryGroup(sn(r.category)), urgency: urgencyFromPriority(s(r.priority)),
+    actionState: oneOfList(payload.action_state, EMAIL_ACTION_STATES), draftRecommended: payload.draft_recommended === true,
+    stageHint: oneOfList(payload.application_stage_hint, EMAIL_STAGE_HINTS),
+    runId: sn(r.run_id), applicationMatch: null,
   };
 }
 
 const EMAIL_FILTERS = {
-  enums: { ...PROVIDER_STATUS, category: EMAIL_CATEGORIES as readonly string[] },
+  enums: {
+    ...PROVIDER_STATUS, category: EMAIL_CATEGORIES as readonly string[], group: EMAIL_GROUPS as readonly string[], urgency: EMAIL_URGENCIES as readonly string[],
+    actionState: EMAIL_ACTION_STATES as readonly string[], applicationMatch: EMAIL_MATCH_STATES as readonly string[],
+  },
   texts: ['company'], bools: ['needsAttention'], times: ['receivedSince', 'receivedBefore'],
 } as const;
+
+/** Attaches the derived application match to job-related items. Best-effort: a lookup failure leaves `applicationMatch` null. */
+export async function attachEmailApplicationMatches(db: Db, ws: string, items: EmailEventDto[]): Promise<boolean> {
+  if (!items.some((e) => e.group === 'job_related')) return true;
+  try {
+    const matches = await matchEmailsToApplications(db as MatchClient, ws, items.map((e) => ({
+      id: e.id, ownerId: e.ownerId, group: e.group, company: e.company, roleTitle: e.roleTitle, receivedAt: e.receivedAt,
+    })));
+    for (const e of items) e.applicationMatch = matches.get(e.id) ?? null;
+    return true;
+  } catch { return false; }
+}
 
 /** Newest received first. Findings without a received time cannot exist for this kind (the contract requires it). */
 export async function listEmailIntelligence(ctx: AiReadContext, filters?: EmailFilters, page?: AiPageRequest, deps: AiReadDeps = {}): Promise<AiReadResult<AiPage<EmailEventDto>>> {
@@ -219,14 +268,49 @@ export async function listEmailIntelligence(ctx: AiReadContext, filters?: EmailF
   const v = f.value;
   let q = p.db.from('ai_findings').select(EMAIL_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'email_event');
   q = applyCommon(q, v);
-  if (v.category) q = q.eq('category', v.category);
+  if (v.group) q = q.in('category', emailGroupCategories(v.group));
+  if (v.category) q = q.in('category', emailCategoryMembers(v.category));
+  if (v.urgency) q = q.in('priority', prioritiesForUrgency(v.urgency));
+  if (v.actionState) q = q.eq('payload->>action_state', v.actionState);
   if (v.company) q = q.ilike('payload->>company', `%${v.company}%`);
-  if (v.needsAttention === true) q = q.eq('status', 'NEW').or(ATTENTION_OR);
+  if (v.needsAttention === true) q = q.eq('status', 'NEW').or(EMAIL_ATTENTION_OR);
   if (v.receivedSince) q = q.gte('occurred_at', v.receivedSince);
   if (v.receivedBefore) q = q.lt('occurred_at', v.receivedBefore);
-  const { data, error } = await q.order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(pg.from, pg.to);
+  q = q.order('occurred_at', { ascending: false }).order('id', { ascending: false });
+
+  if (v.applicationMatch) {
+    // The match is derived from the owner's applications, so it is evaluated over a bounded window of the newest items.
+    const { data, error } = await q.range(0, EMAIL_MATCH_FILTER_WINDOW - 1);
+    if (error) return dbFail(error);
+    const all = ((data ?? []) as Row[]).map(toEmailEvent);
+    if (!(await attachEmailApplicationMatches(p.db as Db, p.ws, all))) return fail('READ_FAILED');
+    const kept = all.filter((e) => e.applicationMatch?.state === v.applicationMatch);
+    return { ok: true, data: { items: kept.slice(pg.from, pg.from + pg.size), page: pg.page, pageSize: pg.size, hasNext: kept.length > pg.from + pg.size } };
+  }
+
+  const { data, error } = await q.range(pg.from, pg.to);
   if (error) return dbFail(error);
-  return { ok: true, data: sliced(((data ?? []) as Row[]).map(toEmailEvent), pg.page, pg.size) };
+  const result = sliced(((data ?? []) as Row[]).map(toEmailEvent), pg.page, pg.size);
+  await attachEmailApplicationMatches(p.db as Db, p.ws, result.items); // optional context: never fails the list
+  return { ok: true, data: result };
+}
+
+/** Most email items one matches lookup accepts (one UI page is far smaller). */
+export const EMAIL_MATCH_LOOKUP_MAX = 50;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The derived application match for specific email items (the AI Hub Email page reads the rows itself under RLS and asks
+ * for the matches here). Read-only; runs AS THE CALLER; an id that is not a readable email in this workspace is simply absent.
+ */
+export async function getEmailApplicationMatches(ctx: AiReadContext, ids: readonly string[], deps: AiReadDeps = {}): Promise<AiReadResult<Record<string, EmailApplicationMatch>>> {
+  const p = prepare(ctx, deps); if (!p.ok) return p;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > EMAIL_MATCH_LOOKUP_MAX || !ids.every((i) => typeof i === 'string' && UUID_RE.test(i))) return fail('INVALID_FILTER', 'ids');
+  const { data, error } = await p.db.from('ai_findings').select(EMAIL_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'email_event').in('id', ids.map((i) => i.toLowerCase()));
+  if (error) return dbFail(error);
+  const items = ((data ?? []) as Row[]).map(toEmailEvent);
+  if (!(await attachEmailApplicationMatches(p.db as Db, p.ws, items))) return fail('READ_FAILED');
+  return { ok: true, data: Object.fromEntries(items.flatMap((e) => (e.applicationMatch ? [[e.id, e.applicationMatch] as const] : []))) };
 }
 
 // ---- recruiter intelligence -----------------------------------------------------------

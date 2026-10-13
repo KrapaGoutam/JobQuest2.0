@@ -218,7 +218,7 @@ describe('email intelligence validation', () => {
   const email = (over: Record<string, unknown> = {}, payload: Record<string, unknown> = {}) => ({ ...clone(external.emailTriage), findings: [emailTriageFinding(over, payload)] });
 
   it('accepts exactly the approved categories, case-insensitively', () => {
-    expect(EMAIL_CATEGORIES).toHaveLength(10);
+    expect(EMAIL_CATEGORIES).toHaveLength(18); // 10 job-related + 4 other (AI-11B) + 4 legacy AI-6 spellings
     for (const c of EMAIL_CATEGORIES) expect(first(email({ category: c })).category).toBe(c);
     expect(first(email({ category: 'Interview Invitation' })).category).toBe('interview_invitation');
     expect(codes(invalidExternal.badEmailCategory)).toContain('email_category');

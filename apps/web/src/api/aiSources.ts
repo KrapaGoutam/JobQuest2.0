@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import {
-  EMAIL_ATTENTION_OR, SOURCE_PAGE_SIZE, SOURCE_STATUSES, SOURCE_WORKFLOW, clampScore, resolveDateRange, sanitizeSearch,
+  EMAIL_ATTENTION_OR, SOURCE_PAGE_SIZE, SOURCE_STATUSES, SOURCE_WORKFLOW, clampScore, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency,
+  resolveDateRange, sanitizeSearch,
   toEmailView, toJobLeadView, toRecruiterView,
   type EmailFilters, type EmailRow, type EmailView, type JobLeadFilters, type JobLeadRow, type JobLeadView,
   type RecruiterFilters, type RecruiterRow, type RecruiterView, type SourceKind,
@@ -94,7 +95,10 @@ export async function fetchEmailPage(workspaceId: string, f: EmailFilters, timeZ
   let q: Query = client.from('ai_findings').select(EMAIL_COLUMNS).eq('workspace_id', workspaceId).eq('kind', 'email_event');
   q = applyStatus(q, f.status);
   if (f.provider !== 'ALL') q = q.eq('provider', f.provider);
-  if (f.category !== 'ALL') q = q.eq('category', f.category);
+  // AI-11B: group, canonical category (matching its legacy spellings too) and urgency (the stored priority) are all SQL filters.
+  if (f.group === 'job_related' || f.group === 'other') q = q.in('category', emailGroupCategories(f.group));
+  if (f.category !== 'ALL') q = q.in('category', emailCategoryMembers(f.category));
+  if (f.urgency === 'HIGH' || f.urgency === 'MEDIUM' || f.urgency === 'LOW') q = q.in('priority', prioritiesForUrgency(f.urgency));
   const company = sanitizeSearch(f.company);
   if (company) q = q.ilike('payload->>company', `%${company}%`);
   if (f.needsAttention) q = q.eq('status', 'NEW').or(EMAIL_ATTENTION_OR);
@@ -104,6 +108,17 @@ export async function fetchEmailPage(workspaceId: string, f: EmailFilters, timeZ
   const { data, error } = await q.order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
   if (error) throw fail();
   return sliceRows<EmailRow, EmailView>(data, toEmailView);
+}
+
+/**
+ * The "Needs attention" headline: OPEN (NEW) emails whose urgency is HIGH, across the whole workspace (not just the page or the
+ * filters on screen). A head-only count under RLS; the caller degrades to "unavailable" if it fails.
+ */
+export async function fetchEmailHighUrgencyCount(workspaceId: string, client: Client = supabase): Promise<number> {
+  const { count, error } = await client.from('ai_findings').select('id', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId).eq('kind', 'email_event').eq('status', 'NEW').in('priority', prioritiesForUrgency('HIGH'));
+  if (error || typeof count !== 'number') throw fail();
+  return count;
 }
 
 // ---- recruiters -----------------------------------------------------------------------------------------

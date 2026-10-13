@@ -5,12 +5,14 @@ import {
   AI_CONTRACT_NAME, AI_CONTRACT_VERSION, AI_EVENT_PATTERN, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION, DIGEST_SECTION_KEYS, DIGEST_SECTION_STATUSES, DIGEST_SUMMARY_KEYS, AI_FINDING_KINDS, AI_LIMITS,
   AI_MAX_SUPPORTED_MINOR, AI_PRIORITIES, AI_PROVIDERS, AI_SOURCE_TYPES, AI_SUGGESTION_ACTIONS,
   AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS,
-  EMAIL_CATEGORIES, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES, JOB_SALARY_PERIODS, JOB_WORK_ARRANGEMENTS,
+  EMAIL_ACTION_STATES, EMAIL_CATEGORIES, EMAIL_GROUPS, EMAIL_STAGE_HINTS, EMAIL_URGENCIES, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES, JOB_SALARY_PERIODS, JOB_WORK_ARRANGEMENTS,
   RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
   CALENDAR_CATEGORIES, CALENDAR_CATEGORY_ALIASES, CALENDAR_DEADLINE_CATEGORIES, CALENDAR_LIMITS, CALENDAR_PAYLOAD_VERSION,
   CALENDAR_RAW_KEYS, CALENDAR_STATUSES,
-  type AiFindingKind, type AiProvider, type AiSuggestionTargetType, type AiTriggerType, type CalendarCategory, type CalendarStatus,
+  type AiFindingKind, type AiPriority, type AiProvider, type AiSuggestionTargetType, type AiTriggerType, type CalendarCategory, type CalendarStatus,
+  type EmailUrgency,
 } from './constants';
+import { emailCategoryGroup, resolveEmailUrgency } from './emailTriage';
 import { isActionType, validateActionProposal } from './actions';
 import { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
 import { isIanaTimeZone, localMidnight, localToInstant, stringOffsetMinutes, zoneOffsetMinutes } from './calendarTime';
@@ -29,6 +31,8 @@ class Ctx {
   errors: AiIssue[] = [];
   warnings: AiIssue[] = [];
   unknown = 0;
+  /** Reference instant (ms) for time-relative rules: the run's generated_at, so a submission validates identically every time. */
+  refTime = Date.now();
   err(path: string, code: string, message: string) { this.errors.push({ path, code, message }); }
   warn(path: string, code: string, message: string) { this.warnings.push({ path, code, message }); }
   /** Drop + count every key outside the allowlist. */
@@ -444,7 +448,10 @@ function jobLeadPayload(
 // Intelligence about a job-search email, NOT a mailbox copy: no body, no attachments, no
 // full address (display name + sender domain only), bounded subject/summary/evidence.
 
-const EMAIL_KEYS = ['version', 'sender_name', 'sender_domain', 'from_domain', 'subject', 'company', 'role_title', 'next_step', 'deadline', 'needs_attention'] as const;
+const EMAIL_KEYS = [
+  'version', 'sender_name', 'sender_domain', 'from_domain', 'subject', 'company', 'role_title', 'next_step', 'action_summary', 'deadline', 'deadline_at',
+  'needs_attention', 'group', 'urgency', 'action_state', 'draft_recommended', 'application_stage_hint',
+] as const;
 const RAW_BODY_KEYS = new Set(['body', 'raw_body', 'body_text', 'body_html', 'html', 'html_body', 'full_text', 'message_body', 'email_body', 'content', 'text', 'attachments']);
 const DOMAIN = /^(?=.{3,255}$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
@@ -452,10 +459,32 @@ function warnRawBody(c: Ctx, o: Obj, path: string) {
   for (const k of Object.keys(o)) if (RAW_BODY_KEYS.has(k)) c.warn(`${path}.${k}`, 'raw_body_rejected', 'message bodies and attachments are never stored; send a concise summary and a short evidence excerpt instead');
 }
 
-function emailPayload(c: Ctx, v: unknown, path: string, raw: Obj): SourceParts & { dueFromDeadline: string | null } {
+// Privacy (AI-11B): links (often tracking links), full addresses and phone numbers are never retained from email-derived text.
+const URL_TEXT = /\b(?:https?:\/\/|www\.)[^\s<>"')\]]+/gi;
+const ADDRESS_TEXT = /[^\s<>"'(),;:]+@[^\s<>"'(),;:]+\.[^\s<>"'(),;:]+/g;
+const PHONE_TEXT = /(?:\+\d{1,3}[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]\d{3}[\s.-]\d{4}\b|\+\d[\d\s.-]{8,}\d/g;
+export function redactEmailText(value: string): string {
+  return value.replace(URL_TEXT, '').replace(ADDRESS_TEXT, '').replace(PHONE_TEXT, '')
+    .replace(/<\s*>|\(\s*\)|\[\s*\]/g, '').replace(/[ \t]{2,}/g, ' ').trim();
+}
+function redacted(c: Ctx, v: string | null, path: string): string | null {
+  if (v === null) return null;
+  const r = redactEmailText(v);
+  if (r !== v) c.warn(path, 'email_text_redacted', 'links, email addresses and phone numbers are not stored');
+  return r || null;
+}
+
+interface EmailParts extends SourceParts {
+  dueFromDeadline: string | null;
+  urgency: EmailUrgency | null;
+  /** true = needs action, false = explicitly none, null = the provider did not say. */
+  actionNeeded: boolean | null;
+}
+
+function emailPayload(c: Ctx, v: unknown, path: string, raw: Obj, category: string | null): EmailParts {
   warnRawBody(c, raw, path.replace(/\.payload$/, ''));
   const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION };
-  const empty = { payload: {}, identity: {}, dueFromDeadline: null };
+  const empty: EmailParts = { payload: {}, identity: {}, dueFromDeadline: null, urgency: null, actionNeeded: null };
   if (v !== undefined && v !== null && !isObj(v)) { c.err(path, 'type', 'must be an object'); return empty; }
   const o: Obj = isObj(v) ? v : {};
   warnRawBody(c, o, path);
@@ -470,20 +499,55 @@ function emailPayload(c: Ctx, v: unknown, path: string, raw: Obj): SourceParts &
     const d = (domRaw.includes('@') ? domRaw.slice(domRaw.lastIndexOf('@') + 1) : domRaw).replace(/[>\s]/g, '').toLowerCase();
     if (DOMAIN.test(d)) domain = d; else c.err(`${path}.sender_domain`, 'domain', 'must be a sender domain such as example.com');
   }
-  const subject = text(c, o.subject, `${path}.subject`, SOURCE_KEY_LIMITS.short, { truncate: true });
+  const subject = redacted(c, text(c, o.subject, `${path}.subject`, SOURCE_KEY_LIMITS.short, { truncate: true }), `${path}.subject`);
   const company = text(c, o.company, `${path}.company`, SOURCE_KEY_LIMITS.short);
   const role = text(c, o.role_title, `${path}.role_title`, SOURCE_KEY_LIMITS.medium);
-  const next = text(c, o.next_step, `${path}.next_step`, SOURCE_KEY_LIMITS.medium, { truncate: true });
-  const deadline = timestamp(c, o.deadline, `${path}.deadline`);
+  // `action_summary` is the canonical AI-11B name for what AI-6 called `next_step`: ONE stored field (`next_step`).
+  const nextIn = text(c, o.next_step, `${path}.next_step`, SOURCE_KEY_LIMITS.medium, { truncate: true });
+  const actionIn = text(c, o.action_summary, `${path}.action_summary`, SOURCE_KEY_LIMITS.medium, { truncate: true });
+  if (nextIn && actionIn && nextIn !== actionIn) c.warn(`${path}.next_step`, 'action_summary_preferred', 'both action_summary and next_step were sent; action_summary is used');
+  const next = redacted(c, actionIn ?? nextIn, `${path}.action_summary`);
+  const deadlineIn = timestamp(c, o.deadline, `${path}.deadline`);
+  const deadlineAtIn = timestamp(c, o.deadline_at, `${path}.deadline_at`);
+  if (deadlineIn && deadlineAtIn && deadlineIn !== deadlineAtIn) c.warn(`${path}.deadline`, 'deadline_at_preferred', 'both deadline_at and deadline were sent; deadline_at is used');
+  const deadline = deadlineAtIn ?? deadlineIn; // never invented: absent stays null
   let attention: boolean | null = null;
   if (o.needs_attention !== undefined && o.needs_attention !== null) {
     if (typeof o.needs_attention === 'boolean') attention = o.needs_attention; else c.err(`${path}.needs_attention`, 'type', 'must be a boolean');
   }
+
+  // ---- AI-11B triage fields -----------------------------------------------------------------------------------
+  const derivedGroup = emailCategoryGroup(category);
+  const group = enumField(c, o.group, `${path}.group`, EMAIL_GROUPS);
+  if (group && derivedGroup && group !== derivedGroup) c.err(`${path}.group`, 'email_group', `group "${group}" does not match category "${category}" (${derivedGroup})`);
+  const urgencyRaw = o.urgency === undefined || o.urgency === null ? null : typeof o.urgency === 'string' ? o.urgency.trim().toUpperCase() : o.urgency;
+  const urgency = urgencyRaw === null ? null : oneOf(c, urgencyRaw, `${path}.urgency`, EMAIL_URGENCIES, false);
+  const actionState = enumField(c, o.action_state, `${path}.action_state`, EMAIL_ACTION_STATES);
+  if (actionState) {
+    if (attention !== null && attention !== (actionState === 'needs_action')) c.warn(`${path}.needs_attention`, 'needs_attention_conflict', 'needs_attention disagrees with action_state; action_state is used');
+    attention = actionState === 'needs_action';
+  }
+  const actionNeeded = actionState ? actionState === 'needs_action' : attention === true ? true : null;
+  let draft: boolean | null = null;
+  if (o.draft_recommended !== undefined && o.draft_recommended !== null) {
+    if (typeof o.draft_recommended !== 'boolean') c.err(`${path}.draft_recommended`, 'type', 'must be a boolean');
+    else if (o.draft_recommended && actionNeeded !== true) c.warn(`${path}.draft_recommended`, 'draft_without_action', 'draft_recommended needs an action-needed email; dropped');
+    else draft = o.draft_recommended; // a recommendation only: JobQuest never drafts or sends mail
+  }
+  let hint: string | null = null;
+  if (o.application_stage_hint !== undefined && o.application_stage_hint !== null) {
+    const h = typeof o.application_stage_hint === 'string' ? o.application_stage_hint.trim().toUpperCase().replace(/[\s-]+/g, '_') : o.application_stage_hint;
+    const checked = oneOf(c, h, `${path}.application_stage_hint`, EMAIL_STAGE_HINTS, false);
+    if (checked && derivedGroup === 'other') c.warn(`${path}.application_stage_hint`, 'stage_hint_not_job_related', 'a stage hint applies to job-related mail only; dropped');
+    else hint = checked; // a hint only: it never changes an application
+  }
+
   const put = (k: string, val: JsonValue | null) => { if (val !== null) out[k] = val; };
   put('sender_name', senderName); put('sender_domain', domain); put('subject', subject); put('company', company);
   put('role_title', role); put('next_step', next); put('deadline', deadline); put('needs_attention', attention);
+  put('group', derivedGroup); put('action_state', actionState); put('draft_recommended', draft); put('application_stage_hint', hint);
   if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', 'email payload too large');
-  return { payload: out, identity: { sender: [senderName, domain].filter(Boolean).join('|'), subject }, dueFromDeadline: deadline };
+  return { payload: out, identity: { sender: [senderName, domain].filter(Boolean).join('|'), subject }, dueFromDeadline: deadline, urgency, actionNeeded };
 }
 
 // ---- recruiter_intel -----------------------------------------------------------------------
@@ -777,15 +841,16 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
   c.strip(raw, FINDING_KEYS, path);
   const e0 = c.errors.length;
   const kind = oneOf(c, raw.kind, `${path}.kind`, AI_FINDING_KINDS);
-  const title = text(c, raw.title, `${path}.title`, AI_LIMITS.title, { required: true });
-  const summary = text(c, raw.summary, `${path}.summary`, AI_LIMITS.summary);
+  let title = text(c, raw.title, `${path}.title`, AI_LIMITS.title, { required: true });
+  let summary = text(c, raw.summary, `${path}.summary`, AI_LIMITS.summary);
   const category = text(c, raw.category, `${path}.category`, AI_LIMITS.category);
-  const priority = raw.priority === undefined || raw.priority === null ? 'NORMAL' : oneOf(c, raw.priority, `${path}.priority`, AI_PRIORITIES);
+  const explicitPriority = raw.priority === undefined || raw.priority === null ? null : oneOf(c, raw.priority, `${path}.priority`, AI_PRIORITIES);
+  let priority: AiPriority | null = raw.priority === undefined || raw.priority === null ? 'NORMAL' : explicitPriority;
   const conf = confidence(c, raw.confidence, `${path}.confidence`);
   const occurred_at = timestamp(c, raw.occurred_at, `${path}.occurred_at`);
   const due_at = timestamp(c, raw.due_at, `${path}.due_at`);
   // Evidence: deterministic truncation (never stores more than 500 chars of source text).
-  const evidence = text(c, raw.evidence, `${path}.evidence`, AI_LIMITS.evidence, { truncate: true });
+  let evidence = text(c, raw.evidence, `${path}.evidence`, AI_LIMITS.evidence, { truncate: true });
 
   let dedupeIn: DedupeInput = {};
   if (!isObj(raw.dedupe)) c.err(`${path}.dedupe`, 'required', 'dedupe identity object is required');
@@ -869,9 +934,21 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
     if (!cat || !(EMAIL_CATEGORIES as readonly string[]).includes(cat)) c.err(`${path}.category`, 'email_category', `must be one of: ${EMAIL_CATEGORIES.join(', ')}`);
     else categoryOut = cat;
     if (!occurred_at) c.err(`${path}.occurred_at`, 'required', 'the email received time is required');
-    const r = emailPayload(c, raw.payload, `${path}.payload`, raw);
+    const r = emailPayload(c, raw.payload, `${path}.payload`, raw, categoryOut);
     body = r.payload; identity = { ...r.identity, occurred_at };
     if (!dueAt && r.dueFromDeadline) dueAt = r.dueFromDeadline;
+    // Email-derived free text keeps no links, addresses or phone numbers.
+    title = redacted(c, title, `${path}.title`);
+    if (!title) c.err(`${path}.title`, 'required', 'must not be empty');
+    summary = redacted(c, summary, `${path}.summary`);
+    evidence = redacted(c, evidence, `${path}.evidence`);
+    // ONE stored urgency: the existing priority, adjusted by deterministic rules (never invented, never an opaque score).
+    if (categoryOut) {
+      const u = resolveEmailUrgency({ category: categoryOut, urgency: r.urgency, priority: explicitPriority, actionNeeded: r.actionNeeded, dueAt, refTime: c.refTime });
+      if (u.conflict) c.warn(`${path}.payload.urgency`, 'priority_urgency_conflict', 'urgency and priority disagree; urgency is used');
+      if (u.adjusted) c.warn(`${path}.payload.urgency`, 'urgency_adjusted', `urgency adjusted: ${u.adjusted}`);
+      priority = u.priority;
+    }
   } else if (kind === 'recruiter_intel') {
     const r = recruiterPayload(c, raw.payload, `${path}.payload`, { sourceUrl });
     body = r.payload; identity = r.identity;
@@ -979,6 +1056,9 @@ export function validateAiResult(input: unknown): AiValidationResult {
       model_hint: text(c, input.run.model_hint, 'run.model_hint', AI_LIMITS.modelHint),
     };
   }
+
+  const generated = run.generated_at ? Date.parse(run.generated_at) : NaN;
+  if (Number.isFinite(generated)) c.refTime = generated;
 
   const sources: AiSourceRef[] = [];
   if (input.sources !== undefined) {

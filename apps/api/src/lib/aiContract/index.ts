@@ -4,5 +4,6 @@ export { validateAiResult, toIngestRunInput } from './validate';
 export { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, normalizeIdentityText, type DedupeInput, type DedupeResult } from './dedupe';
 export { isIanaTimeZone, localMidnight, localToInstant, zoneOffsetAt, type LocalResolution } from './calendarTime';
 export { canonicalJson, contentFingerprint, sha256Hex } from './canonical';
+export * from './emailTriage';
 export * from './actions';
 export * from './automation';

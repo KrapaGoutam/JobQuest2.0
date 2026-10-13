@@ -9,11 +9,48 @@ import { safeHttpUrl } from './aiHub';
 import { shiftDay } from './aiDigest';
 import { zonedWallTimeToUtcIso } from './time';
 
-export const EMAIL_CATEGORIES = [
-  'recruiter_reply', 'interview_invitation', 'assessment', 'rejection', 'application_confirmation',
-  'follow_up', 'scheduling', 'reschedule', 'deadline', 'other_job_search',
+// AI-11B email taxonomy (mirrors the server; tests/unit/ai-11b-email-ui.test.ts fails on drift).
+export const EMAIL_GROUPS = ['job_related', 'other'] as const;
+export const EMAIL_JOB_CATEGORIES = [
+  'recruiter_reply', 'application_confirmation', 'interview', 'interview_scheduling', 'assessment',
+  'follow_up', 'status_update', 'rejection', 'offer', 'other_job_search',
 ] as const;
-export const EMAIL_ATTENTION_CATEGORIES = ['recruiter_reply', 'interview_invitation', 'assessment', 'scheduling', 'reschedule', 'deadline', 'follow_up'] as const;
+export const EMAIL_OTHER_CATEGORIES = ['important_account', 'notification', 'newsletter', 'other'] as const;
+/** AI-6 values stay valid (stored as sent) and read as the canonical category. */
+export const EMAIL_LEGACY_CATEGORY_ALIASES: Record<string, string> = {
+  interview_invitation: 'interview', scheduling: 'interview_scheduling', reschedule: 'interview_scheduling', deadline: 'other_job_search',
+};
+export const EMAIL_CATEGORIES = [
+  ...EMAIL_JOB_CATEGORIES, ...EMAIL_OTHER_CATEGORIES, 'interview_invitation', 'scheduling', 'reschedule', 'deadline',
+] as const;
+/** Categories offered in the filter: the canonical ones (a canonical filter also matches its legacy spellings). */
+export const EMAIL_FILTER_CATEGORIES = [...EMAIL_JOB_CATEGORIES, ...EMAIL_OTHER_CATEGORIES] as const;
+export const EMAIL_ATTENTION_CATEGORIES = [
+  'recruiter_reply', 'interview_invitation', 'assessment', 'scheduling', 'reschedule', 'deadline', 'follow_up', 'interview', 'interview_scheduling', 'offer',
+] as const;
+export const EMAIL_URGENCIES = ['HIGH', 'MEDIUM', 'LOW'] as const;
+export const EMAIL_ACTION_STATES = ['needs_action', 'no_action'] as const;
+export const EMAIL_STAGE_HINTS = ['APPLIED', 'ASSESSMENT', 'RECRUITER_SCREEN', 'INTERVIEW', 'FINAL_INTERVIEW', 'OFFER', 'REJECTED'] as const;
+export type EmailGroup = (typeof EMAIL_GROUPS)[number];
+export type EmailUrgency = (typeof EMAIL_URGENCIES)[number];
+
+export function emailCategoryGroup(category: string | null | undefined): EmailGroup | null {
+  const c = category ? EMAIL_LEGACY_CATEGORY_ALIASES[category] ?? category : null;
+  if (!c) return null;
+  if ((EMAIL_JOB_CATEGORIES as readonly string[]).includes(c)) return 'job_related';
+  if ((EMAIL_OTHER_CATEGORIES as readonly string[]).includes(c)) return 'other';
+  return null;
+}
+/** Every STORED value that reads as `canonical` (itself plus legacy spellings). */
+export const emailCategoryMembers = (canonical: string): string[] =>
+  [canonical, ...Object.entries(EMAIL_LEGACY_CATEGORY_ALIASES).filter(([, to]) => to === canonical).map(([from]) => from)];
+export function emailGroupCategories(group: EmailGroup): string[] {
+  const own = group === 'job_related' ? EMAIL_JOB_CATEGORIES : EMAIL_OTHER_CATEGORIES;
+  return [...own, ...Object.entries(EMAIL_LEGACY_CATEGORY_ALIASES).filter(([, to]) => (own as readonly string[]).includes(to)).map(([from]) => from)];
+}
+export const urgencyFromPriority = (p: string | null | undefined): EmailUrgency =>
+  p === 'HIGH' || p === 'CRITICAL' ? 'HIGH' : p === 'LOW' || p === 'INFO' ? 'LOW' : 'MEDIUM';
+export const prioritiesForUrgency = (u: EmailUrgency): string[] => (u === 'HIGH' ? ['HIGH', 'CRITICAL'] : u === 'LOW' ? ['LOW', 'INFO'] : ['NORMAL']);
 export const JOB_WORK_ARRANGEMENTS = ['remote', 'hybrid', 'onsite'] as const;
 export const JOB_EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'temporary', 'internship', 'freelance', 'other'] as const;
 /** A "strong match" is a provider match score >= this value (0..100). No score => never strong. */
@@ -26,6 +63,13 @@ export const EMAIL_CATEGORY_LABELS: Record<string, string> = {
   recruiter_reply: 'Recruiter reply', interview_invitation: 'Interview invitation', assessment: 'Assessment', rejection: 'Rejection',
   application_confirmation: 'Application confirmation', follow_up: 'Follow-up', scheduling: 'Scheduling', reschedule: 'Reschedule',
   deadline: 'Deadline', other_job_search: 'Other job-search email',
+  interview: 'Interview', interview_scheduling: 'Interview scheduling', status_update: 'Status update', offer: 'Offer',
+  important_account: 'Important account', notification: 'Notification', newsletter: 'Newsletter', other: 'Other mail',
+};
+export const EMAIL_GROUP_LABELS: Record<EmailGroup, string> = { job_related: 'Job related', other: 'Other mail' };
+export const EMAIL_URGENCY_LABELS: Record<EmailUrgency, string> = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
+export const EMAIL_STAGE_HINT_LABELS: Record<string, string> = {
+  APPLIED: 'Applied', ASSESSMENT: 'Assessment', RECRUITER_SCREEN: 'Recruiter screen', INTERVIEW: 'Interview', FINAL_INTERVIEW: 'Final interview', OFFER: 'Offer', REJECTED: 'Rejected',
 };
 export const WORK_ARRANGEMENT_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' };
 export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
@@ -160,8 +204,14 @@ export function jobLeadExport(v: JobLeadView): Record<string, unknown> {
 
 export interface EmailFilters {
   provider: string; status: SourceStatusFilter; category: string; company: string; needsAttention: boolean; received: DateRange;
+  /** AI-11B: 'ALL' | 'job_related' | 'other'. */
+  group: string;
+  /** AI-11B: 'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'. */
+  urgency: string;
 }
-export const DEFAULT_EMAIL_FILTERS: EmailFilters = { provider: 'ALL', status: 'ACTIVE', category: 'ALL', company: '', needsAttention: false, received: { from: '', to: '' } };
+export const DEFAULT_EMAIL_FILTERS: EmailFilters = {
+  provider: 'ALL', status: 'ACTIVE', category: 'ALL', company: '', needsAttention: false, received: { from: '', to: '' }, group: 'ALL', urgency: 'ALL',
+};
 
 export interface EmailRow {
   id: string; user_id: string; provider: string; status: string; priority: string; confidence: number | string | null; category: string | null;
@@ -172,26 +222,95 @@ export interface EmailView {
   id: string; ownerId: string; provider: string; status: string; priority: string; category: string | null; title: string; summary: string | null;
   evidence: string | null; receivedAt: string | null; deadline: string | null; senderName: string | null; senderDomain: string | null;
   company: string | null; roleTitle: string | null; nextStep: string | null; subject: string | null; needsAttention: boolean;
+  /** AI-11B */
+  group: EmailGroup | null; urgency: EmailUrgency; actionState: 'needs_action' | 'no_action' | null; draftRecommended: boolean; stageHint: string | null;
 }
 
-/** One definition of "needs attention" (mirrors the server and the list filter): an open email that is urgent, actionable, dated or provider-flagged. */
+/**
+ * One definition of "needs attention" (mirrors the server and the list filter): an open email that is urgent or provider-flagged, or -
+ * only when the provider gave no explicit action state - in an actionable category or dated. An explicit `no_action` is authoritative.
+ */
 export function emailNeedsAttention(e: { status: string; priority: string; category: string | null; dueAt: string | null; payload: Record<string, unknown> }): boolean {
   if (e.status !== 'NEW') return false;
-  return e.priority === 'HIGH' || e.priority === 'CRITICAL' || (e.category !== null && (EMAIL_ATTENTION_CATEGORIES as readonly string[]).includes(e.category))
-    || e.dueAt !== null || e.payload.needs_attention === true;
+  if (e.priority === 'HIGH' || e.priority === 'CRITICAL' || e.payload.needs_attention === true) return true;
+  if (e.payload.action_state !== undefined && e.payload.action_state !== null) return false;
+  return (e.category !== null && (EMAIL_ATTENTION_CATEGORIES as readonly string[]).includes(e.category)) || e.dueAt !== null;
 }
+const oneOfList = <T extends string>(v: unknown, allowed: readonly T[]): T | null => (typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : null);
 export function toEmailView(r: EmailRow): EmailView {
   const payload = isObj(r.payload) ? r.payload : {};
+  const category = text(r.category, 48);
   return {
     id: String(r.id), ownerId: String(r.user_id), provider: String(r.provider), status: String(r.status), priority: String(r.priority),
-    category: text(r.category, 48), title: String(r.title), summary: text(r.summary, 1000), evidence: text(r.evidence, 500),
+    category, title: String(r.title), summary: text(r.summary, 1000), evidence: text(r.evidence, 500),
     receivedAt: text(r.occurred_at, 40), deadline: text(r.due_at, 40), senderName: text(payload.sender_name, 200), senderDomain: text(payload.sender_domain, 255),
     company: text(payload.company, 200), roleTitle: text(payload.role_title, 300), nextStep: text(payload.next_step, 300), subject: text(payload.subject, 200),
-    needsAttention: emailNeedsAttention({ status: String(r.status), priority: String(r.priority), category: text(r.category, 48), dueAt: text(r.due_at, 40), payload }),
+    needsAttention: emailNeedsAttention({ status: String(r.status), priority: String(r.priority), category, dueAt: text(r.due_at, 40), payload }),
+    group: emailCategoryGroup(category), urgency: urgencyFromPriority(String(r.priority)), actionState: oneOfList(payload.action_state, EMAIL_ACTION_STATES),
+    draftRecommended: payload.draft_recommended === true, stageHint: oneOfList(payload.application_stage_hint, EMAIL_STAGE_HINTS),
   };
 }
-/** PostgREST `or` expression equal to emailNeedsAttention (used with status = NEW). */
-export const EMAIL_ATTENTION_OR = `priority.in.(HIGH,CRITICAL),category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null,payload->>needs_attention.eq.true`;
+/** PostgREST `or` expression equal to emailNeedsAttention (used with status = NEW). Identical to the server's EMAIL_ATTENTION_OR. */
+export const EMAIL_ATTENTION_OR =
+  `priority.in.(HIGH,CRITICAL),payload->>needs_attention.eq.true,and(payload->>action_state.is.null,or(category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null))`;
+
+/** An application the email relates to (read-only context; never changed from here). */
+export interface EmailMatchApp { id: string; company: string; title: string; stage: string; status: string; outcome: string | null }
+/** The server-derived relation to the owner's applications. POSSIBLE is never authoritative. */
+export interface EmailMatchView {
+  state: 'MATCHED' | 'POSSIBLE' | 'UNMATCHED' | 'NOT_APPLICABLE';
+  application: EmailMatchApp | null;
+  possible: EmailMatchApp[];
+}
+const matchApp = (v: unknown): EmailMatchApp | null => {
+  if (!isObj(v) || typeof v.id !== 'string') return null;
+  return { id: v.id, company: String(v.company ?? ''), title: String(v.title ?? ''), stage: String(v.stage ?? ''), status: String(v.status ?? ''), outcome: text(v.outcome, 16) };
+};
+export function toEmailMatchView(v: unknown): EmailMatchView | null {
+  if (!isObj(v)) return null;
+  const state = oneOfList(v.state, ['MATCHED', 'POSSIBLE', 'UNMATCHED', 'NOT_APPLICABLE'] as const);
+  if (!state) return null;
+  const application = state === 'MATCHED' ? matchApp(v.application) : null;
+  if (state === 'MATCHED' && !application) return null;
+  const possible = state === 'POSSIBLE' && Array.isArray(v.possible) ? v.possible.map(matchApp).filter((a): a is EmailMatchApp => a !== null).slice(0, 3) : [];
+  return { state, application, possible };
+}
+
+export interface EmailUrgencyBucket { urgency: EmailUrgency; items: EmailView[] }
+export interface EmailGroupSection { group: EmailGroup; label: string; buckets: EmailUrgencyBucket[]; total: number }
+/**
+ * Job related first, then other mail; inside each, HIGH, MEDIUM, LOW (empty urgencies are dropped, empty groups too). Rows keep
+ * their incoming order (newest received first). An item with an unknown category is shown under "Other mail" - never hidden.
+ */
+export function groupEmailViews(rows: readonly EmailView[]): EmailGroupSection[] {
+  const sections: EmailGroupSection[] = [];
+  for (const group of EMAIL_GROUPS) {
+    const inGroup = rows.filter((r) => (r.group ?? 'other') === group);
+    if (inGroup.length === 0) continue;
+    const buckets = EMAIL_URGENCIES.map((urgency) => ({ urgency, items: inGroup.filter((r) => r.urgency === urgency) })).filter((b) => b.items.length > 0);
+    sections.push({ group, label: EMAIL_GROUP_LABELS[group], buckets, total: inGroup.length });
+  }
+  return sections;
+}
+
+/** Application pipeline stage -> label (an unknown future stage reads as itself, tidied, never as a blank). */
+export const stageLabel = (stage: string | null | undefined): string => {
+  if (!stage) return '';
+  const known: Record<string, string> = { SAVED: 'Saved', PREPARING: 'Preparing', ...EMAIL_STAGE_HINT_LABELS };
+  return known[stage] ?? stage.toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+};
+
+/** "5m ago" / "2h ago" / "3d ago" for a recent instant; '' when it is older than a week, in the future or unparseable (absolute time is shown anyway). */
+export function relativeAge(iso: string | null | undefined, nowMs: number): string {
+  const t = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t) || t > nowMs) return '';
+  const mins = Math.floor((nowMs - t) / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 24 * 60) return `${Math.floor(mins / 60)}h ago`;
+  const days = Math.floor(mins / (24 * 60));
+  return days < 7 ? `${days}d ago` : '';
+}
 
 // ---- recruiters -----------------------------------------------------------------------------------------------
 

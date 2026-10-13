@@ -104,7 +104,7 @@ export const invalidExternal = {
   credentialUrl: base({ findings: [jobLeadFinding({}, { job_url: 'https://user:pw@jobs.example.com/42' })] }),
   badScore: base({ findings: [jobLeadFinding({}, { match_score: 140 })] }),
   scoreAsString: base({ findings: [jobLeadFinding({}, { match_score: '90' })] }),
-  badEmailCategory: base({ workflow: 'email_triage', findings: [emailTriageFinding({ category: 'newsletter' })] }),
+  badEmailCategory: base({ workflow: 'email_triage', findings: [emailTriageFinding({ category: 'marketing' })] }),
   missingEmailIdentity: base({ workflow: 'email_triage', findings: [emailTriageFinding({ dedupe: { source_type: 'gmail' } })] }),
   missingJobIdentity: base({ findings: [{ kind: 'job_lead', dedupe: {}, title: 'Mystery role', payload: { company: 'Example Corp', role_title: 'Mystery role' } }] }),
   recruiterWithoutSource: base({ workflow: 'recruiter_intel', findings: [recruiterIntelFinding({ source: undefined }, { profile_url: undefined, related_job: undefined })] }),

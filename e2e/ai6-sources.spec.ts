@@ -236,7 +236,7 @@ test.describe('AI-6 external intelligence sources', () => {
     // ---- 6) EMAIL ----------------------------------------------------------------------------------------------
     await page.goto('/ai-hub/email');
     await expect(page.getByRole('heading', { name: 'Email Intelligence', level: 2 })).toBeVisible();
-    const emails = page.getByRole('list', { name: 'Email intelligence' }).getByRole('article');
+    const emails = page.getByRole('article'); // AI-11B: the list is split into Job related / Other mail and High / Medium / Low sections
     await expect(emails).toHaveCount(3);
     await expect(page.getByText('Pat Recruiter (example.com)').first()).toBeVisible();
     await expect(page.getByText('We would like to schedule an interview.')).toBeVisible();

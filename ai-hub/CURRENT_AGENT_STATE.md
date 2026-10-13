@@ -1,5 +1,24 @@
 ```
 CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
+AI-11A AUTOMATION FOUNDATION - COMPLETE ON FEATURE BRANCH (branch CI PASS); integrating to development. AI-11B (Email Intelligence & Triage) NOT started.
+
+STATUS:
+AI-11A built on `feature/ai11a-automation-foundation` from development `879f73e71188993b5bd8f03387468fa87e822481`. Decision: EXTEND `ai_workflow_configs` (a row = an automation; no new table). One forward-only migration `20261101100000_ai_hub_automation_foundation.sql` (name, cadence, local_time, timezone, weekdays, sections, delivery; CHECKs; uniqueness now (workspace, owner, workflow, provider) + unique name; service-role-only save/delete RPCs with audit). Last run/success/error are DERIVED from `ai_runs`; next_expected_run is COMPUTED (DST-safe, in the automation's zone); nothing duplicated. API `/api/ai/automations` (list, create, `POST /:id`, `POST /:id/delete`; CSRF, kill switch, strict body). UI: Settings -> AI & Automation -> Automations + one Overview "Next automation" card. Run Now = DEFERRED WITH CONTRACT (`runNow` readiness, disabled explained button; no executor exists). MCP unchanged (11 tools), no scheduler, no provider adapter, no email/job/recruiter logic. Local validation: typecheck, eslint, unit 861/861, AI integration 145/145, focused e2e (axe 0 critical/serious). Branch CI, development merge SHA, development CI and the remote Dev migration are recorded in the AI-11A completion report (chat checkpoint) because they are not knowable before the push. Main `455a0120...` and Production unchanged; development is cumulative and is NOT merged to main after AI-11A (one main promotion after all approved AI-11 subphases). Report: reports/AI-11A_AUTOMATION_FOUNDATION_REPORT.md.
+
+BASE BRANCH:
+development (879f73e71188993b5bd8f03387468fa87e822481 + AI-11A merge)
+
+NEXT EXACT STEP:
+Separately approved AI-11B (Email Intelligence & Triage) on its own feature branch from development. Remote Dev DB needs migration `20261101100000` applied (after development CI green, `supabase db push` dry-run with ref xpnkasclquplmrcmhsif verified) before the Dev UI can create automations; Production needs it only at the one post-AI-11 main promotion (Production head stays `20261031100000`).
+```
+
+(Previous state, AI-10 closure, kept for history:)
+
+```
+CURRENT PHASE:
 AI-10 CLOSED - PRODUCTION CERTIFIED / COMPLETE. Next: JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation)
 
 CURRENT SUB-PHASE:

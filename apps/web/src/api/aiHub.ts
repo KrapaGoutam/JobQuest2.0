@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { fetchSourceCounts } from './aiSources';
 import { fetchCalendarCounts } from './aiCalendar';
 import { fetchPendingActionCount } from './aiActions';
+import { fetchAutomationOverview } from './aiAutomations';
 import type { PublicSession } from '../api';
 import {
   HISTORY_PAGE_SIZE, RECENT_WINDOW_DAYS, pageRange, sliceRunsPage,
@@ -36,7 +37,7 @@ export async function fetchAiHubSnapshot(
   session: PublicSession | null = null,
 ): Promise<AiHubSnapshot> {
   const since = new Date(now.getTime() - RECENT_WINDOW_DAYS * 86_400_000).toISOString();
-  const [runs, findings, pending, pendingRows, recent, attention, sources, calendar, pendingActions] = await Promise.all([
+  const [runs, findings, pending, pendingRows, recent, attention, sources, calendar, pendingActions, automation] = await Promise.all([
     client.from('ai_runs').select(RUN_COLUMNS).eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false }).limit(10),
     client.from('ai_findings').select(FINDING_COLUMNS).eq('workspace_id', workspaceId)
@@ -54,6 +55,8 @@ export async function fetchAiHubSnapshot(
     fetchCalendarCounts(workspaceId, timeZone, now, client).catch(() => undefined),
     // AI-8, isolated like the other source counts: a failure here must not break the rest of the Overview.
     session ? fetchPendingActionCount(workspaceId, session).catch(() => undefined) : Promise.resolve(undefined),
+    // AI-11A, isolated the same way.
+    session ? fetchAutomationOverview(workspaceId, session).catch(() => undefined) : Promise.resolve(undefined),
   ]);
   if ([runs, findings, pending, pendingRows, recent, attention].some((r) => r.error)) throw fail();
   return {
@@ -66,6 +69,7 @@ export async function fetchAiHubSnapshot(
     ...(sources ? { sources } : {}),
     ...(calendar ? { calendar } : {}),
     ...(pendingActions !== undefined ? { pendingActions } : {}),
+    ...(automation ? { automation } : {}),
   };
 }
 
@@ -111,15 +115,4 @@ export async function fetchAiFindingDetail(
     .eq('workspace_id', workspaceId).eq('id', findingId).maybeSingle();
   if (error || !data) throw fail();
   return data as unknown as AiFindingDetailRow;
-}
-
-/** Own workflow-config rows (RLS: owner + active member). Read-only; AI-1F1 has no mutation. */
-export async function fetchAiWorkflowConfigs(
-  workspaceId: string,
-  client: Client = supabase,
-): Promise<Array<{ workflow: string; enabled: boolean }>> {
-  const { data, error } = await client.from('ai_workflow_configs').select('workflow, enabled')
-    .eq('workspace_id', workspaceId).limit(20);
-  if (error) throw fail();
-  return (data ?? []) as Array<{ workflow: string; enabled: boolean }>;
 }

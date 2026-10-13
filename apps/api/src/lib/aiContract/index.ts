@@ -5,3 +5,4 @@ export { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, normalizeIdentityT
 export { isIanaTimeZone, localMidnight, localToInstant, zoneOffsetAt, type LocalResolution } from './calendarTime';
 export { canonicalJson, contentFingerprint, sha256Hex } from './canonical';
 export * from './actions';
+export * from './automation';

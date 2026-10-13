@@ -203,8 +203,8 @@ jobs:
           pnpm local:env
           printf 'AI_HUB_ENABLED=true\nVITE_AI_HUB_ENABLED=true\n' >> .env.m1b-local
       - run: pnpm exec playwright install --with-deps chromium
-      - name: AI Hub focused specs (Daily Digest · Job Leads · Email · Recruiter Intel · Calendar · Actions · Provider cards · shell/clipping · axe · 375/768/1280)
-        run: pnpm exec playwright test e2e/ai5-digest.spec.ts e2e/ai6-sources.spec.ts e2e/ai7-calendar.spec.ts e2e/ai8-actions.spec.ts e2e/ai10-provider-auth.spec.ts
+      - name: AI Hub focused specs (Daily Digest · Job Leads · Email · Recruiter Intel · Calendar · Actions · Provider cards · Automations · shell/clipping · axe · 375/768/1280)
+        run: pnpm exec playwright test e2e/ai5-digest.spec.ts e2e/ai6-sources.spec.ts e2e/ai7-calendar.spec.ts e2e/ai8-actions.spec.ts e2e/ai10-provider-auth.spec.ts e2e/ai11a-automations.spec.ts
         env:
           M1B_ENV_FILE: .env.m1b-local
       - name: Upload sanitized evidence

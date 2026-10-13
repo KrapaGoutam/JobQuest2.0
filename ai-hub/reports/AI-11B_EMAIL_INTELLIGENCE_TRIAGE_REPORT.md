@@ -98,7 +98,7 @@ Headline "N high-urgency emails need attention" (open HIGH, workspace-wide; "una
 
 ## 9. Database
 
-**UNCHANGED. No migration.** Everything fits existing columns (`category`, `priority`, `due_at`, `payload` jsonb). Remote Dev: nothing to apply for AI-11B. (AI-11A's pending migration `20261101100000` is a separate item recorded in its own report.)
+**UNCHANGED. No migration.** Everything fits existing columns (`category`, `priority`, `due_at`, `payload` jsonb). Remote Dev: nothing to apply for AI-11B (ledger read-only check: head is AI-11A `20261101100000`, already applied to project xpnkasclquplmrcmhsif).
 
 ## 10. Draft-only boundary (for AI-11C+ and provider scheduling)
 

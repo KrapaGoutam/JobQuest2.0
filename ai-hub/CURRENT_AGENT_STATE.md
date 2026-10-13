@@ -12,7 +12,7 @@ BASE BRANCH:
 development (d6fe0cd55380538cfe069c3caf04ca3f2a50d102 + AI-11B merge)
 
 NEXT EXACT STEP:
-Separately approved AI-11C (Daily Digest) on its own feature branch from development; reuse the structured email fields above (group, urgency, action, deadline, application). Remote Dev DB still needs AI-11A migration `20261101100000` if not yet applied (AI-11B adds none); Production needs it only at the single post-AI-11 main promotion.
+Separately approved AI-11C (Daily Digest) on its own feature branch from development; reuse the structured email fields above (group, urgency, action, deadline, application). Remote Dev DB head is `20261101100000` (AI-11A, verified applied; AI-11B adds no migration); Production needs it only at the single post-AI-11 main promotion.
 ```
 
 (Previous state, AI-11A, kept for history:)

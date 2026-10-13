@@ -192,7 +192,8 @@ test.describe('AI-11B email intelligence & triage', () => {
       await expect(page.getByRole('search')).toBeVisible();
       const x = await overflow(page);
       const clipped = await page.evaluate(() => { const m = document.querySelector('main.page'); return m ? m.scrollWidth - m.clientWidth : 0; });
-      expect(clipped, `no clipped content inside main at ${w}px`).toBe(0);
+      const offenders = clipped > 0 ? await page.evaluate(() => { const m = document.querySelector('main.page')!; const r = m.getBoundingClientRect(); return [...m.querySelectorAll('*')].filter((e) => e.getBoundingClientRect().right > r.right + 1).slice(0, 5).map((e) => `${e.tagName.toLowerCase()}:${(e.textContent ?? '').trim().slice(0, 40)}:${Math.round(e.getBoundingClientRect().width)}`); }) : [];
+      expect(clipped, `no clipped content inside main at ${w}px; widest: ${offenders.join(' | ')}`).toBe(0);
       expect(x, `no horizontal scroll at ${w}px`).toBe(0);
       evidence[`overflow_${w}`] = x;
       await page.screenshot({ path: resolve(shotsDir, `ai11b-email-${w}.png`), fullPage: true });

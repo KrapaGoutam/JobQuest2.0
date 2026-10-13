@@ -30,7 +30,7 @@ const URGENCY_VARIANT: Record<EmailUrgency, 'danger' | 'info' | 'muted'> = { HIG
 function ApplicationLine({ app, onOpen }: { app: EmailMatchApp; onOpen?: (id: string) => void }) {
   const label = `${app.title} — ${app.outcome === 'REJECTED' ? 'Rejected' : stageLabel(app.stage)}`;
   return onOpen
-    ? <Button variant="link" size="sm" onClick={() => onOpen(app.id)} aria-label={`Open application ${label}`}>{label}</Button>
+    ? <Button variant="link" size="sm" onClick={() => onOpen(app.id)} aria-label={`Open application ${label}`} style={{ whiteSpace: 'normal', textAlign: 'left', height: 'auto', minHeight: '24px', maxWidth: '100%', ...wrap }}>{label}</Button>
     : <span>{label}</span>;
 }
 
@@ -82,7 +82,7 @@ export function EmailCard({ item, timeZone, currentUserId, match, nowMs, onDismi
             <h5 style={{ margin: 0, fontSize: '16px', fontWeight: 600, ...wrap }}>{item.title}</h5>
           </header>
           {item.summary && <p style={{ margin: 0, ...wrap }}>{item.summary}</p>}
-          <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, auto) 1fr', gap: '4px 12px', margin: 0 }}>
+          <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, max-content) minmax(0, 1fr)', gap: '4px 12px', margin: 0 }}>
             {rows.filter(([, v]) => v).map(([k, v]) => (
               <div key={k} style={{ display: 'contents' }}>
                 <dt className="muted small">{k}</dt>
@@ -154,7 +154,7 @@ export function AiHubEmailPanel(p: EmailPanelProps) {
       <h2 style={{ margin: 0, fontSize: '18px' }}>Email Intelligence</h2>
       <p className="muted small" style={{ margin: 0 }}>Mail your AI provider triaged. JobQuest keeps only a short summary and a brief excerpt — never the full message — and cannot send, reply to or change any email.</p>
 
-      <section aria-label="Needs attention" style={{ display: 'flex', gap: '10px', alignItems: 'baseline', flexWrap: 'wrap' }}>
+      <section aria-label="Needs attention" style={{ display: 'flex', gap: '10px', alignItems: 'baseline', flexWrap: 'wrap', ...wrap }}>
         <span style={{ fontSize: '28px', fontWeight: 700 }} data-testid="email-high-count">{p.highCount ?? '—'}</span>
         <span>{p.highCount === 1 ? 'high-urgency email needs attention' : 'high-urgency emails need attention'}</span>
         {p.highCount === null && <span className="muted small">(count unavailable)</span>}

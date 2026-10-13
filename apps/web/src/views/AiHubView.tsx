@@ -314,7 +314,7 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUs
         history={<AiHubHistory activeWorkspaceId={activeWorkspaceId} onOpenRun={openRun} />}
         digest={initialTab === 'digest' ? <AiHubDigest activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
         jobLeads={initialTab === 'job-leads' ? <AiHubJobLeads activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
-        email={initialTab === 'email' ? <AiHubEmail activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
+        email={initialTab === 'email' ? <AiHubEmail activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
         recruiters={initialTab === 'recruiters' ? <AiHubRecruiters activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
         calendar={initialTab === 'calendar' ? <AiHubCalendar activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
         actions={initialTab === 'actions' ? <AiHubActions activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} onChanged={() => setAttempt((n) => n + 1)} /> : null}

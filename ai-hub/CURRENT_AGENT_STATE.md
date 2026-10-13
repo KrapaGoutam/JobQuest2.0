@@ -3,6 +3,25 @@ CURRENT PHASE:
 JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
 
 CURRENT SUB-PHASE:
+AI-11B EMAIL INTELLIGENCE & TRIAGE - COMPLETE ON FEATURE BRANCH `feature/ai11b-email-intelligence-triage` (from development `d6fe0cd55380538cfe069c3caf04ca3f2a50d102`); integrating to development. AI-11C (Daily Digest) NOT started.
+
+STATUS:
+Decision: EXTEND the existing `email_event` finding (no new table/kind/contract version, NO migration). Canonical taxonomy: group job_related|other (derived from category), 10 job + 4 other categories (AI-6 spellings stay valid and read as canonical), urgency HIGH|MEDIUM|LOW = the existing priority through a fixed mapping, action_state needs_action|no_action|absent, action_summary (= stored next_step), deadline_at (= due_at, never invented), draft_recommended (flag only), application_stage_hint (hint only; never applied). Deterministic urgency rules (emailTriage.ts: 24h-deadline floor, informational ceiling). Privacy: no bodies/attachments/addresses; links, addresses and phone numbers are stripped from email-derived text. Application match is server-derived at READ time via the unchanged AI-8 matcher (MATCHED|POSSIBLE|UNMATCHED|NOT_APPLICABLE; POSSIBLE never authoritative; owner + workspace scoped); ai_findings.application_id untouched. Dedupe unchanged (one row per message id; idempotent). MCP stays read-only (11 tools); list tool gains group/urgency/actionState/applicationMatch filters and canonical output fields. New read-only route GET /api/ai/email/matches. Email page upgraded in place (headline + Job related/Other mail x High/Medium/Low + quick filters). Provider templates updated (never create or send a draft). Draft creation, if ever built, belongs to the provider connector/scheduler, not JobQuest. Local validation: typecheck, eslint, unit, AI integration, focused e2e (axe 0 critical/serious). Branch CI, development merge SHA and development CI are recorded in the AI-11B completion report (chat checkpoint). Main `455a0120...` and Production unchanged; development stays cumulative (one main promotion after all approved AI-11 subphases). Report: reports/AI-11B_EMAIL_INTELLIGENCE_TRIAGE_REPORT.md.
+
+BASE BRANCH:
+development (d6fe0cd55380538cfe069c3caf04ca3f2a50d102 + AI-11B merge)
+
+NEXT EXACT STEP:
+Separately approved AI-11C (Daily Digest) on its own feature branch from development; reuse the structured email fields above (group, urgency, action, deadline, application). Remote Dev DB head is `20261101100000` (AI-11A, verified applied; AI-11B adds no migration); Production needs it only at the single post-AI-11 main promotion.
+```
+
+(Previous state, AI-11A, kept for history:)
+
+```
+CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
 AI-11A AUTOMATION FOUNDATION - COMPLETE ON FEATURE BRANCH (branch CI PASS); integrating to development. AI-11B (Email Intelligence & Triage) NOT started.
 
 STATUS:

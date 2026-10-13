@@ -5,7 +5,8 @@
 import { z } from 'zod';
 import {
   AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
-  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_CATEGORIES,
+  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_ACTION_STATES, EMAIL_CATEGORIES,
+  EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_URGENCIES,
   JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
 } from '../lib/aiContract';
 import { CALENDAR_ORDERS } from '../services/aiCalendarService';
@@ -81,6 +82,10 @@ export const listJobLeadsInput = z.strictObject({
 });
 export const listEmailIntelligenceInput = z.strictObject({
   category: z.enum(EMAIL_CATEGORIES).optional(),
+  group: z.enum(EMAIL_GROUPS).optional().describe('job_related or other'),
+  urgency: z.enum(EMAIL_URGENCIES).optional().describe('HIGH, MEDIUM or LOW'),
+  actionState: z.enum(EMAIL_ACTION_STATES).optional(),
+  applicationMatch: z.enum(EMAIL_MATCH_STATES).optional().describe('Derived from the owner\'s applications; evaluated over the newest 200 items'),
   company: searchText.optional(),
   needsAttention: z.boolean().optional(),
   receivedSince: iso.optional(),

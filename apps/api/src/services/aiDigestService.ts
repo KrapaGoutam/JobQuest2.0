@@ -18,7 +18,7 @@
 import { userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION, EMAIL_ATTENTION_CATEGORIES, STRONG_MATCH_THRESHOLD,
+  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, DIGEST_LIMITS, DIGEST_PAYLOAD_VERSION, EMAIL_ATTENTION_OR, STRONG_MATCH_THRESHOLD,
   type JsonRecord,
 } from '../lib/aiContract';
 import { isCalendarDate, nextCalendarDate, shiftCalendarDate } from '../lib/calendarDate';
@@ -117,7 +117,7 @@ export async function resolveOwnerTimeZone(db: AiReadClient, userId: string): Pr
 /** Findings still open to the user; dismissed/closed ones are not part of a digest. */
 const ACTIVE_STATUSES = ['NEW', 'REVIEWED'];
 /** Mirrors aiExternalIntelligenceService (one definition of "needs attention"). */
-const ATTENTION_OR = `priority.in.(HIGH,CRITICAL),category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null,payload->>needs_attention.eq.true`;
+const ATTENTION_OR = EMAIL_ATTENTION_OR;
 const SOURCE_WORKFLOWS = { job_leads: 'job_discovery', email_activity: 'email_triage', recruiter_intel: 'recruiter_intel', calendar: 'calendar_review' } as const;
 const label = (v: unknown) => text(v, 48).replace(/_/g, ' ');
 

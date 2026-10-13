@@ -61,15 +61,48 @@ export const AI_LIMITS = {
 // (tests/unit/ai-6-sources-ui.test.ts fails on drift).
 export const SOURCE_PAYLOAD_VERSION = '1.0' as const;
 
+// ---- Email intelligence & triage (AI-11B) -----------------------------------
+// One canonical taxonomy on the existing `email_event` finding (no new table, no new kind). A message belongs to
+// ONE group; the group is DERIVED from the category (a provider-supplied group must agree). Urgency is the existing
+// `priority` column seen through a fixed mapping (HIGH <- HIGH|CRITICAL, MEDIUM <- NORMAL, LOW <- LOW|INFO), so
+// there is exactly one stored urgency and no opaque score. Mirrored by apps/web/src/lib/aiSources.ts
+// (tests/unit/ai-11b-email-ui.test.ts fails on drift).
+export const EMAIL_GROUPS = ['job_related', 'other'] as const;
+export const EMAIL_JOB_CATEGORIES = [
+  'recruiter_reply', 'application_confirmation', 'interview', 'interview_scheduling', 'assessment',
+  'follow_up', 'status_update', 'rejection', 'offer', 'other_job_search',
+] as const;
+export const EMAIL_OTHER_CATEGORIES = ['important_account', 'notification', 'newsletter', 'other'] as const;
+/**
+ * AI-6 values stay valid and are stored as sent (existing findings and providers keep working). They are
+ * job-related and read as the canonical category below for grouping and filtering.
+ */
+export const EMAIL_LEGACY_CATEGORY_ALIASES = {
+  interview_invitation: 'interview', scheduling: 'interview_scheduling', reschedule: 'interview_scheduling', deadline: 'other_job_search',
+} as const;
 /** Email classification. A closed set: free-form categories are rejected for email_event. */
 export const EMAIL_CATEGORIES = [
-  'recruiter_reply', 'interview_invitation', 'assessment', 'rejection', 'application_confirmation',
-  'follow_up', 'scheduling', 'reschedule', 'deadline', 'other_job_search',
+  ...EMAIL_JOB_CATEGORIES, ...EMAIL_OTHER_CATEGORIES, 'interview_invitation', 'scheduling', 'reschedule', 'deadline',
 ] as const;
 /** Categories that normally need the user to act (used with priority HIGH/CRITICAL and the provider hint). */
 export const EMAIL_ATTENTION_CATEGORIES = [
   'recruiter_reply', 'interview_invitation', 'assessment', 'scheduling', 'reschedule', 'deadline', 'follow_up',
+  'interview', 'interview_scheduling', 'offer',
 ] as const;
+/** Urgency as the user sees it. Stored as the existing finding `priority` (see emailTriage.ts). */
+export const EMAIL_URGENCIES = ['HIGH', 'MEDIUM', 'LOW'] as const;
+/** Explicit action state. Absent = the provider could not tell (null is valid; guessing is not). */
+export const EMAIL_ACTION_STATES = ['needs_action', 'no_action'] as const;
+/** Pipeline signal an email may SUGGEST. A hint only: it never changes an application. */
+export const EMAIL_STAGE_HINTS = ['APPLIED', 'ASSESSMENT', 'RECRUITER_SCREEN', 'INTERVIEW', 'FINAL_INTERVIEW', 'OFFER', 'REJECTED'] as const;
+/** Server-derived relation between an email and one of the OWNER's existing applications. */
+export const EMAIL_MATCH_STATES = ['MATCHED', 'POSSIBLE', 'UNMATCHED'] as const;
+/**
+ * PostgREST `or` expression equal to emailNeedsAttention (used with status = NEW): an open email that is urgent, provider-flagged,
+ * or - only when the provider gave no explicit action state - in an actionable category or dated.
+ */
+export const EMAIL_ATTENTION_OR =
+  `priority.in.(HIGH,CRITICAL),payload->>needs_attention.eq.true,and(payload->>action_state.is.null,or(category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null))`;
 
 export const JOB_WORK_ARRANGEMENTS = ['remote', 'hybrid', 'onsite'] as const;
 export const JOB_EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'temporary', 'internship', 'freelance', 'other'] as const;
@@ -84,6 +117,11 @@ export const RECRUITER_VERIFICATIONS = ['verified', 'uncertain'] as const;
 export const RECRUITER_UNCERTAIN_FIELDS = ['name', 'role', 'company', 'relationship', 'contact'] as const;
 
 export type EmailCategory = (typeof EMAIL_CATEGORIES)[number];
+export type EmailGroup = (typeof EMAIL_GROUPS)[number];
+export type EmailUrgency = (typeof EMAIL_URGENCIES)[number];
+export type EmailActionState = (typeof EMAIL_ACTION_STATES)[number];
+export type EmailStageHint = (typeof EMAIL_STAGE_HINTS)[number];
+export type EmailMatchState = (typeof EMAIL_MATCH_STATES)[number];
 export type JobWorkArrangement = (typeof JOB_WORK_ARRANGEMENTS)[number];
 export type JobEmploymentType = (typeof JOB_EMPLOYMENT_TYPES)[number];
 

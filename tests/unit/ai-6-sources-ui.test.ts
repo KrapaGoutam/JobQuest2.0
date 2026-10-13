@@ -60,8 +60,10 @@ describe('client/server contract sync', () => {
 
   it('"needs attention" and "strong match" mean the same thing on both sides', () => {
     for (const status of ['NEW', 'REVIEWED']) for (const priority of ['HIGH', 'NORMAL']) for (const category of [...C.EMAIL_CATEGORIES, null]) for (const dueAt of [null, '2026-10-03T00:00:00Z']) for (const flag of [true, undefined]) {
-      const payload: Record<string, boolean> = flag ? { needs_attention: true } : {};
-      expect(W.emailNeedsAttention({ status, priority, category, dueAt, payload })).toBe(serverNeedsAttention({ status, priority, category, dueAt, payload }));
+      for (const action of [undefined, 'needs_action', 'no_action']) {
+        const payload: Record<string, string | boolean> = { ...(flag ? { needs_attention: true } : {}), ...(action ? { action_state: action } : {}) };
+        expect(W.emailNeedsAttention({ status, priority, category, dueAt, payload })).toBe(serverNeedsAttention({ status, priority, category, dueAt, payload }));
+      }
     }
     for (const s of [null, 0, 79, 80, 100]) expect(W.isStrongMatch(s)).toBe(serverStrong(s));
     expect(W.isStrongMatch(null)).toBe(false);
@@ -71,6 +73,7 @@ describe('client/server contract sync', () => {
 
   it('the PostgREST attention filter lists exactly the attention categories', () => {
     for (const c of C.EMAIL_ATTENTION_CATEGORIES) expect(W.EMAIL_ATTENTION_OR).toContain(c);
+    expect(W.EMAIL_ATTENTION_OR).toBe(C.EMAIL_ATTENTION_OR);
     for (const c of ['rejection', 'application_confirmation', 'other_job_search']) expect(W.EMAIL_ATTENTION_OR).not.toContain(c);
   });
 
@@ -250,7 +253,7 @@ describe('Email Intelligence page', () => {
   });
   it('shows classification, summary, sender, dates, hints, deadline and the evidence excerpt', () => {
     const h = emailHtml();
-    for (const t of ['Interview invitation', 'Needs attention', 'High priority', 'Recruiter invites you to interview.', 'Pat Recruiter (example.com)', 'Example Corp · Engineer', 'Reply with availability', 'Evidence excerpt', 'We would like to schedule an interview.', 'Deadline', 'Received', 'Claude']) expect(h).toContain(t);
+    for (const t of ['Interview invitation', 'Needs attention', 'High urgency', 'Recruiter invites you to interview.', 'Pat Recruiter (example.com)', 'Example Corp · Engineer', 'Reply with availability', 'Evidence excerpt', 'We would like to schedule an interview.', 'Deadline', 'Received', 'Claude']) expect(h).toContain(t);
   });
   it('is intelligence, not a mail client: no reply/send/archive/delete/mark-read actions', () => {
     const h = emailHtml();

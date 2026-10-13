@@ -327,7 +327,7 @@ describe.skipIf(!ready || !local)('AI-6 — external intelligence sources (real 
     expect((await list(eve, { company: 'mailco' })).items).toHaveLength(0); // peer
     expect((await list(alice, { company: 'mailco' })).items).toHaveLength(3); // manager parity
     expect((await svc.listEmailIntelligence(as(dave, daveWs), { company: 'mailco' }, {}, { env: ON }) as { ok: true; data: { items: unknown[] } }).data.items).toHaveLength(0);
-    expect(await svc.listEmailIntelligence(as(carol), { category: 'newsletter' } as never, {}, { env: ON })).toMatchObject({ ok: false, error: { code: 'INVALID_FILTER' } });
+    expect(await svc.listEmailIntelligence(as(carol), { category: 'marketing' } as never, {}, { env: ON })).toMatchObject({ ok: false, error: { code: 'INVALID_FILTER' } });
   });
 
   // ---- recruiter intelligence ------------------------------------------------------------------

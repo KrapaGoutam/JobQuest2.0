@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "jobquest": {
+      "type": "streamable-http",
+      "url": "https://REPLACE-WITH-YOUR-JOBQUEST-ORIGIN/api/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": { "type": "api_key", "headerScheme": "bearer" }
+        }
+      }
+    }
+  }
+}

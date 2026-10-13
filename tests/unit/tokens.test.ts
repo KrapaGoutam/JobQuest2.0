@@ -63,15 +63,20 @@ describe('service-role boundary (static)', () => {
     const p = join(dir, f);
     return statSync(p).isDirectory() ? files(p) : [p];
   });
-  it('admin() (service role) stays inside the explicit auth, rate-limit, and extension Node-facade boundaries', () => {
+  it('admin() (service role) stays inside the explicit auth, rate-limit, extension Node-facade and AI ingestion-service boundaries', () => {
     const users = files('apps/api/src').filter((p) => /\badmin\(\)/.test(readFileSync(p, 'utf8'))).map((p) => p.replace(/\\/g, '/')).sort();
     expect(users).toEqual([
+      'apps/api/src/lib/aiConnectorTokens.ts', // AI-3: connector-token resolve/touch via service-role-only RPCs (no table reads)
       'apps/api/src/lib/db.ts',
       'apps/api/src/lib/extensionTokens.ts',
+      'apps/api/src/lib/oauth.ts', // AI-10: OAuth grant resolve/touch via service-role-only RPCs
       'apps/api/src/lib/rateLimit.ts',
+      'apps/api/src/routes/aiConnectors.ts', // AI-3: owner-only connector-token create/revoke RPC facade
       'apps/api/src/routes/auth.ts',
       'apps/api/src/routes/extension.ts',
+      'apps/api/src/routes/oauth.ts', // AI-10: OAuth authorization-server and client-management facade
       'apps/api/src/routes/scope.ts',
+      'apps/api/src/services/aiIntegrationService.ts', // AI-2A: internal ingestion via service-role-only rpc_ai_ingest_* (never reads)
     ]);
     const authSrc = readFileSync('apps/api/src/routes/auth.ts', 'utf8');
     for (const table of ['applications', 'workspaces', 'workspace_members', 'workflow_definitions']) {

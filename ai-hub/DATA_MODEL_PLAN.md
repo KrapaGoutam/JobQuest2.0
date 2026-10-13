@@ -1,0 +1,160 @@
+# AI Hub — Data Model Plan (conceptual; no DDL created in AI-0)
+
+## 1. Option comparison
+
+| Criterion | A. one `ai_findings` + JSON | B. many specialized tables | **C. generic parent + children only where needed** |
+|---|---|---|---|
+| RLS | one policy set | N policy sets | one set + few children |
+| Queryability | poor on payload fields | best | promoted columns cover filters; children for rich queries |
+| Schema evolution | easy | migration per change | payload versioned; children rare |
+| Auditability / reporting | uniform | fragmented | uniform parent |
+| Provider neutrality | good | good | good |
+| Table count | 1 | ~8 | 4 at AI-1, +≤2 later |
+
+**Recommendation: Option C.** Parent `ai_findings` holds every filter/sort field as a real column (kind, category, priority, status, confidence, application_id, due_at, dedupe_key); the rest lives in a versioned `payload jsonb`. Add a child table only when a feature needs unique constraints or joins the parent cannot give (candidate: `ai_job_leads` for canonical-URL uniqueness and ranking, decided in AI-8; calendar events likely stay findings).
+
+## 2. Tables for AI-1 (4)
+
+All: `id uuid pk`, `workspace_id` (FK workspaces, cascade), `user_id` (FK user_accounts, cascade), `created_at`, `updated_at` (`app.touch_updated_at`). Workspace-scoped like the rest of the schema.
+
+**`ai_runs`** — layer A. `provider` (check: claude|gemini|chatgpt|manual|system), `workflow` (daily_brief|email_triage|job_discovery|recruiter_intel|calendar_review|other), `status` (QUEUED|RUNNING|SUCCEEDED|PARTIAL|FAILED|AWAITING_APPROVAL|CANCELLED), `trigger_type` (scheduled|manual|retry), `external_run_id`, `connection_id` (nullable until AI-3), `schema_version`, `sources jsonb` (type + reference ids only), `counts jsonb` (received/created/updated/duplicate/rejected), `error_category`, `error_detail` (truncated, no content), `retry_of_run_id`, `started_at`, `completed_at`. Unique `(workspace_id, provider, external_run_id)` where external_run_id not null.
+
+**`ai_findings`** — layer B. `run_id` (FK, set null on run purge), `kind` (daily_brief|email_event|job_lead|recruiter_intel|calendar_event|note|…), `schema_version`, `provider`, `status` (NEW|REVIEWED|DISMISSED|ACCEPTED|SUPERSEDED|EXPIRED), `category` (email taxonomy), `priority` (CRITICAL|HIGH|NORMAL|LOW|INFO), `confidence numeric(4,3)`, `application_id` (FK applications, set null), `match_confidence`, `title`, `summary` (≤ ~1k chars), `occurred_at`, `due_at`, `source_ref jsonb` (`{type, provider_message_id, thread_id, url, canonical_url}`), `evidence` (short snippet ≤ ~500 chars, optional), `dedupe_key text`, `content_hash`, `payload jsonb`, `expires_at`. Unique `(workspace_id, user_id, kind, dedupe_key)`.
+
+**`ai_suggestions`** — the proposal to change core data. `finding_id` (FK cascade), `action` (set_status|create_task|create_followup|link_contact|create_application…), `target_type`, `target_id` (nullable), `proposed jsonb`, `status` (PENDING|ACCEPTED|IGNORED|EXPIRED|SUPERSEDED), `decided_by`, `decided_at`, `applied_ref jsonb` (what core row resulted), `confidence`.
+
+**`ai_workflow_configs`** — per (workspace, user, workflow): `enabled`, `primary_provider`, `fallback_provider`, `settings jsonb` (email rules etc.; validated by contract).
+
+Deferred: `ai_provider_connections` / connector tokens (AI-3B; modeled on `extension_tokens`: prefix, HMAC hash, scopes, expiry, revoke, rotate); `ai_email_rules` (can live in `ai_workflow_configs.settings` until size demands); `ai_job_leads` (AI-8). Digests are `ai_findings(kind='daily_brief', dedupe_key='daily_brief:YYYY-MM-DD')` — no separate table.
+
+## 3. Write path and RLS (see `SECURITY_AUTH.md`)
+
+- Clients: `SELECT` via `can_access_owned_record(workspace_id, user_id)`; **no** client INSERT/UPDATE/DELETE grants on `ai_*` (pattern: M3 table-privilege migration).
+- Writers: `rpc_ai_ingest_*` (service-role-only, called by MCP layer with the token's resolved user/workspace) and `rpc_ai_decide_suggestion` / `rpc_ai_dismiss_finding` / `rpc_ai_delete_*` (authenticated, owner-checked, audited).
+- Cross-user isolation: ingest RPCs take user/workspace from the token, never from payload.
+- AI-1B: ingest takes workspace/user/provider from the owning run (`rpc_ai_ingest_finding`, `rpc_ai_create_suggestion`); only `rpc_ai_ingest_run` takes `p_workspace_id`, validated against ACTIVE membership of `p_actor_id`.
+
+## 4. Canonical result contract `jobquest.ai-result` (v1.0)
+
+```json
+{
+  "schema_version": "1.0",
+  "provider": "claude",
+  "workflow": "email_triage",
+  "run": { "external_run_id": "…", "generated_at": "ISO-8601", "model_hint": "optional" },
+  "sources": [{ "type": "gmail", "ref": "provider_message_id", "observed_at": "…" }],
+  "findings": [{
+    "kind": "email_event",
+    "dedupe": { "source_type": "gmail", "source_id": "…", "event": "rejection" },
+    "category": "REJECTION", "priority": "NORMAL", "confidence": 0.97,
+    "title": "…", "summary": "…", "occurred_at": "…",
+    "match": { "application_id": null, "hints": { "company": "…", "title": "…", "job_url": "…", "external_job_id": "…" } },
+    "evidence": "short snippet", "payload": { }
+  }],
+  "suggestions": [{ "finding_index": 0, "action": "set_status", "target": { "application_id": null }, "proposed": { "status": "REJECTED" }, "confidence": 0.97 }],
+  "metadata": { }
+}
+```
+
+- **Versioning:** `MAJOR.MINOR`. Minor = additive optional fields; major = breaking. Server accepts current major and the previous major for ≥ one release (a per-version upgrader normalizes to current). `schema_version` stored on every run and finding.
+- **Validation:** strict schema at the MCP boundary (reject wrong types, enums, oversize, bad URLs); per-item results so one bad finding yields PARTIAL not total failure.
+- **Unknown fields:** top-level/finding-level unknown keys are **dropped and counted** in `run.counts.rejected_fields`; only `payload` and `metadata` may carry extras (size-capped, never rendered as HTML, never executed).
+- **Normalization boundary:** provider adapters (if ever needed) live *before* the validator; the DB only ever sees canonical form. `provider` is a label, never a schema selector.
+- **Matching:** the AI supplies `hints`; JobQuest performs the match server-side in deterministic order — external job ID → exact URL → company+title → company+title+date → company only. Only the first two may auto-set `application_id`; others set `match_confidence` and require review.
+
+## 5. Idempotency & dedupe
+
+Dedupe key is computed **by JobQuest** from deterministic fields, not AI judgment:
+`sha256(source_type|source_id|event)` for email/calendar (provider message/event id); canonical URL (lowercase host, strip tracking params/fragment) for job leads; `daily_brief:<date>` for briefs; normalized `(name,company,channel)` for recruiter intel; `content_hash` for notes.
+
+| Situation | Behavior |
+|---|---|
+| same dedupe_key, same content_hash | ignore (count duplicate), keep first |
+| same key, different hash, finding still NEW | update in place, bump `updated_at`, keep id |
+| same key, finding already ACCEPTED/DISMISSED | do not resurrect; if material change, create a linked finding (`supersedes`) |
+| same event, different provider | same key → one finding; later provider recorded in `payload.seen_by` |
+| rerun of same `(provider, external_run_id)` | return prior run result (idempotent) |
+| related, different events (e.g. invite → reschedule) | distinct findings linked via `payload.related_keys` |
+
+**AI-1B implementation notes:** `content_hash` is computed inside `rpc_ai_ingest_finding` (sha256 of canonical stored fields); callers cannot supply it. `dedupe_key` is computed by the server util (AI-1C) and only shape-validated in SQL. The ACCEPTED/DISMISSED row applies to any non-NEW status and currently returns `unchanged_closed`; linked superseding findings (which need a derived key under the unchanged unique index) are deferred. `payload.seen_by` is server-owned (stripped from input).
+
+## 6. Run states
+
+QUEUED, RUNNING, SUCCEEDED, PARTIAL, FAILED, AWAITING_APPROVAL, CANCELLED — sufficient. Add `REJECTED_INVALID` only if validation-fail volume needs separating from FAILED (record `error_category=SCHEMA_INVALID` instead). Because provider runs are pull-model, most runs are created RUNNING→terminal within one MCP session; QUEUED is for JobQuest-initiated/manual runs.
+
+Error categories: `PROVIDER_UNAVAILABLE`, `CONNECTOR_AUTH_EXPIRED`, `SOURCE_UNAVAILABLE`, `PARTIAL_READ`, `SCHEMA_INVALID`, `TIMEOUT`, `RATE_LIMITED`, `INTERNAL`.
+
+## 7. Retention / privacy
+
+| Data | Default | User-deletable | On provider disconnect |
+|---|---|---|---|
+| ai_runs | 180 days, then purge (keep aggregate counts) | yes | keep |
+| ai_findings (NEW/DISMISSED) | 90 days (`expires_at`) | yes | keep, mark source `disconnected` |
+| ai_findings ACCEPTED | indefinite while linked to core record | yes (core record unaffected) | keep |
+| evidence snippets | ≤500 chars; purged with finding | yes | **deleted** |
+| raw provider responses / email bodies / web pages | **not stored** (v1) | n/a | n/a |
+| failed runs | 30 days | yes | keep |
+| connector tokens | hash only; expire ≤ 90 days | revoke | **revoked + deleted** |
+| OAuth refresh tokens (if ever held) | encrypted, server only | revoke | deleted |
+
+Purge is a scheduled job introduced in a later phase (AI-1 only defines `expires_at`).
+
+## 8. Calendar storage recommendation
+
+Option C (finding + suggestion) with an **external reference** (`source_ref.event_id`) — never copy descriptions/attendees. Accepting creates a JobQuest interview via existing `rpc_schedule_interview`. Copying external events (A) is rejected as privacy-heavy and sync-prone.
+
+## 9. Daily Digest (AI-5, implemented; supersedes the `daily_brief:YYYY-MM-DD` note in section 5)
+
+- **A digest is a finding. No `ai_daily_digests` table exists.** Kind and workflow keep the existing canonical value `daily_brief` (the product name is "Daily Digest"); no enum change and **no migration** were needed.
+- **Identity:** `dedupe_key = daily_brief:<digest_date>:<provider>` (provider is part of a digest's identity; this is the single exception to "provider is not a dedupe input"), unique per `(workspace_id, user_id, kind, dedupe_key)`. So: one digest per owner + date + provider; ChatGPT/Gemini/Claude/JobQuest digests coexist with their own provenance. A retry with the same `external_run_id` is an idempotent run; a later run on the same date refreshes the same row while it is still NEW; a closed (non-NEW) digest is never reopened (`unchanged_closed`).
+- **Date:** `digest_date` is the calendar date in the owner's profile time zone (`profiles.timezone`, UTC when unset). `payload.digest_date` must equal `dedupe.date`.
+- **Payload 1.0** (validator: `apps/api/src/lib/aiContract/validate.ts`, constants `DIGEST_*`): `version`, `digest_date`, `time_zone?`, `generated_at?`, `summary` (optional integer counts; absent = not reported), `priorities[]` (<= 8), `sections` keyed by `applications|job_leads|email_activity|recruiter_intel|upcoming|follow_ups|ai_suggestions`, each `{status: available|zero|not_configured, count?, items[] (<= 5)}`. Consistency rules: `zero` has no items/count>0, `not_configured` has no items/count, `available` has items or a count>0. Items: `title, detail?, priority?, source?, url?, occurred_at?`. Whole payload <= 16 KiB (DB cap).
+- **Snapshot:** stored payload is returned as stored; history is never recomputed from current state.
+- **Providers:** `system` (existing value) is JobQuest's own deterministic digest; JobQuest content is never attributed to `claude`.
+- ~~**Job leads:** remain generic `job_lead` finding payloads~~ (superseded by section 10, AI-6: `ai_job_leads` child table was added) — originally: generic `job_lead` finding payloads (company, role_title, location, salary_text, remote, job_url, external_job_id, fit_notes). A dedicated `ai_job_leads` child table stays an AI-8 decision and was not created.
+- **`ai_workflow_configs` mutation:** assessed in AI-5 and deliberately NOT added (see report); the table stays read-only.
+
+## 10. External intelligence sources (AI-6, implemented; supersedes the "generic job_lead payload" note in section 9)
+
+- **Migration `20261027100000_ai_hub_external_intelligence.sql`** (local + Dev only; Production untouched): `uq_ai_findings_id_owner` (target of a composite FK), table `ai_job_leads`, `rpc_ai_resolve_job_lead_key`, `rpc_ai_upsert_job_lead`.
+- **`ai_job_leads`** — 1:1 child of an `ai_findings` row of kind `job_lead` (`finding_id` unique; FK `(finding_id, workspace_id, user_id)` -> `ai_findings(id, workspace_id, user_id)` `on delete cascade`, so owner columns can never differ from the parent and review/delete cascade). Columns: company, title, location, `work_arrangement` (remote|hybrid|onsite), `employment_type` (full_time|part_time|contract|temporary|internship|freelance|other), source_name, source_url, canonical_url, external_job_id, `posted_date` (as stated by the source, never inferred), `discovered_at` (JobQuest first stored it; never updated), salary_min/max/currency/period (only if published), experience_level, `match_score` smallint 0..100 (provider estimate), `description` (plain text, CHECK <= 30,000 chars), `description_truncated`, `description_length`, required/preferred skills (jsonb arrays), `payload_version`.
+- **RLS:** authenticated SELECT only with the same predicate as the parent (`can_access_owned_record`); no client INSERT/UPDATE/DELETE; DML only for service_role through the projection RPC. Indexes (query-driven only): newest-first per workspace, owner+canonical_url, owner+(source_name, external_job_id).
+- **Write path:** the finding is ingested first (one audit event, `AI_FINDING_CREATED/UPDATED`); then `rpc_ai_upsert_job_lead` upserts the child (idempotent; skipped when the finding is no longer NEW; identity fields only accumulate via `coalesce`). The projection writes **no** audit event. The description is kept out of `ai_findings.payload` (16 KiB cap): the payload holds the versioned structured metadata (exportable for resume tailoring / ATS / later application creation) and the child holds the text.
+- **Job description:** plain text only; HTML is stripped by the validator; > 30,000 characters is truncated and flagged (`description_truncated`, `description_length`, warning `description_truncated`).
+- **Job dedupe (provider is never an input), strongest first:** (1) external job id with a source name (`job:`), (2) canonical URL (`url:`), (3) company + title + location + posted date (`jobclp:`), (4) company + title + source name (`jobcts:`). Company + title alone is refused. Before ingesting a lead the service calls `rpc_ai_resolve_job_lead_key` and reuses the key of an existing lead (same owner and workspace) that has the same canonical URL or the same (source, id), so a provider that saw only the URL and one that saw only the board id converge.
+- **Email (`email_event`):** category is a closed set (recruiter_reply, interview_invitation, assessment, rejection, application_confirmation, follow_up, scheduling, reschedule, deadline, other_job_search); the received time (`occurred_at`) is required; `due_at` falls back to the extracted deadline. Payload: sender display name + domain (never a full address), subject <= 200, company/role, next step, `needs_attention`. **No body, HTML or attachments** (dropped with warning `raw_body_rejected`). Identity: `ev:<hash(source_type|message id|event)>` with `event` defaulting to `message`; fallback `emfb:` (source + received time + sender + subject) only when no message id exists. "Needs attention" = a NEW email that is HIGH/CRITICAL, in an action category, dated, or flagged by the provider (one definition on server, web and the list filter).
+- **Recruiter (`recruiter_intel`):** must cite `source.url` or `payload.profile_url`; contact email/phone survive only with `contact_source_url` (never guessed); `verification` verified|uncertain with `uncertain_fields`; `related_job` is a contract-local public identity from which the server computes `related_job_key`; the link is resolved at read time inside the caller's RLS scope (a provider database id is never accepted). Identity: canonical profile URL (`recruiter:url:`), else name + company + role (`recruiter:`); the old `channel` input is no longer identity.
+- **Application matching:** deferred. No `application_id` is persisted for any source; no application is created or changed.
+- **Not created (documented decision):** `ai_email_events`, `ai_recruiters` — normalized finding columns plus payload JSON are sufficient for the required filters.
+
+## AI-7 — `ai_calendar_events` (implemented, migration `20261028100000`)
+
+1:1 child of `ai_findings` (kind `calendar_event`), composite FK `(finding_id, workspace_id, user_id)` -> parent, ON DELETE CASCADE,
+RLS select = `can_access_owned_record` (parent parity), no client writes, writers only via service_role RPCs
+(`rpc_ai_upsert_calendar_event`, `rpc_ai_resolve_calendar_key`). Columns: closed `category` (9) and `status` (scheduled, tentative,
+rescheduled, cancelled), `is_deadline` (derived from category), timed instants (`start_at`/`end_at`/`deadline_at`) OR all-day dates
+(`start_date`/`end_date`, inclusive), `sort_at` (chronological anchor), source `time_zone`, calendar source + event id (+ previous id), company/
+job title/location, https meeting/event links, organizer name+domain, `original_start_at`, `reschedule_count`, `cancelled_at`, `logical_key`.
+CHECKs enforce shape (all-day = dates, timed = instants), end >= start, cancelled_at iff cancelled, https-only links. Indexes (query-driven only):
+`(workspace_id, sort_at, id)`, source identity, logical key. No raw payload, attendee list or description is stored anywhere.
+
+## AI-8 — `ai_action_executions` (implemented, migration `20261029100000`)
+
+No core table changes and no suggestion-vocabulary change (`create_application`, `create_task`, `set_status` already existed in the AI-1A CHECK). One new table:
+
+| Column | Notes |
+| --- | --- |
+| `id`, `workspace_id`, `user_id`, `suggestion_id`, `finding_id` | owner/tenant keys; cascade with the suggestion/finding |
+| `action_type` | `create_application` \| `create_task` \| `set_status` |
+| `target_type`, `target_id` | `application` \| `task`; the id is set by JobQuest (pre-generated for applications), never by a provider; no FK (polymorphic) |
+| `status` | `PENDING` \| `SUCCEEDED` \| `FAILED` \| `CONFLICT` (small closed set; no workflow engine) |
+| `idempotency_key`, `state_fingerprint` | server-owned sha256 values |
+| `before_snapshot`, `after_snapshot` | bounded (4 KiB) safe labels only (no provider payloads, no secrets) |
+| `error_category` | the `ACTION_*` categories |
+| `correlation_id`, `requested_at`, `completed_at` | observability |
+
+Unique partial indexes (live = PENDING or SUCCEEDED): per `suggestion_id`, per `(workspace_id, idempotency_key)`, and per `finding_id` for `create_application` (a lead becomes an Application at most once). A FAILED/CONFLICT row never blocks a deliberate retry. RLS: SELECT only, `can_access_owned_record(workspace_id, user_id)` (same predicate as the other AI tables); writes only through the service-role-only claim/complete RPCs.
+
+**Job lead conversion** links the finding to the Application only after JobQuest created (or the human chose) it: `ai_findings.application_id` + `match_confidence = 1` + `status = ACCEPTED`; the lead (`ai_job_leads`) is kept as history. Sibling pending `create_application` suggestions on the same finding become `SUPERSEDED`. **Logical-key review (AI-6 note):** the child table accumulates identity (URL / source+id only ever fill in, never erase), and conversion is keyed by the finding, so a moved/reposted lead cannot be converted twice and a cross-provider re-submission cannot create a second Application; no schema change was needed.
+
+**Initial stage** of a converted lead is `SAVED` (an existing stage meaning "not applied yet"): the Application is not claimed to be applied. `applied_at` keeps the table default; no AI-specific stage or column was invented.

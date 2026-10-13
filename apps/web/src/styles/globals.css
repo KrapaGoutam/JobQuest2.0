@@ -702,6 +702,10 @@ a:hover {
   gap: 22px;
   border-bottom: 1px solid var(--color-border);
 }
+/* AI Hub has six sections: the tab row scrolls inside itself instead of widening the page (AI-6). */
+.ai-hub-tabs-wrapper { min-width: 0; }
+.ai-hub-tabs { overflow-x: auto; overflow-y: hidden; max-width: 100%; scrollbar-width: thin; }
+.ai-hub-tabs .tab { flex: 0 0 auto; }
 .tab {
   height: 36px;
   display: flex;
@@ -1414,7 +1418,7 @@ a:hover {
   justify-content: center;
   border-radius: 50%;
   background: var(--color-accent);
-  color: white;
+  color: var(--color-on-accent);
   font-weight: 700;
 }
 .calendar-cell-events {

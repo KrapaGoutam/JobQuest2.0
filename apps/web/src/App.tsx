@@ -29,6 +29,10 @@ import { ArchiveView } from './views/ArchiveView';
 import { JoinWorkspaceModal } from './components/workspace/JoinWorkspaceModal';
 import { PlaceholderView } from './views/PlaceholderView';
 import { JournalView } from './views/JournalView';
+import { AiHubView } from './views/AiHubView';
+import { OAuthConsentView } from './views/OAuthConsentView';
+import { AI_HUB_PATHS, aiHubTabFromPath } from './lib/aiHub';
+import { isAiHubExposed } from './lib/aiHubFlags';
 import {
   UserPlus,
   AlertCircle,
@@ -402,6 +406,15 @@ function AppContent() {
       case '/analytics':
       case '/analytics/aging':
         return 'Analytics';
+      case '/ai-hub':
+      case '/ai-hub/digest':
+      case '/ai-hub/job-leads':
+      case '/ai-hub/email':
+      case '/ai-hub/recruiters':
+      case '/ai-hub/calendar':
+      case '/ai-hub/actions':
+      case '/ai-hub/history':
+        return 'AI Hub';
       case '/workspace':
       case '/workspace/members':
         return 'Workspace Members';
@@ -418,9 +431,12 @@ function AppContent() {
         return 'Join Workspace';
       case '/settings':
       case '/settings/extension':
+      case '/settings/ai':
         return 'Settings';
       case '/design-system':
         return 'Design System';
+      case '/oauth/authorize':
+        return 'Authorize provider';
       default:
         return 'JobQuest 2.0';
     }
@@ -455,6 +471,20 @@ function AppContent() {
           onDismissCodes={() => setCodes(null)}
         />
       );
+    }
+
+    const notFoundView = (
+      <PlaceholderView
+        title="404 — Page Not Found"
+        subtitle="The requested view does not exist in JobQuest 2.0"
+        icon={<AlertCircle size={24} />}
+        actionText="Return to Applications"
+        onAction={() => navigate('/applications')}
+      />
+    );
+
+    if (routePath === '/oauth/authorize') {
+      return <OAuthConsentView requestId={routeParams.get('request_id')} session={session} />;
     }
 
     if (currentPath === '/design-system') {
@@ -591,6 +621,19 @@ function AppContent() {
       );
     }
 
+    if (AI_HUB_PATHS.includes(routePath)) {
+      if (!isAiHubExposed()) return notFoundView;
+      return (
+        <AiHubView
+          activeWorkspaceId={activeWs}
+          initialTab={aiHubTabFromPath(routePath)}
+          onNavigate={navigate}
+          currentUserId={user?.id ?? null}
+          session={session}
+        />
+      );
+    }
+
     if (currentPath === '/workspace/imports') {
       return (
         <ImportExportView
@@ -650,7 +693,9 @@ function AppContent() {
       );
     }
 
-    if (currentPath === '/settings' || currentPath === '/settings/extension') {
+    if (currentPath === '/settings/ai' && !isAiHubExposed()) return notFoundView;
+
+    if (currentPath === '/settings' || currentPath === '/settings/extension' || currentPath === '/settings/ai') {
       return (
         <SettingsView
           activeWorkspaceId={activeWs}
@@ -670,20 +715,12 @@ function AppContent() {
           onDismissCodes={() => setCodes(null)}
           onRefreshSession={refresh}
           onLogout={onLogout}
-          initialTab={currentPath === '/settings/extension' ? 'extension' : 'account'}
+          initialTab={currentPath === '/settings/extension' ? 'extension' : currentPath === '/settings/ai' ? 'ai' : 'account'}
         />
       );
     }
 
-    return (
-      <PlaceholderView
-        title="404 — Page Not Found"
-        subtitle="The requested view does not exist in JobQuest 2.0"
-        icon={<AlertCircle size={24} />}
-        actionText="Return to Applications"
-        onAction={() => navigate('/applications')}
-      />
-    );
+    return notFoundView;
   };
 
   return (

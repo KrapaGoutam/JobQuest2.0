@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { admin } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AI_TRIGGER_TYPES, toIngestRunInput, validateAiResult,
+  AI_TRIGGER_TYPES, discoveryProfileFromRow, evaluateDiscoveryPolicy, toIngestRunInput, validateAiResult,
   type AiErrorCategory, type AiFinding, type AiIssue, type AiRunStatus, type AiSuggestion, type AiTriggerType,
 } from '../lib/aiContract';
 
@@ -61,6 +61,14 @@ export interface AiIngestCounts {
   suggestionsFailed: number;
   /** Items the validator dropped before persistence. */
   rejectedItems: number;
+  /**
+   * AI-11D: job leads the owner's discovery profile excluded (stale, wrong arrangement, hard-excluded title ...) or that
+   * exceeded the per-run maximum. Policy outcomes, NOT errors: they never make a run PARTIAL.
+   */
+  filteredItems: number;
+  filteredStale: number;
+  filteredUnknownDate: number;
+  filteredOverLimit: number;
 }
 
 export interface AiIngestResult {
@@ -90,6 +98,8 @@ export interface AiRpcClient {
 
 export interface AiIntegrationDeps {
   client?: AiRpcClient;
+  /** Clock for the discovery freshness policy (tests). */
+  now?: () => number;
   env?: Record<string, string | undefined>;
   log?: (entry: Record<string, unknown>) => void;
 }
@@ -106,6 +116,7 @@ const CHECK_VIOLATION = '23514';
 const emptyCounts = (): AiIngestCounts => ({
   findingsCreated: 0, findingsDuplicate: 0, findingsUpdated: 0, findingsClosed: 0, findingsFailed: 0,
   suggestionsCreated: 0, suggestionsDuplicate: 0, suggestionsSkipped: 0, suggestionsFailed: 0, rejectedItems: 0,
+  filteredItems: 0, filteredStale: 0, filteredUnknownDate: 0, filteredOverLimit: 0,
 });
 
 const defaultLog = (entry: Record<string, unknown>) => console.info(JSON.stringify(entry));
@@ -179,6 +190,7 @@ const countsForRpc = (c: AiIngestCounts): Record<string, number> => ({
   findings_closed: c.findingsClosed, findings_failed: c.findingsFailed, suggestions_created: c.suggestionsCreated,
   suggestions_duplicate: c.suggestionsDuplicate, suggestions_skipped: c.suggestionsSkipped,
   suggestions_failed: c.suggestionsFailed, rejected_items: c.rejectedItems,
+  filtered_items: c.filteredItems, filtered_stale: c.filteredStale, filtered_unknown_date: c.filteredUnknownDate, filtered_over_limit: c.filteredOverLimit,
 });
 
 // ---- entry point ------------------------------------------------------------
@@ -277,7 +289,11 @@ export async function ingestAiResult(context: AiTrustedContext, input: unknown, 
   const counts = result.counts;
   let systemic: AiServiceError | null = null;
   const findingIds = new Map<number, { id: string; closed: boolean }>();
+  // AI-11D: deterministic discovery policy (only when this owner has a profile). Best effort: if the profile cannot be read,
+  // leads are stored as before rather than the whole run being lost.
+  const skipLead = await discoveryFilter(client, ctx, data, deps.now ?? Date.now, counts);
   for (const [i, f] of data.findings.entries()) {
+    if (skipLead.has(i)) continue;
     // AI-6: the same posting may reach JobQuest with a different strongest identity (job id vs URL).
     // Reuse the existing lead's key (same owner/workspace, provider-independent) so it is updated, not duplicated.
     // AI-7: the same calendar event may arrive under another provider's id, or as a reschedule with a new id / no id.
@@ -330,6 +346,7 @@ export async function ingestAiResult(context: AiTrustedContext, input: unknown, 
   if (!systemic) {
     for (const [i, s] of data.suggestions.entries()) {
       const parent = findingIds.get(s.finding_index);
+      if (!parent && skipLead.has(s.finding_index)) { counts.suggestionsSkipped++; continue; } // its lead was filtered by the discovery profile
       if (!parent) { counts.suggestionsFailed++; result.errors.push(svcError('CREATE_SUGGESTION_FAILED', { path: `suggestions[${i}]`, message: 'Suggestion references a finding that was not persisted' })); continue; }
       if (parent.closed) { counts.suggestionsSkipped++; continue; } // closed finding: a proposal on it would be refused
       const out = await callRpc(client, 'rpc_ai_create_suggestion', { p_actor_id: ctx.userId, p_finding_id: parent.id, ...toSuggestionParams(s) });
@@ -393,13 +410,42 @@ function toFindingParams(f: AiFinding, schemaVersion: string) {
   };
 }
 
+/**
+ * AI-11D: which accepted-finding indexes the owner's discovery profile excludes. Only job_discovery runs with a stored profile
+ * are filtered. Stale / unknown-date / hard-excluded leads are dropped; the survivors are capped at the profile's maximum
+ * (best provider score first, stable by position). A suggestion on a dropped lead is skipped by the caller.
+ */
+async function discoveryFilter(
+  client: AiRpcClient, ctx: { userId: string; workspaceId: string }, data: { workflow: string; findings: AiFinding[] }, now: () => number, counts: AiIngestCounts,
+): Promise<Set<number>> {
+  const skip = new Set<number>();
+  if (data.workflow !== 'job_discovery' || !data.findings.some((f) => f.kind === 'job_lead' && f.job_lead)) return skip;
+  const out = await callRpc(client, 'rpc_ai_job_discovery_profile_get', { p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId });
+  const row = out.ok ? out.data.profile : null;
+  if (!out.ok || typeof row !== 'object' || row === null) return skip;
+  const profile = discoveryProfileFromRow(row);
+  const nowMs = now();
+  const kept: { i: number; score: number }[] = [];
+  data.findings.forEach((f, i) => {
+    if (f.kind !== 'job_lead' || !f.job_lead) return;
+    const d = evaluateDiscoveryPolicy(profile, { ...f.job_lead, summary: f.summary }, nowMs);
+    if (d.accept) { kept.push({ i, score: f.job_lead.match_score ?? -1 }); return; }
+    skip.add(i); counts.filteredItems++;
+    if (d.reasons.includes('stale_posting')) counts.filteredStale++;
+    else if (d.reasons.includes('unknown_posted_date')) counts.filteredUnknownDate++;
+  });
+  kept.sort((a, b) => b.score - a.score || a.i - b.i);
+  for (const k of kept.slice(profile.maximumResults)) { skip.add(k.i); counts.filteredItems++; counts.filteredOverLimit++; }
+  return skip;
+}
+
 /** Best-effort: a lookup failure must never block ingestion, so any problem falls back to the computed key. */
 async function resolveJobLeadKey(client: AiRpcClient, ctx: { userId: string; workspaceId: string }, f: AiFinding): Promise<string> {
   const lead = f.job_lead;
-  if (!lead || (!lead.canonical_url && !lead.external_job_id)) return f.dedupe_key;
+  if (!lead || (!lead.canonical_url && !lead.external_job_id && !lead.logical_key)) return f.dedupe_key;
   const out = await callRpc(client, 'rpc_ai_resolve_job_lead_key', {
     p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId, p_canonical_url: lead.canonical_url,
-    p_source_name: lead.source_name, p_external_job_id: lead.external_job_id,
+    p_source_name: lead.source_name, p_external_job_id: lead.external_job_id, p_logical_key: lead.logical_key,
   });
   const key = out.ok ? out.data.dedupe_key : null;
   return typeof key === 'string' && /^[!-~]{1,255}$/.test(key) ? key : f.dedupe_key;

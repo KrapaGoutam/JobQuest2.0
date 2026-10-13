@@ -81,7 +81,7 @@ First-run checklist: it read JobQuest; the submitted result was accepted; the di
 
 Job Discovery, Email Triage and Recruiter Intelligence use the same single write tool (`jobquest_submit_ai_result`) and
 the read-only context tools `jobquest_list_job_leads`, `jobquest_list_email_intelligence` and
-`jobquest_list_recruiter_intel` (scope `ai:read`; eleven tools in total, one write, counting the AI-7 `jobquest_list_calendar_intelligence`). Results appear under AI Hub → **Job Leads**,
+`jobquest_list_recruiter_intel` (scope `ai:read`; twelve tools in total, one write, counting the AI-7 `jobquest_list_calendar_intelligence` and the AI-11D read-only `jobquest_get_job_discovery_profile`). Results appear under AI Hub → **Job Leads**,
 **Email** and **Recruiter Intel** and feed the Daily Digest. A job lead is never an application. A run can be scheduled or
 manual: JobQuest does not know or care. JobQuest stores no next-run time. Suggested cadence: job discovery once on
 weekdays, email triage each weekday morning (optionally afternoon), recruiter research only for new or high-value leads.

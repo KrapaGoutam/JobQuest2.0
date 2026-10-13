@@ -3,6 +3,25 @@ CURRENT PHASE:
 JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
 
 CURRENT SUB-PHASE:
+AI-11D FRESH JOB DISCOVERY - COMPLETE ON FEATURE BRANCH `feature/ai11d-fresh-job-discovery` (from development `94e966b8730ef3d2c0828d5a55e93e7660053d2b`); integrating to development. AI-11E (Recruiter Intelligence) NOT started.
+
+STATUS:
+Decision: EXTEND the existing job-lead storage, contract, ingestion, read service, MCP list tool, Job Leads page and templates; NEW only the bounded owner-scoped discovery profile `ai_job_discovery_profiles` (WHAT the user wants; Providers = WHO searches; Automations = WHEN). One additive forward-only migration `20261102100000_ai_hub_fresh_job_discovery.sql` (lead columns posted_at / remote_scope / remote_note / experience range / fit and gap reasons / logical_key / alt_urls / freshness_at; the profile table + service-role RPCs; replaced resolve/upsert lead RPCs). JobQuest never scrapes or browses: providers search with their own tools and submit job_lead findings through the single existing write tool. Deterministic backstop (aiContract/discovery.ts, applied only to job_discovery runs of an owner with a saved profile): freshness 12/24/48/72 h from a trustworthy posted time only (unknown dropped unless the profile allows it, never defaulted to now), Remote-US vs restricted/regional remote, arrangement/employment, excluded title words, explicit experience limit, clearance, software-QA gate, score floor, per-run cap; dropped leads are counted (counts.filtered_*) and never fail or PARTIAL a run. Source health: run.sources[].status ok|zero|blocked|unavailable|error|skipped in the existing ai_runs.sources; "unavailable" is never "zero" (Job Leads page + Daily Digest empty-section state). Dedupe: first URL kept + bounded alt_urls, conservative cross-source logical key, per-metro leads stay separate, dismissed stays dismissed. "Already tracked" = read-time AI-8 matcher (MATCHED/POSSIBLE/UNMATCHED; no write verb; no Application is ever created or changed). MCP: 11 -> 12 tools (+ read-only jobquest_get_job_discovery_profile), still exactly one write. UI: Settings -> AI & Automation -> Job Discovery; Job Leads freshest-first with sort / recency / Remote-US controls, honest posted + remote wording, fit and gap reasons, source health. Validation: typecheck, eslint, build, secret scans, unit 1049, AI integration 179, e2e (ai11d + ai6/ai8/ai11a) at 375/768/1280 with axe 0 critical/serious. Branch CI, development merge SHA, development CI and the remote Dev migration are recorded in the AI-11D completion report (chat checkpoint). Main `455a0120...` and Production unchanged; development stays cumulative. Report: reports/AI-11D_FRESH_JOB_DISCOVERY_REPORT.md.
+
+BASE BRANCH:
+development (94e966b8730ef3d2c0828d5a55e93e7660053d2b + AI-11D merge)
+
+NEXT EXACT STEP:
+Separately approved AI-11E (Recruiter Intelligence) on its own feature branch from development. Remote Dev DB needs AI-11D migration `20261102100000` applied only after development CI is green (verify ref xpnkasclquplmrcmhsif, inspect ledger, dry-run, apply only that migration); Production needs AI-11A `20261101100000` and AI-11D `20261102100000` only at the single post-AI-11 main promotion.
+```
+
+(Previous state, AI-11C, kept for history:)
+
+```
+CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
 AI-11C DAILY DIGEST - COMPLETE ON FEATURE BRANCH `feature/ai11c-daily-digest` (from development `e0ae3a2363208939d001132fe3f999ccfb560553`); integrating to development. AI-11D (Fresh Job Discovery) NOT started.
 
 STATUS:

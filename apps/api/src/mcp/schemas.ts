@@ -7,10 +7,10 @@ import {
   AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
   AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_ACTION_STATES, EMAIL_CATEGORIES,
   EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_URGENCIES,
-  JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
+  JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS,
 } from '../lib/aiContract';
 import { CALENDAR_ORDERS } from '../services/aiCalendarService';
-import { SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
+import { JOB_LEAD_SORTS, SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
 import {
   APPLICATION_STAGES, APPLICATION_STATUSES, APP_READ_MAX_PAGE, APP_READ_MAX_PAGE_SIZE, APP_SEARCH_MAX_LENGTH,
 } from '../services/applicationReadService';
@@ -78,8 +78,13 @@ export const listJobLeadsInput = z.strictObject({
   discoveredBefore: iso.optional(),
   postedSince: calendarDate.optional(),
   postedBefore: calendarDate.optional(),
+  recentHours: z.union([z.literal(12), z.literal(24), z.literal(48), z.literal(72)]).optional().describe('Only leads posted (or, when the posting time is unknown, first stored) within the last 12, 24, 48 or 72 hours'),
+  remoteScope: z.enum(JOB_REMOTE_SCOPES).optional().describe('Remote roles by the geography they admit: us = open to the whole United States, restricted = certain states only, region = a specific region'),
+  sort: z.enum(JOB_LEAD_SORTS).optional().describe('freshness (default: best known posting time, then match), match, or discovered'),
   ...sourceCommon,
 });
+/** AI-11D: read-only view of the owner's Job Discovery profile. No arguments: workspace and owner come from the connection. */
+export const getJobDiscoveryProfileInput = z.strictObject({});
 export const listEmailIntelligenceInput = z.strictObject({
   category: z.enum(EMAIL_CATEGORIES).optional(),
   group: z.enum(EMAIL_GROUPS).optional().describe('job_related or other'),
@@ -141,4 +146,5 @@ const notice = z.string();
 const page = { page: z.number(), pageSize: z.number(), hasNext: z.boolean() };
 export const listOutput = z.object({ items: z.array(z.looseObject({ id: z.string() })), ...page, notice });
 export const getApplicationOutput = z.object({ item: z.looseObject({ id: z.string() }), notice });
+export const getJobDiscoveryProfileOutput = z.object({ item: z.looseObject({ configured: z.boolean() }), notice });
 export const submitAiResultOutput = z.looseObject({ success: z.boolean(), runId: z.string().nullable(), correlationId: z.string() });

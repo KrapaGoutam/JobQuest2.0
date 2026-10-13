@@ -1,7 +1,7 @@
 // Provider-neutral normalized types for jobquest.ai-result. Type-only (no runtime
 // imports beyond constants), so it is safe to share with other packages.
 import type {
-  AiFindingKind, AiPriority, AiProvider, AiSourceType, AiSuggestionAction,
+  AiFindingKind, AiPriority, AiProvider, AiSourceStatus, AiSourceType, AiSuggestionAction,
   AiSuggestionTargetType, AiTriggerType, AiWorkflow, AI_CONTRACT_NAME,
 } from './constants';
 
@@ -9,7 +9,8 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [k: string]: JsonValue };
 export type JsonRecord = { [k: string]: JsonValue };
 
-export interface AiSourceRef { type: AiSourceType; ref: string; observed_at: string | null }
+/** status/count/note are AI-11D discovery source health; absent on legacy refs. */
+export interface AiSourceRef { type: AiSourceType; ref: string; observed_at: string | null; status?: AiSourceStatus; count?: number; note?: string }
 
 /** Untrusted hints for server-side application matching (DATA_MODEL_PLAN §4). */
 export interface AiMatchHints {
@@ -50,6 +51,18 @@ export interface AiJobLeadProjection {
   required_skills: string[];
   preferred_skills: string[];
   payload_version: string;
+  // ---- AI-11D (all optional facts; absent = not stated, never guessed) ----
+  /** Exact posting instant (UTC ISO) when the source states one. Null = unknown; never "now". */
+  posted_at: string | null;
+  /** Geography a remote role admits; null = not stated. */
+  remote_scope: string | null;
+  remote_note: string | null;
+  experience_min_years: number | null;
+  experience_max_years: number | null;
+  fit_reasons: string[];
+  gap_reasons: string[];
+  /** Conservative cross-source identity (company + normalized title + location/arrangement), or null. */
+  logical_key: string | null;
 }
 
 /**

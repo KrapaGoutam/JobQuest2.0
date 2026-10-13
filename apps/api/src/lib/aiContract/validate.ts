@@ -5,7 +5,7 @@ import {
   AI_CONTRACT_NAME, AI_CONTRACT_VERSION, AI_EVENT_PATTERN, DIGEST_LIMITS, DIGEST_MAX_MINOR, DIGEST_PAYLOAD_VERSION, DIGEST_REF_TYPES, DIGEST_SECTION_ITEM_LIMITS,
   DIGEST_SECTION_KEYS, DIGEST_SECTION_STATUSES, DIGEST_SUMMARY_KEYS, AI_FINDING_KINDS, AI_LIMITS,
   AI_MAX_SUPPORTED_MINOR, AI_PRIORITIES, AI_PROVIDERS, AI_SOURCE_TYPES, AI_SUGGESTION_ACTIONS,
-  AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS,
+  AI_SOURCE_STATUSES, AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS, DISCOVERY_LIMITS, JOB_REMOTE_SCOPES,
   EMAIL_ACTION_STATES, EMAIL_CATEGORIES, EMAIL_GROUPS, EMAIL_STAGE_HINTS, EMAIL_URGENCIES, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES, JOB_SALARY_PERIODS, JOB_WORK_ARRANGEMENTS,
   RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
   CALENDAR_CATEGORIES, CALENDAR_CATEGORY_ALIASES, CALENDAR_DEADLINE_CATEGORIES, CALENDAR_LIMITS, CALENDAR_PAYLOAD_VERSION,
@@ -16,6 +16,7 @@ import {
 import { emailCategoryGroup, resolveEmailUrgency } from './emailTriage';
 import { isActionType, validateActionProposal } from './actions';
 import { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
+import { effectiveRemoteScope, leadLogicalKey } from './discovery';
 import { isIanaTimeZone, localMidnight, localToInstant, stringOffsetMinutes, zoneOffsetMinutes } from './calendarTime';
 import type {
   AiCalendarProjection, AiFinding, AiIngestRunInput, AiIssue, AiJobLeadProjection, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
@@ -411,6 +412,8 @@ const JOB_KEYS = [
   'external_job_id', 'posted_date', 'salary_min', 'salary_max', 'salary_currency', 'salary_period', 'salary_text',
   'experience_level', 'required_experience', 'match_score', 'match_reasoning', 'required_skills', 'preferred_skills',
   'fit_notes', 'description',
+  // AI-11D
+  'posted_at', 'remote_scope', 'remote_note', 'experience_min_years', 'experience_max_years', 'fit_reasons', 'gap_reasons',
 ] as const;
 
 function salaryInt(c: Ctx, v: unknown, path: string): number | null {
@@ -441,7 +444,44 @@ function jobLeadPayload(
   const canonical = jobUrl ? canonicalizeUrl(jobUrl) : null;
   const externalId = text(c, v.external_job_id, `${path}.external_job_id`, AI_LIMITS.id);
   const sourceName = (text(c, v.source_name, `${path}.source_name`, 64) ?? hostOf(jobUrl ?? ctx.sourceUrl))?.toLowerCase() ?? null;
-  const posted = calendarDate(c, v.posted_date, `${path}.posted_date`);
+  let posted = calendarDate(c, v.posted_date, `${path}.posted_date`);
+
+  // AI-11D: the exact posting instant. An unusable or future value becomes UNKNOWN (with a warning); it is never "now".
+  let postedAt: string | null = null;
+  if (v.posted_at !== undefined && v.posted_at !== null) {
+    const raw = typeof v.posted_at === 'string' ? v.posted_at.trim() : '';
+    const t = ISO_TS.test(raw) ? Date.parse(raw) : NaN;
+    const y = Number.isFinite(t) ? new Date(t).getUTCFullYear() : 0;
+    if (!Number.isFinite(t) || y < 2000 || y > 2100 || !isIsoDate(raw.slice(0, 10))) c.warn(`${path}.posted_at`, 'posted_at_unusable', 'posted_at must be ISO-8601 with an explicit offset; treated as unknown');
+    else if (t > c.refTime + 10 * 60_000) c.warn(`${path}.posted_at`, 'posted_at_future', 'posted_at is in the future; treated as unknown');
+    else postedAt = new Date(t).toISOString();
+  }
+  if (posted && posted > new Date(c.refTime + 86_400_000).toISOString().slice(0, 10)) { c.warn(`${path}.posted_date`, 'posted_date_future', 'posted_date is in the future; treated as unknown'); posted = null; }
+  if (postedAt) {
+    const atDate = postedAt.slice(0, 10);
+    if (!posted) posted = atDate;
+    else if (Math.abs(Date.parse(`${atDate}T00:00:00Z`) - Date.parse(`${posted}T00:00:00Z`)) > 86_400_000) { c.warn(`${path}.posted_date`, 'posted_date_conflict', 'posted_date disagrees with posted_at; the exact time wins'); posted = atDate; }
+  }
+
+  let remoteScope = enumField(c, v.remote_scope, `${path}.remote_scope`, JOB_REMOTE_SCOPES, {
+    usa: 'us', united_states: 'us', us_only: 'us', nationwide: 'us', restricted_states: 'restricted', state_restricted: 'restricted', select_states: 'restricted',
+    regional: 'region', specific_region: 'region',
+  });
+  if (remoteScope && arrangement !== 'remote') { c.warn(`${path}.remote_scope`, 'remote_scope_ignored', 'remote_scope applies only to remote roles'); remoteScope = null; }
+  const remoteNote = text(c, v.remote_note, `${path}.remote_note`, SOURCE_KEY_LIMITS.short, { truncate: true });
+  // A remote role whose geography the provider did not state: read it conservatively from the stated location/note only
+  // (explicit "United States" => us, "must reside in ..." => restricted, a non-US region => region). Nothing stated => stays unknown.
+  if (arrangement === 'remote' && !remoteScope) remoteScope = effectiveRemoteScope({ remote_scope: null, location, remote_note: remoteNote });
+  const expYears = (raw: unknown, key: string): number | null => {
+    if (raw === undefined || raw === null) return null;
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > 50) { c.warn(`${path}.${key}`, 'experience_years', 'must be a whole number of years 0-50 (only if the posting states it); dropped'); return null; }
+    return raw;
+  };
+  let expMin = expYears(v.experience_min_years, 'experience_min_years');
+  let expMax = expYears(v.experience_max_years, 'experience_max_years');
+  if (expMin !== null && expMax !== null && expMin > expMax) { c.warn(`${path}.experience_min_years`, 'experience_range', 'experience_min_years is greater than experience_max_years; both dropped'); expMin = null; expMax = null; }
+  const fitReasons = stringList(c, v.fit_reasons, `${path}.fit_reasons`, DISCOVERY_LIMITS.reasons, DISCOVERY_LIMITS.reasonChars);
+  const gapReasons = stringList(c, v.gap_reasons, `${path}.gap_reasons`, DISCOVERY_LIMITS.reasons, DISCOVERY_LIMITS.reasonChars);
 
   // Salary: only what the posting explicitly publishes. An inverted range is dropped, not "fixed".
   let salaryMin = salaryInt(c, v.salary_min, `${path}.salary_min`);
@@ -481,7 +521,9 @@ function jobLeadPayload(
   const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION, company, role_title: title };
   const put = (k: string, val: JsonValue | null) => { if (val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0)) out[k] = val; };
   put('location', location); put('work_arrangement', arrangement); put('employment_type', employment);
-  put('source_name', sourceName); put('job_url', jobUrl); put('external_job_id', externalId); put('posted_date', posted);
+  put('source_name', sourceName); put('job_url', jobUrl); put('external_job_id', externalId); put('posted_date', posted); put('posted_at', postedAt);
+  put('remote_scope', remoteScope); put('remote_note', remoteNote); put('experience_min_years', expMin); put('experience_max_years', expMax);
+  put('fit_reasons', fitReasons); put('gap_reasons', gapReasons);
   put('salary_min', salaryMin); put('salary_max', salaryMax); put('salary_currency', currency); put('salary_period', period); put('salary_text', salaryText);
   put('experience_level', experience); put('required_experience', requiredExp);
   put('match_score', score); put('match_reasoning', reasoning);
@@ -497,6 +539,9 @@ function jobLeadPayload(
     salary_period: period, experience_level: experience, match_score: score, description: desc?.text ?? null,
     description_truncated: desc?.truncated ?? false, description_length: desc?.text ? desc.length : null,
     required_skills: required, preferred_skills: preferred, payload_version: SOURCE_PAYLOAD_VERSION,
+    posted_at: postedAt, remote_scope: remoteScope, remote_note: remoteNote, experience_min_years: expMin, experience_max_years: expMax,
+    fit_reasons: fitReasons, gap_reasons: gapReasons,
+    logical_key: leadLogicalKey({ company, title, location, work_arrangement: arrangement, remote_scope: remoteScope }),
   };
   return {
     payload: out, job,
@@ -1127,12 +1172,20 @@ export function validateAiResult(input: unknown): AiValidationResult {
     else input.sources.forEach((s: unknown, i: number) => {
       const p = `sources[${i}]`;
       if (!isObj(s)) { c.err(p, 'type', 'must be an object'); return; }
-      c.strip(s, ['type', 'ref', 'observed_at'], p);
+      c.strip(s, ['type', 'ref', 'observed_at', 'status', 'count', 'note'], p);
       const e0 = c.errors.length;
       const type = oneOf(c, s.type, `${p}.type`, AI_SOURCE_TYPES);
       const ref = text(c, s.ref, `${p}.ref`, AI_LIMITS.id, { required: true });
       const observed_at = timestamp(c, s.observed_at, `${p}.observed_at`);
-      if (c.errors.length === e0 && type && ref) sources.push({ type, ref, observed_at });
+      // AI-11D source health: unavailable / blocked / error / skipped are NOT the same as zero results.
+      const status = oneOf(c, s.status, `${p}.status`, AI_SOURCE_STATUSES, false);
+      let count: number | undefined;
+      if (s.count !== undefined && s.count !== null) {
+        if (typeof s.count !== 'number' || !Number.isInteger(s.count) || s.count < 0 || s.count > 100_000) c.err(`${p}.count`, 'count', 'must be a whole number 0-100000');
+        else count = s.count;
+      }
+      const note = text(c, s.note, `${p}.note`, DISCOVERY_LIMITS.sourceNoteChars, { truncate: true });
+      if (c.errors.length === e0 && type && ref) sources.push({ type, ref, observed_at, ...(status ? { status } : {}), ...(count !== undefined ? { count } : {}), ...(note ? { note } : {}) });
     });
   }
 

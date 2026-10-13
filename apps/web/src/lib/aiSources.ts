@@ -129,16 +129,51 @@ export const clampScore = (raw: string): number | null => {
 export interface JobLeadFilters {
   provider: string; status: SourceStatusFilter; search: string; company: string; location: string;
   arrangement: string; employmentType: string; minScore: string; discovered: DateRange; posted: DateRange;
+  /** AI-11D: 'freshness' (default) | 'match' | 'discovered'. */
+  sort: string;
+  /** AI-11D: 'ALL' or the last 12/24/48/72 hours (posting time; first-stored time when the posting time is unknown). */
+  recent: string;
+  /** AI-11D: only remote roles open to the whole United States. */
+  remoteUs: boolean;
 }
 export const DEFAULT_JOB_LEAD_FILTERS: JobLeadFilters = {
   provider: 'ALL', status: 'ACTIVE', search: '', company: '', location: '', arrangement: 'ALL', employmentType: 'ALL', minScore: '',
-  discovered: { from: '', to: '' }, posted: { from: '', to: '' },
+  discovered: { from: '', to: '' }, posted: { from: '', to: '' }, sort: 'freshness', recent: 'ALL', remoteUs: false,
 };
+
+// AI-11D (mirrors the server; tests/unit/ai-11d-discovery-ui.test.ts fails on drift).
+export const JOB_LEAD_SORTS = ['freshness', 'match', 'discovered'] as const;
+export const JOB_LEAD_SORT_LABELS: Record<(typeof JOB_LEAD_SORTS)[number], string> = {
+  freshness: 'Freshest first', match: 'Best AI match first', discovered: 'Recently found first',
+};
+export const DISCOVERY_FRESHNESS_HOURS = [12, 24, 48, 72] as const;
+export const JOB_REMOTE_SCOPES = ['us', 'restricted', 'region'] as const;
+export type JobRemoteScope = (typeof JOB_REMOTE_SCOPES)[number];
+export const AI_SOURCE_STATUSES = ['ok', 'zero', 'blocked', 'unavailable', 'error', 'skipped'] as const;
+export type AiSourceStatus = (typeof AI_SOURCE_STATUSES)[number];
+
+const NON_US = /\b(canada|canadian|uk|united kingdom|england|ireland|europe|european|emea|apac|asia|india|latam|latin america|mexico|australia|philippines|brazil)\b/i;
+const US_WORDS = /\b(u\.?s\.?a?\.?|united states|nationwide|anywhere in the (u\.?s\.?|united states))\b/i;
+const RESTRICTED = /\b(must (reside|live|be located|be based) in|residents? of|restricted to|only (open )?to (candidates|residents)|eligible (states|locations)|(select|certain|specific|following) states|(tx|ca|ny|fl|wa|il|ga|nc|va|az|co|nj|ma) (and|or|,) (tx|ca|ny|fl|wa|il|ga|nc|va|az|co|nj|ma)\b)/i;
+
+/** Mirrors the server's effectiveRemoteScope: the provider's scope wins; otherwise a conservative reading of the stated text. */
+export function effectiveRemoteScope(l: { scope: string | null; location: string | null; note: string | null }): JobRemoteScope | null {
+  if (l.scope === 'us' || l.scope === 'restricted' || l.scope === 'region') return l.scope;
+  const t = `${l.location ?? ''} ${l.note ?? ''}`.trim();
+  if (!t) return null;
+  if (RESTRICTED.test(t)) return 'restricted';
+  if (NON_US.test(t) && !US_WORDS.test(t)) return 'region';
+  if (US_WORDS.test(t)) return 'us';
+  return null;
+}
 
 /** Row selected by api/aiSources.ts (RLS). `description` is only present in the detail fetch. */
 export interface JobLeadRow {
   finding_id: string; user_id: string; company: string; title: string; location: string | null; work_arrangement: string | null;
   employment_type: string | null; source_name: string | null; source_url: string | null; posted_date: string | null; discovered_at: string;
+  /** AI-11D */
+  posted_at?: string | null; freshness_at?: string | null; remote_scope?: string | null; remote_note?: string | null;
+  experience_min_years?: number | null; experience_max_years?: number | null; fit_reasons?: unknown; gap_reasons?: unknown;
   salary_min: number | null; salary_max: number | null; salary_currency: string | null; salary_period: string | null;
   experience_level: string | null; match_score: number | null; required_skills: unknown; preferred_skills: unknown;
   description_truncated: boolean; description_length: number | null; description?: string | null;
@@ -155,11 +190,20 @@ export interface JobLeadView {
   applicationId: string | null;
   /** AI-8: a create_application suggestion is waiting in the Actions queue (the lead itself is never executed from here). */
   pendingAction: boolean;
+  /** AI-11D. Exact posting instant; null = unknown (never shown as today / now). */
+  postedAt: string | null;
+  freshnessAt: string | null;
+  /** Remote geography (provider scope, else a conservative text reading); null = not remote or not stated. */
+  remoteScope: JobRemoteScope | null;
+  remoteNote: string | null;
+  experienceMinYears: number | null; experienceMaxYears: number | null;
+  /** Provider analysis, bounded. */
+  fitReasons: string[]; gapReasons: string[];
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const text = (v: unknown, max: number): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
-const list = (v: unknown, max = 30): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').slice(0, max).map((x) => x.slice(0, 100)) : []);
+const list = (v: unknown, max = 30, maxLen = 100): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').slice(0, max).map((x) => x.slice(0, maxLen)) : []);
 
 export const isStrongMatch = (score: number | null | undefined): boolean => typeof score === 'number' && score >= STRONG_MATCH_THRESHOLD;
 
@@ -187,14 +231,57 @@ export function toJobLeadView(r: JobLeadRow): JobLeadView {
     hasDescription: desc !== null || (typeof r.description_length === 'number' && r.description_length > 0),
     descriptionTruncated: r.description_truncated === true, descriptionLength: typeof r.description_length === 'number' ? r.description_length : null, description: desc,
     applicationId: typeof f.application_id === 'string' && f.application_id !== '' ? f.application_id : null, pendingAction: false,
+    postedAt: text(r.posted_at, 40), freshnessAt: text(r.freshness_at, 40),
+    remoteScope: r.work_arrangement === 'remote' ? effectiveRemoteScope({ scope: text(r.remote_scope, 12), location: text(r.location, 200), note: text(r.remote_note, 200) }) : null,
+    remoteNote: text(r.remote_note, 200),
+    experienceMinYears: typeof r.experience_min_years === 'number' ? r.experience_min_years : null,
+    experienceMaxYears: typeof r.experience_max_years === 'number' ? r.experience_max_years : null,
+    fitReasons: list(r.fit_reasons, 8, 200), gapReasons: list(r.gap_reasons, 8, 200),
   };
+}
+
+/** Arrangement as the user should read it: a remote role is NEVER shown as "Remote - US" unless its geography is known to be the US. */
+export function arrangementDisplay(l: { arrangement: string | null; remoteScope: JobRemoteScope | null }): string {
+  if (l.arrangement === 'remote') {
+    return l.remoteScope === 'us' ? 'Remote — US' : l.remoteScope === 'restricted' ? 'Remote — restricted locations'
+      : l.remoteScope === 'region' ? 'Remote — specific region' : 'Remote — location scope not stated';
+  }
+  return l.arrangement === 'hybrid' ? 'Hybrid' : l.arrangement === 'onsite' ? 'Onsite' : '';
+}
+
+/**
+ * How old the posting is, from a TRUSTWORTHY timestamp only. A date-only posting reads as a date; no date reads as unknown.
+ * Never "today" for a missing date.
+ */
+export function postedDisplay(l: { postedAt: string | null; postedDate: string | null }, nowMs: number): string {
+  if (l.postedAt) {
+    const t = Date.parse(l.postedAt);
+    if (Number.isFinite(t)) {
+      const mins = Math.max(0, Math.round((nowMs - t) / 60_000));
+      if (mins < 60) return 'Posted just now';
+      const hours = Math.floor(mins / 60);
+      if (hours < 48) return `Posted ${hours}h ago`;
+      return `Posted ${Math.floor(hours / 24)}d ago`;
+    }
+  }
+  if (l.postedDate && DAY.test(l.postedDate)) return `Posted ${new Date(`${l.postedDate}T00:00:00Z`).toLocaleDateString(undefined, { dateStyle: 'medium', timeZone: 'UTC' })}`;
+  return 'Posted date unknown';
+}
+
+export function experienceDisplay(l: { experienceMinYears: number | null; experienceMaxYears: number | null; experienceLevel: string | null }): string | null {
+  const { experienceMinYears: min, experienceMaxYears: max } = l;
+  if (min !== null && max !== null) return min === max ? `${min} years stated` : `${min}–${max} years stated`;
+  if (min !== null) return `${min}+ years stated`;
+  if (max !== null) return `up to ${max} years stated`;
+  return l.experienceLevel;
 }
 
 /** Structured, provider-neutral export of one lead (the copy action). Same fields the page already shows. */
 export function jobLeadExport(v: JobLeadView): Record<string, unknown> {
   return {
     company: v.company, title: v.title, location: v.location, work_arrangement: v.arrangement, employment_type: v.employmentType,
-    source_name: v.sourceName, source_url: v.sourceUrl, posted_date: v.postedDate, discovered_at: v.discoveredAt, salary: v.salary,
+    source_name: v.sourceName, source_url: v.sourceUrl, posted_date: v.postedDate, posted_at: v.postedAt, remote_scope: v.remoteScope, discovered_at: v.discoveredAt, salary: v.salary,
+    fit_reasons: v.fitReasons, gap_reasons: v.gapReasons,
     experience_level: v.experienceLevel, ai_match_score: v.matchScore, required_skills: v.requiredSkills, preferred_skills: v.preferredSkills,
     description: v.description, description_truncated: v.descriptionTruncated, provider: v.provider,
   };
@@ -353,7 +440,7 @@ export type SourceKind = 'job_leads' | 'email' | 'recruiters' | 'calendar';
 export const SOURCE_WORKFLOW: Record<SourceKind, string> = { job_leads: 'job_discovery', email: 'email_triage', recruiters: 'recruiter_intel', calendar: 'calendar_review' };
 export const SOURCE_TITLES: Record<SourceKind, string> = { job_leads: 'Job Leads', email: 'Email Intelligence', recruiters: 'Recruiter Intelligence', calendar: 'Calendar Intelligence' };
 export const SOURCE_NOT_CONFIGURED: Record<SourceKind, string> = {
-  job_leads: 'Job discovery has not run yet. Connect Claude in Settings → AI & Automation and schedule the Job Discovery task; its results appear here.',
+  job_leads: 'Job discovery has not run yet. Describe the jobs you want under Settings → AI & Automation → Job Discovery, connect a provider and schedule its Job Discovery task; fresh, strong-fit leads appear here.',
   email: 'Email triage has not run yet. Connect Claude in Settings → AI & Automation and schedule the Email Triage task; classifications and summaries appear here (never message bodies).',
   recruiters: 'Recruiter research has not run yet. Connect Claude in Settings → AI & Automation and schedule the Recruiter Intelligence task; cited public findings appear here.',
   calendar: 'Calendar review has not run yet. Connect Claude in Settings → AI & Automation and schedule the Calendar Intelligence task; interviews, calls and deadlines it finds appear here. JobQuest never connects to your calendar and cannot change it.',

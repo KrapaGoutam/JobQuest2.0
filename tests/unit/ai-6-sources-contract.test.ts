@@ -188,7 +188,7 @@ describe('job lead dedupe (provider is never part of identity)', () => {
   it('company + title + location + posted date is a strong identity; different posting dates stay separate', () => {
     const a = lead({}, { posted_date: '2026-09-28' }, 'claude');
     const b = lead({}, { posted_date: '2026-09-28', company: ' EXAMPLE corp ' }, 'gemini');
-    const c = lead({}, { posted_date: '2026-10-05' });
+    const c = lead({}, { posted_date: '2026-09-20' });
     expect(keyOf(a)).toBe(keyOf(b));
     expect(keyOf(a)).toMatch(/^jobclp:/);
     expect(keyOf(c)).not.toBe(keyOf(a));

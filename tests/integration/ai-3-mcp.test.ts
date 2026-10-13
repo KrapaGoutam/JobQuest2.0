@@ -16,7 +16,7 @@ const NOTE_CANARY = 'PRIVATE-NOTE-CANARY';
 const URL_ = 'http://localhost/api/mcp';
 const ALL = ['jobquest:read', 'ai:read', 'ai:ingest'];
 const APPROVED_TOOLS = [
-  'jobquest_get_application', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
+  'jobquest_get_application', 'jobquest_get_job_discovery_profile', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
   'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel', 'jobquest_submit_ai_result',
 ];
 
@@ -256,7 +256,7 @@ describe.skipIf(!ready || !local)('AI-3 — MCP transport, connector auth and to
     await c1.close();
     // A second, independent client (new "function instance"): stateless, no session shared or required.
     const c2 = await sdkClient(tokens.carol!.token);
-    expect((await c2.listTools()).tools).toHaveLength(11);
+    expect((await c2.listTools()).tools).toHaveLength(12);
     await c2.close();
     const raw = await mcp(tokens.carol!.token, rpc('tools/list')); // no initialize, no session id
     expect(raw.status).toBe(200);
@@ -319,7 +319,7 @@ describe.skipIf(!ready || !local)('AI-3 — MCP transport, connector auth and to
     const ingestOnly = await mkToken(carol, ws, ['ai:ingest']);
     const names = async (t: string) => ((await mcp(t, rpc('tools/list'))).json.result.tools as { name: string }[]).map((x) => x.name).sort();
     expect(await names(readOnly.token)).toEqual(['jobquest_get_application', 'jobquest_list_applications']);
-    expect(await names(aiRead.token)).toEqual(['jobquest_list_ai_findings', 'jobquest_list_ai_runs', 'jobquest_list_ai_suggestions', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel']);
+    expect(await names(aiRead.token)).toEqual(['jobquest_get_job_discovery_profile', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs', 'jobquest_list_ai_suggestions', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel']);
     expect(await names(ingestOnly.token)).toEqual(['jobquest_submit_ai_result']);
 
     expect((await callTool(readOnly.token, 'jobquest_list_applications', {})).status).toBe(200);

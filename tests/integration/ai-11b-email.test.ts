@@ -354,7 +354,7 @@ describe.skipIf(!ready || !local)('AI-11B — email intelligence & triage (real 
 
   // ---- MCP -------------------------------------------------------------------------------------------------
 
-  it('AI11B-11 · MCP: still 11 tools, one write tool, the email tool is read-only and returns the canonical fields; no new filters can mutate', async () => {
+  it('AI11B-11 · MCP: 12 tools (AI-11D adds one read), one write tool, the email tool is read-only and returns the canonical fields; no new filters can mutate', async () => {
     const mk = async (scopes: string[]) => {
       const res = await carol.call('/ai/connector-tokens', { workspace_id: ws, name: uniq('tok'), scopes });
       expect(res.status, JSON.stringify(res.json)).toBe(201);
@@ -371,7 +371,7 @@ describe.skipIf(!ready || !local)('AI-11B — email intelligence & triage (real 
       return JSON.parse(await res.text());
     };
     const tools = (await mcp(tok, 'tools/list')).result.tools as Array<{ name: string; annotations: Record<string, boolean>; description: string }>;
-    expect(tools).toHaveLength(11);
+    expect(tools).toHaveLength(12);
     expect(tools.filter((t) => /submit|create|import|delete|update|apply|send|reply|draft/i.test(t.name)).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     const emailTool = tools.find((t) => t.name === 'jobquest_list_email_intelligence')!;
     expect(emailTool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });

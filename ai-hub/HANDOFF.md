@@ -6,6 +6,9 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
+CURRENT PHASE: JobQuest 2.2 / AI-11 · CURRENT SUB-PHASE: AI-11A Automation Foundation COMPLETE on `feature/ai11a-automation-foundation` (from development `879f73e7`; branch CI PASS; integrating to development; development merge SHA/CI and the remote Dev migration are in the completion report). EXTENDS `ai_workflow_configs` (a row = a provider-neutral automation: name, workflow, enabled, provider, cadence daily/weekdays/selected_days/weekly/manual_only, local_time, IANA timezone, ISO weekdays, sections, delivery). Migration `20261101100000_ai_hub_automation_foundation.sql` (local only until development CI; Production only at the single post-AI-11 main promotion). Last run/success/error DERIVED from `ai_runs`; next_expected_run COMPUTED. API `/api/ai/automations` (POST-only mutations). Run Now DEFERRED WITH CONTRACT (no executor). MCP unchanged. NEXT: AI-11B Email Intelligence & Triage on its own branch, only when separately approved; do NOT merge development to main after AI-11A. See `reports/AI-11A_AUTOMATION_FOUNDATION_REPORT.md`.
+
+(Previous phase pointer, kept for history:)
 CURRENT PHASE: AI-10 CLOSED - PRODUCTION CERTIFIED / COMPLETE (Claude, Gemini, ChatGPT PASS; main `455a0120`, development `5fc2bc4c`, Prod DB head `20261031100000`; P1-P9 recorded; Prod DB password rotation SHELVED/pending). NEXT: JobQuest 2.2 / AI-11 Scheduled Intelligence & Digest Automation, starting at AI-11A Automation Foundation (audit reuse of ai_workflow_configs/ai_runs/ai_findings first). Planning only; no AI-11 code or migrations yet. See `reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md` section 9 and `ROADMAP.md`.
 
 (Previous phase pointer, kept for history:)

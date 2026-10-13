@@ -1,5 +1,27 @@
 ```
 CURRENT PHASE:
+AI-10 (OAuth 2.1 Provider Auth + Final Security / Release Hardening; one cumulative branch)
+
+CURRENT SUB-PHASE:
+AI-10 COMPLETE ON FEATURE BRANCH - READY FOR DEVELOPMENT INTEGRATION
+
+STATUS:
+AI-10 feature work complete. Executable SHA `26988669877bf2f595fe923df587d71485a79b14`, branch CI `38311573190` PASS (docs-only commits follow; no executable change). Gemini and ChatGPT OAuth, reads, AI ingest and revocation live-verified on Dev/Preview; refresh-token rotation observed live for both (server-side evidence). Shelved by operator and NOT verified: scheduled read/ingest, Gmail trigger, unattended refresh. ChatGPT live hostile-content test NOT TESTED (POST-RELEASE); Gemini fresh-chat injection NOT FULLY VERIFIED. Final read-only security review: no release blockers (8 POST-RELEASE items in the report). Main `26e517ea…`, Production and Production DB unchanged (Prod head `20261022100000`; Dev head `20261030100000`). Production needs 8 ordered migrations `20261023100000`..`20261030100000` (report section 5). Dev still holds one live Gemini and one live ChatGPT test client (revoke when done).
+
+BASE BRANCH:
+development (9d8b815ed2b77b4941467b72d33f16868adf86ca)
+
+WORKING BRANCH:
+feature/ai-10-oauth-release-hardening
+
+NEXT EXACT STEP:
+Commit the docs, fetch and verify origin/development, `--no-ff` merge to development once, push development once, observe the single development CI by exact run ID, then STOP. No main/Production work, no migration, no new CI on the feature branch. See reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md (runbook section 6).
+```
+
+(Previous state, AI-9, kept for history:)
+
+```
+CURRENT PHASE:
 AI-9 (Subscription provider expansion: Gemini + ChatGPT Plus capability validation; one cumulative branch)
 
 CURRENT SUB-PHASE:

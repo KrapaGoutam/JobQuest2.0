@@ -63,11 +63,12 @@ AI-8 (new) Human-approved controlled actions + Application matching  COMPLETE (b
 [x] Job Leads / Email / Recruiter Intel pages + Overview cards  [x] Daily Digest integration (available/zero/not_configured preserved)  [x] Claude templates
 (Deferred: calendar, application matching/conversion, email send/reply, recruiter outreach, ChatGPT/Gemini, controlled AI actions, Production rollout)
 
-AI-9 (new) Subscription provider expansion (Gemini + ChatGPT Plus) + scheduled-automation validation  READY FOR DEVELOPMENT INTEGRATION (branch CI 38279984981 PASS @519ab2e3; provider UIs verified; both authenticated connections BLOCKED on standard OAuth; no OAuth built; see reports/AI-9_PROVIDER_EXPANSION_REPORT.md)
+AI-9 (new) Subscription provider expansion (Gemini + ChatGPT Plus) + scheduled-automation validation  READY FOR DEVELOPMENT INTEGRATION (branch CI 38279984981 PASS @519ab2e3; provider UIs verified; both authenticated connections BLOCKED on standard OAuth; no OAuth built in AI-9, delivered by AI-10; see reports/AI-9_PROVIDER_EXPANSION_REPORT.md)
 
-AI-10 (new) OAuth 2.1 Provider Auth + Final Security / Release Hardening  NOT STARTED — OPERATOR APPROVAL REQUIRED
-[ ] AI-10A Standards-compliant OAuth 2.1 layer for MCP providers  [ ] AI-10B Gemini + ChatGPT OAuth revalidation  [ ] AI-10C Final security review
-[ ] AI-10D Migration reconciliation  [ ] AI-10E Final AI-Hub E2E / release matrix  [ ] AI-10F Production readiness + GO / NO-GO
+AI-10 (new) OAuth 2.1 Provider Auth + Final Security / Release Hardening  COMPLETE ON FEATURE BRANCH — READY FOR DEVELOPMENT INTEGRATION (branch CI 38311573190 PASS @26988669; see reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md)
+[x] AI-10A OAuth 2.1 layer (user-defined confidential clients, code+PKCE S256, rotating refresh; migration 20261030100000)  [x] AI-10B Gemini + ChatGPT OAuth live revalidation (reads, AI ingest, revocation; refresh rotation observed live)  [x] AI-10C Final security review (no release blockers)
+[x] AI-10D Migration reconciliation (Prod 20261022100000 -> 8 ordered migrations)  [x] AI-10E Release matrix + runbook written (not executed)  [ ] AI-10F Production release: awaiting separate operator approval
+(Shelved by operator, NOT verified: scheduled read/ingest, Gmail trigger, scheduled/unattended refresh. ChatGPT live hostile-content test: POST-RELEASE.)
 
 AI-7 Email triage                                       NOT STARTED
 [ ] 7A Rules  [ ] 7B Classification  [ ] 7C Priority  [ ] 7D Matching  [ ] 7E Review UX  [ ] 7F Dedupe
@@ -89,4 +90,4 @@ FINAL RELEASE (operator-approved)                       NOT STARTED
     report: ai-hub/AI_HUB_FINAL_RELEASE_REPORT.md (template only; not created)
 ```
 
-Current recommendation after AI-9: await operator approval for one combined AI-10 OAuth 2.1 Provider Auth + Final Security / Release Hardening phase. Decide first whether OAuth is release-blocking; do not start automatically.
+Current recommendation after AI-10: integrate to development, then STOP. Main and Production remain frozen until the separately authorised single development -> main -> Production release (runbook: reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md section 6).

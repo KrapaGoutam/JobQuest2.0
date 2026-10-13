@@ -88,7 +88,14 @@ The Claude templates (`EMAIL_TRIAGE.md`, `CALENDAR_INTEL.md`, `JOB_DISCOVERY.md`
 - **Shared architecture finding:** one standards-compliant, provider-neutral JobQuest OAuth layer should serve Gemini, ChatGPT and future OAuth-capable MCP providers. Do not build separate Gemini/ChatGPT auth paths.
 - **Separation of concepts:** provider configuration UI availability ≠ authenticated JobQuest connection ≠ scheduled capability. All five JobQuest workflows remain `AVAILABLE`; Gemini/ChatGPT live integration remains blocked until OAuth exists.
 
-## AI-10 recommendation — planning only; do not start automatically
+## AI-10 result — OAuth 2.1 delivered (operator-approved)
+
+- One provider-neutral OAuth 2.1 layer (user-defined confidential clients, Authorization Code + PKCE S256, rotating refresh tokens, revocation) now serves Gemini and ChatGPT; Claude keeps the connector bearer token. No DCR, CIMD or OIDC. Migration `20261030100000` (Dev only).
+- **Gemini:** OAuth, reads, AI ingest (approval-gated) and revocation **VERIFIED**; malformed contracts rejected with nothing persisted. **ChatGPT:** discovery, user-defined OAuth client, plugin creation, reads, AI ingest and revocation **VERIFIED**; provider reported no core-write tools; ingest approval behaviour not recorded.
+- Live refresh-token rotation was observed for both providers (server-side evidence). Scheduled read/ingest, the ChatGPT Gmail trigger and unattended refresh were **shelved by the operator and are NOT verified**; ChatGPT live hostile-content reading is **NOT TESTED** (POST-RELEASE). Provider configuration availability ≠ authenticated connection ≠ scheduled capability.
+- Final security review: no release blockers (`reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md`). Production rollout is a separate operator-approved step; ordered Production migrations and runbook are in that report.
+
+### Original AI-10 planning notes (historical)
 
 After operator approval, one combined **OAuth 2.1 Provider Auth + Final Security / Release Hardening** phase should first decide whether OAuth is release-blocking, then assess:
 

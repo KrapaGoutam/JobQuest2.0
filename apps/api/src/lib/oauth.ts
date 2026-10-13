@@ -12,6 +12,10 @@ import type { ConnectorScope } from './aiConnectorTokens';
 export const OAUTH_SCOPES = ['jobquest:read', 'ai:read', 'ai:ingest'] as const;
 export const OAUTH_OFFLINE_SCOPE = 'offline_access';
 export const OAUTH_TOKEN_AUTH_METHODS = ['client_secret_post', 'client_secret_basic'] as const;
+// `state` is opaque to us and round-tripped unchanged. Gemini sends ~1.2k characters,
+// so the bound is generous but finite; it matches oauth_authorization_requests.state varchar(2048).
+export const OAUTH_STATE_MIN_LENGTH = 8;
+export const OAUTH_STATE_MAX_LENGTH = 2048;
 export type OAuthProvider = 'gemini' | 'chatgpt';
 
 const CLIENT_ID_PATTERN = /^jq_oauth_(dev|live)_[A-Za-z0-9]{32}$/;

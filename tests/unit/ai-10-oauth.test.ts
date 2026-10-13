@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { generateKeyPair, exportJWK } from 'jose';
 
@@ -36,6 +37,13 @@ describe('AI-10 OAuth 2.1 primitives', () => {
     expect(OAUTH_SCOPES).toEqual(['jobquest:read', 'ai:read', 'ai:ingest']);
     expect(normalizeScopes('ai:read jobquest:read ai:read')).toEqual(['ai:read', 'jobquest:read']);
     for (const bad of ['jobquest:write', 'ai:write', 'admin', '*', 'jobquest:read jobquest:write', '']) expect(normalizeScopes(bad)).toBeNull();
+  });
+
+  it('bounds OAuth state at 8..2048 characters, matching the database column', async () => {
+    const { OAUTH_STATE_MIN_LENGTH, OAUTH_STATE_MAX_LENGTH } = await import('../../apps/api/src/lib/oauth');
+    expect([OAUTH_STATE_MIN_LENGTH, OAUTH_STATE_MAX_LENGTH]).toEqual([8, 2048]);
+    const sql = readFileSync(new URL('../../supabase/migrations/20261031100000_ai_hub_oauth_state_length.sql', import.meta.url), 'utf8');
+    expect(sql).toContain(`alter column state type varchar(${OAUTH_STATE_MAX_LENGTH})`);
   });
 
   it('mints audience-bound at+jwt access tokens distinct from browser access tokens', async () => {

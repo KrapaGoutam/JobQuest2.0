@@ -98,6 +98,12 @@ RULES FOR THE PAYLOAD
   source (jobquest|gmail|calendar|web|job_site|recruiter_message|provider|other), url (http/https only),
   occurred_at (ISO-8601 with offset).
 - Do not include user ids, workspace ids, application ids, email addresses, phone numbers, or message bodies.
+- Payload "1.1" (AI-11C) is also accepted and is the shape JobQuest itself writes: it adds the sections
+  needs_attention, job_email and other_email, the section status "unavailable" (the source's latest run failed;
+  no items, no count), and optional item fields kind, company, urgency (HIGH|MEDIUM|LOW), deadline_at, action,
+  score (0-100), tags (max 3), verification (verified|uncertain). Use them only for what you actually checked;
+  never invent items to fill a section, and never put application ids, email addresses or message bodies in them.
+  JobQuest's own digest (provider "system") is the canonical composition; yours is your provider's view.
 
 AFTER SUBMITTING
 - If the tool reports validation errors, fix the payload once and resubmit with external_run_id

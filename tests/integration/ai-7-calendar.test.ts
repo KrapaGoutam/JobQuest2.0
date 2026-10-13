@@ -408,7 +408,7 @@ describe.skipIf(!ready || !local)('AI-7 — calendar intelligence (real DB, RLS)
 
   // ---- Daily Digest ---------------------------------------------------------------------------------------
 
-  it('AI7-12 · Daily Digest: not_configured vs zero vs available, owner-zone day, cancelled/rescheduled surfaced, historical snapshot immutable', async () => {
+  it('AI7-12 · Daily Digest: not_configured vs zero vs available, owner-zone day, cancelled excluded and rescheduled surfaced in Upcoming (AI-11C), historical snapshot immutable', async () => {
     const date = '2026-11-10';
     const digest = async (a: Actor, workspaceId = ws) => {
       const d = await digestSvc.buildDeterministicDigest({ workspaceId, userId: a.userId!, accessToken: a.token! }, date, { env: ON });
@@ -417,16 +417,15 @@ describe.skipIf(!ready || !local)('AI-7 — calendar intelligence (real DB, RLS)
     };
     // dave never ran a calendar workflow: NOT zero
     const fresh = await digest(dave, daveWs);
-    expect(fresh.sections.calendar).toEqual({ status: 'not_configured', items: [] });
-    expect(fresh.summary).not.toHaveProperty('calendar_today');
+    expect(fresh.sections.upcoming).toEqual({ status: 'not_configured', items: [] });
 
     // a clean owner: one SUCCEEDED calendar run with nothing for the week => zero
     expect((await admin.from('profiles').update({ timezone: 'America/Chicago' }).eq('user_id', alice.userId!)).error).toBeNull();
     const now = new Date().toISOString();
     expect((await admin.from('ai_runs').insert({ workspace_id: ws, user_id: alice.userId!, provider: 'claude', workflow: 'calendar_review', status: 'SUCCEEDED', trigger_type: 'scheduled', started_at: now, completed_at: now })).error).toBeNull();
     const zero = await digest(alice);
-    expect(zero.sections.calendar).toEqual({ status: 'zero', count: 0, items: [] });
-    expect(zero.summary).toMatchObject({ calendar_today: 0, calendar_deadlines: 0 });
+    expect(zero.sections.upcoming).toEqual({ status: 'zero', count: 0, items: [] });
+    expect(zero.summary).toMatchObject({ upcoming: 0 });
 
     // carol: events around 2026-11-10 in America/Chicago (UTC-6 in November)
     expect((await admin.from('profiles').update({ timezone: 'America/Chicago' }).eq('user_id', carol.userId!)).error).toBeNull();
@@ -442,19 +441,20 @@ describe.skipIf(!ready || !local)('AI-7 — calendar intelligence (real DB, RLS)
     await mk('moved', {}, { start_at: '2026-11-15T16:00:00Z', end_at: undefined });
     expect(moved.status).toBe('SUCCEEDED');
     const p = await digest(carol);
-    expect(p.sections.calendar.status).toBe('available');
-    expect(p.sections.calendar.count).toBe(6); // all-day, today, tomorrow, deadline, cancelled, moved; "later" is outside the 7-day window
-    expect(p.sections.calendar.items.length).toBeLessThanOrEqual(5); // bounded; cancellations and reschedules are always kept visible
-    const titles = p.sections.calendar.items.map((i: AnyRow) => i.title);
+    // AI-11C: calendar intelligence feeds the canonical Upcoming section (active work only) and Needs attention
+    expect(p.sections.upcoming.status).toBe('available');
+    expect(p.sections.upcoming.count).toBe(5); // all-day, today, tomorrow, deadline, moved; the cancelled item is NOT active work and "later" is outside the 7-day horizon
+    expect(p.sections.upcoming.items.length).toBeLessThanOrEqual(6); // bounded
+    const titles = p.sections.upcoming.items.map((i: AnyRow) => i.title);
     expect(titles).not.toContain('Digest later');
-    expect(titles).toEqual(expect.arrayContaining(['Digest cancelled', 'Digest moved', 'Digest today']));
-    const byTitle = Object.fromEntries(p.sections.calendar.items.map((i: AnyRow) => [i.title, i]));
-    expect(byTitle['Digest cancelled'].detail).toContain('CANCELLED');
+    expect(titles).not.toContain('Digest cancelled');
+    expect(JSON.stringify(p)).not.toContain('Digest cancelled');
+    expect(titles).toEqual(expect.arrayContaining(['Digest moved', 'Digest today', 'Digest tomorrow']));
+    const byTitle = Object.fromEntries(p.sections.upcoming.items.map((i: AnyRow) => [i.title, i]));
     expect(byTitle['Digest moved'].detail).toMatch(/rescheduled from Nov 14/);
     expect(byTitle['Digest today'].detail).toMatch(/Nov 10, 9:00\sPM CST/); // rendered in the owner's zone (21:00 Chicago = tomorrow in UTC)
-    expect(p.summary.calendar_today).toBeGreaterThanOrEqual(1);
-    expect(p.summary.calendar_deadlines).toBeGreaterThanOrEqual(1);
-    expect(p.priorities.some((x: AnyRow) => /Cancelled: Digest cancelled/.test(x.title))).toBe(true);
+    expect(p.sections.needs_attention.items.map((i: AnyRow) => i.title)).toContain('Digest today'); // a meeting later today needs attention
+    expect(p.summary.upcoming).toBe(5);
     expect(JSON.stringify(p)).not.toMatch(/evt-|source_event_id|attendee/i);
 
     // immutability: the stored snapshot is created through the ingestion boundary; an event discovered AFTER it was stored
@@ -463,13 +463,13 @@ describe.skipIf(!ready || !local)('AI-7 — calendar intelligence (real DB, RLS)
     const stored = await submit(wire);
     expect(stored.status).toBe('SUCCEEDED');
     const sf = await findingOf(stored.runId!);
-    const before = JSON.stringify(sf.payload.sections.calendar);
+    const before = JSON.stringify(sf.payload.sections.upcoming);
     await mk('after', {}, { start_at: '2026-11-11T20:00:00Z', end_at: undefined }); // discovered AFTER the digest was stored
     const p2 = await digest(carol);
-    expect(JSON.stringify(p2.sections.calendar)).not.toBe(before); // a fresh computation sees it...
+    expect(JSON.stringify(p2.sections.upcoming)).not.toBe(before); // a fresh computation sees it...
     const regen = await submit(digestSvc.toSystemDigestWire({ digestDate: date, timeZone: 'America/Chicago', payload: p2 }, '2026-11-10T21:00:00Z'));
     expect(regen).toMatchObject({ duplicateRun: true });
-    expect(JSON.stringify((await findingOf(stored.runId!)).payload.sections.calendar)).toBe(before); // ...but the stored snapshot is untouched
+    expect(JSON.stringify((await findingOf(stored.runId!)).payload.sections.upcoming)).toBe(before); // ...but the stored snapshot is untouched
     record('ai7-12-digest', { dave: 'not_configured', alice: 'zero', carol: 'available', snapshotStable: true });
   });
 

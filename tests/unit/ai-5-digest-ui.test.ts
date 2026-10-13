@@ -3,12 +3,12 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { existsSync, readFileSync } from 'node:fs';
 import {
-  DIGEST_LIMITS, DIGEST_SECTION_KEYS as SERVER_SECTIONS, DIGEST_SECTION_STATUSES, DIGEST_SUMMARY_KEYS as SERVER_SUMMARY,
+  DIGEST_LIMITS, DIGEST_SECTION_ITEM_LIMITS as SERVER_ITEM_LIMITS, DIGEST_SECTION_KEYS as SERVER_SECTIONS, DIGEST_SECTION_STATUSES, DIGEST_SUMMARY_KEYS as SERVER_SUMMARY,
 } from '../../apps/api/src/lib/aiContract';
 import { AI_WORKFLOWS } from '../../apps/api/src/lib/aiContract';
 import { CONNECTOR_SCOPES as MCP_SCOPES } from '../../apps/api/src/lib/aiConnectorTokens';
 import {
-  DIGEST_SECTION_KEYS, DIGEST_SECTION_ORDER, DIGEST_SECTION_STATUS_VALUES, DIGEST_SUMMARY_KEYS, combineDigests, formatDigestDate,
+  DIGEST_CANONICAL_ORDER, DIGEST_SECTION_ITEM_LIMITS, DIGEST_SECTION_KEYS, DIGEST_SECTION_ORDER, DIGEST_SECTION_STATUS_VALUES, DIGEST_SUMMARY_KEYS, combineDigests, formatDigestDate,
   groupDigestsByDate, parseDigestPayload, resolveDigestRange, shiftDay, todayKey, type DigestRow,
 } from '../../apps/web/src/lib/aiDigest';
 import { aiHubPathForTab, aiHubTabFromPath } from '../../apps/web/src/lib/aiHub';
@@ -37,8 +37,12 @@ describe('client/server digest contract sync', () => {
     expect([...DIGEST_SECTION_KEYS]).toEqual([...SERVER_SECTIONS]);
     expect([...DIGEST_SECTION_STATUS_VALUES]).toEqual([...DIGEST_SECTION_STATUSES]);
     expect([...DIGEST_SUMMARY_KEYS]).toEqual([...SERVER_SUMMARY]);
-    expect(DIGEST_SECTION_ORDER.map((s) => s.key).sort()).toEqual([...SERVER_SECTIONS].sort());
+    // AI-11C: the canonical layout plus the legacy (1.0) layout together cover every server section.
+    expect([...new Set([...DIGEST_CANONICAL_ORDER, ...DIGEST_SECTION_ORDER].map((s) => s.key))].sort()).toEqual([...SERVER_SECTIONS].sort());
+    expect(DIGEST_SECTION_ORDER.map((s) => s.key)).toEqual(['applications', 'follow_ups', 'job_leads', 'email_activity', 'recruiter_intel', 'calendar', 'upcoming', 'ai_suggestions']);
+    expect(DIGEST_CANONICAL_ORDER.map((s) => s.key)).toEqual(['needs_attention', 'job_email', 'other_email', 'upcoming', 'job_leads', 'recruiter_intel', 'follow_ups']);
     expect(DIGEST_LIMITS.itemsPerSection).toBe(5);
+    expect(DIGEST_SECTION_ITEM_LIMITS).toEqual(SERVER_ITEM_LIMITS);
   });
 });
 

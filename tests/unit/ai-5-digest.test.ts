@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { buildDedupeKey, validateAiResult } from '../../apps/api/src/lib/aiContract';
 import { listAiDigests, getAiDigest, type AiReadClient } from '../../apps/api/src/services/aiReadService';
 import {
-  buildDeterministicDigest, digestDateInZone, generateSystemDigest, localDayWindow, toSystemDigestWire,
+  digestDateInZone, localDayWindow,
 } from '../../apps/api/src/services/aiDigestService';
 import { digestPayload } from './fixtures/ai-contract/fixtures';
 
@@ -159,124 +159,9 @@ describe('digest date semantics (owner profile time zone, never server UTC)', ()
   });
 });
 
-// ---- deterministic aggregation -----------------------------------------------
+// The deterministic aggregation, source states and ingestion-boundary tests moved to tests/unit/ai-11c-digest.test.ts (AI-11C).
 
-type Handler = (table: string, ops: Op[]) => { data?: unknown; count?: number | null; error?: unknown };
-function world(handler: Handler) {
-  const log: { table: string; ops: Op[] }[] = [];
-  const client: AiReadClient = {
-    from(table: string) {
-      const q = { table, ops: [] as Op[] };
-      log.push(q);
-      const chain: any = new Proxy({}, {
-        get: (_t, prop: string) => {
-          if (prop === 'then') return (res: (v: unknown) => unknown) => { const r = handler(table, q.ops); return res({ data: r.data ?? null, count: r.count ?? null, error: r.error ?? null }); };
-          return (...a: unknown[]) => { q.ops.push([prop, ...a]); return chain; };
-        },
-      });
-      return chain;
-    },
-  };
-  return { client, log };
-}
-const NOW = () => new Date('2026-10-12T02:30:00Z'); // 2026-10-11 in America/Chicago
-const dctx = { workspaceId: WS, userId: ME };
-const hasOp = (ops: Op[], ...o: Op) => ops.some((x) => JSON.stringify(x) === JSON.stringify(o));
-const isCount = (ops: Op[]) => ops.some((o) => o[0] === 'select' && JSON.stringify(o[2]) === JSON.stringify({ count: 'exact', head: true }));
-
-const standard: Handler = (table, ops) => {
-  const head = isCount(ops);
-  switch (table) {
-    case 'profiles': return { data: { timezone: 'America/Chicago' } };
-    case 'applications':
-      if (ops.some((o) => o[0] === 'in')) return { data: [{ id: 'a1', company_name: 'Acme', role_title: 'Engineer' }] };
-      if (head) return { count: hasOp(ops, 'lte', 'next_action_date', '2026-10-11') ? 2 : hasOp(ops, 'eq', 'status', 'OPEN') ? 9 : 3 };
-      if (hasOp(ops, 'lte', 'next_action_date', '2026-10-11')) return { data: [{ company_name: 'Acme', role_title: 'Engineer', next_action: 'Send thank-you', next_action_date: '2026-10-10' }] };
-      return { data: [{ company_name: 'Acme', role_title: 'Engineer', stage: 'APPLIED', created_at: '2026-10-11T15:00:00Z' }] };
-    case 'interviews':
-      return head ? { count: 1 } : { data: [{ application_id: 'a1', interview_type: 'TECHNICAL', scheduled_at: '2026-10-13T15:00:00Z' }] };
-    case 'ai_suggestions':
-      return head ? { count: 4 } : { data: [{ action: 'set_status', target_type: 'application', created_at: '2026-10-11T10:00:00Z' }] };
-    case 'ai_findings': return hasOp(ops, 'eq', 'kind', 'email_event') || hasOp(ops, 'eq', 'kind', 'recruiter_intel') ? (head ? { count: 0 } : { data: [] }) : { count: 6 };
-    case 'ai_job_leads': return head ? { count: 0 } : { data: [] };
-    case 'ai_runs': return { data: [] };
-    default: return {};
-  }
-};
-
-describe('deterministic JobQuest aggregation', () => {
-  it('computes only facts JobQuest owns, in the owner zone, scoped to the owner', async () => {
-    const w = world(standard);
-    const r = await buildDeterministicDigest(dctx, '2026-10-11', { client: w.client, env: ON, now: NOW });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.data.timeZone).toBe('America/Chicago');
-    const p = r.data.payload as any;
-    expect(p.summary).toEqual({ applications_added: 3, active_applications: 9, follow_ups: 2, interviews: 1, pending_suggestions: 4, new_findings: 6 });
-    // sources that never ran are NOT zero (AI-6 keeps the AI-5 semantics)
-    expect(p.sections.job_leads).toEqual({ status: 'not_configured', items: [] });
-    expect(p.sections.email_activity).toEqual({ status: 'not_configured', items: [] });
-    expect(p.sections.recruiter_intel).toEqual({ status: 'not_configured', items: [] });
-    expect(p.summary).not.toHaveProperty('new_job_leads');
-    expect(p.sections.applications).toMatchObject({ status: 'available', count: 3 });
-    expect(p.sections.upcoming.items[0]).toMatchObject({ title: 'Acme — Engineer' });
-    expect(p.sections.follow_ups.items[0]).toMatchObject({ priority: 'HIGH' });
-    expect(p.priorities.length).toBeGreaterThan(0);
-    // window is the Chicago day, every owned-table query is restricted to the owner
-    const apps = w.log.filter((q) => q.table === 'applications');
-    expect(apps.some((q) => hasOp(q.ops, 'gte', 'created_at', '2026-10-11T05:00:00.000Z') && hasOp(q.ops, 'lt', 'created_at', '2026-10-12T05:00:00.000Z'))).toBe(true);
-    for (const q of w.log.filter((x) => x.table !== 'profiles')) expect(hasOp(q.ops, 'eq', 'user_id', ME), q.table).toBe(true);
-  });
-  it('distinguishes zero from unavailable for sources it does own', async () => {
-    const w = world((table, ops) => (table === 'profiles' ? { data: null } : table === 'applications' || table === 'interviews' || table === 'ai_suggestions' || table === 'ai_findings' ? (isCount(ops) ? { count: 0 } : { data: [] }) : {}));
-    const r = await buildDeterministicDigest(dctx, '2026-10-11', { client: w.client, env: ON, now: NOW });
-    const p = (r as any).data.payload;
-    expect((r as any).data.timeZone).toBe('UTC'); // no profile zone -> documented UTC default
-    expect(p.sections.applications).toEqual({ status: 'zero', count: 0, items: [] });
-    expect(p.sections.follow_ups).toEqual({ status: 'zero', count: 0, items: [] });
-    expect(p.sections.job_leads.status).toBe('not_configured');
-    expect(p.priorities).toEqual([]);
-  });
-  it('validates input, honours the kill switch and fails closed on read errors', async () => {
-    const w = world(standard);
-    expect(await buildDeterministicDigest(dctx, '2026-10-11', { client: w.client, env: {} })).toMatchObject({ error: { code: 'AI_HUB_DISABLED' } });
-    expect(await buildDeterministicDigest(dctx, '2026-02-30', { client: w.client, env: ON })).toMatchObject({ error: { code: 'INVALID_DATE' } });
-    expect(await buildDeterministicDigest({ workspaceId: 'x', userId: ME }, '2026-10-11', { client: w.client, env: ON })).toMatchObject({ error: { code: 'INVALID_CONTEXT' } });
-    const broken = world((table) => (table === 'ai_findings' ? { error: { code: '500' } } : standard(table, [])));
-    expect(await buildDeterministicDigest(dctx, '2026-10-11', { client: broken.client, env: ON })).toMatchObject({ error: { code: 'READ_FAILED' } });
-  });
-  it('the wire result is a valid system-provider digest, never attributed to Claude', async () => {
-    const w = world(standard);
-    const built = await buildDeterministicDigest(dctx, '2026-10-11', { client: w.client, env: ON, now: NOW });
-    if (!built.ok) throw new Error('build failed');
-    const wire = toSystemDigestWire(built.data, '2026-10-12T02:30:00.000Z');
-    const v = validateAiResult(wire);
-    expect(v.errors).toEqual([]);
-    expect(v.data!.provider).toBe('system');
-    expect(v.data!.findings[0]!.dedupe_key).toBe('daily_brief:2026-10-11:system');
-    expect(v.data!.run.external_run_id).toBe('system-digest:2026-10-11');
-  });
-});
-
-describe('JobQuest-generated digest goes through the ingestion boundary', () => {
-  it('persists via RPCs only (no table writes) with provider system and a stable run id', async () => {
-    const w = world(standard);
-    const calls: { fn: string; args: Record<string, unknown> }[] = [];
-    const rpc = {
-      async rpc(fn: string, args: Record<string, unknown>) {
-        calls.push({ fn, args });
-        if (fn === 'rpc_ai_ingest_run') return { data: { run_id: ID, created: true, status: 'RUNNING' }, error: null };
-        if (fn === 'rpc_ai_ingest_finding') return { data: { finding_id: ID, outcome: 'created' }, error: null };
-        return { data: { run_id: ID, status: 'SUCCEEDED' }, error: null };
-      },
-    };
-    const out = await generateSystemDigest(dctx, { client: w.client, env: ON, now: NOW, ingest: { client: rpc, env: ON, log: () => undefined } });
-    expect(out).toMatchObject({ ok: true, data: { digestDate: '2026-10-11', timeZone: 'America/Chicago', ingest: { success: true } } });
-    expect(calls.map((c) => c.fn)).toEqual(['rpc_ai_ingest_run', 'rpc_ai_ingest_finding', 'rpc_ai_finalize_run']);
-    expect(calls[0]!.args).toMatchObject({ p_provider: 'system', p_workflow: 'daily_brief', p_external_run_id: 'system-digest:2026-10-11', p_workspace_id: WS });
-    expect(calls[1]!.args).toMatchObject({ p_kind: 'daily_brief', p_dedupe_key: 'daily_brief:2026-10-11:system' });
-    expect(w.log.every((q) => q.ops.every((o) => !['insert', 'update', 'upsert', 'delete'].includes(String(o[0]))))).toBe(true);
-  });
+describe("JobQuest-generated digest: today only", () => {
   it('only today (owner zone) can be generated: the date is derived, not accepted', async () => {
     const src = readFileSync('apps/api/src/services/aiDigestService.ts', 'utf8');
     expect(src).toMatch(/const date = digestDateInZone\(now, zone\)/);

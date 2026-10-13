@@ -117,7 +117,7 @@ export interface JobLeadDto {
   descriptionAvailable: boolean; descriptionTruncated: boolean;
 }
 
-const LEAD_COLUMNS = 'id, finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, discovered_at, '
+export const LEAD_COLUMNS = 'id, finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, discovered_at, '
   + 'salary_min, salary_max, salary_currency, salary_period, experience_level, match_score, required_skills, preferred_skills, '
   + 'description_truncated, description_length, '
   + 'finding:ai_findings!inner(provider, status, priority, confidence, summary, payload)';
@@ -209,7 +209,7 @@ export interface EmailEventDto {
   applicationMatch: EmailApplicationMatch | null;
 }
 
-const EMAIL_COLUMNS = 'id, user_id, run_id, provider, status, priority, confidence, category, title, summary, evidence, occurred_at, due_at, created_at, payload';
+export const EMAIL_COLUMNS = 'id, user_id, run_id, provider, status, priority, confidence, category, title, summary, evidence, occurred_at, due_at, created_at, payload';
 
 /**
  * Mirrors the `needsAttention` list filter exactly: an open email that is urgent or provider-flagged, or - only when the
@@ -333,7 +333,7 @@ export interface RecruiterIntelDto {
   relatedJob: { company: string | null; title: string | null } | null;
 }
 
-const RECRUITER_COLUMNS = 'id, user_id, provider, status, confidence, title, summary, source_ref, created_at, payload';
+export const RECRUITER_COLUMNS = 'id, user_id, provider, status, confidence, title, summary, source_ref, created_at, payload';
 
 export function toRecruiterIntel(r: Row): RecruiterIntelDto {
   const payload = rec(r.payload);
@@ -359,7 +359,7 @@ export function toRecruiterIntel(r: Row): RecruiterIntelDto {
  * reference is a public job identity the server turned into a dedupe key; an id supplied by a
  * provider is never used, and a lead that RLS hides simply does not resolve.
  */
-async function attachRelatedLeads(db: Db, ws: string, rows: Row[], dtos: RecruiterIntelDto[]): Promise<boolean> {
+export async function attachRelatedLeads(db: Db, ws: string, rows: Row[], dtos: RecruiterIntelDto[]): Promise<boolean> {
   const wanted = rows.map((r) => rec(rec(r.payload)));
   const keys = [...new Set(wanted.map((p) => str(p.related_job_key, 255)).filter((k): k is string => k !== null))];
   const urls = [...new Set(wanted.map((p) => safeUrl(rec(p.related_job).job_url)).filter((u): u is string => u !== null))];

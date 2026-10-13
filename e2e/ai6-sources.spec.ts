@@ -289,11 +289,12 @@ test.describe('AI-6 external intelligence sources', () => {
     await page.getByRole('button', { name: 'Save a JobQuest digest for today' }).click();
     await expect(page.getByText('Saved today’s JobQuest digest.')).toBeVisible();
     const avail = page.getByRole('list', { name: 'Source availability' });
-    await expect(avail.getByText('Job Leads: Available')).toBeVisible();
-    await expect(avail.getByText('Email Activity: Available')).toBeVisible();
-    await expect(avail.getByText('Recruiter Intelligence: Available')).toBeVisible();
-    await expect(page.getByText('Strong matches', { exact: true })).toBeVisible();
-    await expect(page.getByText(/job-search email.* your attention/)).toBeVisible();
+    // AI-11C canonical sections: leads, job-related email and recruiters are composed from the stored AI-6 records
+    await expect(avail.getByText('Recent job leads: Available')).toBeVisible();
+    await expect(avail.getByText('Job-related email: Available')).toBeVisible();
+    await expect(avail.getByText('Recruiters: Available')).toBeVisible();
+    await expect(page.getByText('Recent jobs', { exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Needs attention' })).toBeVisible();
 
     // ---- 10) RESPONSIVE + ACCESSIBILITY on all three pages --------------------------------------------------------------
     for (const path of ['/ai-hub/job-leads', '/ai-hub/email', '/ai-hub/recruiters']) {

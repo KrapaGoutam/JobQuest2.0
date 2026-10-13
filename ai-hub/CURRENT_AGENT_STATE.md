@@ -3,6 +3,25 @@ CURRENT PHASE:
 JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
 
 CURRENT SUB-PHASE:
+AI-11C DAILY DIGEST - COMPLETE ON FEATURE BRANCH `feature/ai11c-daily-digest` (from development `e0ae3a2363208939d001132fe3f999ccfb560553`); integrating to development. AI-11D (Fresh Job Discovery) NOT started.
+
+STATUS:
+Decision: EXTEND the existing Daily Digest (`daily_brief` finding; payload 1.0 -> 1.1, additive; NO migration; MCP unchanged, 11 read-only-except-submit tools). One pure deterministic composer (`aiContract/digestComposer.ts`) composes the canonical sections Needs attention, Job-related email, Other important email, Upcoming (calendar + JobQuest interviews, cancelled excluded), Recent job leads, Recruiters, Follow-ups from EXISTING structured records only (AI-6/7/11B intelligence, applications, interviews, tasks); the service (`aiDigestService.ts`) only reads (owner + workspace scoped, RLS as the user) and persists through ingestAiResult as provider `system`. Date = owner profile-timezone calendar date; stored digest is an immutable snapshot, one per owner+date+provider, same run id retry = no-op. Section states: available / zero / not_configured / unavailable (latest ai_runs row of the source FAILED). Payload kept under the 16 KiB ingest cap by a deterministic byte budget. Application links only for exact (MATCHED) matches and only trusted for system digests. No web search, no model call, no core mutation, no task/application creation. UI: canonical layout in AI Hub -> Daily Digest, legacy 1.0 digests render unchanged. Validation: typecheck, eslint, unit 972+, AI integration, focused e2e at 375/768/1280 (axe 0 critical/serious). Branch CI, development merge SHA and development CI are recorded in the AI-11C completion report (chat checkpoint). Main `455a0120...` and Production unchanged; development stays cumulative. Report: reports/AI-11C_DAILY_DIGEST_REPORT.md.
+
+BASE BRANCH:
+development (e0ae3a2363208939d001132fe3f999ccfb560553 + AI-11C merge)
+
+NEXT EXACT STEP:
+Separately approved AI-11D (Fresh Job Discovery) on its own feature branch from development. No new migration is pending from AI-11A..C beyond AI-11A `20261101100000` (already on remote Dev); Production needs it only at the single post-AI-11 main promotion.
+```
+
+(Previous state, AI-11B, kept for history:)
+
+```
+CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
 AI-11B EMAIL INTELLIGENCE & TRIAGE - COMPLETE ON FEATURE BRANCH `feature/ai11b-email-intelligence-triage` (from development `d6fe0cd55380538cfe069c3caf04ca3f2a50d102`); integrating to development. AI-11C (Daily Digest) NOT started.
 
 STATUS:

@@ -60,7 +60,7 @@ export interface CalendarEventDto {
   discoveredAt: string;
 }
 
-const CALENDAR_COLUMNS = 'id, finding_id, user_id, category, is_deadline, status, all_day, start_at, end_at, start_date, end_date, deadline_at, sort_at, time_zone, '
+export const CALENDAR_COLUMNS = 'id, finding_id, user_id, category, is_deadline, status, all_day, start_at, end_at, start_date, end_date, deadline_at, sort_at, time_zone, '
   + 'calendar_source, source_event_url, company, job_title, location, meeting_url, organizer_name, organizer_domain, original_start_at, reschedule_count, '
   + 'cancelled_at, discovered_at, finding:ai_findings!inner(provider, status, priority, confidence, title, summary, evidence)';
 

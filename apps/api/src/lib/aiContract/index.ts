@@ -7,3 +7,4 @@ export { canonicalJson, contentFingerprint, sha256Hex } from './canonical';
 export * from './emailTriage';
 export * from './actions';
 export * from './automation';
+export * from './digestComposer';

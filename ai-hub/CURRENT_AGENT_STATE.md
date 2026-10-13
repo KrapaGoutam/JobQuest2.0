@@ -1,5 +1,24 @@
 ```
 CURRENT PHASE:
+AI-10 CLOSED - PRODUCTION CERTIFIED / COMPLETE. Next: JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation)
+
+CURRENT SUB-PHASE:
+AI-11A AUTOMATION FOUNDATION - NOT STARTED (planning/docs only so far)
+
+STATUS:
+AI-10 Production certified (2026-10-13): Claude PASS, Gemini PASS, ChatGPT PASS. Production main `455a0120860405462b73647eca6a65ecd7fad6a7`; development `5fc2bc4ceb5516b3b6ac69139a6769421e758f64`; Production DB head `20261031100000` (oauth state varchar(2048)). Closure read-only check: 0 live OAuth clients/grants/sessions/connector tokens; health, OAuth/MCP metadata 200, unauthenticated MCP 401; 3 synthetic smoke findings remain (dismiss via AI Hub UI only). EXTENSION_TOKEN_ENV=live unchanged. Gemini state hotfix 3288138e (bound 8..2048). Post-release P1-P9 recorded (P9 = Vercel @vercel/node strict:false diagnostics, LOW). Production DB password rotation SHELVED by operator (pending security maintenance). AI-10 does not mean automation is finished: scheduled workflows, Gmail/email intelligence, job discovery and recruiter intelligence continue in AI-11 (AI-11A..H in ROADMAP.md / PHASE_REGISTRY.md).
+
+BASE BRANCH:
+development (5fc2bc4ceb5516b3b6ac69139a6769421e758f64 + this docs-only closure commit)
+
+NEXT EXACT STEP:
+Separately approved AI-11A session: branch feature/ai-11a-automation-foundation from development; FIRST audit reuse of ai_workflow_configs / ai_runs / ai_findings and existing AI Hub settings/UI before any design. Main/Production frozen until a separately authorised release. Details: reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md section 9.
+```
+
+(Previous state, AI-10 pre-integration, kept for history:)
+
+```
+CURRENT PHASE:
 AI-10 (OAuth 2.1 Provider Auth + Final Security / Release Hardening; one cumulative branch)
 
 CURRENT SUB-PHASE:

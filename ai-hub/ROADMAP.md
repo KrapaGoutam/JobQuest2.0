@@ -65,10 +65,22 @@ AI-8 (new) Human-approved controlled actions + Application matching  COMPLETE (b
 
 AI-9 (new) Subscription provider expansion (Gemini + ChatGPT Plus) + scheduled-automation validation  READY FOR DEVELOPMENT INTEGRATION (branch CI 38279984981 PASS @519ab2e3; provider UIs verified; both authenticated connections BLOCKED on standard OAuth; no OAuth built in AI-9, delivered by AI-10; see reports/AI-9_PROVIDER_EXPANSION_REPORT.md)
 
-AI-10 (new) OAuth 2.1 Provider Auth + Final Security / Release Hardening  COMPLETE ON FEATURE BRANCH — READY FOR DEVELOPMENT INTEGRATION (branch CI 38311573190 PASS @26988669; see reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md)
-[x] AI-10A OAuth 2.1 layer (user-defined confidential clients, code+PKCE S256, rotating refresh; migration 20261030100000)  [x] AI-10B Gemini + ChatGPT OAuth live revalidation (reads, AI ingest, revocation; refresh rotation observed live)  [x] AI-10C Final security review (no release blockers)
-[x] AI-10D Migration reconciliation (Prod 20261022100000 -> 8 ordered migrations)  [x] AI-10E Release matrix + runbook written (not executed)  [ ] AI-10F Production release: awaiting separate operator approval
-(Shelved by operator, NOT verified: scheduled read/ingest, Gmail trigger, scheduled/unattended refresh. ChatGPT live hostile-content test: POST-RELEASE.)
+AI-10 (new) OAuth 2.1 Provider Auth + Final Security / Release Hardening  PRODUCTION CERTIFIED / COMPLETE (main 455a0120; development 5fc2bc4c; Prod DB head 20261031100000; Claude PASS, Gemini PASS, ChatGPT PASS; see reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md section 9)
+[x] AI-10A OAuth 2.1 layer (user-defined confidential clients, code+PKCE S256, rotating refresh; migration 20261030100000)  [x] AI-10B Gemini + ChatGPT OAuth live revalidation  [x] AI-10C Final security review (no release blockers)
+[x] AI-10D Migration reconciliation  [x] AI-10E Release matrix + runbook  [x] AI-10F Production release + provider validation (Claude, Gemini, ChatGPT)  [x] AI-10G Gemini OAuth state hotfix (bound 8..2048; migration 20261031100000)
+(AI-10 is the connectivity/security foundation. It does NOT mean AI automation is finished: scheduled workflows, Gmail/email intelligence, job discovery and recruiter intelligence continue in AI-11. Post-release items P1-P9 and pending security maintenance: report section 9.)
+
+JOBQUEST 2.2 / AI-11 - SCHEDULED INTELLIGENCE & DIGEST AUTOMATION   NOT STARTED (planning recorded) - NEXT IMPLEMENTATION PHASE: AI-11A AUTOMATION FOUNDATION
+Primary objective of the next feature release. Provider is configuration, not architecture: all providers use the same JobQuest MCP + AI Hub data model. Job leads stay AI/job-lead records and never auto-create Applications. Nothing is ever auto-sent to recruiters or third parties. JobQuest stores structured intelligence, not raw Gmail bodies.
+[ ] AI-11A Automation foundation - provider-neutral workflow config + run state (enabled, provider, cadence, timezone, sections, delivery prefs, last run/success, next expected run, failure state, Run Now). FIRST determine reuse of ai_workflow_configs / ai_runs / ai_findings and existing AI Hub settings/UI.
+[ ] AI-11B Email intelligence & triage - Gmail source; JOB RELATED (recruiter outreach/replies, application confirmation, interview/scheduling, assessment, follow-up, status update, rejection, offer) vs OTHER MAIL (important personal/account, notifications, newsletters, other); urgency HIGH/MEDIUM/LOW on every email; structured fields (company, matched application, stage, sender name/domain, subject, received time, summary, deadline, recommended action, needs_attention); application matching, duplicate prevention, privacy limits, optional draft-only workflow.
+[ ] AI-11C Daily digest - Needs Attention, Job Email, Other Important Email, Upcoming, Recent Jobs, Recruiters, Follow-ups; a recruiter waiting for a reply outranks many new postings; reuse existing Daily Digest (daily_brief) concepts.
+[ ] AI-11D Fresh job discovery - Remote US / Houston (optionally strong-fit hybrid/onsite), QA/SDET/testing/automation; configurable freshness 12h/24h/48h/72h; newest first; dedupe by company + normalized title; no padding; scoring; source health; stored as Job Leads.
+[ ] AI-11E Recruiter intelligence - job-linked and target-company recruiter/TA/hiring-manager contacts; why relevant; duplicate suppression; evidence/source; outreach draft only.
+[ ] AI-11F Schedule & cadence - weekdays/daily/selected days/weekly, timezone, run history, failure reporting, retries/idempotency. Examples: Weekday Morning Digest (Mon-Fri 8:00 AM America/Chicago), Weekend Job Scan, Weekly Job Search Review, Weekly Inbox Review.
+[ ] AI-11G Provider scheduler adapters - subscription-native schedulers without paid LLM API tokens where supported. Order: 1 Claude, 2 ChatGPT (when scheduling is available/suitable), 3 Gemini (same). Adapter over the canonical JobQuest workflow.
+[ ] AI-11H Weekly digest + UI/analytics polish - weekly digest (applications moved, upcoming interviews/assessments, unresolved important emails, strong unreviewed leads, recruiters worth contacting, overdue follow-ups, activity/goal summary), automation health, run history, failure state, source coverage, digest analytics, provider status.
+(Planning only: no implementation code, migration or schema redesign has been done for AI-11.)
 
 AI-7 Email triage                                       NOT STARTED
 [ ] 7A Rules  [ ] 7B Classification  [ ] 7C Priority  [ ] 7D Matching  [ ] 7E Review UX  [ ] 7F Dedupe
@@ -82,7 +94,7 @@ AI-9 Recruiter intelligence                             NOT STARTED
 AI-10 Calendar / interview intelligence [historical label]  SUPERSEDED BY AI-7
 [ ] 10A Ingestion  [ ] 10B Detection  [ ] 10C Reschedule/cancel  [ ] 10D Events UX
 
-AI-11 Controlled actions (only after read/suggestion layers are stable)   PARTLY DELIVERED EARLY by AI-8 (create task / status update / application from lead, human-approved); 11B snooze/dismiss and 11E approval-audit hardening remain
+AI-11 [historical label - controlled actions; the AI-11 number now means Scheduled Intelligence, see above] Controlled actions (only after read/suggestion layers are stable)   PARTLY DELIVERED EARLY by AI-8 (create task / status update / application from lead, human-approved); 11B snooze/dismiss and 11E approval-audit hardening remain
 [ ] 11A Create task  [ ] 11B Snooze/dismiss  [ ] 11C Status update  [ ] 11D App from lead  [ ] 11E Approval/audit
 
 FINAL RELEASE (operator-approved)                       NOT STARTED
@@ -90,4 +102,6 @@ FINAL RELEASE (operator-approved)                       NOT STARTED
     report: ai-hub/AI_HUB_FINAL_RELEASE_REPORT.md (template only; not created)
 ```
 
-Current recommendation after AI-10: integrate to development, then STOP. Main and Production remain frozen until the separately authorised single development -> main -> Production release (runbook: reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md section 6).
+Current recommendation after AI-10 closure: the next implementation phase is AI-11A (Automation Foundation), once separately approved. Development is integration only until the next release gate.
+
+Historical (pre-closure) AI-10 note: integrate to development, then STOP. Main and Production remain frozen until the separately authorised single development -> main -> Production release (runbook: reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md section 6).

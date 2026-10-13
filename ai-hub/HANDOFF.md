@@ -6,6 +6,9 @@ Durable cross-agent transfer (Claude Code ↔ Codex ↔ new session). Keep conci
 JobQuest AI Hub: provider-neutral AI findings layer + remote MCP for Claude/Gemini/ChatGPT; JobQuest remains system of record. Overview: `README.md`.
 
 ## Current Phase / Sub-Phase
+CURRENT PHASE: AI-10 CLOSED - PRODUCTION CERTIFIED / COMPLETE (Claude, Gemini, ChatGPT PASS; main `455a0120`, development `5fc2bc4c`, Prod DB head `20261031100000`; P1-P9 recorded; Prod DB password rotation SHELVED/pending). NEXT: JobQuest 2.2 / AI-11 Scheduled Intelligence & Digest Automation, starting at AI-11A Automation Foundation (audit reuse of ai_workflow_configs/ai_runs/ai_findings first). Planning only; no AI-11 code or migrations yet. See `reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md` section 9 and `ROADMAP.md`.
+
+(Previous phase pointer, kept for history:)
 CURRENT PHASE: AI-10 (OAuth 2.1 Provider Auth + Final Security / Release Hardening, one cumulative branch) · CURRENT SUB-PHASE: COMPLETE ON FEATURE BRANCH — READY FOR DEVELOPMENT INTEGRATION · WORKING BRANCH: `feature/ai-10-oauth-release-hardening` (from development `9d8b815e`) at certified executable SHA `26988669`; branch CI `38311573190` PASS. Gemini and ChatGPT OAuth + reads + AI ingest + revocation live-verified (Dev/Preview); refresh rotation observed live for both; scheduled read/ingest, Gmail trigger and unattended refresh shelved and NOT verified; ChatGPT hostile-content test NOT TESTED (POST-RELEASE); Gemini fresh-chat injection NOT FULLY VERIFIED. Final security review: no release blockers. Production needs 8 ordered migrations (`20261023100000`..`20261030100000`); runbook in `reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md`. Next: development merge once, one development CI, STOP. Main/Production unchanged.
 
 (Previous phase pointer, kept for history:)

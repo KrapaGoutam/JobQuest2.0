@@ -206,7 +206,7 @@ describe('Claude connector frontend token hygiene', () => {
     expect(settings).toContain('ClaudeConnectorPanel');
     expect(settings).toContain('ProviderConnectorPanel');
     expect(settings).toMatch(/p\.id === 'claude' && session/);
-    expect(read('apps/web/src/views/SettingsView.tsx')).toContain('<AiAutomationSettings activeWorkspaceId={activeWorkspaceId} session={session} />');
+    expect(read('apps/web/src/views/SettingsView.tsx')).toContain('<AiAutomationSettings activeWorkspaceId={activeWorkspaceId} session={session} currentUserId={currentUserId} />');
   });
 });
 

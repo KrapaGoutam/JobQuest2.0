@@ -193,7 +193,7 @@ export function SettingsView({
         />
       )}
 
-      {tab === 'ai' && isAiHubExposed() && <AiAutomationSettings activeWorkspaceId={activeWorkspaceId} session={session} />}
+      {tab === 'ai' && isAiHubExposed() && <AiAutomationSettings activeWorkspaceId={activeWorkspaceId} session={session} currentUserId={currentUserId} />}
 
       {tab === 'diagnostics' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

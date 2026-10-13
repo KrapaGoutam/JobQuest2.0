@@ -25,6 +25,7 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { pendingActionsText } from '../lib/aiActions';
+import { PROVIDER_LABELS as AUTOMATION_PROVIDER_LABELS, automationHealth, describeSchedule, formatInZone, type AutomationOverview } from '../lib/aiAutomation';
 
 export type AiHubLoadState =
   | { status: 'loading' }
@@ -127,6 +128,7 @@ export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun, onOpenTab }:
           </CardBody>
         </Card>
       )}
+      {snapshot.automation && <NextAutomationCard overview={snapshot.automation} />}
       {snapshot.pendingActions !== undefined && (
         <Card>
           <CardHeader><CardTitle>Pending actions</CardTitle></CardHeader>
@@ -161,6 +163,36 @@ export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun, onOpenTab }:
         </CardBody>
       </Card>
     </div>
+  );
+}
+
+/** AI-11A: the soonest enabled, scheduled automation and a one-line health summary. Definitions only; JobQuest runs nothing. */
+export function NextAutomationCard({ overview }: { overview: AutomationOverview }) {
+  const next = overview.next;
+  const health = next ? automationHealth(next) : null;
+  return (
+    <Card>
+      <CardHeader><CardTitle>Next automation</CardTitle></CardHeader>
+      <CardBody>
+        {next && health ? (
+          <div style={{ display: 'grid', gap: '4px' }}>
+            <strong>{next.name}</strong>
+            <span>{formatInZone(next.state.nextExpectedRunAt, next.timezone)}</span>
+            <span className="muted small">{AUTOMATION_PROVIDER_LABELS[next.provider]} · {describeSchedule(next)}</span>
+            <span><StatusBadge variant="success">Enabled</StatusBadge> <StatusBadge variant={health.variant}>{health.label}</StatusBadge></span>
+          </div>
+        ) : (
+          <span className="muted">
+            {overview.total === 0 ? 'No automations yet. Add one in Settings → AI & Automation.' : overview.enabled === 0 ? 'No automations are enabled.' : 'No scheduled runs (enabled automations are manual-only).'}
+          </span>
+        )}
+        {overview.failing > 0 && (
+          <div className="small" style={{ marginTop: '6px' }} role="status">
+            {overview.failing} automation{overview.failing === 1 ? '' : 's'} need{overview.failing === 1 ? 's' : ''} attention (last run failed or was partial).
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

@@ -174,7 +174,7 @@ describe.skipIf(!ready || !local)('AI-1B — AI Hub RLS, ownership, RPC boundary
   });
 
   it('AI1B-07 · workflow configs are owner-only to read and not client-writable', async () => {
-    const cfg = await admin.from('ai_workflow_configs').insert({ workspace_id: ws, user_id: carol.userId!, workflow: 'email_triage', enabled: true, primary_provider: 'claude' }).select('id').single();
+    const cfg = await admin.from('ai_workflow_configs').insert({ workspace_id: ws, user_id: carol.userId!, name: 'Email triage', workflow: 'email_triage', enabled: true, primary_provider: 'claude' }).select('id').single();
     expect(cfg.error).toBeNull();
     const id = cfg.data!.id;
     expect((await carol.db().from('ai_workflow_configs').select('id').eq('id', id)).data).toHaveLength(1);
@@ -184,7 +184,7 @@ describe.skipIf(!ready || !local)('AI-1B — AI Hub RLS, ownership, RPC boundary
     expect(upd.error?.code).toBe('42501');
     const mgrUpd = await alice.db().from('ai_workflow_configs').update({ enabled: false }).eq('id', id);
     expect(mgrUpd.error?.code).toBe('42501');
-    const ins = await carol.db().from('ai_workflow_configs').insert({ workspace_id: ws, user_id: carol.userId!, workflow: 'daily_brief' });
+    const ins = await carol.db().from('ai_workflow_configs').insert({ workspace_id: ws, user_id: carol.userId!, name: 'Daily brief', workflow: 'daily_brief' });
     expect(ins.error?.code).toBe('42501');
   });
 
@@ -323,7 +323,7 @@ describe.skipIf(!ready || !local)('AI-1B — AI Hub RLS, ownership, RPC boundary
     expect((await admin.from('ai_findings').insert({ workspace_id: ws, user_id: carol.userId!, kind: 'note', provider: 'claude', title: 't', dedupe_key: `d-${run}`, confidence: 1.5 })).error?.code).toBe('23514');
     const s = await admin.from('ai_suggestions').insert({ workspace_id: ws, user_id: carol.userId!, finding_id: f.data!.id, action: 'other' }).select('id').single();
     expect((await admin.from('ai_suggestions').update({ status: 'IGNORED' }).eq('id', s.data!.id)).error?.code).toBe('23514'); // decision needs decided_at
-    expect((await admin.from('ai_workflow_configs').insert({ workspace_id: ws, user_id: carol.userId!, workflow: 'other', primary_provider: 'claude', fallback_provider: 'claude' })).error?.code).toBe('23514');
+    expect((await admin.from('ai_workflow_configs').insert({ workspace_id: ws, user_id: carol.userId!, name: 'Other', workflow: 'other', primary_provider: 'claude', fallback_provider: 'claude' })).error?.code).toBe('23514');
     // Deleting the parent run nulls retry_of and finding.run_id; deleting the finding cascades suggestions.
     expect((await admin.from('ai_runs').delete().eq('id', pid)).error).toBeNull();
     expect((await admin.from('ai_runs').select('retry_of_run_id').eq('id', child.data!.id).single()).data!.retry_of_run_id).toBeNull();

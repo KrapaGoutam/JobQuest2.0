@@ -176,18 +176,21 @@ describe('Automations settings UI', () => {
     expect(html(createElement(AutomationsView, full))).toContain(`Limit of ${W.AUTOMATION_LIMIT} reached`);
   });
 
-  it('Run now is a disabled, explained contract (no fabricated execution)', () => {
-    const off = html(createElement(AutomationCard, { automation: view(), busy: false, onEdit: noop, onToggle: noop, onDelete: noop }));
-    expect(/<button[^>]*disabled[^>]*>Run now<\/button>/.test(off)).toBe(true);
-    expect(off).toContain('aria-describedby="run-now-a1"');
-    expect(off).toContain('id="run-now-a1"');
-    expect(off).toContain('JobQuest can’t start a provider run');
+  it('AI-11G: there is no fabricated "Run now"; "Run in provider" is an honest, explained action (JobQuest cannot wake a provider)', () => {
+    const on = html(createElement(AutomationCard, { automation: view(), busy: false, onEdit: noop, onToggle: noop, onDelete: noop }));
+    expect(on).not.toContain('>Run now<');
+    expect(/<button[^>]*disabled[^>]*>Run in provider<\/button>/.test(on)).toBe(false);
+    expect(on).toContain('aria-describedby="run-provider-a1"');
+    expect(on).toContain('id="run-provider-a1"');
+    expect(on).toContain('JobQuest can’t start a provider run itself');
     const disabled = html(createElement(AutomationCard, { automation: view({ enabled: false, runNow: { ready: false, reason: 'AUTOMATION_DISABLED' } }), busy: false, onEdit: noop, onToggle: noop, onDelete: noop }));
-    expect(disabled).toContain('Enable this automation first.');
+    expect(/<button[^>]*disabled[^>]*>Run in provider<\/button>/.test(disabled)).toBe(true);
+    expect(disabled).toContain('Enable this automation to run it in the provider.');
     expect(disabled).toContain('Next expected</dt><dd style="margin:0">Disabled');
-    // Only a server-declared ready contract would enable the button.
-    const ready = html(createElement(AutomationCard, { automation: view({ runNow: { ready: true, reason: null } }), busy: false, onEdit: noop, onToggle: noop, onDelete: noop }));
-    expect(/<button[^>]*disabled[^>]*>Run now<\/button>/.test(ready)).toBe(false);
+    // A manual-only provider has no scheduler adapter: no setup or run-in-provider action.
+    const manual = html(createElement(AutomationCard, { automation: view({ provider: 'manual' }), busy: false, onEdit: noop, onToggle: noop, onDelete: noop }));
+    expect(manual).not.toContain('Run in provider');
+    expect(manual).not.toContain('Set up in');
   });
 
   it('shows operational state: last run, last success, normalized error and health', () => {

@@ -294,7 +294,12 @@ export function sanitizeFailureSummary(raw: unknown): string {
  * with no schema change.
  */
 export type ExecutorState = 'configured' | 'not_configured' | 'unavailable';
-/** Providers with a connected scheduler adapter. Empty in AI-11F by design: no adapter exists yet (AI-11G). */
+/**
+ * Providers for which JobQuest can START a run by itself (a push executor). Empty BY DESIGN, also after AI-11G: the provider adapters
+ * are PULL executors (the provider's own scheduled task wakes up and claims through jobquest_claim_ai_execution), and JobQuest cannot
+ * wake a subscription-native provider. So Run Now stays honest (NO_EXECUTOR) and the UI offers "Run in provider" instead.
+ * Whether a provider's scheduler is working is a separate, evidence-derived state (providerAdapters.deriveSchedulerReadiness).
+ */
 export const REGISTERED_EXECUTORS: readonly AutomationProvider[] = [];
 
 export function executorState(provider: AutomationProvider, ctx: { aiHubEnabled: boolean; registered?: readonly AutomationProvider[] }): ExecutorState {

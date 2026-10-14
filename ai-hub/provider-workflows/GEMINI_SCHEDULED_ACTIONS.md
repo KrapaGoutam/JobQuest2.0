@@ -10,6 +10,10 @@ connector credential yourself and it is shown once. Capability status lives in
 > otherwise, a Gemini scheduled save to JobQuest is **APPROVAL-GATED**; a scheduled **read + report inside Gemini** is the
 > part to validate first. Both results are recorded by the operator, not assumed.
 
+## AI-11G: pull-executor setup (recommended for scheduled runs)
+
+Instead of pasting a per-workflow template into a schedule, create the schedule from JobQuest: **Settings → AI & Automation → Automations → your automation → Set up in Gemini**. JobQuest generates claim-first instructions from the stored automation (automation id only, no credential). The scheduled task first calls `jobquest_claim_ai_execution`; JobQuest answers `CLAIMED` (with the ordered steps and the `externalRunId`) or tells the task to stop (`NOT_DUE`, `ALREADY_CLAIMED`, `ALREADY_COMPLETED`, `DISABLED`). The task then submits ONE `jobquest_submit_ai_result` with the claimed `externalRunId`; JobQuest composes the Daily Digest last. `jobquest_report_ai_execution_failure` is called once if the task cannot finish. It reuses the AI-10 OAuth custom-app connection (include *Allow AI findings*); Gemini asks for manual confirmation of custom-app writes, so a scheduled save may be approval-gated; no Gemini API key is involved. (Sections below that describe bearer-token auth predate AI-10 OAuth.) Whether a scheduled run can use the JobQuest connector is **UNVERIFIED** until a scheduled run really finishes (Providers shows *Scheduled execution: Ready* only then). Use *Run in provider* for an attended, run-once check. Acceptance procedure: [`../OPERATOR_ACCEPTANCE_AI-11G.md`](../OPERATOR_ACCEPTANCE_AI-11G.md). The per-workflow templates below remain valid for a provider-side schedule that does not claim (its runs are recorded as before).
+
 ## What you need (official Google requirements, verified 2026-10-12)
 
 Source: Gemini Apps Help, “Connect & manage custom apps for Gemini Apps” (<https://support.google.com/gemini/answer/17209137>).

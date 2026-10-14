@@ -131,11 +131,14 @@ describe('AI-11D discovery policy at ingestion', () => {
     expect(broken.result.success).toBe(true);
   });
 
-  it('only job_discovery runs are filtered: the same lead in another workflow is stored and the profile is not even read', async () => {
-    const other = { ...doc([{ role_title: 'Old QA', posted_at: hoursAgo(500) }]), workflow: 'other' };
+  it('AI-11G: the profile applies to every run that carries job leads (a composite Morning Digest cannot bypass it); a run with no job lead never reads the profile', async () => {
+    const other = { ...doc([{ role_title: 'Old QA', posted_at: hoursAgo(500) }]), workflow: 'daily_brief' };
     const { f } = await run(other, fake(profile()));
-    expect(f.of('rpc_ai_job_discovery_profile_get')).toHaveLength(0);
-    expect(storedTitles(f)).toEqual(['Old QA']);
+    expect(f.of('rpc_ai_job_discovery_profile_get')).toHaveLength(1);
+    expect(storedTitles(f)).toEqual([]);
+    const none = { ...doc([]), workflow: 'daily_brief' };
+    const { f: f2 } = await run(none, fake(profile()));
+    expect(f2.of('rpc_ai_job_discovery_profile_get')).toHaveLength(0);
   });
 
   it('passes the cross-source logical key to the identity resolver and the new lead columns to the projection', async () => {

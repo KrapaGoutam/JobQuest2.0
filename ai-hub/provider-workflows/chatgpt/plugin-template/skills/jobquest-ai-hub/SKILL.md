@@ -14,13 +14,16 @@ Use the JobQuest tools only when the user asks about their job search or runs on
 - JobQuest has **no tool to change applications, tasks, contacts or statuses**, and you must not claim you changed
   anything. If asked to (for example “move this application to Interview”), say you cannot, and offer at most to submit a
   *suggestion* that the user approves inside JobQuest → AI Hub → Actions.
-- The only write is `jobquest_submit_ai_result`. It stores findings only. It may need the user’s approval; if it is paused,
+- Scheduled JobQuest automations are PULL-based: your scheduled task calls `jobquest_claim_ai_execution` FIRST with the
+  automation id from its instructions, and stops unless the status is `CLAIMED`. If you cannot finish a claimed run, call
+  `jobquest_report_ai_execution_failure` once. These two execution tools change no application, task, contact, email or calendar.
+- The only data write is `jobquest_submit_ai_result`. It stores findings only. It may need the user’s approval; if it is paused,
   blocked or fails, do not retry around it and do not claim success.
 - Never fabricate jobs, recruiters, contact details or sources. Keep stable source identities (message id, calendar event
   id, canonical URL). Never submit email or calendar bodies; keep evidence short.
 - Do not reveal or ask for credentials. Never paste a JobQuest token anywhere.
 
-## Tools (13)
+## Tools (15)
 
 Read: `jobquest_list_applications`, `jobquest_get_application`, `jobquest_list_ai_runs`, `jobquest_list_ai_findings`,
 `jobquest_list_ai_suggestions`, `jobquest_list_daily_digests`, `jobquest_list_job_leads`,
@@ -28,6 +31,7 @@ Read: `jobquest_list_applications`, `jobquest_get_application`, `jobquest_list_a
 `jobquest_get_job_discovery_profile` (the owner's Job Discovery profile, read-only),
 `jobquest_get_recruiter_discovery_profile` (the owner's Recruiter Discovery preferences: target companies and role categories, read-only).
 Write (findings only): `jobquest_submit_ai_result`.
+Execution (scheduled automations only): `jobquest_claim_ai_execution`, `jobquest_report_ai_execution_failure`.
 
 ## Result contract
 

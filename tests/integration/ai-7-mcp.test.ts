@@ -73,12 +73,12 @@ describe.skipIf(!ready || !local)('AI-7 — MCP calendar tool (real DB)', () => 
   it('AI7M-01 · the calendar tool is a read-only ai:read tool; the surface is thirteen tools with exactly one write and no calendar write tool', async () => {
     const rw = await toolNames(tokens.carolRw!);
     expect(rw).toContain(TOOL);
-    expect(rw).toHaveLength(13);
+    expect(rw).toHaveLength(15); // AI-11G adds two execution tools
     expect(rw.filter((t: string) => /submit|create|import|delete|update|apply|calendar.*(write|event|rsvp|accept)/.test(t) && t !== TOOL)).toEqual(['jobquest_submit_ai_result']);
     expect(rw.join()).not.toMatch(/submit_calendar|create_event|update_event|delete_event|respond|rsvp/);
     expect(await toolNames(tokens.carolRead!)).toContain(TOOL);
     expect(await toolNames(tokens.carolRead!)).not.toContain('jobquest_submit_ai_result');
-    expect(await toolNames(tokens.carolIngestOnly!)).toEqual(['jobquest_submit_ai_result']); // scope-filtered registry
+    expect(await toolNames(tokens.carolIngestOnly!)).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']); // scope-filtered registry
     expect(await toolNames(tokens.carolAppsOnly!)).not.toContain(TOOL);
     const denied = await call(tokens.carolAppsOnly!, TOOL);
     expect(denied.status === 403 || denied.json?.result?.isError === true || denied.json?.error).toBeTruthy();

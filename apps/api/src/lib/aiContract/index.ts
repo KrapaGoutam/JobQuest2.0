@@ -10,3 +10,5 @@ export * from './automation';
 export * from './digestComposer';
 export * from './discovery';
 export * from './recruiter';
+export * from './providerAdapters';
+export * from './schedulerSetup';

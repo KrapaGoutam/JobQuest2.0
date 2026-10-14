@@ -226,8 +226,8 @@ describe('MCP tool descriptions for Claude (deterministic contract)', () => {
 
   it('the surface stays minimal: the AI-4 tools, the read-only Daily Digest list (AI-5) and the read-only source lists (AI-6), calendar list (AI-7) and discovery-profile read (AI-11D); one write tool; nothing Claude-specific', async () => {
     expect((await load()).map((t) => t.name).sort()).toEqual([
-      'jobquest_get_application', 'jobquest_get_job_discovery_profile', 'jobquest_get_recruiter_discovery_profile', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
-      'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel', 'jobquest_submit_ai_result',
+      'jobquest_claim_ai_execution', 'jobquest_get_application', 'jobquest_get_job_discovery_profile', 'jobquest_get_recruiter_discovery_profile', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
+      'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result',
     ]);
   });
   it('descriptions are concise, static and non-coercive', async () => {
@@ -238,7 +238,7 @@ describe('MCP tool descriptions for Claude (deterministic contract)', () => {
     }
   });
   it('read tools say they are read-only and what they are not', async () => {
-    for (const t of (await load()).filter((x) => x.name !== 'jobquest_submit_ai_result')) expect(t.description, t.name).toMatch(/Read-only/);
+    for (const t of (await load()).filter((x) => !['jobquest_submit_ai_result', 'jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure'].includes(x.name))) expect(t.description, t.name).toMatch(/Read-only/);
     const apps = (await byName('jobquest_list_applications')).description;
     expect(apps).toMatch(/ALREADY TRACKED/);
     expect(apps).toMatch(/Does NOT discover or search for jobs, browse the web, or create or change applications/);

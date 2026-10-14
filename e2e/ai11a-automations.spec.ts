@@ -91,7 +91,7 @@ test.describe('AI-11A automation foundation', () => {
     await page.goto('/settings/ai');
     await page.waitForLoadState('networkidle');
     await expect(section.getByText('No automations yet')).toBeVisible();
-    await expect(section.getByText('JobQuest does not run it', { exact: false })).toBeVisible();
+    await expect(section.getByText('JobQuest can’t create that schedule or start a run itself', { exact: false })).toBeVisible();
     await expect(page.getByTestId('claude-connector')).toBeVisible(); // Providers is still its own card with its own credentials
     await expect(section.getByText(/token|secret|password/i)).toHaveCount(0);
     a11y.push(await audit(page, 'settings-empty-1280'));
@@ -120,10 +120,11 @@ test.describe('AI-11A automation foundation', () => {
     await expect(digest.getByText('Waiting for first run')).toBeVisible();
     // Next expected is rendered in the AUTOMATION's zone (Chicago), not the browser's (Berlin).
     await expect(digest.locator('dd').first()).toHaveText(/^(Mon|Tue|Wed|Thu|Fri), \w{3} \d{1,2}, 8:00 AM C[DS]T$/);
-    // Run Now is an explained, disabled contract: nothing can start a provider run.
-    const runNow = digest.getByRole('button', { name: 'Run now' });
-    await expect(runNow).toBeDisabled();
-    await expect(digest.getByText('JobQuest can’t start a provider run', { exact: false })).toBeVisible();
+    // AI-11G: there is no fake "Run now". JobQuest cannot wake a provider, so the honest action is "Run in provider" (copy instructions).
+    await expect(digest.getByRole('button', { name: 'Run now' })).toHaveCount(0);
+    await expect(digest.getByRole('button', { name: 'Set up in Claude' })).toBeVisible();
+    await expect(digest.getByRole('button', { name: 'Run in provider' })).toBeEnabled();
+    await expect(digest.getByText('JobQuest can’t start a provider run itself', { exact: false })).toBeVisible();
     const row = (await admin.from('ai_workflow_configs').select('*').eq('user_id', state.userId)).data ?? [];
     expect(row).toHaveLength(1);
     expect(row[0]).toMatchObject({ workflow: 'daily_brief', primary_provider: 'claude', cadence: 'weekdays', local_time: '08:00', timezone: TZ, enabled: true, delivery: ['ai_hub', 'email_summary'] });
@@ -173,7 +174,8 @@ test.describe('AI-11A automation foundation', () => {
     await digest.getByRole('switch', { name: 'Disable Weekday Morning Digest' }).click();
     await expect(digest.getByText('Disabled', { exact: true }).first()).toBeVisible();
     await expect(digest.locator('dd').first()).toHaveText('Disabled');
-    await expect(digest.getByText('Enable this automation first.')).toBeVisible();
+    await expect(digest.getByText('Enable this automation to run it in the provider.')).toBeVisible();
+    await expect(digest.getByRole('button', { name: 'Run in provider' })).toBeDisabled();
     expect((await admin.from('ai_workflow_configs').select('enabled').eq('user_id', state.userId).eq('name', 'Weekday Morning Digest').single()).data?.enabled).toBe(false);
     await digest.getByRole('switch', { name: 'Enable Weekday Morning Digest' }).click();
     await expect(digest.getByText('Waiting for first run')).toBeVisible();
@@ -206,10 +208,37 @@ test.describe('AI-11A automation foundation', () => {
     await expect(digest.locator('dd').first()).toHaveText(/9:15 AM C[DS]T$/);
 
     // ---- 7b) AI-11F: executor readiness, last failure, recent runs (scheduled vs manual), History trigger -----------------
-    // The provider scheduler is not connected in AI-11F: the card says so and Run now stays disabled with the real reason.
-    await expect(digest.getByText('Provider scheduler').locator('xpath=following-sibling::dd[1]')).toHaveText('Not connected yet');
+    // AI-11G: connection and scheduled execution are separate facts. No Claude credential exists here, so the card says so honestly.
+    await expect(digest.getByText('JobQuest connection').locator('xpath=following-sibling::dd[1]')).toHaveText('Not connected');
+    await expect(digest.getByText('Scheduled execution').locator('xpath=following-sibling::dd[1]')).toHaveText('Connect the provider first');
     await expect(digest.getByText('Last failure').locator('xpath=following-sibling::dd[1]')).not.toHaveText('—');
-    await expect(digest.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    await expect(digest.getByRole('button', { name: 'Run now' })).toHaveCount(0);
+    // Provider setup: server-generated, copyable, claim-first instructions that contain the automation id and no credential.
+    await digest.getByRole('button', { name: 'Set up in Claude' }).click();
+    const setup = page.getByRole('dialog');
+    await expect(setup.getByText('Scheduled execution: Connect the provider first')).toBeVisible();
+    await expect(setup.getByRole('button', { name: 'Copy scheduled-task instructions' })).toBeVisible();
+    const instructions = await setup.getByLabel('Scheduled-task instructions').innerText();
+    expect(instructions).toContain('FIRST action is jobquest_claim_ai_execution');
+    expect(instructions).toContain('FRESH JobQuest tool call');
+    expect(instructions).toMatch(/Automation ID: [0-9a-f-]{36}/);
+    expect(instructions).not.toMatch(/jq_mcp_|Bearer [A-Za-z0-9]|client_secret/);
+    await expect(setup.getByText('Email triage').first()).toBeVisible();
+    await expect(setup.getByText('Daily Digest (composed by JobQuest, last)')).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 900 });
+    expect(await overflow(page), 'setup dialog overflow @375').toBe(0);
+    const sbox = await setup.boundingBox();
+    expect(sbox!.x + sbox!.width).toBeLessThanOrEqual(376);
+    a11y.push(await audit(page, 'automation-setup-dialog-375'));
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setup.getByRole('button', { name: 'Done' }).click();
+    await expect(setup).toHaveCount(0);
+    // Providers page: the same two facts, never one badge.
+    const claudeScheduling = page.getByTestId('claude-scheduling');
+    await expect(claudeScheduling.getByText('JobQuest connection').locator('xpath=following-sibling::dd[1]')).toHaveText('Not connected');
+    await expect(claudeScheduling.getByText('Connect the provider first').first()).toBeVisible();
+    await expect(page.getByTestId('chatgpt-scheduling')).toBeVisible();
+    await expect(page.getByTestId('gemini-scheduling')).toBeVisible();
     // A scheduled occurrence requested through the real lifecycle RPC (service client of the LOCAL stack). Back-dated so the
     // latest-run derived state used by the Overview assertions below is unchanged.
     const cfgId = (await admin.from('ai_workflow_configs').select('id').eq('user_id', state.userId).eq('name', 'Weekday Morning Digest').single()).data!.id as string;

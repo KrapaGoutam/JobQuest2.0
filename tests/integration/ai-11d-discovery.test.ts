@@ -410,8 +410,8 @@ describe.skipIf(!ready || !local)('AI-11D — fresh job discovery (real DB, RLS)
     expect(readTools).toHaveLength(12); // a read-only connection never even sees the write tool
     expect(readTools.map((t) => t.name)).toContain('jobquest_get_job_discovery_profile');
     const tools = (await mcp(fullTok, 'tools/list')).result.tools as Array<{ name: string; annotations: Record<string, boolean>; description: string }>;
-    expect(tools).toHaveLength(13);
-    expect(tools.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
+    expect(tools).toHaveLength(15); // AI-11G adds the two execution tools
+    expect(tools.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name).sort()).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']);
     expect(tools.filter((t) => /submit|create|import|delete|update|apply|send|reply|draft|save|scrape|search_web/i.test(t.name)).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     const tool = tools.find((t) => t.name === 'jobquest_get_job_discovery_profile')!;
     expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });

@@ -22,25 +22,20 @@ const card = (a: AutomationView, extra: Record<string, unknown> = {}) =>
   renderToStaticMarkup(createElement(AutomationCard, { automation: a, busy: false, onEdit: noop, onToggle: noop, onDelete: noop, ...extra }));
 
 describe('Automations card (AI-11F)', () => {
-  it('shows executor readiness, the last failure and how the last run started; Run now says the real reason', () => {
+  it('shows the last failure and how the last run started; the provider action is honest about who starts runs', () => {
     const out = card(view());
-    expect(out).toContain('Provider scheduler</dt><dd style="margin:0">Not connected yet');
     expect(out).toContain('Last failure');
     expect(out).toContain('Last started by</dt><dd style="margin:0">Scheduled');
-    expect(out).toContain('no provider scheduler is connected');
-    expect(/<button[^>]*disabled[^>]*>Run now<\/button>/.test(out)).toBe(true);
+    expect(out).toContain('JobQuest can’t start a provider run itself');
+    expect(out).not.toContain('>Run now<');
   });
-  it('a connected executor enables Run now; an unavailable one is labelled; legacy views without the fields still render', () => {
-    const ready = card(view({ executor: 'configured', runNow: { ready: true, reason: null } }));
-    expect(ready).toContain('Connected');
-    expect(/<button[^>]*disabled[^>]*>Run now<\/button>/.test(ready)).toBe(false);
-    expect(card(view({ executor: 'unavailable' }))).toContain('Unavailable');
+  it('legacy views without the AI-11F fields still render, and no scheduling rows appear until the status is loaded', () => {
     const legacy = view();
     delete (legacy as Partial<AutomationView>).executor;
     delete legacy.state.lastTrigger;
     delete legacy.state.lastFailureAt;
     const out = card(legacy);
-    expect(out).not.toContain('Provider scheduler');
+    expect(out).not.toContain('Scheduled execution');
     expect(out).not.toContain('Last started by');
   });
   it('renders the supplied history slot (the panel lazily loads it)', () => {

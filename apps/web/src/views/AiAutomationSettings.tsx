@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
+import { fetchSchedulerStatus } from '../api/aiAutomations';
+import { statusFor, type ProviderSchedulerStatus } from '../lib/aiScheduler';
+import { ProviderSchedulerSummary } from '../components/ai/ProviderSchedulerSummary';
 import {
   AI_PROVIDER_LABELS, AI_WRITE_ACTIONS_ENABLED,
 } from '../lib/aiHubFlags';
@@ -26,6 +30,14 @@ const rowStyle = { display: 'flex', justifyContent: 'space-between', gap: '12px'
 
 export function AiAutomationSettings({ activeWorkspaceId, session, currentUserId = null }: { activeWorkspaceId: string | null; session?: PublicSession; currentUserId?: string | null }) {
   const { timeZone } = useProfileTimeZone(currentUserId);
+  // AI-11G: scheduled-execution state per provider (secondary data: if it cannot load, the connection panels still render).
+  const [scheduling, setScheduling] = useState<ProviderSchedulerStatus[] | null>(null);
+  useEffect(() => {
+    if (!session || !activeWorkspaceId) return undefined;
+    let live = true;
+    fetchSchedulerStatus(activeWorkspaceId, session).then((s) => live && setScheduling(s), () => live && setScheduling(null));
+    return () => { live = false; };
+  }, [activeWorkspaceId, session?.access_token]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -58,6 +70,7 @@ export function AiAutomationSettings({ activeWorkspaceId, session, currentUserId
                       : session
                         ? <ProviderConnectorPanel provider={PROVIDER_CONNECTORS[p.id]} activeWorkspaceId={activeWorkspaceId} session={session} />
                       : <><span>{p.label}</span><b>Not configured</b></>}
+                  {session && statusFor(scheduling, p.id) && <ProviderSchedulerSummary status={statusFor(scheduling, p.id)!} />}
                 </li>
               ))}
             </ul>

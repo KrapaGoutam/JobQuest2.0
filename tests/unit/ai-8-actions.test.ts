@@ -178,11 +178,11 @@ describe('service guard rails (no database needed)', () => {
 });
 
 describe('no unattended path and no MCP core write', () => {
-  it('the MCP registry still has exactly one write (submit AI result) and no core mutation tool', async () => {
+  it('the MCP registry has one findings write (submit AI result), the two AI-11G execution tools and no core mutation tool', async () => {
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(13);
+    expect(MCP_TOOLS).toHaveLength(15);
     const writes = MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true);
-    expect(writes.map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
+    expect(writes.map((t) => t.name).sort()).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']);
     const names = MCP_TOOLS.map((t) => t.name.toLowerCase()).join(' ');
     for (const banned of ['create_application', 'update_application', 'create_task', 'set_application_status', 'execute', 'approve', 'confirm', 'accept', 'action']) expect(names, banned).not.toContain(banned);
   });

@@ -6,6 +6,7 @@ import {
   type AutomationContext, type AutomationError,
 } from '../services/aiAutomationService';
 import { listAutomationRuns, requestRunNow, type ExecutionError } from '../services/aiExecutionService';
+import { getAutomationSetup, getSchedulerStatus, type SchedulerError } from '../services/aiSchedulerStatusService';
 import { CLIENT_KEY } from '../lib/aiContract';
 import { caller } from './scope';
 
@@ -15,7 +16,7 @@ import { caller } from './scope';
  * (deleting never does). NOT exposed through MCP: a provider can never read or change an automation definition.
  * AI-11F adds Run Now (the SAME execution lifecycle as a scheduled occurrence; truthful: 409 NO_EXECUTOR and nothing
  * created until a provider executor is configured) and the per-automation run history. The executor entry points
- * (enqueue / claim / report / retry) are service functions for the AI-11G adapters, deliberately NOT HTTP routes.
+ * (enqueue / claim / report / retry) are service functions, deliberately NOT HTTP routes: AI-11G exposes claim and failure-report to providers ONLY through the authenticated MCP tools (jobquest_claim_ai_execution / jobquest_report_ai_execution_failure). This file adds the owner-session scheduler-status and setup-instruction reads.
  */
 export const aiAutomations = new Hono();
 
@@ -25,6 +26,8 @@ const STATUS: Record<string, ApiStatus> = {
   AI_HUB_DISABLED: 503, READ_FAILED: 500, SAVE_FAILED: 500,
 };
 const fail = (c: Context, e: AutomationError) => c.json({ error: { code: e.code, message: e.message, ...(e.field ? { field: e.field } : {}) } }, STATUS[e.code] ?? 500);
+const SCHED_STATUS: Record<string, ApiStatus> = { INVALID_INPUT: 422, AUTOMATION_NOT_FOUND: 404, READ_FAILED: 500 };
+const schedFail = (c: Context, e: SchedulerError) => c.json({ error: { code: e.code, message: e.message } }, SCHED_STATUS[e.code] ?? 500);
 const unauth = (c: Context) => c.json({ error: { code: 'UNAUTHENTICATED', message: 'Sign in required.' } }, 401);
 
 const workspaceQuery = z.object({ workspace_id: z.uuid() });
@@ -52,6 +55,28 @@ aiAutomations.get('/', async (c) => {
   if (!ctx) return unauth(c);
   const out = await listAutomations(ctx);
   return out.ok ? c.json({ automations: out.data }) : fail(c, out.error);
+});
+
+// AI-11G: provider scheduler readiness (connection and scheduled-execution state are separate facts) and the copyable setup
+// instructions for one automation. Read-only, owner session only. JobQuest creates nothing in the provider.
+aiAutomations.get('/scheduler-status', async (c) => {
+  const q = workspaceQuery.safeParse({ workspace_id: c.req.query('workspace_id') });
+  if (!q.success) return fail(c, { code: 'INVALID_INPUT', message: 'A workspace is required.' });
+  const ctx = await context(c, q.data.workspace_id);
+  if (!ctx) return unauth(c);
+  const out = await getSchedulerStatus({ workspaceId: ctx.workspaceId, userId: ctx.userId, accessToken: ctx.accessToken });
+  return out.ok ? c.json({ providers: out.data }) : schedFail(c, out.error);
+});
+
+aiAutomations.get('/:id/setup', async (c) => {
+  const id = z.uuid().safeParse(c.req.param('id'));
+  const q = workspaceQuery.safeParse({ workspace_id: c.req.query('workspace_id') });
+  if (!id.success) return fail(c, { code: 'AUTOMATION_NOT_FOUND', message: 'Automation not found.' });
+  if (!q.success) return fail(c, { code: 'INVALID_INPUT', message: 'A workspace is required.' });
+  const ctx = await context(c, q.data.workspace_id);
+  if (!ctx) return unauth(c);
+  const out = await getAutomationSetup({ workspaceId: ctx.workspaceId, userId: ctx.userId, accessToken: ctx.accessToken }, id.data);
+  return out.ok ? c.json(out.data) : schedFail(c, out.error);
 });
 
 aiAutomations.post('/', requireCsrfToken, async (c) => {

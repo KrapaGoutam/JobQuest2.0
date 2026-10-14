@@ -371,7 +371,7 @@ describe.skipIf(!ready || !local)('AI-11B — email intelligence & triage (real 
       return JSON.parse(await res.text());
     };
     const tools = (await mcp(tok, 'tools/list')).result.tools as Array<{ name: string; annotations: Record<string, boolean>; description: string }>;
-    expect(tools).toHaveLength(13);
+    expect(tools).toHaveLength(15); // AI-11G adds the two execution tools
     expect(tools.filter((t) => /submit|create|import|delete|update|apply|send|reply|draft/i.test(t.name)).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     const emailTool = tools.find((t) => t.name === 'jobquest_list_email_intelligence')!;
     expect(emailTool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });

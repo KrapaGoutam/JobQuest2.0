@@ -237,7 +237,7 @@ export function ProviderConnectorPanel({ provider, activeWorkspaceId, session }:
     setCreating(true); setCreateError(null);
     try {
       const result = await createConnectorToken(
-        { workspace_id: activeWorkspaceId, name: provider.connectorName, scopes: presetScopesFor(provider, preset), expires_in_days: expiry },
+        { workspace_id: activeWorkspaceId, name: provider.connectorName, scopes: presetScopesFor(provider, preset), expires_in_days: expiry, provider: provider.id },
         session,
       );
       setSetupOpen(false);

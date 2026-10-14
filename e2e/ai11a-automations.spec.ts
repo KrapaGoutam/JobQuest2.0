@@ -117,7 +117,7 @@ test.describe('AI-11A automation foundation', () => {
     await expect(digest.getByText('Weekdays at 8:00 AM · America/Chicago')).toBeVisible();
     await expect(digest.getByText('Sections: Email triage, Job discovery, Recruiter intelligence, Calendar review, Follow-ups')).toBeVisible();
     await expect(digest.getByText('Delivery: AI Hub, Email summary')).toBeVisible();
-    await expect(digest.getByText('Waiting for first run')).toBeVisible();
+    await expect(digest.getByText('Needs setup', { exact: true })).toBeVisible(); // AI-11H: derived health; the provider is not connected yet
     // Next expected is rendered in the AUTOMATION's zone (Chicago), not the browser's (Berlin).
     await expect(digest.locator('dd').first()).toHaveText(/^(Mon|Tue|Wed|Thu|Fri), \w{3} \d{1,2}, 8:00 AM C[DS]T$/);
     // AI-11G: there is no fake "Run now". JobQuest cannot wake a provider, so the honest action is "Run in provider" (copy instructions).
@@ -178,7 +178,7 @@ test.describe('AI-11A automation foundation', () => {
     await expect(digest.getByRole('button', { name: 'Run in provider' })).toBeDisabled();
     expect((await admin.from('ai_workflow_configs').select('enabled').eq('user_id', state.userId).eq('name', 'Weekday Morning Digest').single()).data?.enabled).toBe(false);
     await digest.getByRole('switch', { name: 'Enable Weekday Morning Digest' }).click();
-    await expect(digest.getByText('Waiting for first run')).toBeVisible();
+    await expect(digest.getByText('Needs setup', { exact: true })).toBeVisible();
 
     // ---- 6) DERIVED STATE from ai_runs (seeded; the automation row stores none of it) -------------------------------
     const seed = async (status: string, error?: string) => {
@@ -192,9 +192,9 @@ test.describe('AI-11A automation foundation', () => {
     await expect(digest.getByText('Last success').locator('xpath=following-sibling::dd[1]')).not.toHaveText('—');
     await seed('FAILED', 'CONNECTOR_AUTH_EXPIRED');
     await page.reload();
-    await expect(digest.getByText('Last run failed')).toBeVisible();
+    await expect(digest.getByText('Needs attention', { exact: true })).toBeVisible();
     await expect(digest.getByText('Connector authorization expired')).toBeVisible();
-    await expect(weekly.getByText('Waiting for first run')).toBeVisible(); // a Gemini automation is unaffected by Claude's runs
+    await expect(weekly.getByText('Needs setup', { exact: true })).toBeVisible(); // a Gemini automation is unaffected by Claude's runs
     expect((await admin.from('ai_runs').select('id', { count: 'exact', head: true }).eq('user_id', state.userId)).count).toBe(2);
 
     // ---- 7) EDIT ------------------------------------------------------------------------------------------------------

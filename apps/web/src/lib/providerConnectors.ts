@@ -200,3 +200,29 @@ export function summarizeProvider(config: ProviderConnectorConfig, tokens: reado
   }
   return { state: 'NOT_CONFIGURED', label: config.notConfiguredLabel, active, previous, lastUsedAt };
 }
+
+// ---- AI-11H: credentials that are not shown on a provider card ----
+
+export interface LegacyCredentials {
+  /** Active (usable) credentials: the ones that need a decision. */
+  active: ConnectorTokenMetadata[];
+  /** Expired or revoked: history only. */
+  inactive: ConnectorTokenMetadata[];
+}
+
+/**
+ * Connector credentials the owner cannot otherwise see or revoke in Providers: tokens with NO provider (created before AI-11G or without
+ * choosing one; they cannot claim automation runs), and tokens bound to a provider whose card does not list tokens (Gemini and ChatGPT
+ * connect with OAuth; the Claude card lists tokens by its name prefix). Metadata only: the API never returns a token or hash.
+ */
+export function legacyCredentials(tokens: readonly ConnectorTokenMetadata[], now = Date.now()): LegacyCredentials {
+  const hidden = tokens.filter((t) => t.provider == null || !isProviderToken(CLAUDE_PROVIDER, t));
+  const newestFirst = (a: ConnectorTokenMetadata, b: ConnectorTokenMetadata) => b.created_at.localeCompare(a.created_at);
+  return {
+    active: hidden.filter((t) => effectiveStatus(t, now) === 'ACTIVE').sort(newestFirst),
+    inactive: hidden.filter((t) => effectiveStatus(t, now) !== 'ACTIVE').sort(newestFirst),
+  };
+}
+
+export const providerOfCredential = (t: Pick<ConnectorTokenMetadata, 'provider'>): string =>
+  (t.provider ? PROVIDER_CONNECTORS[t.provider].name : 'Not bound to a provider');

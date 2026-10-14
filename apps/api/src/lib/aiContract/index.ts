@@ -12,3 +12,5 @@ export * from './discovery';
 export * from './recruiter';
 export * from './providerAdapters';
 export * from './schedulerSetup';
+export * from './automationHealth';
+export * from './weekly';

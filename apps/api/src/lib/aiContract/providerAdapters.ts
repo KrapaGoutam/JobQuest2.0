@@ -26,6 +26,12 @@ export const isSchedulerProvider = (v: unknown): v is SchedulerProvider => typeo
  */
 export type SchedulerReadiness = 'UNSUPPORTED' | 'NOT_CONNECTED' | 'SETUP_REQUIRED' | 'UNVERIFIED' | 'READY';
 export type ProviderConnectionState = 'connected' | 'not_connected';
+/**
+ * AI-11H: why a provider is not connected, derived from the credentials JobQuest holds metadata for. none = nothing was ever created for the
+ * provider; active = a usable credential; expired / revoked = the newest credential lapsed (expiry or owner revocation, or the OAuth
+ * authorization ended). Never typed in by anyone.
+ */
+export type ProviderCredentialState = 'none' | 'active' | 'expired' | 'revoked';
 
 export interface ProviderAdapterManifest {
   provider: SchedulerProvider;
@@ -129,6 +135,8 @@ export interface ProviderSchedulerStatus {
   label: string;
   connection: ProviderConnectionState;
   canIngest: boolean;
+  /** AI-11H: credential lifecycle behind `connection` (additive; absent from older clients). */
+  credential: ProviderCredentialState;
   scheduler: SchedulerReadiness;
   /** Static capability baseline plus what the runs have shown. */
   scheduledJobQuestAccess: 'UNVERIFIED' | 'VERIFIED_BY_USE';
@@ -141,11 +149,14 @@ export interface ProviderSchedulerStatus {
   limitations: readonly string[];
 }
 
-export function buildProviderStatus(provider: SchedulerProvider, connection: ProviderConnectionState, canIngest: boolean, evidence: SchedulerRunEvidence): ProviderSchedulerStatus {
+export function buildProviderStatus(
+  provider: SchedulerProvider, connection: ProviderConnectionState, canIngest: boolean, evidence: SchedulerRunEvidence,
+  credential: ProviderCredentialState = connection === 'connected' ? 'active' : 'none',
+): ProviderSchedulerStatus {
   const m = PROVIDER_ADAPTERS[provider];
   const scheduler = deriveSchedulerReadiness({ provider, connection, canIngest, evidence });
   return {
-    provider, label: m.label, connection, canIngest, scheduler,
+    provider, label: m.label, connection, canIngest, credential, scheduler,
     scheduledJobQuestAccess: scheduler === 'READY' ? 'VERIFIED_BY_USE' : 'UNVERIFIED',
     scheduleAvailable: m.scheduleAvailable, gmailAvailable: m.gmailAvailable, webSearchAvailable: m.webSearchAvailable, executionClaimSupported: m.executionClaimSupported,
     lastClaimAt: evidence.latestClaimAt, lastCompletedAt: evidence.latestCompletedAt, limitations: m.limitations,

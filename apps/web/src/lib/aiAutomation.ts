@@ -212,3 +212,66 @@ export function summarizeAutomations(list: readonly AutomationView[]): Automatio
     next: nextAutomation(list),
   };
 }
+
+// ---- AI-11H: derived health + run analytics (GET /api/ai/automations/insights; the server derives everything) ---------------------
+
+export type AutomationHealthState = 'healthy' | 'running' | 'needs_setup' | 'needs_attention' | 'never_run' | 'disabled';
+export interface AutomationHealthView {
+  state: AutomationHealthState;
+  label: string;
+  variant: 'success' | 'warning' | 'danger' | 'info' | 'muted';
+  reasons: string[];
+  interventionRequired: boolean;
+  retry: { attempt: number; limit: number; inFlight: boolean; exhausted: boolean } | null;
+  lastRunAt: string | null;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+  lastTrigger: string | null;
+  nextExpectedRunAt: string | null;
+}
+export interface RunTally { key: string; runs: number; succeeded: number; partial: number; failed: number }
+export interface AutomationAnalyticsView {
+  windowDays: number;
+  totalRuns: number;
+  finishedRuns: number;
+  inFlightRuns: number;
+  succeeded: number;
+  partial: number;
+  failed: number;
+  cancelled: number;
+  successRate: number | null;
+  byTrigger: { scheduled: number; manual: number; retry: number };
+  retries: { attempts: number; recovered: number };
+  byProvider: RunTally[];
+  byWorkflow: RunTally[];
+  avgCompletionMs: number | null;
+  sourceProblems: { total: number; byType: Array<{ key: string; count: number }> };
+  recentFailures: Array<{ runId: string; automationId: string; provider: string; workflow: string; at: string; errorCategory: string | null; trigger: string }>;
+}
+export interface AutomationInsights {
+  generatedAt: string;
+  windowDays: number;
+  health: Record<string, AutomationHealthView>;
+  analytics: AutomationAnalyticsView;
+  truncated: boolean;
+}
+export const INSIGHT_WINDOWS = [7, 30, 90] as const;
+
+/** Health label/variant when the insights endpoint is unavailable: the AI-11A card state only (never claims provider readiness). */
+export function healthOf(a: Pick<AutomationView, 'enabled' | 'cadence' | 'state' | 'id'>, insights: AutomationInsights | null | undefined): { label: string; variant: AutomationHealth['variant']; detail: AutomationHealthView | null } {
+  const detail = insights?.health[a.id] ?? null;
+  if (detail) return { label: detail.label, variant: detail.variant, detail };
+  const h = automationHealth(a);
+  return { ...h, detail: null };
+}
+
+export const formatPercent = (rate: number | null): string => (rate === null ? '—' : `${Math.round(rate * 100)}%`);
+/** "42 s", "3 min 05 s", "1 h 02 min"; "—" when there is no finished run with both timestamps. */
+export function formatDuration(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms) || ms < 0) return '—';
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ${String(s % 60).padStart(2, '0')} s`;
+  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+}

@@ -254,12 +254,13 @@ export function isAiHubEmpty(s: AiHubSnapshot): boolean {
   return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0 && !(s.automation && s.automation.total > 0);
 }
 
-export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'actions' | 'history';
+export type AiHubTab = 'overview' | 'digest' | 'weekly' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'actions' | 'history';
 
 /** Tab order is the navigation order. */
 export const AI_HUB_TABS: ReadonlyArray<{ id: AiHubTab; label: string; path: string }> = [
   { id: 'overview', label: 'Overview', path: '/ai-hub' },
   { id: 'digest', label: 'Daily Digest', path: '/ai-hub/digest' },
+  { id: 'weekly', label: 'Weekly Digest', path: '/ai-hub/weekly' },
   { id: 'job-leads', label: 'Job Leads', path: '/ai-hub/job-leads' },
   { id: 'email', label: 'Email', path: '/ai-hub/email' },
   { id: 'recruiters', label: 'Recruiter Intel', path: '/ai-hub/recruiters' },

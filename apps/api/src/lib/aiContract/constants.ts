@@ -112,6 +112,19 @@ export const JOB_DESCRIPTION_MAX_CHARS = 30000;
 /** A "strong match" is a provider match score of at least this value (0..100). No score => never strong. */
 export const STRONG_MATCH_THRESHOLD = 80;
 
+// ---- Fresh job discovery (AI-11D) --------------------------------------------------
+/** Where a "remote" role may actually be worked from. Absent = not stated (never assumed to be the US). */
+export const JOB_REMOTE_SCOPES = ['us', 'restricted', 'region'] as const;
+export type JobRemoteScope = (typeof JOB_REMOTE_SCOPES)[number];
+/** Per-source outcome of one discovery run. "unavailable" (could not search) is never the same as "zero" (searched, nothing). */
+export const AI_SOURCE_STATUSES = ['ok', 'zero', 'blocked', 'unavailable', 'error', 'skipped'] as const;
+export type AiSourceStatus = (typeof AI_SOURCE_STATUSES)[number];
+export const DISCOVERY_FRESHNESS_HOURS = [12, 24, 48, 72] as const;
+export const DISCOVERY_LIMITS = {
+  titles: 20, titleChars: 80, cities: 5, cityChars: 80, exclusions: 20, exclusionChars: 40, skills: 20, skillChars: 60,
+  maxResultsMax: 25, maxExperienceYears: 30, toleranceYears: 5, reasons: 8, reasonChars: 200, sourceNoteChars: 200,
+} as const;
+
 export const RECRUITER_RELATIONSHIPS = ['recruiter', 'talent_acquisition', 'hiring_manager', 'sourcer', 'other'] as const;
 export const RECRUITER_VERIFICATIONS = ['verified', 'uncertain'] as const;
 export const RECRUITER_UNCERTAIN_FIELDS = ['name', 'role', 'company', 'relationship', 'contact'] as const;

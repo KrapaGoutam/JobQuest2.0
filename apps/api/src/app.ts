@@ -9,6 +9,7 @@ import { aiDigest } from './routes/aiDigest';
 import { aiActions } from './routes/aiActions';
 import { aiAutomations } from './routes/aiAutomations';
 import { aiEmail } from './routes/aiEmail';
+import { aiJobDiscovery } from './routes/aiJobDiscovery';
 import { mcp } from './routes/mcp';
 import { oauth, authorizationServerMetadata, protectedResourceMetadata } from './routes/oauth';
 import { requestOrigin } from './lib/oauth';
@@ -40,6 +41,7 @@ app.route('/ai/digest', aiDigest);
 app.route('/ai/actions', aiActions);
 app.route('/ai/automations', aiAutomations);
 app.route('/ai/email', aiEmail);
+app.route('/ai/job-discovery', aiJobDiscovery);
 app.route('/mcp', mcp);
 app.route('/oauth', oauth);
 

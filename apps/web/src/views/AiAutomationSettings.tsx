@@ -12,10 +12,11 @@ import { ProviderConnectorPanel } from '../components/ai/ProviderConnectorPanel'
 import { PROVIDER_CONNECTORS } from '../lib/providerConnectors';
 import { OAuthProviderPanel } from '../components/ai/OAuthProviderPanel';
 import { AutomationsPanel } from '../components/ai/AutomationsPanel';
+import { JobDiscoveryPanel } from '../components/ai/JobDiscoveryPanel';
 import type { PublicSession } from '../api';
 
 // Settings -> AI & Automation (AI-1F1). General settings and the Workflows reference are
-// read-only; AI-11A adds Automations (provider-neutral schedule definitions). AI-4 adds the Claude connector setup (scoped connector token for the
+// read-only; AI-11D adds Job Discovery (WHAT jobs the user wants; providers read it, JobQuest never searches); AI-11A adds Automations (provider-neutral schedule definitions). AI-4 adds the Claude connector setup (scoped connector token for the
 // remote MCP endpoint); AI-9 adds Gemini and ChatGPT cards on the same generic connector-token panel, each with truthful
 // capability notes (configured is not the same as automation-capable). Rendered only when
 // the AI Hub is exposed (see isAiHubExposed); failures are local to this panel.
@@ -62,6 +63,15 @@ export function AiAutomationSettings({ activeWorkspaceId, session, currentUserId
           </CardBody>
         </Card>
       </section>
+
+      {session && (
+        <section aria-labelledby="ai-job-discovery">
+          <Card>
+            <CardHeader><CardTitle><span id="ai-job-discovery">Job Discovery</span></CardTitle></CardHeader>
+            <CardBody><JobDiscoveryPanel activeWorkspaceId={activeWorkspaceId} session={session} /></CardBody>
+          </Card>
+        </section>
+      )}
 
       {session && (
         <section aria-labelledby="ai-automations">

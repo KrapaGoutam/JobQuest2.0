@@ -60,7 +60,7 @@ fields Gemini asks for:
 Run these in a Gemini chat with the custom app, then record PASS/FAIL per line (no token values, no private email or calendar
 content in notes):
 
-1. Tool discovery: ask Gemini to list the JobQuest tools. Expect **11** (10 read, 1 write: `jobquest_submit_ai_result`).
+1. Tool discovery: ask Gemini to list the JobQuest tools. Expect **12** (11 read, 1 write: `jobquest_submit_ai_result`).
 2. “List my 5 most recent JobQuest applications.”
 3. “List my Job Leads / email intelligence / recruiter intelligence / calendar intelligence.” (synthetic or empty is fine)
 4. “Show my latest Daily Digest.”

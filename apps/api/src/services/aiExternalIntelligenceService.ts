@@ -13,11 +13,12 @@
 // list reads (they can be 30,000 characters); the UI reads them for one lead at a time.
 import {
   AI_PROVIDERS, EMAIL_ACTION_STATES, EMAIL_ATTENTION_CATEGORIES, EMAIL_ATTENTION_OR, EMAIL_CATEGORIES, EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_STAGE_HINTS, EMAIL_URGENCIES,
-  JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS, STRONG_MATCH_THRESHOLD, emailCategoryGroup, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency, urgencyFromPriority,
-  type AiFindingStatus, type AiPriority, type AiProvider, type EmailActionState, type EmailGroup, type EmailStageHint, type EmailUrgency, type JsonRecord,
+  DISCOVERY_FRESHNESS_HOURS, JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, STRONG_MATCH_THRESHOLD, effectiveRemoteScope, emailCategoryGroup, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency, urgencyFromPriority,
+  type AiFindingStatus, type AiPriority, type AiProvider, type JobRemoteScope, type EmailActionState, type EmailGroup, type EmailStageHint, type EmailUrgency, type JsonRecord,
 } from '../lib/aiContract';
 import type { MatchClient } from './aiApplicationMatchService';
 import { matchEmailsToApplications, type EmailApplicationMatch } from './aiEmailMatchService';
+import { matchLeadsToApplications, type LeadApplicationMatch, type LeadMatchInput } from './aiLeadMatchService';
 import type { AiPage, AiPageRequest, AiReadContext, AiReadDeps, AiReadResult } from './aiReadService';
 import { dbFail, fail, num, parsePage, prepare, rec, s, sliced, sn } from './aiReadSupport';
 
@@ -43,7 +44,7 @@ export function safeUrl(raw: unknown): string | null {
 }
 
 const str = (v: unknown, max = 500): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
-const strList = (v: unknown, max = 30): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max).map((x) => x.slice(0, 100)) : []);
+const strList = (v: unknown, max = 30, maxLen = 100): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max).map((x) => x.slice(0, maxLen)) : []);
 
 /** Strips characters that would alter a PostgREST filter expression, then bounds the term. */
 export function sanitizeSearch(v: unknown): string | null {
@@ -93,10 +94,19 @@ function applyCommon(q: any, f: CommonFilters, prefix = '') { // eslint-disable-
 
 // ---- job leads ----------------------------------------------------------------------
 
+/** freshness = best known posting time first (then match); match = provider score first; discovered = when JobQuest stored it. */
+export const JOB_LEAD_SORTS = ['freshness', 'match', 'discovered'] as const;
+export type JobLeadSort = (typeof JOB_LEAD_SORTS)[number];
+
 export interface JobLeadFilters extends CommonFilters {
   search?: string; company?: string; title?: string; location?: string;
   workArrangement?: (typeof JOB_WORK_ARRANGEMENTS)[number]; employmentType?: (typeof JOB_EMPLOYMENT_TYPES)[number];
   minMatchScore?: number;
+  /** AI-11D: only leads whose freshness time (posted time, else first stored) is within the last 12/24/48/72 hours. */
+  recentHours?: (typeof DISCOVERY_FRESHNESS_HOURS)[number];
+  /** AI-11D: restrict remote roles by the geography they admit (us = open to the whole United States). */
+  remoteScope?: JobRemoteScope;
+  sort?: JobLeadSort;
   discoveredSince?: string; discoveredBefore?: string; // ISO-8601 with offset
   postedSince?: string; postedBefore?: string; // YYYY-MM-DD, inclusive
 }
@@ -106,6 +116,18 @@ export interface JobLeadDto {
   id: string; ownerId: string; provider: AiProvider; status: AiFindingStatus; priority: AiPriority; confidence: number | null;
   company: string; title: string; location: string | null; workArrangement: string | null; employmentType: string | null;
   sourceName: string | null; sourceUrl: string | null; postedDate: string | null; discoveredAt: string;
+  /** AI-11D. Exact posting time when the source stated one; null = unknown (NEVER defaulted to today / now). */
+  postedAt: string | null;
+  /** Sort key only: the best known posting time, else when JobQuest first stored the lead. Not a posted time. */
+  freshnessAt: string | null;
+  /** Remote geography: the provider's scope, else a conservative reading of the stated location. Null = not stated / not remote. */
+  remoteScope: JobRemoteScope | null; remoteNote: string | null;
+  experienceMinYears: number | null; experienceMaxYears: number | null;
+  /** Bounded provider reasons (analysis, not fact). */
+  fitReasons: string[]; gapReasons: string[];
+  canonicalUrl: string | null; externalJobId: string | null;
+  /** Derived at read time from the owner's applications; null = not evaluated. A lead is never an application. */
+  applicationMatch: LeadApplicationMatch | null;
   salary: { min: number | null; max: number | null; currency: string | null; period: string | null } | null;
   experienceLevel: string | null;
   /** Provider analysis 0..100 (null = not scored). Never an objective suitability measure. */
@@ -117,7 +139,8 @@ export interface JobLeadDto {
   descriptionAvailable: boolean; descriptionTruncated: boolean;
 }
 
-export const LEAD_COLUMNS = 'id, finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, discovered_at, '
+export const LEAD_COLUMNS = 'id, finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, canonical_url, external_job_id, posted_date, posted_at, discovered_at, '
+  + 'freshness_at, remote_scope, remote_note, experience_min_years, experience_max_years, fit_reasons, gap_reasons, '
   + 'salary_min, salary_max, salary_currency, salary_period, experience_level, match_score, required_skills, preferred_skills, '
   + 'description_truncated, description_length, '
   + 'finding:ai_findings!inner(provider, status, priority, confidence, summary, payload)';
@@ -133,7 +156,12 @@ export function toJobLead(r: Row): JobLeadDto {
     id: s(r.finding_id), ownerId: s(r.user_id), provider: f.provider as AiProvider, status: f.status as AiFindingStatus, priority: f.priority as AiPriority,
     confidence: num(f.confidence), company: s(r.company), title: s(r.title), location: sn(r.location), workArrangement: sn(r.work_arrangement),
     employmentType: sn(r.employment_type), sourceName: sn(r.source_name), sourceUrl: safeUrl(r.source_url), postedDate: sn(r.posted_date),
-    discoveredAt: s(r.discovered_at),
+    discoveredAt: s(r.discovered_at), postedAt: sn(r.posted_at), freshnessAt: sn(r.freshness_at),
+    remoteScope: r.work_arrangement === 'remote'
+      ? effectiveRemoteScope({ remote_scope: sn(r.remote_scope), location: sn(r.location), remote_note: sn(r.remote_note) }) : null,
+    remoteNote: sn(r.remote_note), experienceMinYears: num(r.experience_min_years), experienceMaxYears: num(r.experience_max_years),
+    fitReasons: strList(r.fit_reasons, 8, 200), gapReasons: strList(r.gap_reasons, 8, 200),
+    canonicalUrl: safeUrl(r.canonical_url), externalJobId: str(r.external_job_id, 255), applicationMatch: null,
     salary: min !== null || max !== null ? { min, max, currency: sn(r.salary_currency), period: sn(r.salary_period) } : null,
     experienceLevel: sn(r.experience_level), matchScore: score, strongMatch: isStrongMatch(score),
     requiredSkills: strList(r.required_skills), preferredSkills: strList(r.preferred_skills),
@@ -143,16 +171,23 @@ export function toJobLead(r: Row): JobLeadDto {
 }
 
 const LEAD_FILTERS = {
-  enums: { ...PROVIDER_STATUS, workArrangement: JOB_WORK_ARRANGEMENTS as readonly string[], employmentType: JOB_EMPLOYMENT_TYPES as readonly string[] },
-  texts: ['search', 'company', 'title', 'location'], ints: ['minMatchScore'], times: ['discoveredSince', 'discoveredBefore'], dates: ['postedSince', 'postedBefore'],
+  enums: {
+    ...PROVIDER_STATUS, workArrangement: JOB_WORK_ARRANGEMENTS as readonly string[], employmentType: JOB_EMPLOYMENT_TYPES as readonly string[],
+    remoteScope: JOB_REMOTE_SCOPES as readonly string[], sort: JOB_LEAD_SORTS as readonly string[],
+  },
+  texts: ['search', 'company', 'title', 'location'], ints: ['minMatchScore', 'recentHours'], times: ['discoveredSince', 'discoveredBefore'], dates: ['postedSince', 'postedBefore'],
 } as const;
 
-/** Newest discovered first (stable id tiebreak). `description` is never selected here. */
+/**
+ * Freshest first by default (best known posting time, then provider match, stable id tiebreak); `description` is never selected here.
+ * Each item carries the derived application match as optional context (a failed match read never fails the list).
+ */
 export async function listJobLeads(ctx: AiReadContext, filters?: JobLeadFilters, page?: AiPageRequest, deps: AiReadDeps = {}): Promise<AiReadResult<AiPage<JobLeadDto>>> {
   const p = prepare(ctx, deps); if (!p.ok) return p;
   const f = parseSourceFilters<JobLeadFilters>(filters, LEAD_FILTERS); if (!f.ok) return f;
   const pg = parsePage(page); if (!pg.ok) return pg;
   const v = f.value;
+  if (v.recentHours !== undefined && !(DISCOVERY_FRESHNESS_HOURS as readonly number[]).includes(v.recentHours)) return fail('INVALID_FILTER', 'recentHours');
   let q = p.db.from('ai_job_leads').select(LEAD_COLUMNS).eq('workspace_id', p.ws);
   q = applyCommon(q, v, 'finding.');
   if (v.search) q = q.or(`company.ilike.%${v.search}%,title.ilike.%${v.search}%`);
@@ -161,14 +196,54 @@ export async function listJobLeads(ctx: AiReadContext, filters?: JobLeadFilters,
   if (v.location) q = q.ilike('location', `%${v.location}%`);
   if (v.workArrangement) q = q.eq('work_arrangement', v.workArrangement);
   if (v.employmentType) q = q.eq('employment_type', v.employmentType);
+  if (v.remoteScope) q = q.eq('work_arrangement', 'remote').eq('remote_scope', v.remoteScope);
+  if (v.recentHours !== undefined) q = q.gte('freshness_at', new Date(Date.now() - v.recentHours * 3_600_000).toISOString());
   if (v.minMatchScore !== undefined) q = q.gte('match_score', v.minMatchScore);
   if (v.discoveredSince) q = q.gte('discovered_at', v.discoveredSince);
   if (v.discoveredBefore) q = q.lt('discovered_at', v.discoveredBefore);
   if (v.postedSince) q = q.gte('posted_date', v.postedSince);
   if (v.postedBefore) q = q.lte('posted_date', v.postedBefore);
-  const { data, error } = await q.order('discovered_at', { ascending: false }).order('id', { ascending: false }).range(pg.from, pg.to);
+  const sort = v.sort ?? 'freshness';
+  q = sort === 'match' ? q.order('match_score', { ascending: false, nullsFirst: false }).order('freshness_at', { ascending: false })
+    : sort === 'discovered' ? q.order('discovered_at', { ascending: false })
+    : q.order('freshness_at', { ascending: false }).order('match_score', { ascending: false, nullsFirst: false });
+  const { data, error } = await q.order('id', { ascending: false }).range(pg.from, pg.to);
   if (error) return dbFail(error);
-  return { ok: true, data: sliced(((data ?? []) as Row[]).map(toJobLead), pg.page, pg.size) };
+  const result = sliced(((data ?? []) as Row[]).map(toJobLead), pg.page, pg.size);
+  await attachLeadApplicationMatches(p.db as Db, p.ws, result.items); // optional context: never fails the list
+  return { ok: true, data: result };
+}
+
+const leadMatchInput = (l: JobLeadDto): LeadMatchInput => ({
+  id: l.id, ownerId: l.ownerId, company: l.company, title: l.title, location: l.location, workArrangement: l.workArrangement,
+  canonicalUrl: l.canonicalUrl, sourceUrl: l.sourceUrl, externalJobId: l.externalJobId, sourceName: l.sourceName, referenceDate: l.postedAt ?? l.discoveredAt,
+});
+
+/** Mutates `items` with the derived match; returns false (leaving them null) when the application read failed. */
+export async function attachLeadApplicationMatches(db: Db, ws: string, items: JobLeadDto[]): Promise<boolean> {
+  if (items.length === 0) return true;
+  try {
+    const matches = await matchLeadsToApplications(db as MatchClient, ws, items.map(leadMatchInput));
+    for (const l of items) l.applicationMatch = matches.get(l.id) ?? null;
+    return true;
+  } catch { return false; }
+}
+
+/** Most leads one matches lookup accepts (one UI page is far smaller). */
+export const LEAD_MATCH_LOOKUP_MAX = 50;
+
+/**
+ * The derived application match for specific leads (the AI Hub Job Leads page reads rows under RLS and asks for the matches
+ * here). Read-only; runs AS THE CALLER; an id that is not a readable lead in this workspace is simply absent.
+ */
+export async function getJobLeadApplicationMatches(ctx: AiReadContext, ids: readonly string[], deps: AiReadDeps = {}): Promise<AiReadResult<Record<string, LeadApplicationMatch>>> {
+  const p = prepare(ctx, deps); if (!p.ok) return p;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > LEAD_MATCH_LOOKUP_MAX || !ids.every((i) => typeof i === 'string' && UUID_RE.test(i))) return fail('INVALID_FILTER', 'ids');
+  const { data, error } = await p.db.from('ai_job_leads').select(LEAD_COLUMNS).eq('workspace_id', p.ws).in('finding_id', ids.map((i) => i.toLowerCase()));
+  if (error) return dbFail(error);
+  const items = ((data ?? []) as Row[]).map(toJobLead);
+  if (!(await attachLeadApplicationMatches(p.db as Db, p.ws, items))) return fail('READ_FAILED');
+  return { ok: true, data: Object.fromEntries(items.flatMap((l) => (l.applicationMatch ? [[l.id, l.applicationMatch] as const] : []))) };
 }
 
 // ---- email intelligence -------------------------------------------------------------

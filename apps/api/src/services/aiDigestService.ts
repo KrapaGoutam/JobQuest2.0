@@ -20,8 +20,8 @@
 import { userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, DIGEST_LOOKBACK_DAYS, EMAIL_ATTENTION_OR, composeDailyDigest, emailGroupCategories,
-  type ComposeInput, type JsonRecord, type SourceHealth,
+  AI_CONTRACT_NAME, AI_CONTRACT_VERSION, DIGEST_LOOKBACK_DAYS, EMAIL_ATTENTION_OR, composeDailyDigest, discoverySearchOutcome, emailGroupCategories,
+  type AiSourceStatus, type ComposeInput, type JsonRecord, type SourceHealth,
 } from '../lib/aiContract';
 import { isCalendarDate, nextCalendarDate, shiftCalendarDate } from '../lib/calendarDate';
 import type { AiReadClient } from './aiReadService';
@@ -171,7 +171,7 @@ export async function buildDeterministicDigest(
     owned('ai_calendar_events', head ? 'id, finding:ai_findings!inner(status)' : cols, head).in('finding.status', ACTIVE_STATUSES)
       .or(windowOr({ start: day.start, end: upcomingEnd }, digestDate, lastUpcomingDay));
   const latestRun = (workflow: string) =>
-    db.from('ai_runs').select('status').eq('workspace_id', ws).eq('user_id', me).eq('workflow', workflow).in('status', ['SUCCEEDED', 'PARTIAL', 'FAILED'])
+    db.from('ai_runs').select('status, sources').eq('workspace_id', ws).eq('user_id', me).eq('workflow', workflow).in('status', ['SUCCEEDED', 'PARTIAL', 'FAILED'])
       .order('created_at', { ascending: false }).limit(1);
   const soonOrOverdueTasks = (cols: string, head = false) =>
     owned('tasks', cols, head).eq('status', 'PENDING').or(`due_date.lte.${digestDate},due_at.lt.${day.end}`);
@@ -214,9 +214,17 @@ export async function buildDeterministicDigest(
   ];
   if (all.some((r) => r.error)) return bad('READ_FAILED', 'JobQuest data could not be read');
 
+  // AI-11D: a run that finished but whose every source reported blocked / unavailable / error / skipped did NOT search anything,
+  // so it reads as unavailable (never as a quiet "zero"). Runs without per-source status keep the AI-11C behaviour.
   const health = (r: { data?: unknown }): SourceHealth => {
-    const status = rowsOf(r)[0]?.status;
-    return status === 'FAILED' ? 'failed' : status === 'SUCCEEDED' || status === 'PARTIAL' ? 'ok' : 'never';
+    const row = rowsOf(r)[0];
+    const status = row?.status;
+    if (status === 'FAILED') return 'failed';
+    if (status === 'SUCCEEDED' || status === 'PARTIAL') {
+      const sources = Array.isArray(row?.sources) ? (row.sources as { status?: AiSourceStatus }[]) : [];
+      return discoverySearchOutcome(sources) === 'not_searched' ? 'failed' : 'ok';
+    }
+    return 'never';
   };
 
   // ---- emails (+ the derived application match, best-effort: a failed lookup leaves matches null) ----

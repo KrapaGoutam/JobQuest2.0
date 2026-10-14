@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import {
-  EMAIL_ATTENTION_OR, SOURCE_PAGE_SIZE, SOURCE_STATUSES, SOURCE_WORKFLOW, clampScore, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency,
+  DISCOVERY_FRESHNESS_HOURS, EMAIL_ATTENTION_OR, SOURCE_PAGE_SIZE, SOURCE_STATUSES, SOURCE_WORKFLOW, clampScore, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency,
   resolveDateRange, sanitizeSearch,
   toEmailView, toJobLeadView, toRecruiterView,
   type EmailFilters, type EmailRow, type EmailView, type JobLeadFilters, type JobLeadRow, type JobLeadView,
@@ -33,12 +33,13 @@ export function applyStatus(q: Query, status: keyof typeof SOURCE_STATUSES | 'AL
 
 // ---- job leads ----------------------------------------------------------------------------------
 
-const LEAD_COLUMNS = 'finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, discovered_at, '
+const LEAD_COLUMNS = 'finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, posted_at, discovered_at, '
+  + 'freshness_at, remote_scope, remote_note, experience_min_years, experience_max_years, fit_reasons, gap_reasons, '
   + 'salary_min, salary_max, salary_currency, salary_period, experience_level, match_score, required_skills, preferred_skills, description_truncated, description_length, '
   + 'finding:ai_findings!inner(provider, status, priority, confidence, summary, payload, application_id)';
 
 export async function fetchJobLeadsPage(
-  workspaceId: string, f: JobLeadFilters, timeZone: string, page: number, client: Client = supabase,
+  workspaceId: string, f: JobLeadFilters, timeZone: string, page: number, client: Client = supabase, now?: () => number,
 ): Promise<SourcePage<JobLeadView>> {
   const disc = resolveDateRange(f.discovered, timeZone);
   if (!disc.ok) throw fail();
@@ -54,6 +55,10 @@ export async function fetchJobLeadsPage(
   if (location) q = q.ilike('location', `%${location}%`);
   if (f.arrangement !== 'ALL') q = q.eq('work_arrangement', f.arrangement);
   if (f.employmentType !== 'ALL') q = q.eq('employment_type', f.employmentType);
+  // AI-11D: only remote roles whose geography is the whole United States; and "newest within N hours" on the freshness time.
+  if (f.remoteUs) q = q.eq('work_arrangement', 'remote').eq('remote_scope', 'us');
+  const hours = Number(f.recent);
+  if (f.recent !== 'ALL' && (DISCOVERY_FRESHNESS_HOURS as readonly number[]).includes(hours)) q = q.gte('freshness_at', new Date((now ?? Date.now)() - hours * 3_600_000).toISOString());
   const min = clampScore(f.minScore);
   if (min !== null) q = q.gte('match_score', min);
   if (disc.since) q = q.gte('discovered_at', disc.since);
@@ -61,7 +66,11 @@ export async function fetchJobLeadsPage(
   if (posted.from) q = q.gte('posted_date', posted.from);
   if (posted.to) q = q.lte('posted_date', posted.to);
   const { from, to } = range(page);
-  const { data, error } = await q.order('discovered_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
+  // Default: freshest first (best known posting time), then provider match; stable id tiebreak.
+  q = f.sort === 'match' ? q.order('match_score', { ascending: false, nullsFirst: false }).order('freshness_at', { ascending: false })
+    : f.sort === 'discovered' ? q.order('discovered_at', { ascending: false })
+    : q.order('freshness_at', { ascending: false }).order('match_score', { ascending: false, nullsFirst: false });
+  const { data, error } = await q.order('id', { ascending: false }).range(from, to);
   if (error) throw fail();
   const out = sliceRows<JobLeadRow, JobLeadView>(data, toJobLeadView);
   // AI-8: which leads have a create_application suggestion waiting for review (owner's own; an RLS head query). Best-effort:

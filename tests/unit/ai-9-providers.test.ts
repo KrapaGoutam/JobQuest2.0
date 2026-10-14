@@ -281,7 +281,7 @@ describe('ChatGPT plugin template (documented format, no secrets, no invented ca
     expect(all).not.toMatch(/jq_mcp_|sk-[A-Za-z0-9]{10,}|Bearer [A-Za-z0-9_-]{16,}|client_secret|OPENAI_API_KEY|eyJ[A-Za-z0-9_-]{20,}/);
     expect(all).not.toMatch(/vercel\.app|jobquest\.app/i);
   });
-  it('SKILL.md has valid frontmatter, lists exactly the 11 tools and forbids claiming core changes', async () => {
+  it('SKILL.md has valid frontmatter, lists exactly the 12 tools and forbids claiming core changes', async () => {
     const skill = read(`${dir}/skills/jobquest-ai-hub/SKILL.md`);
     expect(skill).toMatch(/^---\nname: jobquest-ai-hub\ndescription: .+\n---\n/);
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
@@ -303,9 +303,9 @@ describe('MCP surface and provider identity (regression)', () => {
     const { resetEnvCache } = await import('../../apps/api/src/env');
     resetEnvCache();
   });
-  it('still 11 tools: 10 read-only and exactly one write that stays a write; no core mutation tool', async () => {
+  it('still 12 tools: 11 read-only and exactly one write that stays a write; no core mutation tool', async () => {
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(11);
+    expect(MCP_TOOLS).toHaveLength(12);
     const writes = MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true);
     expect(writes.map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     expect(writes[0]!.annotations.readOnlyHint).toBe(false); // NOT weakened to satisfy a provider
@@ -331,9 +331,9 @@ describe('no provider APIs, no new scheduler, no new credential tables, no migra
     expect(read('vercel.json')).not.toMatch(/"crons"/);
     for (const m of ['package.json', 'apps/api/package.json']) expect(read(m), m).not.toMatch(/node-cron|node-schedule|bull|agenda|cron/i);
   });
-  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration', () => {
+  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration; AI-11D adds one additive discovery migration', () => {
     const migrations = readdirSync('supabase/migrations').sort();
-    expect(migrations.slice(-3)).toEqual(['20261030100000_ai_hub_oauth_21.sql', '20261031100000_ai_hub_oauth_state_length.sql', '20261101100000_ai_hub_automation_foundation.sql']);
+    expect(migrations.slice(-3)).toEqual(['20261031100000_ai_hub_oauth_state_length.sql', '20261101100000_ai_hub_automation_foundation.sql', '20261102100000_ai_hub_fresh_job_discovery.sql']);
     expect(read('supabase/migrations/20261031100000_ai_hub_oauth_state_length.sql')).not.toMatch(/create table/i);
     const sql = migrations.map((m) => read(`supabase/migrations/${m}`)).join('\n');
     expect(sql).not.toMatch(/gemini_tokens|chatgpt_tokens|openai_tokens/i);

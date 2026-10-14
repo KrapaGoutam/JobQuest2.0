@@ -59,9 +59,9 @@ export const AI_WORKFLOW_DEFINITIONS: readonly AiWorkflowDefinition[] = [
   {
     id: 'job_discovery',
     name: 'Job Discovery',
-    purpose: 'Find roles matching a search profile and record them as job-lead findings (never as applications).',
+    purpose: 'Find recently posted roles that match your Job Discovery profile (Settings) and record them as job-lead findings, freshest first (never as applications).',
     expectedSource: 'Public job sites and job-search connectors available to the provider.',
-    output: 'Findings of kind "job_lead" with URL, company, title, location and match reasoning.',
+    output: 'Findings of kind "job_lead" with URL, company, title, location, posted time, match reasoning, plus per-source search status.',
     recommendedCadence: 'Daily',
     requiredScopes: ['jobquest:read', 'ai:read', 'ai:ingest'],
     sourceOperational: true,

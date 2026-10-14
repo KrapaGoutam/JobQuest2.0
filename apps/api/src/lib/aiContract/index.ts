@@ -8,3 +8,4 @@ export * from './emailTriage';
 export * from './actions';
 export * from './automation';
 export * from './digestComposer';
+export * from './discovery';

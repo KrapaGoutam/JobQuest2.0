@@ -20,11 +20,12 @@ Use the JobQuest tools only when the user asks about their job search or runs on
   id, canonical URL). Never submit email or calendar bodies; keep evidence short.
 - Do not reveal or ask for credentials. Never paste a JobQuest token anywhere.
 
-## Tools (11)
+## Tools (12)
 
 Read: `jobquest_list_applications`, `jobquest_get_application`, `jobquest_list_ai_runs`, `jobquest_list_ai_findings`,
 `jobquest_list_ai_suggestions`, `jobquest_list_daily_digests`, `jobquest_list_job_leads`,
-`jobquest_list_email_intelligence`, `jobquest_list_recruiter_intel`, `jobquest_list_calendar_intelligence`.
+`jobquest_list_email_intelligence`, `jobquest_list_recruiter_intel`, `jobquest_list_calendar_intelligence`,
+`jobquest_get_job_discovery_profile` (the owner's Job Discovery profile, read-only).
 Write (findings only): `jobquest_submit_ai_result`.
 
 ## Result contract

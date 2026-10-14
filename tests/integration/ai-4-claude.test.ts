@@ -122,7 +122,7 @@ describe.skipIf(!ready || !local)('AI-4 — Claude connector integration (real D
     expect(JSON.stringify(denied.json)).toMatch(/insufficient[ _]scope/i);
 
     const rw = await claudeToken(member, ws, INGEST_PRESET);
-    expect(await toolNames(rw.token)).toEqual([...READ_TOOLS, 'jobquest_submit_ai_result'].sort());
+    expect(await toolNames(rw.token)).toEqual([...READ_TOOLS, 'jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result'].sort());
     const before = (await admin.from('applications').select('id, status, stage, updated_at').eq('workspace_id', ws).order('id')).data;
     const out = toolData(await callTool(rw.token, 'jobquest_submit_ai_result', { result: envelope() }));
     expect(out.success).toBe(true);

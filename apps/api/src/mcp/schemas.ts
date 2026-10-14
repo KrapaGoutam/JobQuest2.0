@@ -4,12 +4,13 @@
 // same constants the database CHECKs and the AI contract use.
 import { z } from 'zod';
 import {
-  AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
+  AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES, EXECUTION_FAILURE_CATEGORIES,
   AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_ACTION_STATES, EMAIL_CATEGORIES,
   EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_URGENCIES,
   JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, RECRUITER_DISCOVERY_MODES, RECRUITER_RELATIONSHIPS, RECRUITER_VERIFICATIONS,
 } from '../lib/aiContract';
 import { CALENDAR_ORDERS } from '../services/aiCalendarService';
+import { CLAIM_STATUSES } from '../services/aiExecutorBridgeService';
 import { JOB_LEAD_SORTS, SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
 import {
   APPLICATION_STAGES, APPLICATION_STATUSES, APP_READ_MAX_PAGE, APP_READ_MAX_PAGE_SIZE, APP_SEARCH_MAX_LENGTH,
@@ -121,6 +122,21 @@ export const listCalendarIntelligenceInput = z.strictObject({
   order: z.enum(CALENDAR_ORDERS).optional().describe('asc = soonest first (default); desc = latest first'),
   ...sourceCommon,
 });
+// ---- AI-11G execution tools (ai:ingest). The provider NEVER supplies a provider, user or workspace: identity is the credential's. ----
+export const claimAiExecutionInput = z.strictObject({
+  automationId: id.describe('The JobQuest automation this scheduled task is bound to (from its setup instructions)'),
+  trigger: z.enum(['scheduled', 'manual']).optional().describe('scheduled (default) = claim the due occurrence; manual = an attended run the owner started in the provider'),
+  clientKey: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional().describe('Required for trigger manual: a fresh key of 8-64 letters, digits, _ or -'),
+});
+export const reportAiExecutionFailureInput = z.strictObject({
+  runId: id.describe('The runId returned by the claim'),
+  category: z.enum(EXECUTION_FAILURE_CATEGORIES),
+  summary: z.string().max(2000).describe('One short plain-text line; no secrets, links or email addresses (JobQuest removes them and keeps at most 200 characters)'),
+});
+const claimStatuses = z.enum(CLAIM_STATUSES);
+export const claimAiExecutionOutput = z.looseObject({ status: claimStatuses, automationId: z.string(), guidance: z.string() });
+export const reportAiExecutionFailureOutput = z.looseObject({ runId: z.string(), status: z.string(), changed: z.boolean() });
+
 export const listAiSuggestionsInput = z.strictObject({
   status: z.enum(AI_SUGGESTION_STATUSES).optional(),
   findingId: id.optional(),

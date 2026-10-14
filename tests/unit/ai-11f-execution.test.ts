@@ -355,11 +355,11 @@ describe('boundary: no provider code, no MCP surface, service-role-only SQL', ()
     expect(routes).toContain("aiAutomations.post('/:id/run-now', requireCsrfToken");
     expect(routes).not.toMatch(/['"`]\/(:id\/)?(claim|enqueue|report|retry)/); // executor entry points are services, not routes
   });
-  it('MCP is unchanged: 13 tools, exactly one write, no execution/claim/schedule tool', async () => {
+  it('MCP (AI-11G): 15 tools; the only non-read tools are submit and the two AI-ingest execution tools; no schedule / run-now / automation-definition tool', async () => {
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(13);
-    expect(MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
-    expect(MCP_TOOLS.map((t) => t.name).join(' ')).not.toMatch(/automation|schedule|claim|execution|run_now|workflow_config/i);
+    expect(MCP_TOOLS).toHaveLength(15);
+    expect(MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name).sort()).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']);
+    expect(MCP_TOOLS.map((t) => t.name).join(' ')).not.toMatch(/schedule|run_now|workflow_config|automation/i);
   });
   it('the migration is additive, forward-only and service-role only', () => {
     const sql = read('supabase/migrations/20261104100000_ai_hub_schedule_execution.sql');

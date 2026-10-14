@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
   CONNECTOR_EXPIRY_DAYS, CONNECTOR_PUBLIC_COLUMNS, CONNECTOR_SCOPES, DEFAULT_CONNECTOR_EXPIRY_DAYS,
-  DEFAULT_CONNECTOR_SCOPES, mintConnectorSecret, publicConnector, type ConnectorTokenRecord,
+  CONNECTOR_PROVIDERS, DEFAULT_CONNECTOR_SCOPES, mintConnectorSecret, publicConnector, type ConnectorTokenRecord,
 } from '../lib/aiConnectorTokens';
 import { admin } from '../lib/db';
 import { requireCsrfToken } from '../lib/security';
@@ -25,6 +25,8 @@ const createSchema = z.strictObject({
   workspace_id: z.uuid(),
   name: z.string().trim().min(1).max(64),
   scopes: z.array(z.enum(CONNECTOR_SCOPES)).min(1).max(CONNECTOR_SCOPES.length).optional(),
+  /** AI-11G: the provider this credential is for (owner-chosen at creation; lets that provider claim its own automation runs). */
+  provider: z.enum(CONNECTOR_PROVIDERS).optional(),
   expires_in_days: z.union(CONNECTOR_EXPIRY_DAYS.map((d) => z.literal(d)) as [z.ZodLiteral<7>, z.ZodLiteral<30>, z.ZodLiteral<90>]).default(DEFAULT_CONNECTOR_EXPIRY_DAYS),
 });
 
@@ -66,6 +68,7 @@ aiConnectors.post('/', requireCsrfToken, async (c) => {
     p_token_hash: secret.hash,
     p_scopes: scopes,
     p_expires_at: expiresAt,
+    p_provider: body.provider ?? null,
   });
   if (error || !tokenId) {
     if (error?.code === '42501') return fail(c, 403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.');

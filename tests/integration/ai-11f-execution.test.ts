@@ -376,6 +376,6 @@ describe.skipIf(!ready || !local)('AI-11F — schedule / cadence execution (real
     await claim(id); await finalize(id, 'SUCCEEDED');
     expect(await counts()).toEqual(before);
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(13);
+    expect(MCP_TOOLS).toHaveLength(15); // AI-11G adds the two pull-executor tools (claim, failure report)
   });
 });

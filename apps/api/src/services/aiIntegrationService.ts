@@ -425,7 +425,7 @@ function toFindingParams(f: AiFinding, schemaVersion: string) {
 }
 
 /**
- * AI-11D: which accepted-finding indexes the owner's discovery profile excludes. Only job_discovery runs with a stored profile
+ * AI-11D: which accepted-finding indexes the owner's discovery profile excludes. Only runs that carry job leads, for an owner with a stored profile
  * are filtered. Stale / unknown-date / hard-excluded leads are dropped; the survivors are capped at the profile's maximum
  * (best provider score first, stable by position). A suggestion on a dropped lead is skipped by the caller.
  */
@@ -433,7 +433,9 @@ async function discoveryFilter(
   client: AiRpcClient, ctx: { userId: string; workspaceId: string }, data: { workflow: string; findings: AiFinding[] }, now: () => number, counts: AiIngestCounts,
 ): Promise<Set<number>> {
   const skip = new Set<number>();
-  if (data.workflow !== 'job_discovery' || !data.findings.some((f) => f.kind === 'job_lead' && f.job_lead)) return skip;
+  // AI-11G: a composite automation (Morning Digest) submits its job leads inside a daily_brief / other run, so the owner's profile
+  // applies to every submitted job lead whatever the run's workflow is - the deterministic backstop cannot be bypassed by the wrapper.
+  if (!data.findings.some((f) => f.kind === 'job_lead' && f.job_lead)) return skip;
   const out = await callRpc(client, 'rpc_ai_job_discovery_profile_get', { p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId });
   const row = out.ok ? out.data.profile : null;
   if (!out.ok || typeof row !== 'object' || row === null) return skip;

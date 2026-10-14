@@ -213,12 +213,12 @@ describe('AI-11D never creates or changes an application; MCP stays read-only', 
     expect(sql).not.toMatch(/\bdrop table\b|\btruncate\b|delete from public\.(applications|tasks|contacts)/i); // additive, forward-only
   });
 
-  it('MCP: 13 tools (AI-11E adds the recruiter profile read), exactly one write; the profile read is read-only, scoped ai:read and takes no arguments', async () => {
+  it('MCP: 15 tools (AI-11E adds the recruiter profile read, AI-11G the two execution tools), one data write; the profile read is read-only, scoped ai:read and takes no arguments', async () => {
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
     const schemas = await import('../../apps/api/src/mcp/schemas');
-    expect(MCP_TOOLS).toHaveLength(13);
-    expect(MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
+    expect(MCP_TOOLS).toHaveLength(15);
+    expect(MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name).sort()).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']);
     const tool = MCP_TOOLS.find((t) => t.name === 'jobquest_get_job_discovery_profile')!;
     expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
     expect(tool.scope).toBe('ai:read');

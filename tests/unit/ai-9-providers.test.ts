@@ -281,7 +281,7 @@ describe('ChatGPT plugin template (documented format, no secrets, no invented ca
     expect(all).not.toMatch(/jq_mcp_|sk-[A-Za-z0-9]{10,}|Bearer [A-Za-z0-9_-]{16,}|client_secret|OPENAI_API_KEY|eyJ[A-Za-z0-9_-]{20,}/);
     expect(all).not.toMatch(/vercel\.app|jobquest\.app/i);
   });
-  it('SKILL.md has valid frontmatter, lists exactly the 13 tools and forbids claiming core changes', async () => {
+  it('SKILL.md has valid frontmatter, lists exactly the 15 tools and forbids claiming core changes', async () => {
     const skill = read(`${dir}/skills/jobquest-ai-hub/SKILL.md`);
     expect(skill).toMatch(/^---\nname: jobquest-ai-hub\ndescription: .+\n---\n/);
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
@@ -303,11 +303,14 @@ describe('MCP surface and provider identity (regression)', () => {
     const { resetEnvCache } = await import('../../apps/api/src/env');
     resetEnvCache();
   });
-  it('still 13 tools: 12 read-only and exactly one write that stays a write; no core mutation tool', async () => {
+  it('15 tools: 12 read-only, the findings write that stays a write, and the two AI-11G execution tools; no core mutation tool', async () => {
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(13);
-    const writes = MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true);
-    expect(writes.map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
+    expect(MCP_TOOLS).toHaveLength(15);
+    expect(MCP_TOOLS.filter((t) => t.annotations.readOnlyHint === true)).toHaveLength(12);
+    const allWrites = MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true);
+    expect(allWrites.map((t) => t.name).sort()).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']);
+    for (const t of allWrites) expect(t.scope).toBe('ai:ingest');
+    const writes = allWrites.filter((t) => t.name === 'jobquest_submit_ai_result');
     expect(writes[0]!.annotations.readOnlyHint).toBe(false); // NOT weakened to satisfy a provider
     expect(writes[0]!.scope).toBe('ai:ingest');
     expect(MCP_TOOLS.map((t) => t.name).join()).not.toMatch(/create_application|update_application|set_status|create_task|complete_task|delete|execute/);
@@ -331,9 +334,9 @@ describe('no provider APIs, no new scheduler, no new credential tables, no migra
     expect(read('vercel.json')).not.toMatch(/"crons"/);
     for (const m of ['package.json', 'apps/api/package.json']) expect(read(m), m).not.toMatch(/node-cron|node-schedule|bull|agenda|cron/i);
   });
-  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration; AI-11D adds one additive discovery migration; AI-11E adds one additive recruiter migration; AI-11F adds one additive schedule-execution migration', () => {
+  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration; AI-11D adds one additive discovery migration; AI-11E adds one additive recruiter migration; AI-11F adds one additive schedule-execution migration; AI-11G adds one additive provider-scheduler migration', () => {
     const migrations = readdirSync('supabase/migrations').sort();
-    expect(migrations.slice(-5)).toEqual(['20261031100000_ai_hub_oauth_state_length.sql', '20261101100000_ai_hub_automation_foundation.sql', '20261102100000_ai_hub_fresh_job_discovery.sql', '20261103100000_ai_hub_recruiter_intelligence.sql', '20261104100000_ai_hub_schedule_execution.sql']);
+    expect(migrations.slice(-5)).toEqual(['20261101100000_ai_hub_automation_foundation.sql', '20261102100000_ai_hub_fresh_job_discovery.sql', '20261103100000_ai_hub_recruiter_intelligence.sql', '20261104100000_ai_hub_schedule_execution.sql', '20261105100000_ai_hub_provider_scheduler.sql']);
     expect(read('supabase/migrations/20261031100000_ai_hub_oauth_state_length.sql')).not.toMatch(/create table/i);
     const sql = migrations.map((m) => read(`supabase/migrations/${m}`)).join('\n');
     expect(sql).not.toMatch(/gemini_tokens|chatgpt_tokens|openai_tokens/i);

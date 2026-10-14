@@ -19,8 +19,10 @@ import { listEmailIntelligence, listJobLeads, listRecruiterIntel } from '../serv
 import { listCalendarIntelligence } from '../services/aiCalendarService';
 import { getJobDiscoveryProfile } from '../services/aiJobDiscoveryService';
 import { getRecruiterPreferences } from '../services/aiRecruiterDiscoveryService';
+import { claimAutomationExecution, composeDigestLast, guardSubmission, reportAutomationFailure, type BridgeContext } from '../services/aiExecutorBridgeService';
 import { hasMcpScope, type McpPrincipal, type McpScope } from './principal';
 import {
+  claimAiExecutionInput, claimAiExecutionOutput, reportAiExecutionFailureInput, reportAiExecutionFailureOutput,
   getApplicationInput, getApplicationOutput, getJobDiscoveryProfileInput, getJobDiscoveryProfileOutput, getRecruiterDiscoveryProfileInput, getRecruiterDiscoveryProfileOutput, listAiFindingsInput, listAiRunsInput, listAiSuggestionsInput,
   listApplicationsInput, listCalendarIntelligenceInput, listDailyDigestsInput, listEmailIntelligenceInput, listJobLeadsInput, listOutput, listRecruiterIntelInput,
   submitAiResultInput, submitAiResultOutput,
@@ -60,6 +62,9 @@ export interface ToolDef {
   annotations: ToolAnnotations;
   run(args: any, ctx: McpToolContext): Promise<Outcome>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
+
+/** AI-11G: the trusted identity the execution tools act for. `provider` comes from the credential (null = unbound), never from a request. */
+const bridgeContext = (ctx: McpToolContext): BridgeContext => ({ workspaceId: ctx.principal.workspaceId, userId: ctx.principal.userId, provider: ctx.principal.provider });
 
 const READ_ANNOTATIONS: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const asOutcome = <T>(r: { ok: true; data: T } | { ok: false; error: { code: string; message: string } }, shape: (d: T) => Record<string, unknown>): Outcome =>
@@ -245,6 +250,10 @@ export const MCP_TOOLS: readonly ToolDef[] = [
     output: submitAiResultOutput,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     async run(args, ctx) {
+      // AI-11G: provider identity is the credential's (a bound credential can only submit as its own provider), and the
+      // execution-lifecycle run keys (auto:/manual:/retry:) can only be used for a run this provider has claimed.
+      const guard = await guardSubmission(bridgeContext(ctx), args.result);
+      if (!guard.ok) return { ok: false, error: guard.error };
       const result = await ingestAiResult({
         workspaceId: ctx.principal.workspaceId,
         userId: ctx.principal.userId,
@@ -252,7 +261,39 @@ export const MCP_TOOLS: readonly ToolDef[] = [
         triggerType: 'manual',
         correlationId: ctx.correlationId,
       }, args.result);
-      return { ok: true, data: shapeIngest(result) };
+      const shaped = shapeIngest(result);
+      // AI-11G: when this was a claimed automation whose plan ends with the Daily Digest, JobQuest composes the canonical digest LAST.
+      if (result.success && result.runId) {
+        const digest = await composeDigestLast(bridgeContext(ctx), result.runId, await ctx.userToken());
+        if (digest !== 'NOT_APPLICABLE') shaped.digest = digest;
+      }
+      return { ok: true, data: shaped };
+    },
+  },
+  {
+    name: 'jobquest_claim_ai_execution',
+    title: 'Claim AI execution',
+    description: "EXECUTION (AI Hub only): a provider's scheduled task calls this FIRST to claim ONE JobQuest automation's due occurrence (automationId from its setup instructions). JobQuest decides: NOT_DUE, ALREADY_CLAIMED, ALREADY_COMPLETED, DISABLED or RETRY_LIMIT_REACHED mean STOP (nothing is created); CLAIMED returns the ordered steps and the externalRunId for jobquest_submit_ai_result. Your credential's provider must own the automation. trigger \"manual\" + clientKey starts an attended run. Idempotent. Changes no application, task, contact, email or calendar.",
+    scope: 'ai:ingest',
+    input: claimAiExecutionInput,
+    output: claimAiExecutionOutput,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    async run(args, ctx) {
+      const r = await claimAutomationExecution(bridgeContext(ctx), { automationId: args.automationId, trigger: args.trigger, clientKey: args.clientKey });
+      return r.ok ? { ok: true, data: r.data as unknown as Record<string, unknown> } : { ok: false, error: r.error };
+    },
+  },
+  {
+    name: 'jobquest_report_ai_execution_failure',
+    title: 'Report AI execution failure',
+    description: 'EXECUTION (AI Hub only): call ONCE when you claimed a run (runId from jobquest_claim_ai_execution) but cannot finish it, so it does not stay RUNNING. Give a category and one short safe summary (JobQuest removes links, email addresses and credential-like text). Works only for a RUNNING run of YOUR provider; a finished run is final. Do not retry indefinitely. Changes no application, task, contact, email or calendar.',
+    scope: 'ai:ingest',
+    input: reportAiExecutionFailureInput,
+    output: reportAiExecutionFailureOutput,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    async run(args, ctx) {
+      const r = await reportAutomationFailure(bridgeContext(ctx), { runId: args.runId, category: args.category, summary: args.summary });
+      return r.ok ? { ok: true, data: r.data as unknown as Record<string, unknown> } : { ok: false, error: r.error };
     },
   },
 ];

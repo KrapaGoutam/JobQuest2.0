@@ -388,7 +388,7 @@ describe.skipIf(!ready || !local)('AI-11D — fresh job discovery (real DB, RLS)
 
   // ---- MCP ---------------------------------------------------------------------------------------------------------------
 
-  it('AI11D-13 · MCP: 12 tools, one write; the profile tool is read-only and returns only discovery criteria; the lead list carries the new fields and the match; mutating arguments are refused', async () => {
+  it('AI11D-13 · MCP: 13 tools (AI-11E adds one read), one write; the profile tool is read-only and returns only discovery criteria; the lead list carries the new fields and the match; mutating arguments are refused', async () => {
     const mk = async (a: Actor, scopes: string[]) => {
       const res = await a.call('/ai/connector-tokens', { workspace_id: ws, name: uniq('tok'), scopes });
       expect(res.status, JSON.stringify(res.json)).toBe(201);
@@ -407,10 +407,10 @@ describe.skipIf(!ready || !local)('AI-11D — fresh job discovery (real DB, RLS)
     const body = (out: any) => out.result.structuredContent ?? JSON.parse(out.result.content[0].text);
     const fullTok = await mk(carol, ['jobquest:read', 'ai:read', 'ai:ingest']);
     const readTools = (await mcp(readTok, 'tools/list')).result.tools as Array<{ name: string }>;
-    expect(readTools).toHaveLength(11); // a read-only connection never even sees the write tool
+    expect(readTools).toHaveLength(12); // a read-only connection never even sees the write tool
     expect(readTools.map((t) => t.name)).toContain('jobquest_get_job_discovery_profile');
     const tools = (await mcp(fullTok, 'tools/list')).result.tools as Array<{ name: string; annotations: Record<string, boolean>; description: string }>;
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(13);
     expect(tools.filter((t) => t.annotations.readOnlyHint !== true).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     expect(tools.filter((t) => /submit|create|import|delete|update|apply|send|reply|draft|save|scrape|search_web/i.test(t.name)).map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     const tool = tools.find((t) => t.name === 'jobquest_get_job_discovery_profile')!;

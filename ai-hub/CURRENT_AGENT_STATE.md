@@ -3,6 +3,24 @@ CURRENT PHASE:
 JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
 
 CURRENT SUB-PHASE:
+AI-11E RECRUITER INTELLIGENCE - COMPLETE ON FEATURE BRANCH `feature/ai11e-recruiter-intelligence` (from development `1bbe58f6f7c9dd6ceabd3eb5c61bcd22262d2c1a`); integrating to development. AI-11F (Schedule / Cadence Execution) NOT started.
+
+STATUS:
+Decision: EXTEND the existing `recruiter_intel` finding (contract, ingestion, read service, MCP list tool, Recruiter Intel page, digest composer, templates); NEW only the bounded owner-scoped `ai_recruiter_discovery_preferences` (WHO is useful: target companies <= 25, role categories, max new contacts 1-10, mode switches, drafts on/off; separate from the Job Discovery profile = WHAT jobs, Providers = WHO executes, Automations = WHEN) plus four service-role RPCs. One additive forward-only migration `20261103100000_ai_hub_recruiter_intelligence.sql`; no people table. Job-linked mode (one person per company for a stored lead; a contact named in the posting wins) and target-company networking (only companies the owner listed; a zero-job day still works). Deterministic pure rules in aiContract/recruiter.ts: role relevance (sales/campus/former/no-hiring-relationship rejected), ranking (posting contact, technical recruiter, TA, QA/test manager, engineering manager, hiring manager, head of engineering, verified, evidence), one person per company per run, bounded NEW contacts (owner max, default 5; job-linked cap 10), server-verified mode, 30-day suppression of target-company contacts, no second new contact at a company with an active contact today; dropped items are COUNTED (filtered_*) and never fail or PARTIAL a run. Verification: verified only with a cited public URL AND a verification_basis, otherwise visibly uncertain; never silently upgraded (merge keeps evidence, new doubt wins). Privacy: no phone is stored; work email only with contact_source_url and never a personal mailbox or a pattern guess; email/phone stripped from names, titles, summaries and why; speculative why dropped. Dedupe: profile URL > provider person id > verified work email > name + company (legal suffix removed), old name+company+role key kept as lookup-only; weaker tier never merges two different strong identities; a provider dedupe object cannot rename a person; a re-submission is MERGED, never replaces; dismissed stays dismissed. Drafts (<= 300 char note, email subject/body bounded) are data for a human: refused if they contain links/contact details/Re:/claims of having applied, a thread, a prior conversation or a mutual connection; JobQuest never sends. Source health reuses ai_runs.sources[].status (ok|zero|blocked|unavailable|error|skipped): "unavailable" is never "no recruiter exists" (page + Daily Digest). Application relation is read-only via the related lead (AI-8 matcher); no contact/task/Application is ever created or changed. MCP: 12 -> 13 tools (+ read-only jobquest_get_recruiter_discovery_profile), still exactly one write; the recruiter list gains verification/relationship/mode/relatedLeadId filters and canonical fields. UI: Settings -> AI & Automation -> Recruiter Intelligence; Recruiter Intel grouped Job-linked / Target companies / Other with Verified|Uncertain, why, drafts (not sent, Copy only), application relation, source health. Validation: typecheck, eslint, build, secret scans, unit 1150, AI integration (all suites incl. 17 new), e2e (ai11e + ai5/ai6/ai11a/ai11c/ai11d) at 375/768/1280 with axe 0 critical/serious. Branch CI, development merge SHA, development CI and the remote Dev migration are recorded in the AI-11E completion report (chat checkpoint). Main `455a0120...` and Production unchanged; development stays cumulative. Report: reports/AI-11E_RECRUITER_INTELLIGENCE_REPORT.md.
+
+BASE BRANCH:
+development (1bbe58f6f7c9dd6ceabd3eb5c61bcd22262d2c1a + AI-11E merge)
+
+NEXT EXACT STEP:
+Remote Dev DB needs AI-11E migration `20261103100000` applied only after development CI is green (verify ref xpnkasclquplmrcmhsif, inspect ledger, dry-run, apply only that migration). Then separately approved AI-11F (Schedule / Cadence Execution) on its own feature branch. Production needs AI-11A `20261101100000`, AI-11D `20261102100000` and AI-11E `20261103100000` only at the single post-AI-11 main promotion.
+```
+
+(Previous state, AI-11D, kept for history:)
+```
+CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
 AI-11D FRESH JOB DISCOVERY - COMPLETE ON FEATURE BRANCH `feature/ai11d-fresh-job-discovery` (from development `94e966b8730ef3d2c0828d5a55e93e7660053d2b`); integrating to development. AI-11E (Recruiter Intelligence) NOT started.
 
 STATUS:

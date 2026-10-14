@@ -11,7 +11,7 @@ import {
   AI_SOURCE_STATUSES, DISCOVERY_FRESHNESS_HOURS, DISCOVERY_LIMITS, JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
   type AiSourceStatus, type JobRemoteScope,
 } from './constants';
-import { normalizeIdentityText } from './dedupe';
+import { companyIdentityKey, normalizeIdentityText } from './dedupe';
 
 // ---- profile ----------------------------------------------------------------------------
 
@@ -126,8 +126,7 @@ export function parseDiscoveryProfile(raw: unknown): DiscoveryProfileParse {
 
 // ---- identity (cross-source dedupe fallback) --------------------------------------------
 
-const LEGAL_SUFFIX = /\b(incorporated|inc|llc|l\.l\.c|ltd|limited|corp|corporation|co|company|plc|gmbh|lp|llp)\b\.?/g;
-const normCompany = (s: string): string => normalizeIdentityText(s).replace(/[.,]/g, ' ').replace(LEGAL_SUFFIX, ' ').replace(/[^a-z0-9&+# ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const normCompany = companyIdentityKey; // AI-11E: the definition moved to dedupe.ts so recruiter identity shares it
 
 /**
  * Conservative title normalization: bracketed notes and a trailing "- remote/hybrid/onsite" marker are dropped; level words

@@ -66,6 +66,8 @@ export interface ComposeRecruiter {
   id: string; name: string; roleTitle: string | null; company: string; relationship: string | null;
   verification: 'verified' | 'uncertain'; profileUrl: string | null; sourceUrl: string | null; discoveredAt: string;
   relatedLead: { id: string; company: string; title: string } | null;
+  /** AI-11E: job_linked or target_company (verified when stored); absent for older items. Contact details and drafts never reach the digest. */
+  discoveryMode?: 'job_linked' | 'target_company' | null;
 }
 
 export interface ComposeInput {
@@ -318,7 +320,7 @@ export function composeDailyDigest(input: ComposeInput): ComposedDigest {
     const url = r.profileUrl ?? r.sourceUrl;
     return {
       title: clip(r.name, 110),
-      detail: clip([r.roleTitle ? sentence(clip(r.roleTitle, 60)) : r.relationship ? sentence(label(r.relationship)) : '', r.relatedLead ? `re: ${clip(r.relatedLead.title, 60)}` : ''].filter(Boolean).join(' · ') || 'Recruiter', 140),
+      detail: clip([r.roleTitle ? sentence(clip(r.roleTitle, 60)) : r.relationship ? sentence(label(r.relationship)) : '', r.relatedLead ? `re: ${clip(r.relatedLead.title, 60)}` : r.discoveryMode === 'target_company' ? 'Target company' : ''].filter(Boolean).join(' · ') || 'Recruiter', 140),
       source: 'web', kind: 'recruiter', company: clip(r.company, 60), verification: r.verification,
       ...(url ? { url } : {}), occurred_at: isoOf(r.discoveredAt), ref: { type: 'recruiter', id: r.id },
     };

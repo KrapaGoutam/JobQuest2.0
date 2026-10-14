@@ -353,9 +353,9 @@ describe('saveAutomation / deleteAutomation (service)', () => {
 
 // ---- boundary: nothing new for providers ------------------------------------------------------------------------
 describe('provider boundary (AI-10 security model intact)', () => {
-  it('MCP surface carries no automation tool: 12 tools (AI-11D adds one read-only discovery-profile read), 11 reads + the single AI-ingest write', async () => {
+  it('MCP surface carries no automation tool: 13 tools (AI-11D and AI-11E each add one read-only profile read), 12 reads + the single AI-ingest write', async () => {
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(12);
+    expect(MCP_TOOLS).toHaveLength(13);
     expect(MCP_TOOLS.map((t) => t.name).join(' ')).not.toMatch(/automation|schedule|workflow_config/i);
   });
   it('MCP and OAuth code never reference automation definitions or the new RPCs', () => {

@@ -77,6 +77,11 @@ export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
 };
 export const RELATIONSHIP_LABELS: Record<string, string> = {
   recruiter: 'Recruiter', talent_acquisition: 'Talent acquisition', hiring_manager: 'Hiring manager', sourcer: 'Sourcer', other: 'Other',
+  technical_recruiter: 'Technical recruiter', qa_manager: 'QA / test manager', engineering_manager: 'Engineering manager', engineering_leader: 'Head of engineering',
+};
+export const VERIFICATION_BASIS_LABELS: Record<string, string> = {
+  company_page: 'company page', professional_profile: 'public professional profile', job_posting: 'named in the job posting',
+  prospecting_source: 'prospecting source', other_public_source: 'other public source',
 };
 const label = (map: Record<string, string>, v: string | null | undefined) => (v ? map[v] ?? 'Other' : '');
 export const emailCategoryLabel = (v: string | null | undefined) => label(EMAIL_CATEGORY_LABELS, v);
@@ -401,33 +406,59 @@ export function relativeAge(iso: string | null | undefined, nowMs: number): stri
 
 // ---- recruiters -----------------------------------------------------------------------------------------------
 
-export interface RecruiterFilters { provider: string; status: SourceStatusFilter; search: string; company: string; discovered: DateRange }
-export const DEFAULT_RECRUITER_FILTERS: RecruiterFilters = { provider: 'ALL', status: 'ACTIVE', search: '', company: '', discovered: { from: '', to: '' } };
+export const RECRUITER_MODE_FILTERS = [{ id: 'ALL', label: 'All' }, { id: 'job_linked', label: 'Job-linked' }, { id: 'target_company', label: 'Target company' }] as const;
+export const RECRUITER_VERIFICATION_FILTERS = [{ id: 'ALL', label: 'All' }, { id: 'verified', label: 'Verified' }, { id: 'uncertain', label: 'Uncertain' }] as const;
+export type RecruiterModeFilter = (typeof RECRUITER_MODE_FILTERS)[number]['id'];
+export type RecruiterVerificationFilter = (typeof RECRUITER_VERIFICATION_FILTERS)[number]['id'];
+export interface RecruiterFilters {
+  provider: string; status: SourceStatusFilter; search: string; company: string; discovered: DateRange;
+  /** AI-11E. job_linked = researched for a stored lead; target_company = standing networking at a company on the owner's list. */
+  mode: RecruiterModeFilter; verification: RecruiterVerificationFilter;
+}
+export const DEFAULT_RECRUITER_FILTERS: RecruiterFilters = { provider: 'ALL', status: 'ACTIVE', search: '', company: '', discovered: { from: '', to: '' }, mode: 'ALL', verification: 'ALL' };
 
 export interface RecruiterRow {
   id: string; user_id: string; provider: string; status: string; confidence: number | string | null; title: string; summary: string | null;
-  source_ref: Record<string, unknown> | null; created_at: string; payload: Record<string, unknown> | null;
+  source_ref: Record<string, unknown> | null; created_at: string; updated_at?: string | null; payload: Record<string, unknown> | null;
 }
 export interface RecruiterView {
   id: string; ownerId: string; provider: string; status: string; name: string; roleTitle: string | null; company: string; relationship: string | null;
   verified: boolean; uncertainFields: string[]; sourceName: string | null; sourceUrl: string | null; profileUrl: string | null;
-  contact: { email: string | null; phone: string | null; sourceUrl: string } | null; summary: string | null; discoveredAt: string;
+  contact: { email: string; sourceUrl: string } | null; summary: string | null; discoveredAt: string;
   relatedJobKey: string | null; relatedJobUrl: string | null; relatedJob: { company: string | null; title: string | null } | null;
   relatedLead: { id: string; company: string; title: string } | null; confidence: number | null;
+  /** AI-11E. Last time JobQuest saw this person (a re-submission refreshes it); discoveredAt stays the first time. */
+  lastSeenAt: string;
+  /** Evidence-based reason (bounded). */
+  why: string | null;
+  verificationBasis: string | null;
+  /** Checked by JobQuest at ingestion: job_linked or target_company. Null = neither could be shown (listed under "Other"). */
+  discoveryMode: 'job_linked' | 'target_company' | null;
+  postingContact: boolean;
+  /** Draft text for the owner to review. JobQuest never sends it. */
+  draftNote: string | null;
+  draftEmail: { subject: string; body: string } | null;
 }
 export function toRecruiterView(r: RecruiterRow): RecruiterView {
   const payload = isObj(r.payload) ? r.payload : {};
   const ref = isObj(r.source_ref) ? r.source_ref : {};
   const related = isObj(payload.related_job) ? payload.related_job : {};
   const contactSource = safeHttpUrl(payload.contact_source_url);
-  const email = text(payload.contact_email, 254), phone = text(payload.contact_phone, 32);
+  const email = text(payload.contact_email, 254);
+  const draftEmail = isObj(payload.draft_email) ? payload.draft_email : {};
+  const mode = payload.discovery_mode;
   const conf = typeof r.confidence === 'string' ? Number(r.confidence) : r.confidence;
   return {
     id: String(r.id), ownerId: String(r.user_id), provider: String(r.provider), status: String(r.status),
     name: text(payload.recruiter_name, 200) ?? String(r.title), roleTitle: text(payload.role_title, 200), company: text(payload.company, 200) ?? '',
     relationship: text(payload.relationship, 32), verified: payload.verification === 'verified', uncertainFields: list(payload.uncertain_fields, 5),
     sourceName: text(payload.source_name, 100), sourceUrl: safeHttpUrl(ref.url), profileUrl: safeHttpUrl(payload.profile_url),
-    contact: contactSource && (email || phone) ? { email, phone, sourceUrl: contactSource } : null, summary: text(r.summary, 1000), discoveredAt: String(r.created_at),
+    contact: contactSource && email ? { email, sourceUrl: contactSource } : null, summary: text(r.summary, 1000), discoveredAt: String(r.created_at),
+    lastSeenAt: String(r.updated_at ?? r.created_at), why: text(payload.why, 300),
+    verificationBasis: payload.verification === 'verified' ? text(payload.verification_basis, 32) : null,
+    discoveryMode: mode === 'job_linked' || mode === 'target_company' ? mode : null, postingContact: payload.posting_contact === true,
+    draftNote: text(payload.draft_note, 300),
+    draftEmail: text(draftEmail.subject, 120) && text(draftEmail.body, 1200) ? { subject: text(draftEmail.subject, 120)!, body: text(draftEmail.body, 1200)! } : null,
     relatedJobKey: text(payload.related_job_key, 255), relatedJobUrl: safeHttpUrl(related.job_url),
     relatedJob: Object.keys(related).length ? { company: text(related.company, 200), title: text(related.title, 300) } : null,
     relatedLead: null, confidence: typeof conf === 'number' && Number.isFinite(conf) ? conf : null,
@@ -442,7 +473,7 @@ export const SOURCE_TITLES: Record<SourceKind, string> = { job_leads: 'Job Leads
 export const SOURCE_NOT_CONFIGURED: Record<SourceKind, string> = {
   job_leads: 'Job discovery has not run yet. Describe the jobs you want under Settings → AI & Automation → Job Discovery, connect a provider and schedule its Job Discovery task; fresh, strong-fit leads appear here.',
   email: 'Email triage has not run yet. Connect Claude in Settings → AI & Automation and schedule the Email Triage task; classifications and summaries appear here (never message bodies).',
-  recruiters: 'Recruiter research has not run yet. Connect Claude in Settings → AI & Automation and schedule the Recruiter Intelligence task; cited public findings appear here.',
+  recruiters: 'Recruiter research has not run yet. Choose target companies and roles under Settings → AI & Automation → Recruiter Intelligence, connect a provider and schedule its Recruiter Intelligence task; cited public findings appear here.',
   calendar: 'Calendar review has not run yet. Connect Claude in Settings → AI & Automation and schedule the Calendar Intelligence task; interviews, calls and deadlines it finds appear here. JobQuest never connects to your calendar and cannot change it.',
 };
 export const AI_MATCH_NOTE = 'AI match is the provider’s own estimate, not a measure JobQuest guarantees. A job lead is not an application.';

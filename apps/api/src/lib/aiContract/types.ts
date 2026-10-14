@@ -104,6 +104,28 @@ export interface AiCalendarProjection {
   payload_version: string;
 }
 
+/**
+ * AI-11E: server-derived facts about a recruiter_intel finding that the ingestion policy needs but that are not provider
+ * input and are not all persisted. Nothing here carries a provider-supplied database id.
+ */
+export interface AiRecruiterProjection {
+  /** Candidate dedupe keys, strongest first (keys[0] is also the finding's dedupe_key). */
+  candidate_keys: string[];
+  profile_key: string | null;
+  person_key: string | null;
+  /** Normalized company (legal suffixes removed): the unit for "one person per company". */
+  company_key: string;
+  /** The provider's claim; only honoured when the company is on the owner's target list. */
+  mode_hint: 'job_linked' | 'target_company' | null;
+  has_related_job: boolean;
+  /** The posting itself names this person. */
+  posting_contact: boolean;
+  relationship: string | null;
+  role_title: string | null;
+  verification: 'verified' | 'uncertain';
+  verification_basis: string | null;
+}
+
 export interface AiFinding {
   kind: AiFindingKind;
   /** Computed by JobQuest from deterministic fields; never taken from the provider. */
@@ -123,6 +145,8 @@ export interface AiFinding {
   job_lead?: AiJobLeadProjection;
   /** Present only for kind calendar_event. */
   calendar?: AiCalendarProjection;
+  /** Present only for kind recruiter_intel (AI-11E). */
+  recruiter?: AiRecruiterProjection;
 }
 
 /** A PROPOSAL only. No status: nothing here is executable (AI-11). */

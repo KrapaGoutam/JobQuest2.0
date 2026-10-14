@@ -287,14 +287,14 @@ describe('Recruiter Intelligence page', () => {
   });
   it('shows name, role, company, public source, verification, provider and discovery date', () => {
     const h = recHtml();
-    for (const t of ['Pat Recruiter', 'Technical Recruiter · Example Corp', 'Public source cited', 'Team page', 'Public profile', 'Found by', 'Claude', 'Discovered']) expect(h).toContain(t);
+    for (const t of ['Pat Recruiter', 'Technical Recruiter · Example Corp', 'Verified', 'Team page', 'Public profile', 'Found by', 'Claude', 'First surfaced']) expect(h).toContain(t);
   });
   it('labels unverified people and uncertain fields; never invents a contactable state', () => {
     const h = recHtml({ state: { status: 'ready', rows: [W.toRecruiterView(recruiterRow({ payload: { recruiter_name: 'Sam', company: 'Acme', verification: 'uncertain', uncertain_fields: ['role'] } }))], hasNext: false } });
-    expect(h).toContain('Unverified');
-    expect(h).toContain('marked these as uncertain: role');
-    expect(h).not.toMatch(/contactable|verified email|reach out|Send message|Connect/i);
-    expect(h).not.toContain('Public contact');
+    expect(h).toContain('Uncertain');
+    expect(h).toContain('Not verified: the company or role association was not proven (role)');
+    expect(h).not.toMatch(/contactable|verified email|Send message|>Connect</i);
+    expect(h).not.toContain('Work email');
   });
   it('shows contact details only with their cited source, and links the related stored lead', () => {
     const view = W.toRecruiterView(recruiterRow({ payload: { recruiter_name: 'Pat', company: 'Acme', verification: 'verified', contact_email: 'pat@acme.example', contact_source_url: 'https://acme.example/contact', related_job: { company: 'Acme', title: 'Engineer' } } }));
@@ -302,7 +302,7 @@ describe('Recruiter Intelligence page', () => {
     const h = recHtml({ state: { status: 'ready', rows: [view], hasNext: false } });
     expect(h).toContain('pat@acme.example');
     expect(h).toContain('cited source');
-    expect(h).toContain('Staff Engineer at Acme (stored job lead)');
+    expect(h).toContain('Staff Engineer at Acme');
     const unresolved = W.toRecruiterView(recruiterRow({ payload: { recruiter_name: 'Pat', company: 'Acme', related_job: { company: 'Acme', title: 'Engineer' } } }));
     expect(recHtml({ state: { status: 'ready', rows: [unresolved], hasNext: false } })).toContain('reported by the provider; not in your job leads');
   });

@@ -26,6 +26,9 @@ export interface DedupeInput {
   /** Recruiter: public profile URL (canonicalized). */
   profile_url?: string | null;
   role?: string | null;
+  /** Recruiter (AI-11E): the provider's stable person id (scoped by source_name) and a cited work email. */
+  person_id?: string | null;
+  email?: string | null;
   // email_event fallback when no stable message id exists.
   occurred_at?: string | null;
   sender?: string | null;
@@ -72,6 +75,11 @@ export function canonicalizeUrl(raw: string): string | null {
 export const normalizeIdentityText = (s: string | null | undefined): string =>
   (s ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 
+const LEGAL_SUFFIX = /\b(incorporated|inc|llc|l\.l\.c|ltd|limited|corp|corporation|co|company|plc|gmbh|lp|llp)\b\.?/g;
+/** Company identity without legal suffixes or punctuation ("Acme, Inc." = "ACME"). Shared by job-lead, recruiter and target-company identity. */
+export const companyIdentityKey = (s: string | null | undefined): string =>
+  normalizeIdentityText(s).replace(/[.,]/g, ' ').replace(LEGAL_SUFFIX, ' ').replace(/[^a-z0-9&+# ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
 const clean = (s: string | null | undefined): string => (s ?? '').trim();
 export const isIsoDate = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) &&
   new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
@@ -79,6 +87,44 @@ export const isIsoDate = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s) &
 export type DedupeResult = { ok: true; key: string } | { ok: false; reason: string };
 const ok = (key: string): DedupeResult =>
   key.length <= AI_LIMITS.dedupeKey && /^[\x21-\x7e]+$/.test(key) ? { ok: true, key } : { ok: false, reason: 'dedupe key out of range' };
+
+export interface RecruiterIdentity {
+  ok: true;
+  /**
+   * Candidate dedupe keys, STRONGEST FIRST; keys[0] is the key a NEW finding is stored under. Later entries only exist so a
+   * second submission that reaches the same person through a different tier resolves to the existing finding:
+   *   1. canonical public profile URL    2. provider person id (scoped by source)    3. verified work email
+   *   4. normalized name + normalized company (conservative fallback)    5. pre-AI-11E name + company + role (lookup only)
+   * Never first name alone; never the name without the company, so one name at two companies stays two people.
+   */
+  keys: string[];
+  /** Hashes of the strong identities, stored server-side so a weaker tier can never merge two DIFFERENT strong identities. */
+  profileKey: string | null;
+  personKey: string | null;
+  companyKey: string;
+}
+
+/** Pure; the validated payload is the only input (provider free text in `dedupe` never overrides it). */
+export function recruiterIdentity(i: DedupeInput): RecruiterIdentity | { ok: false; reason: string } {
+  const n = normalizeIdentityText(i.name), c = normalizeIdentityText(i.company), r = normalizeIdentityText(i.role);
+  const ck = companyIdentityKey(i.company);
+  if (!n || !c || !ck) return { ok: false, reason: 'recruiter_intel requires name and company' };
+  const keys: string[] = [];
+  let profileKey: string | null = null, personKey: string | null = null;
+  if (clean(i.profile_url)) {
+    const u = canonicalizeUrl(clean(i.profile_url));
+    if (!u) return { ok: false, reason: 'dedupe profile_url is not a valid http(s) URL' };
+    profileKey = sha256Hex(u);
+    keys.push(`recruiter:url:${profileKey}`);
+  }
+  const src = normalizeIdentityText(i.source_name), pid = clean(i.person_id);
+  if (src && pid) { personKey = sha256Hex(`${src}|${pid}`); keys.push(`recruiter:pid:${personKey}`); }
+  const email = clean(i.email).toLowerCase();
+  if (email) keys.push(`recruiter:email:${sha256Hex(email)}`);
+  keys.push(`recruiter:nc:${sha256Hex(`${n}|${ck}`)}`);
+  if (r) keys.push(`recruiter:${sha256Hex(`${n}|${c}|${r}`)}`);
+  return { ok: true, keys, profileKey, personKey, companyKey: ck };
+}
 
 export function buildDedupeKey(kind: AiFindingKind, i: DedupeInput): DedupeResult {
   switch (kind) {
@@ -134,16 +180,8 @@ export function buildDedupeKey(kind: AiFindingKind, i: DedupeInput): DedupeResul
       return ok(`daily_brief:${d}:${pr}`);
     }
     case 'recruiter_intel': {
-      // Prefer the public profile/source identity; fall back to name + company + role. Provider and
-      // contact channel are NOT identity, so two providers researching one person converge.
-      const n = normalizeIdentityText(i.name), c = normalizeIdentityText(i.company), r = normalizeIdentityText(i.role);
-      if (!n || !c) return { ok: false, reason: 'recruiter_intel requires name and company' };
-      if (clean(i.profile_url)) {
-        const u = canonicalizeUrl(clean(i.profile_url));
-        if (!u) return { ok: false, reason: 'dedupe profile_url is not a valid http(s) URL' };
-        return ok(`recruiter:url:${sha256Hex(u)}`);
-      }
-      return ok(`recruiter:${sha256Hex(`${n}|${c}|${r}`)}`);
+      const r = recruiterIdentity(i);
+      return r.ok ? ok(r.keys[0]!) : r;
     }
     default: {
       const t = normalizeIdentityText(i.title), s = normalizeIdentityText(i.summary);

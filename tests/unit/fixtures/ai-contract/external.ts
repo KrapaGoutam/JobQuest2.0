@@ -62,7 +62,7 @@ export const recruiterIntelFinding = (over: Record<string, unknown> = {}, payloa
   source: { url: 'https://example.com/team/pat-recruiter' },
   payload: {
     version: '1.0', recruiter_name: 'Pat Recruiter', role_title: 'Senior Technical Recruiter', company: 'Example Corp',
-    relationship: 'recruiter', verification: 'verified', source_name: 'Example Corp team page',
+    relationship: 'recruiter', verification: 'verified', verification_basis: 'company_page', source_name: 'Example Corp team page',
     profile_url: 'https://example.com/team/pat-recruiter', related_job: { job_url: 'https://jobs.example.com/posting/42' },
     ...payloadOver,
   },

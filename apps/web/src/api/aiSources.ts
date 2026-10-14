@@ -132,7 +132,7 @@ export async function fetchEmailHighUrgencyCount(workspaceId: string, client: Cl
 
 // ---- recruiters -----------------------------------------------------------------------------------------
 
-const RECRUITER_COLUMNS = 'id, user_id, provider, status, confidence, title, summary, source_ref, created_at, payload';
+const RECRUITER_COLUMNS = 'id, user_id, provider, status, confidence, title, summary, source_ref, created_at, updated_at, payload';
 const canonicalUrl = (u: string): string => {
   try {
     const x = new URL(u);
@@ -153,6 +153,8 @@ export async function fetchRecruiterPage(workspaceId: string, f: RecruiterFilter
   const search = sanitizeSearch(f.search), company = sanitizeSearch(f.company);
   if (search) q = q.or(`payload->>recruiter_name.ilike.%${search}%,payload->>company.ilike.%${search}%`);
   if (company) q = q.ilike('payload->>company', `%${company}%`);
+  if (f.mode !== 'ALL') q = q.eq('payload->>discovery_mode', f.mode);
+  if (f.verification !== 'ALL') q = q.eq('payload->>verification', f.verification);
   if (disc.since) q = q.gte('created_at', disc.since);
   if (disc.before) q = q.lt('created_at', disc.before);
   const { from, to } = range(page);

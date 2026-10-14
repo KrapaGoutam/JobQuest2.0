@@ -13,6 +13,7 @@ import { PROVIDER_CONNECTORS } from '../lib/providerConnectors';
 import { OAuthProviderPanel } from '../components/ai/OAuthProviderPanel';
 import { AutomationsPanel } from '../components/ai/AutomationsPanel';
 import { JobDiscoveryPanel } from '../components/ai/JobDiscoveryPanel';
+import { RecruiterDiscoveryPanel } from '../components/ai/RecruiterDiscoveryPanel';
 import type { PublicSession } from '../api';
 
 // Settings -> AI & Automation (AI-1F1). General settings and the Workflows reference are
@@ -69,6 +70,15 @@ export function AiAutomationSettings({ activeWorkspaceId, session, currentUserId
           <Card>
             <CardHeader><CardTitle><span id="ai-job-discovery">Job Discovery</span></CardTitle></CardHeader>
             <CardBody><JobDiscoveryPanel activeWorkspaceId={activeWorkspaceId} session={session} /></CardBody>
+          </Card>
+        </section>
+      )}
+
+      {session && (
+        <section aria-labelledby="ai-recruiter-intelligence">
+          <Card>
+            <CardHeader><CardTitle><span id="ai-recruiter-intelligence">Recruiter Intelligence</span></CardTitle></CardHeader>
+            <CardBody><RecruiterDiscoveryPanel activeWorkspaceId={activeWorkspaceId} session={session} /></CardBody>
           </Card>
         </section>
       )}

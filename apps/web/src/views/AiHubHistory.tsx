@@ -3,7 +3,7 @@ import { AlertTriangle, Sparkles } from 'lucide-react';
 import { fetchAiRunsPage } from '../api/aiHub';
 import {
   AI_PROVIDER_VALUES, AI_RUN_STATUS_VALUES, AI_WORKFLOW_VALUES, DEFAULT_RUN_FILTERS, aiErrorCategoryLabel,
-  aiProviderLabel, aiRunStatusLabel, aiRunStatusVariant, aiWorkflowLabel, runCountEntries, runDurationLabel,
+  aiProviderLabel, aiRunStatusLabel, aiRunStatusVariant, aiTriggerLabel, aiWorkflowLabel, runCountEntries, runDurationLabel,
   type AiRunFilters, type AiRunRow,
 } from '../lib/aiHub';
 import { Card, CardBody } from '../components/ui/Card';
@@ -43,6 +43,7 @@ function RunRow({ run, onOpen }: { run: AiRunRow; onOpen?: (run: AiRunRow) => vo
           </button>
         ) : <span>{aiWorkflowLabel(run.workflow)}</span>}
         <span className="muted small">{aiProviderLabel(run.provider)}</span>
+        {run.trigger_type && <span className="muted small" data-testid="run-trigger">· {aiTriggerLabel(run.trigger_type)}</span>}
       </div>
       <div className="muted small">
         {fmtTime(run.started_at ?? run.created_at)}

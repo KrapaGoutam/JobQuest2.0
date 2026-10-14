@@ -8,12 +8,12 @@
 // Operational state is DERIVED: last run / last success / last error from `ai_runs` (same owner, workflow and
 // provider; only the normalized error_category is read, never error_detail) and `nextExpectedRunAt` from the
 // schedule. Nothing is copied back into the configuration row. JobQuest does not execute workflows, so Run Now is
-// reported as a contract (`runNow`) rather than an action; see runNowReadiness.
+// reported through `runNow` (see runNowReadiness); AI-11F adds the execution lifecycle in aiExecutionService.
 import { admin as adminClient, userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AUTOMATION_LIMIT, computeNextExpectedRun, deriveAutomationRunState, runNowReadiness, validateAutomation,
-  type AutomationDefinition, type AutomationRunSlice, type RunNowReadiness,
+  AUTOMATION_LIMIT, computeNextExpectedRun, deriveAutomationRunState, executorState, runNowReadiness, validateAutomation,
+  type AutomationDefinition, type AutomationRunSlice, type ExecutorState, type RunNowReadiness,
 } from '../lib/aiContract';
 import { UUID } from './aiReadSupport';
 
@@ -37,13 +37,18 @@ export interface AutomationView extends AutomationDefinition {
   state: {
     lastRunAt: string | null;
     lastStatus: string | null;
+    /** scheduled | manual | retry */
+    lastTrigger: string | null;
     lastSuccessAt: string | null;
+    lastFailureAt: string | null;
     lastErrorCategory: string | null;
     /** Computed from the schedule; null when disabled / manual-only. */
     nextExpectedRunAt: string | null;
   };
-  /** Run Now contract (AI-11A defers execution): ready is false until a provider adapter can accept work. */
+  /** Run Now: ready only when an executor is configured for the provider (AI-11G); the reason is always truthful. */
   runNow: RunNowReadiness;
+  /** Provider-neutral executor readiness (derived): configured | not_configured | unavailable. */
+  executor: ExecutorState;
 }
 
 // Narrow structural types so the unit tests can supply fakes.
@@ -52,7 +57,7 @@ type Writer = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<
 export interface AutomationDeps { reader?: Reader; writer?: Writer; aiHubEnabled?: () => boolean; now?: () => Date }
 
 const CONFIG_COLUMNS = 'id, name, workflow, enabled, primary_provider, cadence, local_time, timezone, weekdays, sections, delivery, created_at, updated_at';
-const RUN_COLUMNS = 'status, created_at, completed_at, error_category';
+const RUN_COLUMNS = 'status, created_at, completed_at, error_category, trigger_type';
 
 interface ConfigRow {
   id: string; name: string; workflow: AutomationDefinition['workflow']; enabled: boolean; primary_provider: AutomationDefinition['provider'] | null;
@@ -68,10 +73,12 @@ function toView(row: ConfigRow, run: ReturnType<typeof deriveAutomationRunState>
     name: row.name, workflow: row.workflow, enabled: row.enabled, provider: row.primary_provider ?? 'manual', cadence: row.cadence,
     localTime: row.local_time, timezone: row.timezone, weekdays: row.weekdays ?? [], sections: row.sections ?? [], delivery: row.delivery ?? ['ai_hub'],
   };
+  const executor = executorState(def.provider, { aiHubEnabled });
   return {
     ...def, id: row.id, createdAt: row.created_at, updatedAt: row.updated_at,
     state: { ...run, nextExpectedRunAt: computeNextExpectedRun(def, now) },
-    runNow: runNowReadiness(def, { aiHubEnabled }),
+    runNow: runNowReadiness(def, { aiHubEnabled, executorAvailable: executor === 'configured' }),
+    executor,
   };
 }
 
@@ -86,18 +93,20 @@ export async function listAutomations(ctx: AutomationContext, deps: AutomationDe
   if (cfg.error) return readFail();
   const rows = (cfg.data ?? []) as ConfigRow[];
 
-  // At most AUTOMATION_LIMIT rows -> at most 2 tiny indexed queries each; exact per automation.
+  // At most AUTOMATION_LIMIT rows -> at most 3 tiny indexed queries each; exact per automation.
   const views = await Promise.all(rows.map(async (row) => {
     const base = () => reader.from('ai_runs').select(RUN_COLUMNS).eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId)
       .eq('workflow', row.workflow).eq('provider', row.primary_provider ?? '');
-    const [latest, success] = await Promise.all([
+    const [latest, success, failure] = await Promise.all([
       base().order('created_at', { ascending: false }).limit(1),
       base().eq('status', 'SUCCEEDED').order('created_at', { ascending: false }).limit(1),
+      base().eq('status', 'FAILED').order('created_at', { ascending: false }).limit(1),
     ]);
-    if (latest.error || success.error) return null;
+    if (latest.error || success.error || failure.error) return null;
     const state = deriveAutomationRunState(
       ((latest.data ?? [])[0] ?? null) as AutomationRunSlice | null,
       ((success.data ?? [])[0] ?? null) as AutomationRunSlice | null,
+      ((failure.data ?? [])[0] ?? null) as AutomationRunSlice | null,
     );
     return toView(row, state, aiHubEnabled, now);
   }));

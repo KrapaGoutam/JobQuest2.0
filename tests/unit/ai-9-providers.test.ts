@@ -331,9 +331,9 @@ describe('no provider APIs, no new scheduler, no new credential tables, no migra
     expect(read('vercel.json')).not.toMatch(/"crons"/);
     for (const m of ['package.json', 'apps/api/package.json']) expect(read(m), m).not.toMatch(/node-cron|node-schedule|bull|agenda|cron/i);
   });
-  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration; AI-11D adds one additive discovery migration; AI-11E adds one additive recruiter migration', () => {
+  it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration; AI-11D adds one additive discovery migration; AI-11E adds one additive recruiter migration; AI-11F adds one additive schedule-execution migration', () => {
     const migrations = readdirSync('supabase/migrations').sort();
-    expect(migrations.slice(-4)).toEqual(['20261031100000_ai_hub_oauth_state_length.sql', '20261101100000_ai_hub_automation_foundation.sql', '20261102100000_ai_hub_fresh_job_discovery.sql', '20261103100000_ai_hub_recruiter_intelligence.sql']);
+    expect(migrations.slice(-5)).toEqual(['20261031100000_ai_hub_oauth_state_length.sql', '20261101100000_ai_hub_automation_foundation.sql', '20261102100000_ai_hub_fresh_job_discovery.sql', '20261103100000_ai_hub_recruiter_intelligence.sql', '20261104100000_ai_hub_schedule_execution.sql']);
     expect(read('supabase/migrations/20261031100000_ai_hub_oauth_state_length.sql')).not.toMatch(/create table/i);
     const sql = migrations.map((m) => read(`supabase/migrations/${m}`)).join('\n');
     expect(sql).not.toMatch(/gemini_tokens|chatgpt_tokens|openai_tokens/i);

@@ -54,8 +54,8 @@ describe.skipIf(!ready || !local)('AI-11C — Daily Digest (real DB, RLS)', () =
     const row = (await admin.from('ai_findings').select('id, payload, provider, status').eq('workspace_id', workspaceId).eq('user_id', owner.userId!).eq('dedupe_key', `daily_brief:${date}:system`).maybeSingle()).data;
     return row as { id: string; payload: Digest; provider: string; status: string } | null;
   };
-  const build = async (owner: Actor, workspaceId: string) => {
-    const r = await digestSvc.buildDeterministicDigest({ workspaceId, userId: owner.userId!, accessToken: owner.token! }, DATE, { env: ON, now: () => NOW });
+  const build = async (owner: Actor, workspaceId: string, date = DATE) => {
+    const r = await digestSvc.buildDeterministicDigest({ workspaceId, userId: owner.userId!, accessToken: owner.token! }, date, { env: ON, now: () => NOW });
     if (!r.ok) throw new Error(JSON.stringify(r.error));
     return r.data.payload as unknown as Digest;
   };
@@ -216,7 +216,8 @@ describe.skipIf(!ready || !local)('AI-11C — Daily Digest (real DB, RLS)', () =
       expect(JSON.stringify(d)).not.toContain(co('Acme'));
     }
     // a peer's digest is built from the peer's rows only
-    const evesDigest = await build(eve, ws);
+    // eve has no profile time zone, so her digest day is the UTC date (DATE is carol's America/Chicago date, which lags UTC for ~5-6 hours a day)
+    const evesDigest = await build(eve, ws, digestSvc.digestDateInZone(NOW, 'UTC'));
     expect(JSON.stringify(evesDigest)).toContain('EVE ACTION');
     expect(JSON.stringify(evesDigest)).not.toContain(co('Acme'));
     // stored digests: peer cannot read the owner's

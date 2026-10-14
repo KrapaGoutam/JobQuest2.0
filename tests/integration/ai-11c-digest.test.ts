@@ -258,7 +258,8 @@ describe.skipIf(!ready || !local)('AI-11C — Daily Digest (real DB, RLS)', () =
     // and the empty digest persists through the same boundary and validates
     const out = await generate(dave, daveWs);
     expect(out.ok && out.data.ingest.success).toBe(true);
-    expect((await stored(dave, daveWs))!.payload.sections.job_leads).toEqual({ status: 'unavailable', items: [] });
+    // dave has no profile time zone, so his digest date is the UTC date (DATE is carol's America/Chicago date, which lags UTC by a day for ~6 hours a day)
+    expect((await stored(dave, daveWs, digestSvc.digestDateInZone(NOW, 'UTC')))!.payload.sections.job_leads).toEqual({ status: 'unavailable', items: [] });
   });
 
   it('AI11C-06 · provider digests share the shape: a Claude 1.1 digest is stored, readable beside JobQuest’s, and drives the AI-11A automation state', async () => {

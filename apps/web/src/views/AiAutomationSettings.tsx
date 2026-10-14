@@ -14,6 +14,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { ClaudeConnectorPanel } from '../components/ai/ClaudeConnectorPanel';
 import { ProviderConnectorPanel } from '../components/ai/ProviderConnectorPanel';
 import { PROVIDER_CONNECTORS } from '../lib/providerConnectors';
+import { LegacyCredentialsPanel } from '../components/ai/LegacyCredentialsPanel';
 import { OAuthProviderPanel } from '../components/ai/OAuthProviderPanel';
 import { AutomationsPanel } from '../components/ai/AutomationsPanel';
 import { JobDiscoveryPanel } from '../components/ai/JobDiscoveryPanel';
@@ -74,6 +75,7 @@ export function AiAutomationSettings({ activeWorkspaceId, session, currentUserId
                 </li>
               ))}
             </ul>
+            {session && <LegacyCredentialsPanel activeWorkspaceId={activeWorkspaceId} session={session} />}
           </CardBody>
         </Card>
       </section>

@@ -343,7 +343,7 @@ test.describe('AI-7 calendar intelligence', () => {
     // ---- 11) SEVEN-TAB SHELL: clipping regression + reachability on every size and every tab ------------------------------------------
     // Tabs are visited by clicking them (in-app navigation, as a user does). Refresh tokens are single-use with replay
     // detection, so a burst of full reloads is not a realistic navigation pattern and would sign the test user out.
-    const tabs: Array<[string, string]> = [['Overview', '/ai-hub'], ['Daily Digest', '/ai-hub/digest'], ['Job Leads', '/ai-hub/job-leads'], ['Email', '/ai-hub/email'],
+    const tabs: Array<[string, string]> = [['Overview', '/ai-hub'], ['Daily Digest', '/ai-hub/digest'], ['Weekly Digest', '/ai-hub/weekly'], ['Job Leads', '/ai-hub/job-leads'], ['Email', '/ai-hub/email'],
       ['Recruiter Intel', '/ai-hub/recruiters'], ['Calendar', '/ai-hub/calendar'], ['History', '/ai-hub/history']];
     for (const w of [375, 768, 1280]) {
       await page.setViewportSize({ width: w, height: 900 });

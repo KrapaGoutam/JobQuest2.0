@@ -132,9 +132,10 @@ describe('setup wrapper: canonical contract + thin provider wrapper, copyable, n
     expect(s.planSteps.map((p) => p.title)).toEqual(['Email triage', 'Fresh job discovery', 'Recruiter intelligence', 'Calendar review', 'Follow-ups', 'Daily Digest']);
     expect(s.scheduleSummary).toBe('Weekdays (Mon-Fri) at 8:00 AM America/Chicago');
   });
-  it('the manual (attended) variant claims with trigger manual and a fresh client key; the scheduled one never does', () => {
+  it("the manual (attended) variant claims with trigger manual and an embedded JobQuest-generated client key; the scheduled one never does", () => {
     for (const s of setups) {
-      expect(s.manualRunInstructions).toMatch(/"trigger": "manual", "clientKey": "manual-</);
+      expect(s.manualRunInstructions).toContain(`"trigger": "manual", "clientKey": "${s.manualRunKey}"`);
+      expect(s.manualRunInstructions).not.toMatch(/current UTC time|manual-</);
       expect(s.scheduledInstructions).not.toMatch(/clientKey/);
     }
   });

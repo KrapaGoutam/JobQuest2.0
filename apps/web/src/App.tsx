@@ -408,6 +408,7 @@ function AppContent() {
         return 'Analytics';
       case '/ai-hub':
       case '/ai-hub/digest':
+      case '/ai-hub/weekly':
       case '/ai-hub/job-leads':
       case '/ai-hub/email':
       case '/ai-hub/recruiters':

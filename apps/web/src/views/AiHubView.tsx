@@ -11,6 +11,7 @@ import {
 } from './AiHubDetails';
 import { AiHubHistory } from './AiHubHistory';
 import { AiHubDigest } from './AiHubDigest';
+import { AiHubWeekly } from './AiHubWeekly';
 import { AiHubJobLeads } from './AiHubJobLeads';
 import { AiHubEmail } from './AiHubEmail';
 import { AiHubRecruiters } from './AiHubRecruiters';
@@ -213,11 +214,11 @@ function SourceCard({ title, value, hint, tab, action, onOpenTab }: {
 
 /** Presentational shell: no data fetching, easy to render in every state. */
 export function AiHubShell({
-  tab, onTabChange, state, onRetry, history, digest, jobLeads, email, recruiters, calendar, actions, onOpenFinding, onOpenRun,
+  tab, onTabChange, state, onRetry, history, digest, weekly, jobLeads, email, recruiters, calendar, actions, onOpenFinding, onOpenRun,
 }: {
   tab: AiHubTab; onTabChange: (t: AiHubTab) => void; state: AiHubLoadState; onRetry?: () => void;
   /** Each section owns its own data/failure state so it is isolated from Overview and from the others. */
-  history?: ReactNode; digest?: ReactNode; jobLeads?: ReactNode; email?: ReactNode; recruiters?: ReactNode; calendar?: ReactNode; actions?: ReactNode;
+  history?: ReactNode; digest?: ReactNode; weekly?: ReactNode; jobLeads?: ReactNode; email?: ReactNode; recruiters?: ReactNode; calendar?: ReactNode; actions?: ReactNode;
   onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
 }) {
   const body = (render: (s: AiHubSnapshot) => ReactNode) =>
@@ -240,6 +241,7 @@ export function AiHubShell({
           {body((s) => <AiHubOverview snapshot={s} onOpenFinding={onOpenFinding} onOpenRun={onOpenRun} onOpenTab={onTabChange} />)}
         </TabPanel>
         <TabPanel id="digest">{digest}</TabPanel>
+        <TabPanel id="weekly">{weekly}</TabPanel>
         <TabPanel id="job-leads">{jobLeads}</TabPanel>
         <TabPanel id="email">{email}</TabPanel>
         <TabPanel id="recruiters">{recruiters}</TabPanel>
@@ -313,6 +315,7 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUs
         onOpenRun={openRun}
         history={<AiHubHistory activeWorkspaceId={activeWorkspaceId} onOpenRun={openRun} />}
         digest={initialTab === 'digest' ? <AiHubDigest activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
+        weekly={initialTab === 'weekly' ? <AiHubWeekly activeWorkspaceId={activeWorkspaceId} session={session} /> : null}
         jobLeads={initialTab === 'job-leads' ? <AiHubJobLeads activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
         email={initialTab === 'email' ? <AiHubEmail activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
         recruiters={initialTab === 'recruiters' ? <AiHubRecruiters activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}

@@ -1,6 +1,6 @@
 import { api, type PublicSession } from '../api';
 import type { AutomationSetupView, ProviderSchedulerStatus } from '../lib/aiScheduler';
-import { formToBody, summarizeAutomations, type AutomationFormState, type AutomationOverview, type AutomationRunView, type AutomationView } from '../lib/aiAutomation';
+import { formToBody, summarizeAutomations, type AutomationInsights, type AutomationFormState, type AutomationOverview, type AutomationRunView, type AutomationView } from '../lib/aiAutomation';
 
 // Automation definitions talk to the JobQuest API only (never MCP): reads are bearer-authenticated GETs; every
 // mutation is a CSRF-protected POST that the server re-validates from scratch (workspace and owner come from the
@@ -63,4 +63,10 @@ export async function fetchSchedulerStatus(workspaceId: string, session: PublicS
 export async function fetchAutomationSetup(workspaceId: string, session: PublicSession | null, id: string): Promise<AutomationSetupView> {
   const r = await api<AutomationSetupView & Err>(`/ai/automations/${encodeURIComponent(id)}/setup?workspace_id=${encodeURIComponent(workspaceId)}`, undefined, token(session));
   return r.status === 200 ? { setup: r.data.setup, status: r.data.status } : fail(r);
+}
+
+/** AI-11H: derived health per automation + run analytics for 7 / 30 / 90 days. Secondary data: the caller degrades without it. */
+export async function fetchAutomationInsights(workspaceId: string, session: PublicSession | null, days: 7 | 30 | 90 = 30): Promise<AutomationInsights> {
+  const r = await api<AutomationInsights & Err>(`/ai/automations/insights?workspace_id=${encodeURIComponent(workspaceId)}&days=${days}`, undefined, token(session));
+  return r.status === 200 ? r.data : fail(r);
 }

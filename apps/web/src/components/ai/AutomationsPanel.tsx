@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PublicSession } from '../../api';
-import { AutomationApiError, deleteAutomation, fetchAutomationRuns, fetchAutomations, fetchSchedulerStatus, saveAutomation } from '../../api/aiAutomations';
+import { AutomationApiError, deleteAutomation, fetchAutomationInsights, fetchAutomationRuns, fetchAutomations, fetchSchedulerStatus, saveAutomation } from '../../api/aiAutomations';
 import {
   AUTOMATION_COMPOSITE_WORKFLOWS, AUTOMATION_DELIVERY, AUTOMATION_LIMIT, AUTOMATION_NAME_MAX, AUTOMATION_PROVIDERS,
   AUTOMATION_SECTIONS, AUTOMATION_WORKFLOWS, CADENCE_LABELS, DELIVERY_LABELS, PROVIDER_LABELS,
-  RUN_STATUS_LABELS, SECTION_LABELS, TRIGGER_LABELS, WEEKDAY_LABELS, WORKFLOW_LABELS, automationHealth, automationToForm, describeSchedule, emptyAutomationForm,
+  RUN_STATUS_LABELS, SECTION_LABELS, TRIGGER_LABELS, WEEKDAY_LABELS, WORKFLOW_LABELS, healthOf, automationToForm, describeSchedule, emptyAutomationForm,
   formatInZone, orderedSections, validateAutomationForm,
-  type AutomationCadence, type AutomationFormErrors, type AutomationFormState, type AutomationRunView, type AutomationView,
+  type AutomationCadence, type AutomationInsights, type AutomationFormErrors, type AutomationFormState, type AutomationRunView, type AutomationView,
 } from '../../lib/aiAutomation';
 import { aiErrorCategoryLabel } from '../../lib/aiHub';
-import { RUN_IN_PROVIDER_HELP, SCHEDULER_HELP, SCHEDULER_LABELS, SCHEDULER_VARIANT, connectionLabel, isSchedulerProvider, setupActionLabel, statusFor, type ProviderSchedulerStatus } from '../../lib/aiScheduler';
+import { RUN_IN_PROVIDER_HELP, connectionLabel, schedulerView, isSchedulerProvider, setupActionLabel, statusFor, type ProviderSchedulerStatus } from '../../lib/aiScheduler';
 import { AutomationSetupDialog, type SetupMode } from './AutomationSetupDialog';
+import { AutomationActivity } from './AutomationActivity';
 import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { Dialog } from '../ui/Dialog';
@@ -44,6 +45,8 @@ export interface AutomationCardProps {
   onDelete(a: AutomationView): void;
   /** AI-11G: connection and scheduled-execution state of this automation's provider (separate facts). Omitted = not loaded. */
   scheduler?: ProviderSchedulerStatus | null;
+  /** AI-11H: derived health (state, reasons, retry) and analytics. Omitted = not loaded; the card falls back to the basic state badge. */
+  insights?: AutomationInsights | null;
   /** Opens the copyable provider setup (mode setup) or the run-once-in-the-provider instructions (mode manual). */
   onSetup?(a: AutomationView, mode: SetupMode): void;
   /** Lazily loaded recent-run history (rendered by the panel; the card itself stays presentational). */
@@ -83,8 +86,8 @@ export function AutomationRunHistory({ workspaceId, session, automation }: { wor
   );
 }
 
-export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete, scheduler, onSetup, history }: AutomationCardProps) {
-  const health = automationHealth(a);
+export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete, scheduler, onSetup, history, insights }: AutomationCardProps) {
+  const health = healthOf(a, insights);
   const nextText = a.enabled ? (a.state.nextExpectedRunAt ? formatInZone(a.state.nextExpectedRunAt, a.timezone) : 'Run manually') : 'Disabled';
   const supported = isSchedulerProvider(a.provider);
   const setupLabel = setupActionLabel(a.provider);
@@ -114,12 +117,18 @@ export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete
           <>
             <dt className="muted">JobQuest connection</dt><dd style={{ margin: 0 }}>{connectionLabel(scheduler)}</dd>
             <dt className="muted">Scheduled execution</dt>
-            <dd style={{ margin: 0 }}><StatusBadge variant={SCHEDULER_VARIANT[scheduler.scheduler]}>{SCHEDULER_LABELS[scheduler.scheduler]}</StatusBadge></dd>
+            <dd style={{ margin: 0 }}><StatusBadge variant={schedulerView(scheduler, { hasAutomation: true }).variant}>{schedulerView(scheduler, { hasAutomation: true }).label}</StatusBadge></dd>
           </>
         )}
         {!supported && (<><dt className="muted">Scheduled execution</dt><dd style={{ margin: 0 }}>No provider selected</dd></>)}
       </dl>
-      {supported && scheduler && scheduler.scheduler !== 'READY' && <span className="muted" style={mutedSmall}>{SCHEDULER_HELP[scheduler.scheduler]}</span>}
+      {health.detail && health.detail.reasons.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: '20px', ...mutedSmall }} aria-label={`Status details for ${a.name}`} data-testid="automation-health-reasons">
+          {health.detail.reasons.map((r, i) => <li key={i}>{r}</li>)}
+          {health.detail.retry && !health.detail.retry.inFlight && <li>Retry attempt {health.detail.retry.attempt} of {health.detail.retry.limit}{health.detail.retry.exhausted ? ': none left' : ''}.</li>}
+        </ul>
+      )}
+      {supported && scheduler && scheduler.scheduler !== 'READY' && <span className="muted" style={mutedSmall}>{schedulerView(scheduler, { hasAutomation: true }).help}</span>}
       <div style={{ ...rowStyle, justifyContent: 'flex-start' }}>
         <Button size="sm" variant="secondary" onClick={() => onEdit(a)} disabled={busy}>Edit</Button>
         {setupLabel && <Button size="sm" variant="secondary" onClick={() => onSetup?.(a, 'setup')} disabled={busy}>{setupLabel}</Button>}
@@ -236,9 +245,15 @@ export interface AutomationsViewProps {
   schedulers?: readonly ProviderSchedulerStatus[] | null;
   onSetup?(a: AutomationView, mode: SetupMode): void;
   renderHistory?(a: AutomationView): ReactNode;
+  /** AI-11H */
+  insights?: AutomationInsights | null;
+  insightsState?: 'loading' | 'error' | 'ready';
+  insightDays?: 7 | 30 | 90;
+  onInsightDays?(d: 7 | 30 | 90): void;
+  onInsightsRetry?(): void;
 }
 
-export function AutomationsView({ load, busyId, actionError, notice, onNew, onEdit, onToggle, onDelete, onRetry, schedulers, onSetup, renderHistory }: AutomationsViewProps) {
+export function AutomationsView({ load, busyId, actionError, notice, onNew, onEdit, onToggle, onDelete, onRetry, schedulers, onSetup, renderHistory, insights, insightsState = 'loading', insightDays = 30, onInsightDays, onInsightsRetry }: AutomationsViewProps) {
   const count = load.status === 'ready' ? load.automations.length : 0;
   return (
     <div style={stackStyle}>
@@ -259,8 +274,14 @@ export function AutomationsView({ load, busyId, actionError, notice, onNew, onEd
       {load.status === 'ready' && count === 0 && <p className="muted" style={{ margin: 0 }}>No automations yet. Create one to record when a workflow should run.</p>}
       {load.status === 'ready' && count > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {load.automations.map((a) => <AutomationCard key={a.id} automation={a} busy={busyId === a.id} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} scheduler={statusFor(schedulers, a.provider)} onSetup={onSetup} history={renderHistory?.(a)} />)}
+          {load.automations.map((a) => <AutomationCard key={a.id} automation={a} busy={busyId === a.id} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} scheduler={statusFor(schedulers, a.provider)} onSetup={onSetup} history={renderHistory?.(a)} insights={insights} />)}
         </ul>
+      )}
+      {load.status === 'ready' && count > 0 && onInsightDays && (
+        <AutomationActivity
+          insights={insights ?? null} state={insightsState} days={insightDays} automations={load.automations}
+          onDays={onInsightDays} onRetry={() => onInsightsRetry?.()} formatAt={(iso) => formatInZone(iso, null)}
+        />
       )}
       <div>
         <Button variant="primary" size="sm" onClick={onNew} disabled={load.status !== 'ready' || count >= AUTOMATION_LIMIT}>New automation</Button>
@@ -285,6 +306,10 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
   const [schedulers, setSchedulers] = useState<ProviderSchedulerStatus[] | null>(null);
   const [setupFor, setSetupFor] = useState<{ automation: AutomationView; mode: SetupMode } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [insights, setInsights] = useState<AutomationInsights | null>(null);
+  const [insightsState, setInsightsState] = useState<'loading' | 'error' | 'ready'>('loading');
+  const [insightDays, setInsightDays] = useState<7 | 30 | 90>(30);
+  const [insightAttempt, setInsightAttempt] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -308,6 +333,18 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
     fetchSchedulerStatus(activeWorkspaceId, session).then((s) => live && setSchedulers(s), () => live && setSchedulers(null));
     return () => { live = false; };
   }, [activeWorkspaceId, attempt, session.access_token]);
+
+  // Derived health + analytics are secondary: a failure here never blocks the automation list.
+  useEffect(() => {
+    if (!activeWorkspaceId) return undefined;
+    let live = true;
+    setInsightsState('loading');
+    fetchAutomationInsights(activeWorkspaceId, session, insightDays).then(
+      (i) => { if (live) { setInsights(i); setInsightsState('ready'); } },
+      () => { if (live) { setInsights(null); setInsightsState('error'); } },
+    );
+    return () => { live = false; };
+  }, [activeWorkspaceId, insightDays, attempt, insightAttempt, session.access_token]);
 
   const submit = async () => {
     if (!editing || !activeWorkspaceId) return;
@@ -357,6 +394,11 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
         actionError={actionError}
         notice={notice}
         schedulers={schedulers}
+        insights={insights}
+        insightsState={insightsState}
+        insightDays={insightDays}
+        onInsightDays={setInsightDays}
+        onInsightsRetry={() => setInsightAttempt((n) => n + 1)}
         onSetup={(automation, mode) => { setNotice(null); setSetupFor({ automation, mode }); }}
         renderHistory={(a) => (activeWorkspaceId ? <AutomationRunHistory workspaceId={activeWorkspaceId} session={session} automation={a} /> : null)}
         onNew={() => { setErrors({}); setSaveError(null); setEditing({ id: null, form: emptyAutomationForm(defaultTimeZone) }); }}

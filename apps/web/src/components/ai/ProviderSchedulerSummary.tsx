@@ -1,4 +1,4 @@
-import { SCHEDULER_HELP, SCHEDULER_LABELS, SCHEDULER_VARIANT, connectionLabel, type ProviderSchedulerStatus } from '../../lib/aiScheduler';
+import { connectionLabel, schedulerView, type ProviderSchedulerStatus } from '../../lib/aiScheduler';
 import { StatusBadge } from '../ui/StatusBadge';
 
 // AI-11G: under each provider in Settings -> Providers. Two separate facts, never one green badge:
@@ -12,7 +12,8 @@ const fmt = (iso: string | null) => {
   return Number.isNaN(d.getTime()) ? null : new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(d);
 };
 
-export function ProviderSchedulerSummary({ status }: { status: ProviderSchedulerStatus }) {
+export function ProviderSchedulerSummary({ status, hasAutomation = false }: { status: ProviderSchedulerStatus; hasAutomation?: boolean }) {
+  const view = schedulerView(status, { hasAutomation });
   const lastClaim = fmt(status.lastClaimAt);
   const lastDone = fmt(status.lastCompletedAt);
   return (
@@ -20,10 +21,10 @@ export function ProviderSchedulerSummary({ status }: { status: ProviderScheduler
       <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', margin: 0, fontSize: '13px', alignItems: 'center' }}>
         <dt className="muted">JobQuest connection</dt><dd style={{ margin: 0 }}>{connectionLabel(status)}</dd>
         <dt className="muted">Scheduled execution</dt>
-        <dd style={{ margin: 0 }}><StatusBadge variant={SCHEDULER_VARIANT[status.scheduler]}>{SCHEDULER_LABELS[status.scheduler]}</StatusBadge></dd>
+        <dd style={{ margin: 0 }}><StatusBadge variant={view.variant}>{view.label}</StatusBadge></dd>
       </dl>
       <p className="muted" style={{ margin: '6px 0 0', fontSize: '13px' }}>
-        {SCHEDULER_HELP[status.scheduler]}
+        {view.help}
         {lastClaim ? ` Last scheduled claim: ${lastClaim}.` : ''}
         {lastDone ? ` Last finished: ${lastDone}.` : ''}
       </p>

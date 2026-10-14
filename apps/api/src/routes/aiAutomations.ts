@@ -7,6 +7,7 @@ import {
 } from '../services/aiAutomationService';
 import { listAutomationRuns, requestRunNow, type ExecutionError } from '../services/aiExecutionService';
 import { getAutomationSetup, getSchedulerStatus, type SchedulerError } from '../services/aiSchedulerStatusService';
+import { getAutomationInsights, DEFAULT_INSIGHT_WINDOW } from '../services/aiAutomationInsightsService';
 import { CLIENT_KEY } from '../lib/aiContract';
 import { caller } from './scope';
 
@@ -66,6 +67,17 @@ aiAutomations.get('/scheduler-status', async (c) => {
   if (!ctx) return unauth(c);
   const out = await getSchedulerStatus({ workspaceId: ctx.workspaceId, userId: ctx.userId, accessToken: ctx.accessToken });
   return out.ok ? c.json({ providers: out.data }) : schedFail(c, out.error);
+});
+
+// AI-11H: derived health per automation + run analytics for a bounded window (7 / 30 / 90 days). Read-only, owner session only; nothing is stored.
+aiAutomations.get('/insights', async (c) => {
+  const q = workspaceQuery.safeParse({ workspace_id: c.req.query('workspace_id') });
+  if (!q.success) return fail(c, { code: 'INVALID_INPUT', message: 'A workspace is required.' });
+  const days = c.req.query('days') === undefined ? DEFAULT_INSIGHT_WINDOW : Number(c.req.query('days'));
+  const ctx = await context(c, q.data.workspace_id);
+  if (!ctx) return unauth(c);
+  const out = await getAutomationInsights({ workspaceId: ctx.workspaceId, userId: ctx.userId, accessToken: ctx.accessToken }, days);
+  return out.ok ? c.json(out.data) : schedFail(c, out.error);
 });
 
 aiAutomations.get('/:id/setup', async (c) => {

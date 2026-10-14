@@ -243,9 +243,9 @@ describe('Overview, Daily Digest and Job Leads integration', () => {
 });
 
 describe('navigation and wiring', () => {
-  it('Actions is the 7th of eight tabs; every path round-trips; the shell renders all eight', () => {
-    expect(AI_HUB_TABS).toHaveLength(8);
-    expect(AI_HUB_TABS[6]).toMatchObject({ id: 'actions', label: 'Actions', path: '/ai-hub/actions' });
+  it('Actions is the 7th of nine tabs (AI-11H inserts Weekly Digest); every path round-trips; the shell renders all nine', () => {
+    expect(AI_HUB_TABS).toHaveLength(9);
+    expect(AI_HUB_TABS[7]).toMatchObject({ id: 'actions', label: 'Actions', path: '/ai-hub/actions' });
     for (const t of AI_HUB_TABS) { expect(aiHubTabFromPath(t.path)).toBe(t.id); expect(aiHubPathForTab(t.id)).toBe(t.path); }
     const shell = html(createElement(AiHubShell, { tab: 'actions', onTabChange: noop, state: { status: 'loading' }, actions: createElement('p', null, 'ACTIONS-SLOT') }));
     expect(shell).toContain('ACTIONS-SLOT');

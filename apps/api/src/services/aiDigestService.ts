@@ -113,10 +113,25 @@ export async function resolveOwnerTimeZone(db: AiReadClient, userId: string): Pr
   }
 }
 
+/**
+ * AI-11D: a run that finished but whose every source reported blocked / unavailable / error / skipped did NOT search anything, so it
+ * reads as unavailable (never as a quiet "zero"). Runs without per-source status keep the AI-11C behaviour. Shared by the Weekly Digest
+ * (AI-11H) so both digests judge a source identically.
+ */
+export function sourceHealthOfRun(row: Row | undefined): SourceHealth {
+  const status = row?.status;
+  if (status === 'FAILED') return 'failed';
+  if (status === 'SUCCEEDED' || status === 'PARTIAL') {
+    const sources = Array.isArray(row?.sources) ? (row.sources as { status?: AiSourceStatus }[]) : [];
+    return discoverySearchOutcome(sources) === 'not_searched' ? 'failed' : 'ok';
+  }
+  return 'never';
+}
+
 /** Findings still open to the user; dismissed/closed ones are not part of a digest. */
 const ACTIVE_STATUSES = ['NEW', 'REVIEWED'];
 /** The source workflows whose ai_runs describe whether a source is operational. */
-const SOURCE_WORKFLOWS = { jobs: 'job_discovery', email: 'email_triage', recruiters: 'recruiter_intel', calendar: 'calendar_review' } as const;
+export const SOURCE_WORKFLOWS = { jobs: 'job_discovery', email: 'email_triage', recruiters: 'recruiter_intel', calendar: 'calendar_review' } as const;
 
 /** Rows examined per source before composition keeps its bounded top-N (counts always come from exact head queries). */
 const SCAN = { emails: 100, attentionEmails: 50, calendar: 30, interviews: 12, followUps: 10, leads: 12, recruiters: 30, trackedApps: 200 } as const;
@@ -214,18 +229,7 @@ export async function buildDeterministicDigest(
   ];
   if (all.some((r) => r.error)) return bad('READ_FAILED', 'JobQuest data could not be read');
 
-  // AI-11D: a run that finished but whose every source reported blocked / unavailable / error / skipped did NOT search anything,
-  // so it reads as unavailable (never as a quiet "zero"). Runs without per-source status keep the AI-11C behaviour.
-  const health = (r: { data?: unknown }): SourceHealth => {
-    const row = rowsOf(r)[0];
-    const status = row?.status;
-    if (status === 'FAILED') return 'failed';
-    if (status === 'SUCCEEDED' || status === 'PARTIAL') {
-      const sources = Array.isArray(row?.sources) ? (row.sources as { status?: AiSourceStatus }[]) : [];
-      return discoverySearchOutcome(sources) === 'not_searched' ? 'failed' : 'ok';
-    }
-    return 'never';
-  };
+  const health = (r: { data?: unknown }): SourceHealth => sourceHealthOfRun(rowsOf(r)[0]);
 
   // ---- emails (+ the derived application match, best-effort: a failed lookup leaves matches null) ----
   const byId = new Map<string, Row>();

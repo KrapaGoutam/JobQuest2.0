@@ -12,7 +12,7 @@
 import { admin as adminClient, userClient } from '../lib/db';
 import {
   SCHEDULER_PROVIDERS, EMPTY_EVIDENCE, buildProviderStatus, buildSchedulerSetup,
-  type AutomationDefinition, type ProviderSchedulerStatus, type SchedulerRunEvidence, type SchedulerSetup, type SchedulerProvider,
+  type AutomationDefinition, type ProviderCredentialState, type ProviderSchedulerStatus, type SchedulerRunEvidence, type SchedulerSetup, type SchedulerProvider,
 } from '../lib/aiContract';
 import { UUID } from './aiReadSupport';
 
@@ -27,28 +27,48 @@ export interface SchedulerDeps { reader?: Reader; oauth?: Rpc; now?: () => Date 
 const fail = <T>(code: SchedulerError['code'], message: string): SchedulerResult<T> => ({ ok: false, error: { code, message } });
 const FINISHED = ['SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED'];
 
-interface Connection { connected: boolean; canIngest: boolean }
+interface Connection { connected: boolean; canIngest: boolean; credential: ProviderCredentialState }
 
+/**
+ * Connection state per provider PLUS why a provider is not connected (AI-11H): a credential that exists but expired or was revoked
+ * is a different, actionable fact from "never set up". Token metadata only (never a hash/secret); the newest lapsed credential decides.
+ */
 async function connections(ctx: SchedulerContext, reader: Reader, oauth: Rpc, now: Date): Promise<Map<SchedulerProvider, Connection> | null> {
-  const out = new Map<SchedulerProvider, Connection>(SCHEDULER_PROVIDERS.map((p) => [p, { connected: false, canIngest: false }]));
+  const out = new Map<SchedulerProvider, Connection>(SCHEDULER_PROVIDERS.map((p) => [p, { connected: false, canIngest: false, credential: 'none' as ProviderCredentialState }]));
+  const lapsed = new Map<SchedulerProvider, { at: string; state: 'expired' | 'revoked' }>();
   const mark = (p: unknown, scopes: unknown) => {
     if (typeof p !== 'string' || !out.has(p as SchedulerProvider)) return;
     const cur = out.get(p as SchedulerProvider)!;
     cur.connected = true;
+    cur.credential = 'active';
     cur.canIngest ||= Array.isArray(scopes) && scopes.includes('ai:ingest');
   };
+  const lapse = (p: unknown, at: unknown, state: 'expired' | 'revoked') => {
+    if (typeof p !== 'string' || !out.has(p as SchedulerProvider)) return;
+    const when = typeof at === 'string' ? at : '';
+    const prev = lapsed.get(p as SchedulerProvider);
+    if (!prev || when > prev.at) lapsed.set(p as SchedulerProvider, { at: when, state });
+  };
 
-  const tokens = await reader.from('ai_connector_tokens').select('provider, scopes, expires_at, revoked_at')
-    .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).not('provider', 'is', null).is('revoked_at', null).limit(100);
+  const tokens = await reader.from('ai_connector_tokens').select('provider, scopes, expires_at, revoked_at, created_at')
+    .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).not('provider', 'is', null).order('created_at', { ascending: false }).limit(100);
   if (tokens.error) return null;
-  for (const t of (tokens.data ?? []) as Array<{ provider: string; scopes: string[]; expires_at: string }>) {
-    if (Date.parse(t.expires_at) > now.getTime()) mark(t.provider, t.scopes);
+  for (const t of (tokens.data ?? []) as Array<{ provider: string; scopes: string[]; expires_at: string; revoked_at: string | null; created_at: string }>) {
+    if (t.revoked_at) lapse(t.provider, t.created_at, 'revoked');
+    else if (Date.parse(t.expires_at) > now.getTime()) mark(t.provider, t.scopes);
+    else lapse(t.provider, t.created_at, 'expired');
   }
 
   const clients = await oauth.rpc('rpc_oauth_list_clients', { p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId });
   if (clients.error) return null;
-  for (const c of (Array.isArray(clients.data) ? clients.data : []) as Array<{ provider: string; scopes: string[]; revoked_at: string | null; active_grants: number | string }>) {
-    if (!c.revoked_at && Number(c.active_grants) > 0) mark(c.provider, c.scopes);
+  for (const c of (Array.isArray(clients.data) ? clients.data : []) as Array<{ provider: string; scopes: string[]; revoked_at: string | null; active_grants: number | string; created_at?: string; last_used_at?: string | null }>) {
+    if (c.revoked_at) lapse(c.provider, c.revoked_at, 'revoked');
+    else if (Number(c.active_grants) > 0) mark(c.provider, c.scopes);
+    else if (c.last_used_at) lapse(c.provider, c.last_used_at, 'expired'); // it WAS used and now has no active grant: the authorization ended. A never-used registration is not a lapse.
+  }
+  for (const [p, l] of lapsed) {
+    const cur = out.get(p)!;
+    if (!cur.connected) cur.credential = l.state;
   }
   return out;
 }
@@ -79,7 +99,7 @@ export async function getSchedulerStatus(ctx: SchedulerContext, deps: SchedulerD
     const evidence = await evidenceFor(ctx, reader, p);
     if (!evidence) return fail('READ_FAILED', 'Could not load scheduler status.');
     const c = conn.get(p)!;
-    list.push(buildProviderStatus(p, c.connected ? 'connected' : 'not_connected', c.canIngest, evidence));
+    list.push(buildProviderStatus(p, c.connected ? 'connected' : 'not_connected', c.canIngest, evidence, c.credential));
   }
   return { ok: true, data: list };
 }

@@ -187,16 +187,16 @@ const runRow = (status: string, at: string, error: string | null = null, complet
 
 describe('derived run state', () => {
   it('has no history of its own: it is a pure function of the latest and latest-success runs', () => {
-    expect(deriveAutomationRunState(null, null)).toEqual({ lastRunAt: null, lastStatus: null, lastSuccessAt: null, lastErrorCategory: null });
+    expect(deriveAutomationRunState(null, null)).toEqual({ lastRunAt: null, lastStatus: null, lastTrigger: null, lastSuccessAt: null, lastFailureAt: null, lastErrorCategory: null });
     const good = runRow('SUCCEEDED', '2026-10-12T13:00:00Z');
-    expect(deriveAutomationRunState(good, good)).toEqual({ lastRunAt: '2026-10-12T13:00:00Z', lastStatus: 'SUCCEEDED', lastSuccessAt: '2026-10-12T13:00:00Z', lastErrorCategory: null });
+    expect(deriveAutomationRunState(good, good)).toEqual({ lastRunAt: '2026-10-12T13:00:00Z', lastStatus: 'SUCCEEDED', lastTrigger: null, lastSuccessAt: '2026-10-12T13:00:00Z', lastFailureAt: null, lastErrorCategory: null });
     const failed = runRow('FAILED', '2026-10-13T13:00:00Z', 'TIMEOUT');
-    expect(deriveAutomationRunState(failed, good)).toEqual({ lastRunAt: '2026-10-13T13:00:00Z', lastStatus: 'FAILED', lastSuccessAt: '2026-10-12T13:00:00Z', lastErrorCategory: 'TIMEOUT' });
+    expect(deriveAutomationRunState(failed, good)).toEqual({ lastRunAt: '2026-10-13T13:00:00Z', lastStatus: 'FAILED', lastTrigger: null, lastSuccessAt: '2026-10-12T13:00:00Z', lastFailureAt: null, lastErrorCategory: 'TIMEOUT' });
     expect(deriveAutomationRunState(runRow('PARTIAL', '2026-10-13T13:00:00Z', 'PARTIAL_READ'), good).lastErrorCategory).toBe('PARTIAL_READ');
   });
   it('a running run is not an error and falls back to created_at before completion', () => {
     const running = runRow('RUNNING', '2026-10-13T13:00:00Z', null, null);
-    expect(deriveAutomationRunState(running, null)).toEqual({ lastRunAt: '2026-10-13T13:00:00Z', lastStatus: 'RUNNING', lastSuccessAt: null, lastErrorCategory: null });
+    expect(deriveAutomationRunState(running, null)).toEqual({ lastRunAt: '2026-10-13T13:00:00Z', lastStatus: 'RUNNING', lastTrigger: null, lastSuccessAt: null, lastFailureAt: null, lastErrorCategory: null });
   });
 });
 
@@ -265,7 +265,7 @@ describe('listAutomations (service)', () => {
     const a = out.data[0]!;
     expect(a).toMatchObject({ name: 'Weekday Morning Digest', provider: 'claude', cadence: 'weekdays', workflow: 'daily_brief' });
     expect(a.state).toEqual({
-      lastRunAt: '2026-10-13T13:01:00Z', lastStatus: 'FAILED', lastSuccessAt: '2026-10-12T13:01:00Z', lastErrorCategory: 'TIMEOUT', nextExpectedRunAt: '2026-10-13T13:00:00.000Z',
+      lastRunAt: '2026-10-13T13:01:00Z', lastStatus: 'FAILED', lastTrigger: null, lastSuccessAt: '2026-10-12T13:01:00Z', lastFailureAt: '2026-10-13T13:01:00Z', lastErrorCategory: 'TIMEOUT', nextExpectedRunAt: '2026-10-13T13:00:00.000Z',
     });
     expect(a.runNow).toEqual({ ready: false, reason: 'NO_EXECUTOR' });
     // Every read is scoped by workspace AND owner (belt and braces on top of RLS); run reads also by workflow + provider.
@@ -292,7 +292,7 @@ describe('listAutomations (service)', () => {
     expect(out.ok && out.data[0]!.runNow.reason).toBe('AI_HUB_DISABLED');
     expect(JSON.stringify(out)).not.toContain('RAW-SECRET-DETAIL');
     const runColumns = /const RUN_COLUMNS = '([^']+)'/.exec(readFileSync('apps/api/src/services/aiAutomationService.ts', 'utf8'))?.[1];
-    expect(runColumns).toBe('status, created_at, completed_at, error_category'); // error_detail is never selected
+    expect(runColumns).toBe('status, created_at, completed_at, error_category, trigger_type'); // never error_detail // error_detail is never selected
   });
 
   it('a read failure is opaque (no database text) and a bad workspace is rejected without reading', async () => {

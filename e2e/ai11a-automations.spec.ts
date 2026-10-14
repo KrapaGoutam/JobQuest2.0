@@ -205,6 +205,36 @@ test.describe('AI-11A automation foundation', () => {
     await expect(digest.getByText('Weekdays at 9:15 AM · America/Chicago')).toBeVisible();
     await expect(digest.locator('dd').first()).toHaveText(/9:15 AM C[DS]T$/);
 
+    // ---- 7b) AI-11F: executor readiness, last failure, recent runs (scheduled vs manual), History trigger -----------------
+    // The provider scheduler is not connected in AI-11F: the card says so and Run now stays disabled with the real reason.
+    await expect(digest.getByText('Provider scheduler').locator('xpath=following-sibling::dd[1]')).toHaveText('Not connected yet');
+    await expect(digest.getByText('Last failure').locator('xpath=following-sibling::dd[1]')).not.toHaveText('—');
+    await expect(digest.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    // A scheduled occurrence requested through the real lifecycle RPC (service client of the LOCAL stack). Back-dated so the
+    // latest-run derived state used by the Overview assertions below is unchanged.
+    const cfgId = (await admin.from('ai_workflow_configs').select('id').eq('user_id', state.userId).eq('name', 'Weekday Morning Digest').single()).data!.id as string;
+    const occ = await admin.rpc('rpc_ai_execution_request', { p_actor_id: state.userId, p_workspace_id: state.workspaceId, p_automation_id: cfgId, p_trigger_type: 'scheduled', p_scheduled_for: new Date(Math.floor(Date.now() / 1000) * 1000 + 5_000).toISOString(), p_client_key: null, p_retry_of_run_id: null });
+    expect(occ.error).toBeNull();
+    expect((await admin.from('ai_runs').update({ created_at: new Date(Date.now() - 2 * 86_400_000).toISOString() }).eq('id', occ.data.run_id)).error).toBeNull();
+    await page.reload();
+    await digest.getByText('Recent runs').click();
+    const history = digest.getByTestId('automation-history');
+    await expect(history.getByText('Scheduled')).toBeVisible();
+    await expect(history.getByText('Queued')).toBeVisible();
+    await expect(history.getByText('Manual').first()).toBeVisible();
+    await expect(history.getByText('Failed')).toBeVisible();
+    await expect(history.getByText('Connector authorization expired')).toBeVisible();
+    // The expanded history at phone width: no horizontal overflow, no critical/serious axe violations.
+    await page.setViewportSize({ width: 375, height: 900 });
+    expect(await overflow(page), 'history overflow @375').toBe(0);
+    a11y.push(await audit(page, 'automation-history-open-375'));
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/ai-hub/history');
+    await expect(page.getByTestId('run-trigger').filter({ hasText: 'Scheduled' }).first()).toBeVisible();
+    await expect(page.getByTestId('run-trigger').filter({ hasText: 'Manual' }).first()).toBeVisible();
+    await page.goto('/settings/ai');
+    await expect(cards).toHaveCount(2);
+
     // ---- 8) RESPONSIVE + ACCESSIBILITY ------------------------------------------------------------------------------
     for (const width of [375, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 });
@@ -246,7 +276,7 @@ test.describe('AI-11A automation foundation', () => {
     await dialog.getByRole('button', { name: 'Delete automation' }).click();
     await expect(cards).toHaveCount(1);
     expect((await admin.from('ai_workflow_configs').select('id', { count: 'exact', head: true }).eq('user_id', state.userId)).count).toBe(1);
-    expect((await admin.from('ai_runs').select('id', { count: 'exact', head: true }).eq('user_id', state.userId)).count).toBe(2);
+    expect((await admin.from('ai_runs').select('id', { count: 'exact', head: true }).eq('user_id', state.userId)).count).toBe(3);
     const audits = (await admin.from('audit_events').select('action').eq('workspace_id', state.workspaceId).like('action', 'AI_AUTOMATION_%')).data ?? [];
     expect(audits.map((a) => a.action)).toEqual(expect.arrayContaining(['AI_AUTOMATION_CREATED', 'AI_AUTOMATION_UPDATED', 'AI_AUTOMATION_DELETED']));
 

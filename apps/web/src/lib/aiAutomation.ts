@@ -42,8 +42,22 @@ export const WEEKDAY_LABELS: ReadonlyArray<{ value: number; short: string; long:
 export const RUN_NOW_REASON_LABELS: Record<string, string> = {
   AI_HUB_DISABLED: 'The AI Hub is turned off.',
   AUTOMATION_DISABLED: 'Enable this automation first.',
-  NO_EXECUTOR: 'Run Now isn’t available yet: JobQuest can’t start a provider run. Create the schedule in your provider; results arrive as AI findings.',
+  NO_EXECUTOR: 'Run Now isn’t available yet: no provider scheduler is connected, so JobQuest can’t start a provider run. Create the schedule in your provider; results arrive as AI findings.',
 };
+/** Provider-neutral executor readiness (derived by the server). */
+export const EXECUTOR_LABELS: Record<string, string> = {
+  configured: 'Connected', not_configured: 'Not connected yet', unavailable: 'Unavailable',
+};
+export const TRIGGER_LABELS: Record<string, string> = { scheduled: 'Scheduled', manual: 'Manual', retry: 'Retry' };
+export const RUN_STATUS_LABELS: Record<string, string> = {
+  QUEUED: 'Queued', RUNNING: 'Running', SUCCEEDED: 'Succeeded', PARTIAL: 'Partial', FAILED: 'Failed', AWAITING_APPROVAL: 'Awaiting approval', CANCELLED: 'Cancelled',
+};
+
+/** One recent run of an automation (GET /api/ai/automations/:id/runs). */
+export interface AutomationRunView {
+  id: string; status: string; trigger: string; scheduledFor: string | null; startedAt: string | null; completedAt: string | null;
+  createdAt: string; errorCategory: string | null;
+}
 
 /** Shape returned by GET /api/ai/automations (see apps/api/src/services/aiAutomationService.ts). */
 export interface AutomationView {
@@ -63,11 +77,14 @@ export interface AutomationView {
   state: {
     lastRunAt: string | null;
     lastStatus: string | null;
+    lastTrigger?: string | null;
     lastSuccessAt: string | null;
+    lastFailureAt?: string | null;
     lastErrorCategory: string | null;
     nextExpectedRunAt: string | null;
   };
   runNow: { ready: boolean; reason: string | null };
+  executor?: 'configured' | 'not_configured' | 'unavailable';
 }
 
 export interface AutomationFormState {

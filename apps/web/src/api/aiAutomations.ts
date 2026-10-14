@@ -1,5 +1,5 @@
 import { api, type PublicSession } from '../api';
-import { formToBody, summarizeAutomations, type AutomationFormState, type AutomationOverview, type AutomationView } from '../lib/aiAutomation';
+import { formToBody, summarizeAutomations, type AutomationFormState, type AutomationOverview, type AutomationRunView, type AutomationView } from '../lib/aiAutomation';
 
 // Automation definitions talk to the JobQuest API only (never MCP): reads are bearer-authenticated GETs; every
 // mutation is a CSRF-protected POST that the server re-validates from scratch (workspace and owner come from the
@@ -33,6 +33,18 @@ export async function saveAutomation(
 export async function deleteAutomation(workspaceId: string, session: PublicSession | null, id: string): Promise<void> {
   const r = await api<{ id: string } & Err>(`/ai/automations/${encodeURIComponent(id)}/delete`, { workspace_id: workspaceId }, token(session));
   if (r.status !== 200) fail(r);
+}
+
+/** Recent runs of one automation (scheduled / manual / retry), newest first. */
+export async function fetchAutomationRuns(workspaceId: string, session: PublicSession | null, id: string): Promise<AutomationRunView[]> {
+  const r = await api<{ runs: AutomationRunView[] } & Err>(`/ai/automations/${encodeURIComponent(id)}/runs?workspace_id=${encodeURIComponent(workspaceId)}`, undefined, token(session));
+  return r.status === 200 ? r.data.runs : fail(r);
+}
+
+/** Run Now. `clientKey` makes a double click or a retried request the same execution. Only called when the server says ready. */
+export async function runAutomationNow(workspaceId: string, session: PublicSession | null, id: string, clientKey: string): Promise<{ runId: string; created: boolean; status: string }> {
+  const r = await api<{ runId: string; created: boolean; status: string } & Err>(`/ai/automations/${encodeURIComponent(id)}/run-now`, { workspace_id: workspaceId, client_key: clientKey }, token(session));
+  return r.status === 200 || r.status === 201 ? r.data : fail(r);
 }
 
 /** Overview card data; isolated by the caller so a failure never breaks the rest of the Overview. */

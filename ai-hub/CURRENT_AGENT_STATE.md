@@ -3,6 +3,24 @@ CURRENT PHASE:
 JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
 
 CURRENT SUB-PHASE:
+AI-11F SCHEDULE / CADENCE EXECUTION - COMPLETE ON FEATURE BRANCH `feature/ai11f-schedule-execution` (from development `78075e9c33db1f02cc6c4710e52af4a8962de2f0`); integrating to development. AI-11G (Provider Scheduler Adapters) NOT started.
+
+STATUS:
+Decision: EXTEND `ai_runs` minimally (nullable `automation_id` FK on delete set null + `scheduled_for`); `ai_workflow_configs` unchanged; no occurrence table/queue/DAG. One additive forward-only migration `20261104100000_ai_hub_schedule_execution.sql`. Canonical occurrence identity (automation, scheduled_for, trigger) is database-enforced (unique indexes; keys `auto:<id>:<UTC stamp>` / `manual:<id>:<client key>` / `retry:<first run>:<n>`); lifecycle = `rpc_ai_execution_request` (QUEUED, idempotent) -> `rpc_ai_execution_claim` (RUNNING, row lock, exactly one winner, provider re-validated in SQL) -> existing ingest/finalize. No new statuses; `ai_runs_guard` trigger makes the binding immutable and finished runs final. One shared occurrence calculator drives next-run display AND due evaluation (`getDueOccurrences`); catch-up grace 3 h, only the latest eligible occurrence, occurrences at/before the last config change are not due; spring-forward -> first valid instant after the gap, fall-back -> once. Retry = NEW run (max 3, one in flight, first-attempt root), failure summaries sanitized/bounded. Composite order: email_triage, job_discovery, recruiter_intel, calendar_review, followups, goal_summary, THEN daily_brief. Run Now backend is real (`POST /api/ai/automations/:id/run-now`, same lifecycle, manual trigger) but gated: 409 NO_EXECUTOR and nothing created until AI-11G registers an executor (`REGISTERED_EXECUTORS` empty); UI keeps Run now disabled with the real reason. Executor entry points are services with a trusted context, NOT HTTP routes. UI: executor readiness, last failure, last started by, Recent runs, History trigger label. MCP unchanged: 13 tools, 12 read-only + the single write. Report: `reports/AI-11F_SCHEDULE_EXECUTION_REPORT.md`. A pre-existing wall-clock-dependent test (AI11C-03) was fixed separately on `fix/ai11c-peer-utc-digest-date`. Provenance: the AI-11E Dev migration was found applied during later verification; the actor/time of that apply was not documented; schema/ledger independently verified correct (documentation only).
+
+BASE BRANCH:
+development (78075e9c33db1f02cc6c4710e52af4a8962de2f0 + AI-11F merge)
+
+NEXT EXACT STEP:
+Remote Dev DB needs AI-11F migration `20261104100000` applied only after development CI is green (verify ref xpnkasclquplmrcmhsif, inspect ledger, dry-run, apply only that migration). Then separately approved AI-11G (Provider Scheduler Adapters) on its own feature branch. Production needs AI-11A `20261101100000`, AI-11D `20261102100000`, AI-11E `20261103100000` and AI-11F `20261104100000` only at the single post-AI-11 main promotion. Do NOT merge development to main or deploy Production.
+```
+
+(Previous state, AI-11E, kept for history:)
+```
+CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
 AI-11E RECRUITER INTELLIGENCE - COMPLETE ON FEATURE BRANCH `feature/ai11e-recruiter-intelligence` (from development `1bbe58f6f7c9dd6ceabd3eb5c61bcd22262d2c1a`); integrating to development. AI-11F (Schedule / Cadence Execution) NOT started.
 
 STATUS:

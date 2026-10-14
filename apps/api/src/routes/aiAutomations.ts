@@ -5,13 +5,17 @@ import {
   deleteAutomation, listAutomations, saveAutomation,
   type AutomationContext, type AutomationError,
 } from '../services/aiAutomationService';
+import { listAutomationRuns, requestRunNow, type ExecutionError } from '../services/aiExecutionService';
+import { CLIENT_KEY } from '../lib/aiContract';
 import { caller } from './scope';
 
 /**
  * AI-11A: AI Hub automation definitions (Settings -> AI & Automation -> Automations). Web-session authenticated
  * (the signed-in owner only); mutations are CSRF-protected and creating/updating honours the AI Hub kill switch
  * (deleting never does). NOT exposed through MCP: a provider can never read or change an automation definition.
- * There is deliberately no Run Now route yet: each automation reports a `runNow` readiness contract instead.
+ * AI-11F adds Run Now (the SAME execution lifecycle as a scheduled occurrence; truthful: 409 NO_EXECUTOR and nothing
+ * created until a provider executor is configured) and the per-automation run history. The executor entry points
+ * (enqueue / claim / report / retry) are service functions for the AI-11G adapters, deliberately NOT HTTP routes.
  */
 export const aiAutomations = new Hono();
 
@@ -69,6 +73,36 @@ aiAutomations.post('/:id', requireCsrfToken, async (c) => {
   if (!ctx) return unauth(c);
   const out = await saveAutomation(ctx, id.data, body.definition);
   return out.ok ? c.json(out.data, 200) : fail(c, out.error);
+});
+
+const EXEC_STATUS: Record<string, ApiStatus> = {
+  INVALID_INPUT: 422, AI_HUB_DISABLED: 503, WORKSPACE_ACCESS_DENIED: 403, AUTOMATION_NOT_FOUND: 404, AUTOMATION_DISABLED: 409,
+  NO_EXECUTOR: 409, INVALID_OCCURRENCE: 422, CONFLICT: 409, READ_FAILED: 500, EXECUTION_FAILED: 500,
+};
+const execFail = (c: Context, e: ExecutionError) => c.json({ error: { code: e.code, message: e.message } }, EXEC_STATUS[e.code] ?? 500);
+
+// Run Now: owner only, CSRF, kill switch. `client_key` is a per-click idempotency key chosen by the browser.
+aiAutomations.post('/:id/run-now', requireCsrfToken, async (c) => {
+  const id = z.uuid().safeParse(c.req.param('id'));
+  const raw: unknown = await c.req.json().catch(() => null);
+  const body = z.strictObject({ workspace_id: z.uuid(), client_key: z.string().regex(CLIENT_KEY) }).safeParse(raw);
+  if (!id.success) return fail(c, { code: 'AUTOMATION_NOT_FOUND', message: 'Automation not found.' });
+  if (!body.success) return fail(c, { code: 'INVALID_INPUT', message: 'A workspace and a request key are required.' });
+  const ctx = await context(c, body.data.workspace_id);
+  if (!ctx) return unauth(c);
+  const out = await requestRunNow({ workspaceId: ctx.workspaceId, userId: ctx.userId }, id.data, body.data.client_key);
+  return out.ok ? c.json(out.data, out.data.created ? 201 : 200) : execFail(c, out.error);
+});
+
+aiAutomations.get('/:id/runs', async (c) => {
+  const id = z.uuid().safeParse(c.req.param('id'));
+  const q = workspaceQuery.safeParse({ workspace_id: c.req.query('workspace_id') });
+  if (!id.success) return fail(c, { code: 'AUTOMATION_NOT_FOUND', message: 'Automation not found.' });
+  if (!q.success) return fail(c, { code: 'INVALID_INPUT', message: 'A workspace is required.' });
+  const ctx = await context(c, q.data.workspace_id);
+  if (!ctx) return unauth(c);
+  const out = await listAutomationRuns({ workspaceId: ctx.workspaceId, userId: ctx.userId, accessToken: ctx.accessToken }, id.data);
+  return out.ok ? c.json({ runs: out.data }) : execFail(c, out.error);
 });
 
 aiAutomations.post('/:id/delete', requireCsrfToken, async (c) => {

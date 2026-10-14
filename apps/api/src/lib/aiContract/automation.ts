@@ -124,31 +124,203 @@ function runsOnWeekday(s: ScheduleFields, isoWeekday: number): boolean {
  * Derived on read rather than stored: it is a pure function of the schedule, so it can never go stale.
  */
 export function computeNextExpectedRun(schedule: ScheduleFields, now: Date = new Date()): string | null {
+  const base = localBase(schedule, now);
+  if (!base) return null;
+  // 8 days always contains the next occurrence of any weekly / selected-day schedule, even across a DST change.
+  for (let add = 0; add <= 8; add++) {
+    const ms = occurrenceOnLocalDay(schedule, base, add);
+    if (ms !== null && ms > base.nowMs) return new Date(ms).toISOString();
+  }
+  return null;
+}
+
+/** The local calendar date "today" in the automation's own zone, or null when the schedule can never fire. */
+function localBase(schedule: ScheduleFields, now: Date): { nowMs: number; y: number; mo: number; d: number; localTime: string; timezone: string } | null {
   if (!schedule.enabled || schedule.cadence === 'manual_only') return null;
   const { localTime, timezone } = schedule;
   if (!localTime || !TIME.test(localTime) || !timezone || !isIanaTimeZone(timezone)) return null;
   const nowMs = now.getTime();
   if (!Number.isFinite(nowMs)) return null;
-
-  // Local calendar date "today" in the automation's zone.
   const local = new Date(nowMs + zoneOffsetAt(nowMs, timezone));
-  const y = local.getUTCFullYear();
-  const mo = local.getUTCMonth();
-  const d = local.getUTCDate();
+  return { nowMs, y: local.getUTCFullYear(), mo: local.getUTCMonth(), d: local.getUTCDate(), localTime, timezone };
+}
 
-  // 8 days always contains the next occurrence of any weekly / selected-day schedule, even across a DST change.
-  for (let add = 0; add <= 8; add++) {
-    const day = new Date(Date.UTC(y, mo, d + add));
-    const isoWeekday = day.getUTCDay() === 0 ? 7 : day.getUTCDay();
-    if (!runsOnWeekday(schedule, isoWeekday)) continue;
-    const stamp = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')}T${localTime}:00`;
-    const r = localToInstant(stamp, timezone);
-    const ms = r.ok
-      ? Date.parse(r.iso)
-      : Date.parse(`${stamp}Z`) - zoneOffsetAt(Date.parse(`${stamp}Z`) - 86_400_000, timezone); // gap: first instant after it
-    if (ms > nowMs) return new Date(ms).toISOString();
+/**
+ * THE occurrence calculator: the instant (epoch ms) at which the schedule fires on the local date `base + add days`, or
+ * null when the cadence skips that weekday. Both the next-run display and due evaluation use this one function, so the
+ * UI and the executor can never disagree about "8:00".
+ */
+function occurrenceOnLocalDay(schedule: ScheduleFields, base: { y: number; mo: number; d: number; localTime: string; timezone: string }, add: number): number | null {
+  const day = new Date(Date.UTC(base.y, base.mo, base.d + add));
+  const isoWeekday = day.getUTCDay() === 0 ? 7 : day.getUTCDay();
+  if (!runsOnWeekday(schedule, isoWeekday)) return null;
+  const stamp = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')}T${base.localTime}:00`;
+  const r = localToInstant(stamp, base.timezone);
+  return r.ok
+    ? Date.parse(r.iso)
+    : Date.parse(`${stamp}Z`) - zoneOffsetAt(Date.parse(`${stamp}Z`) - 86_400_000, base.timezone); // gap: first instant after it
+}
+
+// ---- due evaluation (AI-11F) -------------------------------------------------------------------------------------------
+
+/**
+ * Catch-up window. An occurrence that is at most this far in the past is still claimable (the poller or the provider was
+ * briefly down); anything older is SKIPPED, never replayed. Only the single most recent eligible occurrence is ever due, so
+ * an outage can never produce a backlog. Three hours keeps a missed 08:00 digest useful until late morning without
+ * running a "morning" digest in the afternoon.
+ */
+export const AUTOMATION_CATCHUP_GRACE_MS = 3 * 60 * 60 * 1000;
+
+/** The latest scheduled instant in (now - graceMs, now], or null. Same occurrence calculator as computeNextExpectedRun. */
+export function latestDueOccurrence(schedule: ScheduleFields, now: Date, graceMs: number = AUTOMATION_CATCHUP_GRACE_MS): string | null {
+  const base = localBase(schedule, now);
+  if (!base) return null;
+  const back = Math.ceil(graceMs / 86_400_000) + 1; // a local day is 23-25h; one spare day covers any DST shift
+  let best: number | null = null;
+  for (let add = -back; add <= 1; add++) {
+    const ms = occurrenceOnLocalDay(schedule, base, add);
+    if (ms === null || ms > base.nowMs || ms <= base.nowMs - graceMs) continue;
+    if (best === null || ms > best) best = ms;
   }
-  return null;
+  return best === null ? null : new Date(best).toISOString();
+}
+
+/** The slice of an automation row due evaluation needs. `updatedAt` is when the configuration last changed. */
+export interface DueCandidate extends ScheduleFields {
+  id: string;
+  workflow: AutomationDefinition['workflow'];
+  provider: AutomationProvider | null;
+  updatedAt: string;
+}
+export interface DueOccurrence { automationId: string; scheduledFor: string; workflow: DueCandidate['workflow']; provider: AutomationProvider }
+
+/**
+ * Which automation occurrences are due at `now`? Deterministic, bounded (at most one per automation, at most `limit`
+ * automations considered) and ordered (scheduledFor, then id).
+ *   * disabled, manual-only, provider-less or invalid schedules are never due;
+ *   * an occurrence at or before the last configuration change is not due: a schedule edit (or re-enabling) never
+ *     retroactively fires a slot the new configuration did not own, so the edit boundary cannot double-run.
+ */
+export function getDueOccurrences(candidates: readonly DueCandidate[], now: Date, graceMs: number = AUTOMATION_CATCHUP_GRACE_MS, limit: number = AUTOMATION_LIMIT): DueOccurrence[] {
+  const out: DueOccurrence[] = [];
+  for (const c of candidates.slice(0, limit)) {
+    if (!c.provider) continue;
+    const at = latestDueOccurrence(c, now, graceMs);
+    if (at === null) continue;
+    const changed = Date.parse(c.updatedAt);
+    if (Number.isFinite(changed) && Date.parse(at) <= changed) continue;
+    out.push({ automationId: c.id, scheduledFor: at, workflow: c.workflow, provider: c.provider });
+  }
+  return out.sort((a, b) => (a.scheduledFor < b.scheduledFor ? -1 : a.scheduledFor > b.scheduledFor ? 1 : a.automationId < b.automationId ? -1 : 1));
+}
+
+// ---- canonical occurrence identity ---------------------------------------------------------------------------------------
+
+export const EXECUTION_TRIGGERS = ['scheduled', 'manual', 'retry'] as const;
+export type ExecutionTrigger = (typeof EXECUTION_TRIGGERS)[number];
+/** A retry is a NEW run linked to the failed one; at most this many retries per original run. */
+export const EXECUTION_RETRY_LIMIT = 3;
+
+/**
+ * "20261103T140000Z": the unambiguous UTC form of a scheduled instant. rpc_ai_execution_request builds the identical string
+ * in SQL, and the integration test pins both to the same value.
+ */
+export function occurrenceStamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) throw new Error('INVALID_OCCURRENCE');
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+/** The deterministic `ai_runs.external_run_id` of a scheduled occurrence: one automation + one instant = one execution. */
+export const scheduledRunKey = (automationId: string, scheduledForIso: string): string => `auto:${automationId}:${occurrenceStamp(scheduledForIso)}`;
+/** Run Now: the client supplies a fresh key per click; a retried request with the same key is the same execution. */
+export const manualRunKey = (automationId: string, clientKey: string): string => `manual:${automationId}:${clientKey}`;
+export const CLIENT_KEY = /^[A-Za-z0-9_-]{8,64}$/;
+
+// ---- composite workflow ordering -----------------------------------------------------------------------------------------
+
+export type ExecutionStep = AutomationSection | AutomationDefinition['workflow'];
+
+/**
+ * The canonical ordered step list an executor walks for one occurrence. Sections are stored alphabetically (a set), so
+ * order is never read from storage: it is derived here. Evidence first, synthesis last:
+ *   1 email triage -> 2 job discovery -> 3 recruiter intelligence -> 4 calendar review -> 5 follow-ups -> 6 goal summary
+ *   -> the Daily Digest composition LAST, because it reads what the earlier steps produced.
+ * A single-purpose workflow is its own single step. A custom review runs its sections in the same order (no digest).
+ * Deliberately a bounded ordered list, not a DAG: dependencies are linear and fixed.
+ */
+export function executionPlan(a: Pick<AutomationDefinition, 'workflow' | 'sections'>): ExecutionStep[] {
+  const ordered = AUTOMATION_SECTIONS.filter((s) => a.sections.includes(s));
+  if (a.workflow === 'daily_brief') return [...ordered, 'daily_brief'];
+  if (a.workflow === 'other') return ordered.length > 0 ? ordered : ['other'];
+  return [a.workflow];
+}
+
+// ---- failure recording -----------------------------------------------------------------------------------------------------
+
+export const EXECUTION_FAILURE_CATEGORIES = [
+  'PROVIDER_UNAVAILABLE', 'CONNECTOR_AUTH_EXPIRED', 'SOURCE_UNAVAILABLE', 'PARTIAL_READ', 'SCHEMA_INVALID', 'TIMEOUT', 'RATE_LIMITED', 'INTERNAL',
+] as const;
+export type ExecutionFailureCategory = (typeof EXECUTION_FAILURE_CATEGORIES)[number];
+export const EXECUTION_FAILURE_SUMMARY_MAX = 200;
+
+/**
+ * A persistent, user-visible failure summary: one short plain-text line. Strips control characters, URLs, e-mail
+ * addresses and anything token-shaped (long opaque runs, Bearer/JWT), then truncates. Technical detail belongs in
+ * operational logs, never in `ai_runs.error_detail`.
+ */
+export function sanitizeFailureSummary(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const s = raw
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\bbearer\s+\S+/gi, '[redacted]')
+    .replace(/\bey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]*)?/g, '[redacted]')
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[link]')
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[email]')
+    .replace(/[A-Za-z0-9_\-+/=.]{24,}/g, '[redacted]')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return s.length > EXECUTION_FAILURE_SUMMARY_MAX ? `${s.slice(0, EXECUTION_FAILURE_SUMMARY_MAX - 1).trimEnd()}…` : s;
+}
+
+// ---- executor readiness (provider-neutral) ---------------------------------------------------------------------------------
+
+/**
+ * configured     a registered executor can accept work for this provider
+ * not_configured no executor exists for this provider (every provider until AI-11G; `manual` never has one)
+ * unavailable    one exists in principle but cannot run now (AI Hub kill switch off)
+ * Derived, never stored: AI-11G adds a provider by registering it in REGISTERED_EXECUTORS (or its connection check),
+ * with no schema change.
+ */
+export type ExecutorState = 'configured' | 'not_configured' | 'unavailable';
+/** Providers with a connected scheduler adapter. Empty in AI-11F by design: no adapter exists yet (AI-11G). */
+export const REGISTERED_EXECUTORS: readonly AutomationProvider[] = [];
+
+export function executorState(provider: AutomationProvider, ctx: { aiHubEnabled: boolean; registered?: readonly AutomationProvider[] }): ExecutorState {
+  if (provider === 'manual' || !(ctx.registered ?? REGISTERED_EXECUTORS).includes(provider)) return 'not_configured';
+  return ctx.aiHubEnabled ? 'configured' : 'unavailable';
+}
+
+/**
+ * The context an executor receives from a successful claim. Bounded and credential-free by construction: ids, enums,
+ * the canonical schedule fields and the ordered plan. It never carries provider tokens, client secrets or DB credentials.
+ * `externalRunId` is what the executor puts in `run.external_run_id` of jobquest_submit_ai_result so the result lands on
+ * THIS run (the ingest RPC resumes an existing RUNNING run with that key and never starts a second one).
+ */
+export interface ExecutionClaim {
+  runId: string;
+  automationId: string | null;
+  workflow: AutomationDefinition['workflow'];
+  provider: AutomationProvider;
+  trigger: ExecutionTrigger;
+  scheduledFor: string | null;
+  timezone: string | null;
+  sections: AutomationSection[];
+  delivery: AutomationDelivery[];
+  plan: ExecutionStep[];
+  externalRunId: string;
+  retryOfRunId: string | null;
 }
 
 // ---- derived run state ---------------------------------------------------------------------------------------------
@@ -159,12 +331,18 @@ export interface AutomationRunSlice {
   created_at: string;
   completed_at: string | null;
   error_category: string | null;
+  /** scheduled | manual | retry (AI-11F). Optional so older callers and fixtures stay valid. */
+  trigger_type?: string | null;
 }
 
 export interface AutomationRunState {
   lastRunAt: string | null;
   lastStatus: string | null;
+  /** How the latest run started: scheduled | manual | retry. */
+  lastTrigger: string | null;
   lastSuccessAt: string | null;
+  /** When the latest FAILED run ended (a later success does not erase it: it is the last failure, not the current state). */
+  lastFailureAt: string | null;
   /** Normalized category only (never provider error text). */
   lastErrorCategory: string | null;
 }
@@ -176,12 +354,14 @@ const stamp = (r: AutomationRunSlice) => r.completed_at ?? r.created_at;
  * the most recent run of any status, `latestSuccess` the most recent SUCCEEDED run. Nothing is duplicated into the
  * configuration row, so there is no second source of truth to drift.
  */
-export function deriveAutomationRunState(latest: AutomationRunSlice | null, latestSuccess: AutomationRunSlice | null): AutomationRunState {
+export function deriveAutomationRunState(latest: AutomationRunSlice | null, latestSuccess: AutomationRunSlice | null, latestFailure: AutomationRunSlice | null = null): AutomationRunState {
   const failed = latest !== null && (latest.status === 'FAILED' || latest.status === 'PARTIAL');
   return {
     lastRunAt: latest ? stamp(latest) : null,
     lastStatus: latest ? latest.status : null,
+    lastTrigger: latest ? latest.trigger_type ?? null : null,
     lastSuccessAt: latestSuccess ? stamp(latestSuccess) : null,
+    lastFailureAt: latestFailure ? stamp(latestFailure) : null,
     lastErrorCategory: failed ? latest.error_category : null,
   };
 }
@@ -189,14 +369,14 @@ export function deriveAutomationRunState(latest: AutomationRunSlice | null, late
 // ---- Run Now contract ----------------------------------------------------------------------------------------------
 
 /**
- * Run Now readiness. AI-11A deliberately ships the CONTRACT, not the execution: JobQuest has no executor and the
- * provider owns execution, so creating a QUEUED run nobody will ever pick up would fabricate state.
- *
- * Future (AI-11F/G, once a provider adapter can accept work) the action is
+ * Run Now readiness. AI-11A shipped the contract; AI-11F makes the backend real and keeps it truthful:
  *   POST /api/ai/automations/:id/run-now  (CSRF, owner only, AI Hub kill switch)
- *   -> inserts ai_runs { workflow, provider, trigger_type: 'manual', status: 'QUEUED',
- *        external_run_id: 'manual:<automationId>:<clientKey>' }   (idempotent on the existing unique index)
- *   -> the adapter claims the run and finalizes it through the existing rpc_ai_finalize_run lifecycle.
+ *   -> rpc_ai_execution_request inserts ai_runs { trigger_type: 'manual', status: 'QUEUED', automation_id,
+ *        external_run_id: 'manual:<automationId>:<clientKey>' }   (idempotent)
+ *   -> an executor claims it (rpc_ai_execution_claim: QUEUED -> RUNNING, exactly one winner) and finalizes it through
+ *      the existing rpc_ai_finalize_run lifecycle. It is the SAME lifecycle as a scheduled occurrence.
+ * It is only ready when an executor is configured for the provider (AI-11G registers them). Until then it stays
+ * `NO_EXECUTOR`: a QUEUED run nobody can claim would be fabricated state, so none is ever created.
  * Reasons are ordered: the first failing check wins.
  */
 export type RunNowReason = 'AI_HUB_DISABLED' | 'AUTOMATION_DISABLED' | 'NO_EXECUTOR';

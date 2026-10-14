@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PublicSession } from '../../api';
-import { AutomationApiError, deleteAutomation, fetchAutomations, saveAutomation } from '../../api/aiAutomations';
+import { AutomationApiError, deleteAutomation, fetchAutomationRuns, fetchAutomations, runAutomationNow, saveAutomation } from '../../api/aiAutomations';
 import {
   AUTOMATION_COMPOSITE_WORKFLOWS, AUTOMATION_DELIVERY, AUTOMATION_LIMIT, AUTOMATION_NAME_MAX, AUTOMATION_PROVIDERS,
-  AUTOMATION_SECTIONS, AUTOMATION_WORKFLOWS, CADENCE_LABELS, DELIVERY_LABELS, PROVIDER_LABELS, RUN_NOW_REASON_LABELS,
-  SECTION_LABELS, WEEKDAY_LABELS, WORKFLOW_LABELS, automationHealth, automationToForm, describeSchedule, emptyAutomationForm,
+  AUTOMATION_SECTIONS, AUTOMATION_WORKFLOWS, CADENCE_LABELS, DELIVERY_LABELS, EXECUTOR_LABELS, PROVIDER_LABELS, RUN_NOW_REASON_LABELS,
+  RUN_STATUS_LABELS, SECTION_LABELS, TRIGGER_LABELS, WEEKDAY_LABELS, WORKFLOW_LABELS, automationHealth, automationToForm, describeSchedule, emptyAutomationForm,
   formatInZone, orderedSections, validateAutomationForm,
-  type AutomationCadence, type AutomationFormErrors, type AutomationFormState, type AutomationView,
+  type AutomationCadence, type AutomationFormErrors, type AutomationFormState, type AutomationRunView, type AutomationView,
 } from '../../lib/aiAutomation';
 import { aiErrorCategoryLabel } from '../../lib/aiHub';
 import { Button } from '../ui/Button';
@@ -40,9 +40,46 @@ export interface AutomationCardProps {
   onEdit(a: AutomationView): void;
   onToggle(a: AutomationView, enabled: boolean): void;
   onDelete(a: AutomationView): void;
+  /** Only invoked when the server declared Run Now ready (an executor is connected for the provider). */
+  onRunNow?(a: AutomationView): void;
+  /** Lazily loaded recent-run history (rendered by the panel; the card itself stays presentational). */
+  history?: ReactNode;
 }
 
-export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete }: AutomationCardProps) {
+/** Recent runs of one automation, loaded when the section is first opened. Scheduled and manual runs are labelled. */
+export function AutomationRunHistory({ workspaceId, session, automation }: { workspaceId: string; session: PublicSession; automation: AutomationView }) {
+  const [open, setOpen] = useState(false);
+  const [state, setState] = useState<{ status: 'idle' } | { status: 'loading' } | { status: 'error' } | { status: 'ready'; runs: AutomationRunView[] }>({ status: 'idle' });
+  useEffect(() => {
+    if (!open) return undefined;
+    let live = true;
+    setState({ status: 'loading' });
+    fetchAutomationRuns(workspaceId, session, automation.id).then((runs) => live && setState({ status: 'ready', runs }), () => live && setState({ status: 'error' }));
+    return () => { live = false; };
+  }, [open, workspaceId, automation.id, automation.state.lastRunAt, session.access_token]);
+  return (
+    <details onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)} data-testid="automation-history">
+      <summary style={{ cursor: 'pointer', ...mutedSmall }}>Recent runs</summary>
+      {state.status === 'loading' && <p role="status" className="muted" style={mutedSmall}>Loading runs…</p>}
+      {state.status === 'error' && <p role="alert" style={{ ...mutedSmall, color: 'var(--color-danger)' }}>Couldn’t load run history.</p>}
+      {state.status === 'ready' && state.runs.length === 0 && <p className="muted" style={mutedSmall}>No runs yet.</p>}
+      {state.status === 'ready' && state.runs.length > 0 && (
+        <ul style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'grid', gap: '4px' }}>
+          {state.runs.map((r) => (
+            <li key={r.id} style={{ ...mutedSmall, display: 'flex', flexWrap: 'wrap', gap: '4px 8px' }}>
+              <span>{TRIGGER_LABELS[r.trigger] ?? r.trigger}</span>
+              <span>{RUN_STATUS_LABELS[r.status] ?? r.status}</span>
+              <span className="muted">{formatInZone(r.scheduledFor ?? r.startedAt ?? r.createdAt, automation.timezone)}</span>
+              {r.errorCategory && <span className="muted">{aiErrorCategoryLabel(r.errorCategory)}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  );
+}
+
+export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete, onRunNow, history }: AutomationCardProps) {
   const health = automationHealth(a);
   const nextText = a.enabled ? (a.state.nextExpectedRunAt ? formatInZone(a.state.nextExpectedRunAt, a.timezone) : 'Run manually') : 'Disabled';
   const runNowText = a.runNow.reason ? RUN_NOW_REASON_LABELS[a.runNow.reason] ?? 'Run Now is not available.' : '';
@@ -65,14 +102,18 @@ export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete
         <dt className="muted">Next expected</dt><dd style={{ margin: 0 }}>{nextText}</dd>
         <dt className="muted">Last run</dt><dd style={{ margin: 0 }}>{a.state.lastRunAt ? formatInZone(a.state.lastRunAt, a.timezone) : 'No runs yet'}</dd>
         <dt className="muted">Last success</dt><dd style={{ margin: 0 }}>{a.state.lastSuccessAt ? formatInZone(a.state.lastSuccessAt, a.timezone) : '—'}</dd>
+        {a.state.lastFailureAt && (<><dt className="muted">Last failure</dt><dd style={{ margin: 0 }}>{formatInZone(a.state.lastFailureAt, a.timezone)}</dd></>)}
         {a.state.lastErrorCategory && (<><dt className="muted">Last error</dt><dd style={{ margin: 0 }}>{aiErrorCategoryLabel(a.state.lastErrorCategory)}</dd></>)}
+        {a.state.lastTrigger && (<><dt className="muted">Last started by</dt><dd style={{ margin: 0 }}>{TRIGGER_LABELS[a.state.lastTrigger] ?? a.state.lastTrigger}</dd></>)}
+        {a.executor && (<><dt className="muted">Provider scheduler</dt><dd style={{ margin: 0 }}>{EXECUTOR_LABELS[a.executor] ?? a.executor}</dd></>)}
       </dl>
       <div style={{ ...rowStyle, justifyContent: 'flex-start' }}>
         <Button size="sm" variant="secondary" onClick={() => onEdit(a)} disabled={busy}>Edit</Button>
-        <Button size="sm" variant="secondary" disabled={!a.runNow.ready} aria-describedby={`run-now-${a.id}`}>Run now</Button>
+        <Button size="sm" variant="secondary" disabled={!a.runNow.ready || busy} onClick={() => onRunNow?.(a)} aria-describedby={`run-now-${a.id}`}>Run now</Button>
         <Button size="sm" variant="danger-outline" onClick={() => onDelete(a)} disabled={busy}>Delete</Button>
       </div>
       {!a.runNow.ready && <span id={`run-now-${a.id}`} className="muted" style={mutedSmall}>{runNowText}</span>}
+      {history}
     </li>
   );
 }
@@ -172,14 +213,17 @@ export interface AutomationsViewProps {
   load: AutomationsLoad;
   busyId: string | null;
   actionError: string | null;
+  notice?: string | null;
   onNew(): void;
   onEdit(a: AutomationView): void;
   onToggle(a: AutomationView, enabled: boolean): void;
   onDelete(a: AutomationView): void;
   onRetry(): void;
+  onRunNow?(a: AutomationView): void;
+  renderHistory?(a: AutomationView): ReactNode;
 }
 
-export function AutomationsView({ load, busyId, actionError, onNew, onEdit, onToggle, onDelete, onRetry }: AutomationsViewProps) {
+export function AutomationsView({ load, busyId, actionError, notice, onNew, onEdit, onToggle, onDelete, onRetry, onRunNow, renderHistory }: AutomationsViewProps) {
   const count = load.status === 'ready' ? load.automations.length : 0;
   return (
     <div style={stackStyle}>
@@ -189,6 +233,7 @@ export function AutomationsView({ load, busyId, actionError, onNew, onEdit, onTo
         derived from them.
       </p>
       {actionError && <p role="alert" style={{ margin: 0, color: 'var(--color-danger)' }}>{actionError}</p>}
+      {notice && <p role="status" style={{ margin: 0, ...mutedSmall }}>{notice}</p>}
       {load.status === 'loading' && <p role="status" className="muted" style={{ margin: 0 }}>Loading automations…</p>}
       {load.status === 'error' && (
         <div role="alert" style={rowStyle}>
@@ -199,7 +244,7 @@ export function AutomationsView({ load, busyId, actionError, onNew, onEdit, onTo
       {load.status === 'ready' && count === 0 && <p className="muted" style={{ margin: 0 }}>No automations yet. Create one to record when a workflow should run.</p>}
       {load.status === 'ready' && count > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {load.automations.map((a) => <AutomationCard key={a.id} automation={a} busy={busyId === a.id} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} />)}
+          {load.automations.map((a) => <AutomationCard key={a.id} automation={a} busy={busyId === a.id} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} onRunNow={onRunNow} history={renderHistory?.(a)} />)}
         </ul>
       )}
       <div>
@@ -225,6 +270,7 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
   const [attempt, setAttempt] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string | null; form: AutomationFormState } | null>(null);
   const [errors, setErrors] = useState<AutomationFormErrors>({});
   const [saving, setSaving] = useState(false);
@@ -272,6 +318,21 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
     finally { setBusyId(null); }
   };
 
+  // Reached only when the server declared Run Now ready. A fresh key per click: a double click or a retried request is the same run.
+  const onRunNow = async (a: AutomationView) => {
+    if (!activeWorkspaceId) return;
+    setBusyId(a.id);
+    setActionError(null);
+    setNotice(null);
+    try {
+      const key = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, '');
+      const out = await runAutomationNow(activeWorkspaceId, session, a.id, key);
+      setNotice(out.created ? `Run requested for “${a.name}”. It is waiting for the provider scheduler to pick it up.` : `A run for “${a.name}” was already requested.`);
+      refresh();
+    } catch (e) { setActionError(e instanceof AutomationApiError ? e.message : 'Couldn’t request the run.'); }
+    finally { setBusyId(null); }
+  };
+
   const confirmDelete = async () => {
     if (!deleting || !activeWorkspaceId) return;
     setBusyId(deleting.id);
@@ -290,6 +351,9 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
         load={activeWorkspaceId ? load : { status: 'error', message: 'Select a workspace to manage automations.' }}
         busyId={busyId}
         actionError={actionError}
+        notice={notice}
+        onRunNow={onRunNow}
+        renderHistory={(a) => (activeWorkspaceId ? <AutomationRunHistory workspaceId={activeWorkspaceId} session={session} automation={a} /> : null)}
         onNew={() => { setErrors({}); setSaveError(null); setEditing({ id: null, form: emptyAutomationForm(defaultTimeZone) }); }}
         onEdit={(a) => { setErrors({}); setSaveError(null); setEditing({ id: a.id, form: automationToForm(a, defaultTimeZone) }); }}
         onToggle={onToggle}

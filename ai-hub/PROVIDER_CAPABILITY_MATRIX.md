@@ -4,6 +4,20 @@
 
 Statuses (never collapsed into “Supported”): `VERIFIED` (observed in a real test in the operator’s account) · `DOCUMENTED` (official documentation says so; not tested here) · `APPROVAL-GATED` (works only with a human approval click) · `PLAN-GATED` (the operator’s plan does not offer it) · `BLOCKED` (the provider requires a capability JobQuest deliberately does not implement in this phase) · `NOT SUPPORTED` · `NOT TESTED`.
 
+## AI-11G scheduler adapter matrix (current for scheduled execution; evidence date 2026-10-14)
+
+Pull-executor model: the provider's own scheduled task claims one automation occurrence through JobQuest MCP. JobQuest never calls a provider. A scheduler existing (A) is not the same as a scheduled run being able to use the JobQuest connector (B); (B) is derived from use (a scheduled, claim-started run that finished), never assumed. Details: `reports/AI-11G_PROVIDER_SCHEDULER_ADAPTERS_REPORT.md`; live checks: `OPERATOR_ACCEPTANCE_AI-11G.md` (NOT RUN).
+
+| Dimension | Claude | ChatGPT | Gemini |
+|---|---|---|---|
+| A. Scheduler exists | DOCUMENTED (scheduled tasks) | DOCUMENTED (Scheduled tasks; OpenAI Help 2026-10-12) | DOCUMENTED (Scheduled Actions) |
+| B. Scheduled run can use the JobQuest connector | **UNVERIFIED** (public reports Apr-Jun 2026 of custom connectors not loading in scheduled/cloud runs) | **UNVERIFIED** (plugin availability in a task depends on plan/mode) | **UNVERIFIED** (custom-app writes need manual confirmation) |
+| Connection used | scoped connector token bound to Claude | OAuth (AI-10) | OAuth (AI-10) |
+| Schedule creation | MANUAL (copied instructions; no private API used) | MANUAL | MANUAL |
+| Claim bridge (`jobquest_claim_ai_execution`) | SUPPORTED by JobQuest | SUPPORTED | SUPPORTED |
+| Provider API key required | NO | NO | NO |
+| Capability state | UNVERIFIED (MANUAL setup) | UNVERIFIED (MANUAL setup) | UNVERIFIED (MANUAL setup) |
+
 ## AI-10 capability matrix (current — supersedes the AI-9 authentication rows below)
 
 **Verification date: 2026-10-12/13.** Method: operator live tests against the Dev Preview (stable alias) and the Dev database, cross-checked with read-only Dev database evidence (runs, findings, grants, refresh-token chains, audit events). Details: `reports/AI-10_OAUTH_RELEASE_HARDENING_REPORT.md`. Nothing here was exercised against Production.

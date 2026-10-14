@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PublicSession } from '../../api';
-import { AutomationApiError, deleteAutomation, fetchAutomationRuns, fetchAutomations, runAutomationNow, saveAutomation } from '../../api/aiAutomations';
+import { AutomationApiError, deleteAutomation, fetchAutomationRuns, fetchAutomations, fetchSchedulerStatus, saveAutomation } from '../../api/aiAutomations';
 import {
   AUTOMATION_COMPOSITE_WORKFLOWS, AUTOMATION_DELIVERY, AUTOMATION_LIMIT, AUTOMATION_NAME_MAX, AUTOMATION_PROVIDERS,
-  AUTOMATION_SECTIONS, AUTOMATION_WORKFLOWS, CADENCE_LABELS, DELIVERY_LABELS, EXECUTOR_LABELS, PROVIDER_LABELS, RUN_NOW_REASON_LABELS,
+  AUTOMATION_SECTIONS, AUTOMATION_WORKFLOWS, CADENCE_LABELS, DELIVERY_LABELS, PROVIDER_LABELS,
   RUN_STATUS_LABELS, SECTION_LABELS, TRIGGER_LABELS, WEEKDAY_LABELS, WORKFLOW_LABELS, automationHealth, automationToForm, describeSchedule, emptyAutomationForm,
   formatInZone, orderedSections, validateAutomationForm,
   type AutomationCadence, type AutomationFormErrors, type AutomationFormState, type AutomationRunView, type AutomationView,
 } from '../../lib/aiAutomation';
 import { aiErrorCategoryLabel } from '../../lib/aiHub';
+import { RUN_IN_PROVIDER_HELP, SCHEDULER_HELP, SCHEDULER_LABELS, SCHEDULER_VARIANT, connectionLabel, isSchedulerProvider, setupActionLabel, statusFor, type ProviderSchedulerStatus } from '../../lib/aiScheduler';
+import { AutomationSetupDialog, type SetupMode } from './AutomationSetupDialog';
 import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { Dialog } from '../ui/Dialog';
@@ -40,8 +42,10 @@ export interface AutomationCardProps {
   onEdit(a: AutomationView): void;
   onToggle(a: AutomationView, enabled: boolean): void;
   onDelete(a: AutomationView): void;
-  /** Only invoked when the server declared Run Now ready (an executor is connected for the provider). */
-  onRunNow?(a: AutomationView): void;
+  /** AI-11G: connection and scheduled-execution state of this automation's provider (separate facts). Omitted = not loaded. */
+  scheduler?: ProviderSchedulerStatus | null;
+  /** Opens the copyable provider setup (mode setup) or the run-once-in-the-provider instructions (mode manual). */
+  onSetup?(a: AutomationView, mode: SetupMode): void;
   /** Lazily loaded recent-run history (rendered by the panel; the card itself stays presentational). */
   history?: ReactNode;
 }
@@ -79,10 +83,11 @@ export function AutomationRunHistory({ workspaceId, session, automation }: { wor
   );
 }
 
-export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete, onRunNow, history }: AutomationCardProps) {
+export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete, scheduler, onSetup, history }: AutomationCardProps) {
   const health = automationHealth(a);
   const nextText = a.enabled ? (a.state.nextExpectedRunAt ? formatInZone(a.state.nextExpectedRunAt, a.timezone) : 'Run manually') : 'Disabled';
-  const runNowText = a.runNow.reason ? RUN_NOW_REASON_LABELS[a.runNow.reason] ?? 'Run Now is not available.' : '';
+  const supported = isSchedulerProvider(a.provider);
+  const setupLabel = setupActionLabel(a.provider);
   return (
     <li style={{ ...stackStyle, gap: '8px', padding: '12px 0', borderTop: '1px solid var(--color-border)' }} data-testid="automation-card">
       <div style={rowStyle}>
@@ -105,14 +110,23 @@ export function AutomationCard({ automation: a, busy, onEdit, onToggle, onDelete
         {a.state.lastFailureAt && (<><dt className="muted">Last failure</dt><dd style={{ margin: 0 }}>{formatInZone(a.state.lastFailureAt, a.timezone)}</dd></>)}
         {a.state.lastErrorCategory && (<><dt className="muted">Last error</dt><dd style={{ margin: 0 }}>{aiErrorCategoryLabel(a.state.lastErrorCategory)}</dd></>)}
         {a.state.lastTrigger && (<><dt className="muted">Last started by</dt><dd style={{ margin: 0 }}>{TRIGGER_LABELS[a.state.lastTrigger] ?? a.state.lastTrigger}</dd></>)}
-        {a.executor && (<><dt className="muted">Provider scheduler</dt><dd style={{ margin: 0 }}>{EXECUTOR_LABELS[a.executor] ?? a.executor}</dd></>)}
+        {supported && scheduler && (
+          <>
+            <dt className="muted">JobQuest connection</dt><dd style={{ margin: 0 }}>{connectionLabel(scheduler)}</dd>
+            <dt className="muted">Scheduled execution</dt>
+            <dd style={{ margin: 0 }}><StatusBadge variant={SCHEDULER_VARIANT[scheduler.scheduler]}>{SCHEDULER_LABELS[scheduler.scheduler]}</StatusBadge></dd>
+          </>
+        )}
+        {!supported && (<><dt className="muted">Scheduled execution</dt><dd style={{ margin: 0 }}>No provider selected</dd></>)}
       </dl>
+      {supported && scheduler && scheduler.scheduler !== 'READY' && <span className="muted" style={mutedSmall}>{SCHEDULER_HELP[scheduler.scheduler]}</span>}
       <div style={{ ...rowStyle, justifyContent: 'flex-start' }}>
         <Button size="sm" variant="secondary" onClick={() => onEdit(a)} disabled={busy}>Edit</Button>
-        <Button size="sm" variant="secondary" disabled={!a.runNow.ready || busy} onClick={() => onRunNow?.(a)} aria-describedby={`run-now-${a.id}`}>Run now</Button>
+        {setupLabel && <Button size="sm" variant="secondary" onClick={() => onSetup?.(a, 'setup')} disabled={busy}>{setupLabel}</Button>}
+        {setupLabel && <Button size="sm" variant="secondary" disabled={!a.enabled || busy} onClick={() => onSetup?.(a, 'manual')} aria-describedby={`run-provider-${a.id}`}>Run in provider</Button>}
         <Button size="sm" variant="danger-outline" onClick={() => onDelete(a)} disabled={busy}>Delete</Button>
       </div>
-      {!a.runNow.ready && <span id={`run-now-${a.id}`} className="muted" style={mutedSmall}>{runNowText}</span>}
+      {setupLabel && <span id={`run-provider-${a.id}`} className="muted" style={mutedSmall}>{a.enabled ? RUN_IN_PROVIDER_HELP : 'Enable this automation to run it in the provider.'}</span>}
       {history}
     </li>
   );
@@ -219,18 +233,19 @@ export interface AutomationsViewProps {
   onToggle(a: AutomationView, enabled: boolean): void;
   onDelete(a: AutomationView): void;
   onRetry(): void;
-  onRunNow?(a: AutomationView): void;
+  schedulers?: readonly ProviderSchedulerStatus[] | null;
+  onSetup?(a: AutomationView, mode: SetupMode): void;
   renderHistory?(a: AutomationView): ReactNode;
 }
 
-export function AutomationsView({ load, busyId, actionError, notice, onNew, onEdit, onToggle, onDelete, onRetry, onRunNow, renderHistory }: AutomationsViewProps) {
+export function AutomationsView({ load, busyId, actionError, notice, onNew, onEdit, onToggle, onDelete, onRetry, schedulers, onSetup, renderHistory }: AutomationsViewProps) {
   const count = load.status === 'ready' ? load.automations.length : 0;
   return (
     <div style={stackStyle}>
       <p className="muted" style={{ margin: 0, ...mutedSmall }}>
-        An automation defines which workflow should run, with which provider, and when. JobQuest does not run it: create the matching
-        schedule in the provider (for example a Claude scheduled task); results arrive as AI findings and the status below is
-        derived from them.
+        An automation defines which workflow should run, with which provider, and when. Your provider runs it: copy the setup
+        instructions into a scheduled task in the provider, which then asks JobQuest for the work and sends back AI findings. JobQuest
+        can’t create that schedule or start a run itself, and the status below is derived from what the provider actually did.
       </p>
       {actionError && <p role="alert" style={{ margin: 0, color: 'var(--color-danger)' }}>{actionError}</p>}
       {notice && <p role="status" style={{ margin: 0, ...mutedSmall }}>{notice}</p>}
@@ -244,7 +259,7 @@ export function AutomationsView({ load, busyId, actionError, notice, onNew, onEd
       {load.status === 'ready' && count === 0 && <p className="muted" style={{ margin: 0 }}>No automations yet. Create one to record when a workflow should run.</p>}
       {load.status === 'ready' && count > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {load.automations.map((a) => <AutomationCard key={a.id} automation={a} busy={busyId === a.id} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} onRunNow={onRunNow} history={renderHistory?.(a)} />)}
+          {load.automations.map((a) => <AutomationCard key={a.id} automation={a} busy={busyId === a.id} onEdit={onEdit} onToggle={onToggle} onDelete={onDelete} scheduler={statusFor(schedulers, a.provider)} onSetup={onSetup} history={renderHistory?.(a)} />)}
         </ul>
       )}
       <div>
@@ -267,6 +282,8 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
   activeWorkspaceId: string | null; session: PublicSession; defaultTimeZone?: string;
 }) {
   const [load, setLoad] = useState<AutomationsLoad>({ status: 'loading' });
+  const [schedulers, setSchedulers] = useState<ProviderSchedulerStatus[] | null>(null);
+  const [setupFor, setSetupFor] = useState<{ automation: AutomationView; mode: SetupMode } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -287,6 +304,8 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
       (automations) => live && setLoad({ status: 'ready', automations }),
       () => live && setLoad({ status: 'error', message: 'Couldn’t load automations. The rest of Settings is unaffected.' }),
     );
+    // Provider scheduling state is secondary: if it cannot load, the automations still render (without the scheduling rows).
+    fetchSchedulerStatus(activeWorkspaceId, session).then((s) => live && setSchedulers(s), () => live && setSchedulers(null));
     return () => { live = false; };
   }, [activeWorkspaceId, attempt, session.access_token]);
 
@@ -318,21 +337,6 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
     finally { setBusyId(null); }
   };
 
-  // Reached only when the server declared Run Now ready. A fresh key per click: a double click or a retried request is the same run.
-  const onRunNow = async (a: AutomationView) => {
-    if (!activeWorkspaceId) return;
-    setBusyId(a.id);
-    setActionError(null);
-    setNotice(null);
-    try {
-      const key = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, '');
-      const out = await runAutomationNow(activeWorkspaceId, session, a.id, key);
-      setNotice(out.created ? `Run requested for “${a.name}”. It is waiting for the provider scheduler to pick it up.` : `A run for “${a.name}” was already requested.`);
-      refresh();
-    } catch (e) { setActionError(e instanceof AutomationApiError ? e.message : 'Couldn’t request the run.'); }
-    finally { setBusyId(null); }
-  };
-
   const confirmDelete = async () => {
     if (!deleting || !activeWorkspaceId) return;
     setBusyId(deleting.id);
@@ -352,7 +356,8 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
         busyId={busyId}
         actionError={actionError}
         notice={notice}
-        onRunNow={onRunNow}
+        schedulers={schedulers}
+        onSetup={(automation, mode) => { setNotice(null); setSetupFor({ automation, mode }); }}
         renderHistory={(a) => (activeWorkspaceId ? <AutomationRunHistory workspaceId={activeWorkspaceId} session={session} automation={a} /> : null)}
         onNew={() => { setErrors({}); setSaveError(null); setEditing({ id: null, form: emptyAutomationForm(defaultTimeZone) }); }}
         onEdit={(a) => { setErrors({}); setSaveError(null); setEditing({ id: a.id, form: automationToForm(a, defaultTimeZone) }); }}
@@ -360,6 +365,9 @@ export function AutomationsPanel({ activeWorkspaceId, session, defaultTimeZone =
         onDelete={setDeleting}
         onRetry={refresh}
       />
+      {setupFor && activeWorkspaceId && (
+        <AutomationSetupDialog workspaceId={activeWorkspaceId} session={session} automation={setupFor.automation} mode={setupFor.mode} onClose={() => { setSetupFor(null); refresh(); }} />
+      )}
       {editing && (
         <Dialog
           isOpen

@@ -3,6 +3,24 @@ CURRENT PHASE:
 JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
 
 CURRENT SUB-PHASE:
+AI-11G PROVIDER SCHEDULER ADAPTERS - CODE COMPLETE ON FEATURE BRANCH `feature/ai11g-provider-scheduler-adapters` (from development `d1b5483291be4064020d3f3c6357f62d9daea791`); integrating to development. LIVE PROVIDER ACCEPTANCE NOT RUN. AI-11H NOT started.
+
+STATUS:
+Decision: PULL executor. The provider (Claude / ChatGPT / Gemini) is the scheduled worker; JobQuest never calls a provider, needs no provider API key and makes no LLM call. A provider scheduled task calls `jobquest_claim_ai_execution(automationId)`; JobQuest atomically decides whether that occurrence is due (AI-11F calculator) and whether the caller wins it (NOT_DUE / ALREADY_CLAIMED / ALREADY_COMPLETED / DISABLED stop cleanly, nothing created); the winner gets a bounded credential-free context with ordered steps + canonical step guides and the `externalRunId`. The provider submits ONE `jobquest.ai-result` through the existing `jobquest_submit_ai_result` (heterogeneous findings in one claimed run; no child-step mechanism needed), JobQuest finalizes the claimed run and composes the canonical Daily Digest LAST. `jobquest_report_ai_execution_failure` exists only so a claimed run does not stay RUNNING. MCP 13 -> 15 tools (12 reads + submit + claim + failure; both new tools need `ai:ingest`, no core mutation tool). Provider identity is derived server-side (`McpPrincipal.provider` from `oauth_clients.provider` / new `ai_connector_tokens.provider`), never from a request; wrong-provider, wrong-workspace, unbound, disabled and manual-only claims are refused. Stale RUNNING claims are failed (TIMEOUT) by the next claim after 60 min and retried as a new linked run (AI-11F contract, max 3). Two audit defects fixed in the one additive migration `20261105100000`: claimed runs now adopt the provider's `sources` (source health), and the discovery backstop applies to job leads in any workflow (composite runs cannot bypass it). Readiness is derived from evidence (NOT_CONNECTED / SETUP_REQUIRED / UNVERIFIED / READY); connection never implies a working scheduler; capability for all three providers is UNVERIFIED/MANUAL setup (no first-party evidence that scheduled runs can use a custom MCP connector). Setup = server-generated copyable claim-first instructions (`GET /api/ai/automations/:id/setup`); Run Now stays honestly NO_EXECUTOR and the UI offers "Run in provider". Live provider scheduling has NOT been tested: operator acceptance plan `OPERATOR_ACCEPTANCE_AI-11G.md` needs approval. Report: `reports/AI-11G_PROVIDER_SCHEDULER_ADAPTERS_REPORT.md`.
+
+BASE BRANCH:
+development (d1b5483291be4064020d3f3c6357f62d9daea791 + AI-11G merge)
+
+NEXT EXACT STEP:
+Remote Dev DB needs AI-11G migration `20261105100000` applied only after development CI is green (verify ref xpnkasclquplmrcmhsif, inspect ledger, dry-run, apply only that migration; AI-11F `20261104100000` must already be applied). Then the OPERATOR decides whether to run the provider acceptance plan (Claude -> ChatGPT -> Gemini, one at a time, Dev/Preview only). Do NOT merge development to main or deploy Production; Production needs 20261101100000, 20261102100000, 20261103100000, 20261104100000 and 20261105100000 only at the single post-AI-11 promotion.
+```
+
+(Previous state, AI-11F, kept for history:)
+```
+CURRENT PHASE:
+JobQuest 2.2 / AI-11 (Scheduled Intelligence & Digest Automation) - AI-10 CLOSED, Production certified
+
+CURRENT SUB-PHASE:
 AI-11F SCHEDULE / CADENCE EXECUTION - COMPLETE ON FEATURE BRANCH `feature/ai11f-schedule-execution` (from development `78075e9c33db1f02cc6c4710e52af4a8962de2f0`); integrating to development. AI-11G (Provider Scheduler Adapters) NOT started.
 
 STATUS:

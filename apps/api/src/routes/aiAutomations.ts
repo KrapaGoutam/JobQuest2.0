@@ -16,7 +16,7 @@ import { caller } from './scope';
  * (deleting never does). NOT exposed through MCP: a provider can never read or change an automation definition.
  * AI-11F adds Run Now (the SAME execution lifecycle as a scheduled occurrence; truthful: 409 NO_EXECUTOR and nothing
  * created until a provider executor is configured) and the per-automation run history. The executor entry points
- * (enqueue / claim / report / retry) are service functions for the AI-11G adapters, deliberately NOT HTTP routes.
+ * (enqueue / claim / report / retry) are service functions, deliberately NOT HTTP routes: AI-11G exposes claim and failure-report to providers ONLY through the authenticated MCP tools (jobquest_claim_ai_execution / jobquest_report_ai_execution_failure). This file adds the owner-session scheduler-status and setup-instruction reads.
  */
 export const aiAutomations = new Hono();
 

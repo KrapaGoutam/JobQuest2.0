@@ -70,10 +70,10 @@ describe.skipIf(!ready || !local)('AI-7 — MCP calendar tool (real DB)', () => 
   });
   const submit = (token: string, result: unknown) => call(token, 'jobquest_submit_ai_result', { result });
 
-  it('AI7M-01 · the calendar tool is a read-only ai:read tool; the surface is twelve tools with exactly one write and no calendar write tool', async () => {
+  it('AI7M-01 · the calendar tool is a read-only ai:read tool; the surface is thirteen tools with exactly one write and no calendar write tool', async () => {
     const rw = await toolNames(tokens.carolRw!);
     expect(rw).toContain(TOOL);
-    expect(rw).toHaveLength(12);
+    expect(rw).toHaveLength(13);
     expect(rw.filter((t: string) => /submit|create|import|delete|update|apply|calendar.*(write|event|rsvp|accept)/.test(t) && t !== TOOL)).toEqual(['jobquest_submit_ai_result']);
     expect(rw.join()).not.toMatch(/submit_calendar|create_event|update_event|delete_event|respond|rsvp/);
     expect(await toolNames(tokens.carolRead!)).toContain(TOOL);

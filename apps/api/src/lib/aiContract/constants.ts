@@ -125,9 +125,30 @@ export const DISCOVERY_LIMITS = {
   maxResultsMax: 25, maxExperienceYears: 30, toleranceYears: 5, reasons: 8, reasonChars: 200, sourceNoteChars: 200,
 } as const;
 
-export const RECRUITER_RELATIONSHIPS = ['recruiter', 'talent_acquisition', 'hiring_manager', 'sourcer', 'other'] as const;
+// AI-11E: technical_recruiter / qa_manager / engineering_manager / engineering_leader are new role categories; the older
+// spellings (recruiter, sourcer, other) stay valid. Order here is NOT the ranking: see RECRUITER_ROLE_RANK in recruiter.ts.
+export const RECRUITER_RELATIONSHIPS = [
+  'recruiter', 'talent_acquisition', 'hiring_manager', 'sourcer', 'other',
+  'technical_recruiter', 'qa_manager', 'engineering_manager', 'engineering_leader',
+] as const;
 export const RECRUITER_VERIFICATIONS = ['verified', 'uncertain'] as const;
 export const RECRUITER_UNCERTAIN_FIELDS = ['name', 'role', 'company', 'relationship', 'contact'] as const;
+/** What evidence made a person VERIFIED. A verified person always carries one (and a cited public URL). */
+export const RECRUITER_VERIFICATION_BASES = ['company_page', 'professional_profile', 'job_posting', 'prospecting_source', 'other_public_source'] as const;
+/** How a work email was obtained. Anything else (inferred, guessed, pattern ...) is never stored. */
+export const RECRUITER_EMAIL_BASES = ['published', 'prospecting_source'] as const;
+export const RECRUITER_DISCOVERY_MODES = ['job_linked', 'target_company'] as const;
+/** Role categories the user can prefer in Settings (a subset of the relationships above). */
+export const RECRUITER_PREFERRED_ROLES = ['technical_recruiter', 'talent_acquisition', 'qa_manager', 'engineering_manager', 'hiring_manager', 'engineering_leader'] as const;
+export const RECRUITER_LIMITS = {
+  targetCompanies: 25, companyChars: 120, maxNewContactsMax: 10, maxNewContactsDefault: 5, jobLinkedRunCap: 10,
+  /** Duplicate-suppression window for standing networking (documented fixed default; not user-configurable). */
+  suppressionDays: 30, whyChars: 300, noteChars: 300, emailSubjectChars: 120, emailBodyChars: 1200,
+} as const;
+export type RecruiterRelationship = (typeof RECRUITER_RELATIONSHIPS)[number];
+export type RecruiterVerificationBasis = (typeof RECRUITER_VERIFICATION_BASES)[number];
+export type RecruiterDiscoveryMode = (typeof RECRUITER_DISCOVERY_MODES)[number];
+export type RecruiterPreferredRole = (typeof RECRUITER_PREFERRED_ROLES)[number];
 
 export type EmailCategory = (typeof EMAIL_CATEGORIES)[number];
 export type EmailGroup = (typeof EMAIL_GROUPS)[number];

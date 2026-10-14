@@ -180,7 +180,7 @@ describe('service guard rails (no database needed)', () => {
 describe('no unattended path and no MCP core write', () => {
   it('the MCP registry still has exactly one write (submit AI result) and no core mutation tool', async () => {
     const { MCP_TOOLS } = await import('../../apps/api/src/mcp/tools');
-    expect(MCP_TOOLS).toHaveLength(12);
+    expect(MCP_TOOLS).toHaveLength(13);
     const writes = MCP_TOOLS.filter((t) => t.annotations.readOnlyHint !== true);
     expect(writes.map((t) => t.name)).toEqual(['jobquest_submit_ai_result']);
     const names = MCP_TOOLS.map((t) => t.name.toLowerCase()).join(' ');

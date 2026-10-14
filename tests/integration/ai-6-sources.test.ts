@@ -362,7 +362,7 @@ describe.skipIf(!ready || !local)('AI-6 — external intelligence sources (real 
     const pat = mine.find((x) => x.name === 'Pat 12')!;
     expect(pat).toMatchObject({ company: 'Recruitco', verification: 'verified', provider: 'claude', contact: null });
     expect(pat.relatedLead).toMatchObject({ company: 'Recruitco', title: 'Staff Engineer' }); // resolved via the stored lead's canonical URL
-    expect(mine.find((x) => x.name === 'Pat 12c')!.contact).toEqual({ email: 'ops@recruitco.example', phone: null, sourceUrl: 'https://recruitco.example/contact' });
+    expect(mine.find((x) => x.name === 'Pat 12c')!.contact).toEqual({ email: 'ops@recruitco.example', sourceUrl: 'https://recruitco.example/contact' }); // AI-11E: no phone is ever stored
     expect((await list(carol, { search: 'pat 12c' })).map((x) => x.name)).toEqual(['Pat 12c']);
     // no fabricated association: an unrelated recruiter has no lead
     await submit(recruiterDoc('12x', { payload: { company: 'Elsewhere', related_job: { job_url: 'https://jobs.example.com/nope/404' } } }));

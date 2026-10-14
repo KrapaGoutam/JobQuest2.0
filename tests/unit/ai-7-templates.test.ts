@@ -88,8 +88,8 @@ describe('Claude Calendar template (AI-7)', () => {
     expect(def.providers.claude).toBe('template_ready');
   });
 
-  it('the operator guide covers calendar cadence, state reporting, no scheduler and the twelve-tool surface', () => {
+  it('the operator guide covers calendar cadence, state reporting, no scheduler and the thirteen-tool surface', () => {
     const g = read('ai-hub/provider-workflows/CLAUDE_SCHEDULED_TASKS.md');
-    for (const phrase of ['Calendar intelligence (AI-7)', 'every weekday morning', 'afternoon', 'JobQuest stores no next-run time', 'has no scheduler', 'calendar_review', 'Always report current state', 'never connects to the', 'twelve tools in total, one write']) expect(g).toContain(phrase);
+    for (const phrase of ['Calendar intelligence (AI-7)', 'every weekday morning', 'afternoon', 'JobQuest stores no next-run time', 'has no scheduler', 'calendar_review', 'Always report current state', 'never connects to the', 'thirteen tools in total, one write']) expect(g).toContain(phrase);
   });
 });

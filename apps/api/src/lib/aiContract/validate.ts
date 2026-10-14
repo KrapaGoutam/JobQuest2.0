@@ -7,7 +7,7 @@ import {
   AI_MAX_SUPPORTED_MINOR, AI_PRIORITIES, AI_PROVIDERS, AI_SOURCE_TYPES, AI_SUGGESTION_ACTIONS,
   AI_SOURCE_STATUSES, AI_SUGGESTION_TARGET_TYPES, AI_SUPPORTED_MAJORS, AI_WORKFLOWS, DISCOVERY_LIMITS, JOB_REMOTE_SCOPES,
   EMAIL_ACTION_STATES, EMAIL_CATEGORIES, EMAIL_GROUPS, EMAIL_STAGE_HINTS, EMAIL_URGENCIES, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES, JOB_SALARY_PERIODS, JOB_WORK_ARRANGEMENTS,
-  RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
+  RECRUITER_DISCOVERY_MODES, RECRUITER_EMAIL_BASES, RECRUITER_LIMITS, RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS, RECRUITER_VERIFICATION_BASES, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
   CALENDAR_CATEGORIES, CALENDAR_CATEGORY_ALIASES, CALENDAR_DEADLINE_CATEGORIES, CALENDAR_LIMITS, CALENDAR_PAYLOAD_VERSION,
   CALENDAR_RAW_KEYS, CALENDAR_STATUSES,
   type AiFindingKind, type AiPriority, type AiProvider, type AiSuggestionTargetType, type AiTriggerType, type CalendarCategory, type CalendarStatus,
@@ -15,11 +15,12 @@ import {
 } from './constants';
 import { emailCategoryGroup, resolveEmailUrgency } from './emailTriage';
 import { isActionType, validateActionProposal } from './actions';
-import { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, isIsoDate, type DedupeInput } from './dedupe';
+import { buildDedupeKey, calendarLogicalKey, canonicalizeUrl, isIsoDate, recruiterIdentity, type DedupeInput } from './dedupe';
+import { isPersonalEmailDomain, isSpeculativeWhy, sanitizeConnectionNote, sanitizeEmailDraft } from './recruiter';
 import { effectiveRemoteScope, leadLogicalKey } from './discovery';
 import { isIanaTimeZone, localMidnight, localToInstant, stringOffsetMinutes, zoneOffsetMinutes } from './calendarTime';
 import type {
-  AiCalendarProjection, AiFinding, AiIngestRunInput, AiIssue, AiJobLeadProjection, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
+  AiCalendarProjection, AiFinding, AiIngestRunInput, AiIssue, AiJobLeadProjection, AiRecruiterProjection, AiResult, AiSourceRef, AiSuggestion, AiValidationResult,
   JsonRecord, JsonValue,
 } from './types';
 
@@ -656,51 +657,111 @@ function emailPayload(c: Ctx, v: unknown, path: string, raw: Obj, category: stri
 }
 
 // ---- recruiter_intel -----------------------------------------------------------------------
+// AI-11E. A person is reported only with a cited PUBLIC source. Verified needs a named basis. A work email is kept only when a
+// source is cited, it is a business address and it was published or returned by a prospecting tool (never inferred). No phone
+// number is stored. Drafts are text for a human to review; JobQuest never sends them.
 
 const RECRUITER_KEYS = [
   'version', 'recruiter_name', 'role_title', 'company', 'relationship', 'verification', 'uncertain_fields', 'source_name',
   'profile_url', 'channel', 'contact_email', 'contact_phone', 'contact_source_url', 'related_job',
+  // AI-11E
+  'verification_basis', 'person_id', 'posting_contact', 'why', 'discovery_mode', 'contact_email_basis', 'draft_note', 'draft_email',
 ] as const;
 const RELATED_JOB_KEYS = ['job_url', 'external_job_id', 'source_name', 'company', 'title', 'location', 'posted_date'] as const;
 const EMAIL_ADDR = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
-const PHONE = /^\+?[0-9][0-9 ().-]{5,24}[0-9]$/;
 
-function recruiterPayload(c: Ctx, v: unknown, path: string, ctx: { sourceUrl: string | null }): SourceParts {
-  const empty = { payload: {}, identity: {} };
+interface RecruiterParts extends SourceParts { recruiter?: AiRecruiterProjection }
+
+function recruiterPayload(c: Ctx, v: unknown, path: string, ctx: { sourceUrl: string | null }): RecruiterParts {
+  const empty: RecruiterParts = { payload: {}, identity: {} };
   if (!isObj(v)) { c.err(path, 'required', 'a recruiter_intel payload with recruiter_name and company is required'); return empty; }
   c.strip(v, RECRUITER_KEYS, path);
   const e0 = c.errors.length;
   sourceVersion(c, v.version, path);
-  const name = text(c, v.recruiter_name, `${path}.recruiter_name`, SOURCE_KEY_LIMITS.short, { required: true });
-  const company = text(c, v.company, `${path}.company`, SOURCE_KEY_LIMITS.short, { required: true });
-  const role = text(c, v.role_title, `${path}.role_title`, SOURCE_KEY_LIMITS.short);
-  const relationship = enumField(c, v.relationship, `${path}.relationship`, RECRUITER_RELATIONSHIPS, { talent: 'talent_acquisition', ta: 'talent_acquisition', hiring_manager: 'hiring_manager' });
+  // Public identity text never carries contact details: an address or phone number pasted into a name or title is removed.
+  const plain = (s: string | null, p: string): string | null => {
+    if (s === null) return null;
+    const r = redactContact(s);
+    if (r.replace(/\s+/g, ' ') !== s.replace(/\s+/g, ' ')) c.warn(p, 'contact_text_redacted', 'email addresses and phone numbers are not stored');
+    return r || null;
+  };
+  const name = plain(text(c, v.recruiter_name, `${path}.recruiter_name`, SOURCE_KEY_LIMITS.short, { required: true }), `${path}.recruiter_name`);
+  const company = plain(text(c, v.company, `${path}.company`, SOURCE_KEY_LIMITS.short, { required: true }), `${path}.company`);
+  const role = plain(text(c, v.role_title, `${path}.role_title`, SOURCE_KEY_LIMITS.short), `${path}.role_title`);
+  const relationship = enumField(c, v.relationship, `${path}.relationship`, RECRUITER_RELATIONSHIPS, {
+    talent: 'talent_acquisition', ta: 'talent_acquisition', hiring_manager: 'hiring_manager', tech_recruiter: 'technical_recruiter',
+    qa_lead: 'qa_manager', test_manager: 'qa_manager', eng_manager: 'engineering_manager', head_of_engineering: 'engineering_leader',
+  });
   const profileUrl = url(c, v.profile_url, `${path}.profile_url`);
   const sourceName = text(c, v.source_name, `${path}.source_name`, 100);
   const channel = text(c, v.channel, `${path}.channel`, 64);
   // A recruiter is only ever reported with a public source citation (profile or source URL).
   if (!profileUrl && !ctx.sourceUrl) c.err(path, 'recruiter_source_required', 'a public source URL (source.url or payload.profile_url) is required; do not report recruiters without one');
 
-  // Public contact details only when a cited source URL accompanies them. Never guessed or inferred.
-  const emailRaw = text(c, v.contact_email, `${path}.contact_email`, 254);
-  const phoneRaw = text(c, v.contact_phone, `${path}.contact_phone`, 32);
-  const contactSource = url(c, v.contact_source_url, `${path}.contact_source_url`);
-  let email: string | null = null, phone: string | null = null;
-  if (emailRaw) { if (EMAIL_ADDR.test(emailRaw)) email = emailRaw.toLowerCase(); else c.err(`${path}.contact_email`, 'email', 'not a valid email address'); }
-  if (phoneRaw) { if (PHONE.test(phoneRaw)) phone = phoneRaw; else c.err(`${path}.contact_phone`, 'phone', 'not a valid phone number'); }
-  if ((email || phone) && !contactSource) {
-    c.warn(`${path}.contact_email`, 'contact_uncited_dropped', 'contact details without contact_source_url are dropped; never guess or infer contact details');
-    email = null; phone = null;
-  }
+  // A provider's stable person id is identity only (scoped by source_name); it is never displayed or returned.
+  const personId = text(c, v.person_id, `${path}.person_id`, AI_LIMITS.id);
 
+  // Work email: cited, business, and actually published / returned by a prospecting tool. Never guessed or inferred. No phone is stored.
+  const emailRaw = text(c, v.contact_email, `${path}.contact_email`, 254);
+  const contactSource = url(c, v.contact_source_url, `${path}.contact_source_url`);
+  const emailBasis = enumField(c, v.contact_email_basis, `${path}.contact_email_basis`, RECRUITER_EMAIL_BASES);
+  let email: string | null = null;
+  if (emailRaw) {
+    if (!EMAIL_ADDR.test(emailRaw)) c.err(`${path}.contact_email`, 'email', 'not a valid email address');
+    else if (isPersonalEmailDomain(emailRaw)) c.warn(`${path}.contact_email`, 'contact_personal_email_dropped', 'personal mailboxes are never stored; only a work email returned by a cited source is accepted');
+    else if (!contactSource) c.warn(`${path}.contact_email`, 'contact_uncited_dropped', 'contact details without contact_source_url are dropped; never guess or infer contact details');
+    else email = emailRaw.toLowerCase();
+  }
+  if (v.contact_phone !== undefined && v.contact_phone !== null) c.warn(`${path}.contact_phone`, 'contact_phone_not_stored', 'phone numbers are never stored; use the cited public profile instead');
+
+  // Verification: the provider's claim is honoured only with a named basis and a cited public URL; otherwise it is uncertain, visibly.
   let verification = enumField(c, v.verification, `${path}.verification`, RECRUITER_VERIFICATIONS) ?? 'uncertain';
+  const basis = enumField(c, v.verification_basis, `${path}.verification_basis`, RECRUITER_VERIFICATION_BASES);
   if (verification === 'verified' && (!name || !company || (!profileUrl && !ctx.sourceUrl))) verification = 'uncertain';
+  if (verification === 'verified' && !basis) {
+    verification = 'uncertain';
+    c.warn(`${path}.verification`, 'verified_without_basis', 'verified requires verification_basis (company_page, professional_profile, job_posting, prospecting_source or other_public_source); recorded as uncertain');
+  }
   let uncertain: string[] = [];
   if (v.uncertain_fields !== undefined && v.uncertain_fields !== null) {
     if (!Array.isArray(v.uncertain_fields)) c.err(`${path}.uncertain_fields`, 'type', 'must be an array');
     else uncertain = [...new Set(v.uncertain_fields.map((x) => oneOf(c, slug(x), `${path}.uncertain_fields`, RECRUITER_UNCERTAIN_FIELDS, false)).filter((x): x is (typeof RECRUITER_UNCERTAIN_FIELDS)[number] => x !== null))];
   }
   if (uncertain.length > 0) verification = 'uncertain';
+
+  // "Why this person" is bounded evidence, not enthusiasm or a guess about hiring. Contact details never belong in it.
+  let why = text(c, v.why, `${path}.why`, RECRUITER_LIMITS.whyChars, { truncate: true });
+  if (why) {
+    why = redactContact(why);
+    if (!why || isSpeculativeWhy(why)) { c.warn(`${path}.why`, 'why_speculative_dropped', 'the explanation must state evidence (a stored lead, the target list, a verified role); it was dropped'); why = null; }
+  }
+
+  // Outreach drafts: optional, bounded, never sent. Unsupported claims, links and contact details are refused (not edited).
+  let draftNote: string | null = null, draftEmail: { subject: string; body: string } | null = null;
+  if (v.draft_note !== undefined && v.draft_note !== null) {
+    if (typeof v.draft_note !== 'string') c.err(`${path}.draft_note`, 'type', 'must be a string');
+    else {
+      const r = sanitizeConnectionNote(v.draft_note);
+      if (r.ok) draftNote = r.value; else c.warn(`${path}.draft_note`, `draft_${r.reason}`, `the connection note was dropped (${r.reason.replace(/_/g, ' ')}); notes are at most ${RECRUITER_LIMITS.noteChars} characters with no links, contact details or claims JobQuest cannot support`);
+    }
+  }
+  if (v.draft_email !== undefined && v.draft_email !== null) {
+    if (!isObj(v.draft_email)) c.err(`${path}.draft_email`, 'type', 'must be an object');
+    else {
+      c.strip(v.draft_email, ['subject', 'body'], `${path}.draft_email`);
+      const subject = typeof v.draft_email.subject === 'string' ? v.draft_email.subject : '';
+      const body = typeof v.draft_email.body === 'string' ? v.draft_email.body : '';
+      if (!subject.trim() || !body.trim()) c.warn(`${path}.draft_email`, 'draft_empty', 'an email draft needs a subject and a body; it was dropped');
+      else {
+        const r = sanitizeEmailDraft(subject, body);
+        if (r.ok) draftEmail = r.value; else c.warn(`${path}.draft_email`, `draft_${r.reason}`, `the email draft was dropped (${r.reason.replace(/_/g, ' ')}); no links, contact details or claims JobQuest cannot support`);
+      }
+    }
+  }
+
+  const postingContact = v.posting_contact === true || basis === 'job_posting';
+  if (v.posting_contact !== undefined && v.posting_contact !== null && typeof v.posting_contact !== 'boolean') c.err(`${path}.posting_contact`, 'type', 'must be a boolean');
+  const modeHint = enumField(c, v.discovery_mode, `${path}.discovery_mode`, RECRUITER_DISCOVERY_MODES);
 
   // related_job: a contract-local reference by public job identity. JobQuest computes the lead's
   // dedupe key itself and resolves it inside the caller's own workspace at read time; a database id
@@ -731,13 +792,33 @@ function recruiterPayload(c: Ctx, v: unknown, path: string, ctx: { sourceUrl: st
   }
   if (c.errors.length > e0 || !name || !company) return empty;
 
-  const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION, recruiter_name: name, company, verification };
+  // Identity comes from the validated payload only (a provider's free-text `dedupe` object never overrides it).
+  const identity: DedupeInput = { name, company, role, profile_url: profileUrl, source_name: sourceName?.toLowerCase() ?? null, person_id: personId, email };
+  const ident = recruiterIdentity(identity);
+  if (!ident.ok) { c.err(path, 'dedupe', ident.reason); return empty; }
+
+  const out: JsonRecord = { version: SOURCE_PAYLOAD_VERSION, recruiter_name: name, company, company_key: ident.companyKey, verification };
   const put = (k: string, val: JsonValue | null) => { if (val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0)) out[k] = val; };
   put('role_title', role); put('relationship', relationship); put('uncertain_fields', uncertain); put('source_name', sourceName);
-  put('profile_url', profileUrl); put('channel', channel); put('contact_email', email); put('contact_phone', phone);
-  put('contact_source_url', email || phone ? contactSource : null); put('related_job', relatedJob); put('related_job_key', relatedKey);
+  put('profile_url', profileUrl); put('channel', channel); put('contact_email', email); put('contact_email_basis', email ? emailBasis ?? 'published' : null);
+  put('contact_source_url', email ? contactSource : null); put('related_job', relatedJob); put('related_job_key', relatedKey);
+  put('verification_basis', verification === 'verified' ? basis : null); put('posting_contact', postingContact ? true : null);
+  put('why', why); put('draft_note', draftNote); put('draft_email', draftEmail);
+  // Server-derived identity (never provider input): every tier this person can be recognised by, so a later submission that
+  // reaches the same person through a different tier resolves to this finding instead of creating a duplicate.
+  put('profile_key', ident.profileKey); put('person_key', ident.personKey); put('identity_keys', ident.keys);
   if (byteLen(out) > AI_LIMITS.payloadBytes) c.err(path, 'too_large', 'recruiter payload too large');
-  return { payload: out, identity: { name, company, role, profile_url: profileUrl } };
+  const recruiter: AiRecruiterProjection = {
+    candidate_keys: ident.keys, profile_key: ident.profileKey, person_key: ident.personKey, company_key: ident.companyKey, mode_hint: modeHint,
+    has_related_job: relatedJob !== null, posting_contact: postingContact, relationship, role_title: role, verification,
+    verification_basis: verification === 'verified' ? basis : null,
+  };
+  return { payload: out, identity, recruiter };
+}
+
+/** Email addresses and phone numbers are never retained from free text a provider attached to a person (links are kept: they are the citation). */
+function redactContact(s: string): string {
+  return s.replace(ADDRESS_TEXT, '').replace(PHONE_TEXT, '').replace(/<\s*>|\(\s*\)|\[\s*\]/g, '').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
 // ---- calendar_event (AI-7) -----------------------------------------------------------------
@@ -1029,6 +1110,7 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
   let occurredOut = occurred_at;
   let categoryOut = category;
   let calendar: AiCalendarProjection | undefined;
+  let recruiter: AiRecruiterProjection | undefined;
   const sourceUrl = typeof source_ref.url === 'string' ? source_ref.url : null;
   if (kind === 'job_lead') {
     const r = jobLeadPayload(c, raw.payload, `${path}.payload`, { dedupe: dedupeIn, sourceUrl });
@@ -1056,7 +1138,12 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
     }
   } else if (kind === 'recruiter_intel') {
     const r = recruiterPayload(c, raw.payload, `${path}.payload`, { sourceUrl });
-    body = r.payload; identity = r.identity;
+    body = r.payload; identity = r.identity; if (r.recruiter) recruiter = r.recruiter;
+    // A person's free text never keeps phone numbers or email addresses (links stay: they are the citation).
+    // If nothing is left once an address or number is removed, the title falls back to the validated name and company (never the raw text).
+    title = redactContact(title ?? '') || (typeof body.recruiter_name === 'string' ? `${body.recruiter_name}, ${String(body.company ?? '')}` : title);
+    if (summary) summary = redactContact(summary) || null;
+    if (evidence) evidence = redactContact(evidence) || null;
   } else if (kind === 'calendar_event') {
     // The finding time is the item's chronological anchor (its start, or its deadline), not a provider-supplied value.
     const r = calendarPayload(c, raw.payload, `${path}.payload`, { dedupe: dedupeIn, title, category, categoryPath: `${path}.category` });
@@ -1072,6 +1159,8 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
     for (const [k, val] of Object.entries(dedupeIn)) {
       // Calendar identity is derived from the validated payload (company/title/start), never from free dedupe text.
       if (kind === 'calendar_event' && (k === 'company' || k === 'title')) continue;
+      // Recruiter identity is derived from the validated payload, never from free dedupe text.
+      if (kind === 'recruiter_intel') continue;
       if (val !== null && val !== undefined && val !== '') (merged as Record<string, unknown>)[k] = val;
     }
     const r = buildDedupeKey(kind, { ...merged, provider, title: kind === 'job_lead' ? merged.title ?? title : kind === 'calendar_event' ? title : dedupeIn.title ?? title, summary });
@@ -1080,7 +1169,7 @@ function finding(c: Ctx, raw: unknown, path: string, provider: AiProvider | null
   if (c.errors.length > e0 || !kind || !title || !priority) return null;
   return {
     kind, dedupe_key, category: categoryOut, priority, confidence: conf, title, summary, occurred_at: occurredOut, due_at: dueAt, source_ref,
-    match_hints: hints, evidence, payload: body, ...(jobLead ? { job_lead: jobLead } : {}), ...(calendar ? { calendar } : {}),
+    match_hints: hints, evidence, payload: body, ...(jobLead ? { job_lead: jobLead } : {}), ...(calendar ? { calendar } : {}), ...(recruiter ? { recruiter } : {}),
   };
 }
 

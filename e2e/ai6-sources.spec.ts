@@ -260,13 +260,13 @@ test.describe('AI-6 external intelligence sources', () => {
 
     // ---- 7) RECRUITERS -----------------------------------------------------------------------------------------
     await page.goto('/ai-hub/recruiters');
-    await expect(page.getByRole('heading', { name: 'Recruiter Intelligence', level: 2 })).toBeVisible();
-    const recruiters = page.getByRole('list', { name: 'Recruiter intelligence' }).getByRole('article');
+    await expect(page.getByRole('heading', { name: 'Recruiters to connect with', level: 2 })).toBeVisible(); // AI-11E: grouped page
+    const recruiters = page.getByRole('article'); // AI-11E: the list is split into Job-linked / Target companies / Other groups
     await expect(recruiters).toHaveCount(2);
-    await expect(page.getByText('Public source cited')).toBeVisible();
-    await expect(page.getByText('Unverified', { exact: true })).toBeVisible();
-    await expect(page.getByText('marked these as uncertain: role')).toBeVisible();
-    await expect(page.getByText('Engineer 0 at Company 0 (stored job lead)')).toBeVisible(); // resolved inside the owner's scope
+    await expect(recruiters.getByText('Verified', { exact: true })).toBeVisible();
+    await expect(recruiters.getByText('Uncertain', { exact: true })).toBeVisible();
+    await expect(page.getByText('Not verified: the company or role association was not proven (role)')).toBeVisible();
+    await expect(page.getByText('Engineer 0 at Company 0', { exact: true })).toBeVisible(); // resolved inside the owner's scope
     await expect(page.getByText(/reported by the provider; not in your job leads/)).toBeVisible();
     await expect(page.getByText(/contactable/i)).toHaveCount(0);
     await page.getByLabel('Provider').selectOption('chatgpt');

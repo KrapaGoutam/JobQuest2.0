@@ -7,7 +7,7 @@ import {
   AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
   AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_ACTION_STATES, EMAIL_CATEGORIES,
   EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_URGENCIES,
-  JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS,
+  JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, RECRUITER_DISCOVERY_MODES, RECRUITER_RELATIONSHIPS, RECRUITER_VERIFICATIONS,
 } from '../lib/aiContract';
 import { CALENDAR_ORDERS } from '../services/aiCalendarService';
 import { JOB_LEAD_SORTS, SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
@@ -85,6 +85,8 @@ export const listJobLeadsInput = z.strictObject({
 });
 /** AI-11D: read-only view of the owner's Job Discovery profile. No arguments: workspace and owner come from the connection. */
 export const getJobDiscoveryProfileInput = z.strictObject({});
+/** AI-11E: read-only view of the owner's Recruiter Discovery preferences (target companies, role categories, bounds). No arguments. */
+export const getRecruiterDiscoveryProfileInput = z.strictObject({});
 export const listEmailIntelligenceInput = z.strictObject({
   category: z.enum(EMAIL_CATEGORIES).optional(),
   group: z.enum(EMAIL_GROUPS).optional().describe('job_related or other'),
@@ -100,6 +102,10 @@ export const listEmailIntelligenceInput = z.strictObject({
 export const listRecruiterIntelInput = z.strictObject({
   search: searchText.optional().describe('Matches recruiter name or company'),
   company: searchText.optional(),
+  verification: z.enum(RECRUITER_VERIFICATIONS).optional().describe('verified or uncertain'),
+  relationship: z.enum(RECRUITER_RELATIONSHIPS).optional(),
+  mode: z.enum(RECRUITER_DISCOVERY_MODES).optional().describe('job_linked (researched for a stored lead) or target_company (standing networking)'),
+  relatedLeadId: id.optional().describe('Only people already researched for this stored job lead'),
   discoveredSince: iso.optional(),
   discoveredBefore: iso.optional(),
   ...sourceCommon,
@@ -147,4 +153,5 @@ const page = { page: z.number(), pageSize: z.number(), hasNext: z.boolean() };
 export const listOutput = z.object({ items: z.array(z.looseObject({ id: z.string() })), ...page, notice });
 export const getApplicationOutput = z.object({ item: z.looseObject({ id: z.string() }), notice });
 export const getJobDiscoveryProfileOutput = z.object({ item: z.looseObject({ configured: z.boolean() }), notice });
+export const getRecruiterDiscoveryProfileOutput = z.object({ item: z.looseObject({ configured: z.boolean() }), notice });
 export const submitAiResultOutput = z.looseObject({ success: z.boolean(), runId: z.string().nullable(), correlationId: z.string() });

@@ -17,7 +17,7 @@
 import { admin as adminClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  CLIENT_KEY, EXECUTION_FAILURE_CATEGORIES, EXECUTION_STALE_AFTER_MS, computeNextExpectedRun, executionPlan, getDueOccurrences, claimSteps, planComposesDigest,
+  CLAIMED_GUIDANCE, CLIENT_KEY, EXECUTION_FAILURE_CATEGORIES, EXECUTION_STALE_AFTER_MS, computeNextExpectedRun, executionPlan, getDueOccurrences, claimSteps, planComposesDigest,
   type AutomationDefinition, type ClaimStep, type ExecutionFailureCategory, type ExecutionTrigger,
 } from '../lib/aiContract';
 import { claimExecution, reportExecutionFailure, requestExecution, requestRetry, type ExecutionDeps, type ExecutionError, type ExecutionResult } from './aiExecutionService';
@@ -104,7 +104,7 @@ async function latestAttempt(deps: BridgeDeps, ctx: BridgeContext, rootRunId: st
 }
 
 const GUIDANCE: Record<ClaimStatus, string> = {
-  CLAIMED: 'Run the steps in order with your own tools, then submit ONE result with jobquest_submit_ai_result using submit.externalRunId, or call jobquest_report_ai_execution_failure if you cannot finish.',
+  CLAIMED: CLAIMED_GUIDANCE,
   NOT_DUE: 'Nothing is due for this automation right now. Stop. Do not run any step and do not submit a result.',
   ALREADY_CLAIMED: 'This occurrence is already being executed. Stop. Do not run any step and do not submit a result.',
   ALREADY_COMPLETED: 'This occurrence already finished. Stop. Do not run any step and do not submit a result.',

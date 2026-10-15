@@ -340,7 +340,7 @@ function digestPayload(c: Ctx, v: unknown, path: string, dedupeDate: string | nu
 // job_lead / email_event / recruiter_intel. Providers submit untrusted text; everything below
 // is allow-listed, bounded and normalized. Nothing is invented: absent facts stay absent.
 
-const SOURCE_KEY_LIMITS = { short: 200, medium: 300, long: 1000, skill: 100, skills: 30 } as const;
+export const SOURCE_KEY_LIMITS = { short: 200, medium: 300, long: 1000, skill: 100, skills: 30 } as const;
 const slug = (v: unknown): unknown => (typeof v === 'string' ? v.trim().toLowerCase().replace(/[\s-]+/g, '_') : v);
 
 function sourceVersion(c: Ctx, v: unknown, path: string) {

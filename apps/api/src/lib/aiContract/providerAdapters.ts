@@ -11,6 +11,7 @@
 // No provider schedule is created by JobQuest and no private provider API is used: setup is a copyable instruction set.
 
 import type { AutomationProvider, ExecutionStep } from './automation';
+import { jobLeadContractRules } from './resultContractGuide';
 
 export const SCHEDULER_PROVIDERS = ['claude', 'chatgpt', 'gemini'] as const;
 export type SchedulerProvider = (typeof SCHEDULER_PROVIDERS)[number];
@@ -200,7 +201,7 @@ export const STEP_GUIDES: Readonly<Record<ExecutionStep, StepGuide>> = {
       'Prefer recent postings: keep only postings whose real posted time is inside the profile freshness window; omit posted_at when it is not stated (never default it to now).',
       'Honor Remote-US semantics: remote_scope "us" only if the posting says the whole United States; "restricted"/"region" otherwise. Honor excluded title words, the experience limit and the software-QA gate (accept a "Quality Assurance" role only with software-testing evidence).',
       'Never apply, sign in, submit a form or message anyone. Never fabricate salary, posted time, company, title, years or skills; omit what the posting does not state. A job lead is never an application.',
-      'Each lead: dedupe {job_url (canonical), external_job_id, source_name}; title, summary; payload {version:"1.0", company, role_title, location, work_arrangement, remote_scope, employment_type, source_name, job_url, posted_at, match_score (0-100), match_reasoning, fit_reasons, gap_reasons, description (plain text)}. At most the profile maximum, best matches first.',
+      ...jobLeadContractRules(),
       SOURCE_STATUS_RULE,
     ],
   },

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { api, type PublicSession } from '../api';
 import { supabase } from '../supabase';
 import { shiftDay, type DigestRow } from '../lib/aiDigest';
+import type { WeeklyDigest } from '../lib/aiWeekly';
 import { zonedWallTimeToUtcIso } from '../lib/time';
 
 // READ-ONLY selects with the user's session (RLS is the authority) plus one explicit,
@@ -62,4 +63,16 @@ export async function generateTodayDigest(workspaceId: string, session: PublicSe
   const r = await api<{ digest_date?: string; duplicate?: boolean; error?: { message?: string } }>('/ai/digest/generate', { workspace_id: workspaceId }, session.access_token);
   if (r.status !== 200 || !r.data.digest_date) throw new Error(r.data.error?.message ?? 'Could not generate the digest.');
   return { digestDate: r.data.digest_date, duplicate: r.data.duplicate === true };
+}
+
+export class WeeklyApiError extends Error {
+  constructor(public code: string, message: string) { super(message); }
+}
+
+/** AI-11H: the Weekly Digest for the owner's week (null = the current week). Read-only; the server computes it from the owner's records. */
+export async function fetchWeeklyDigest(workspaceId: string, session: PublicSession, weekStart: string | null): Promise<WeeklyDigest> {
+  const qs = `workspace_id=${encodeURIComponent(workspaceId)}${weekStart ? `&week_start=${encodeURIComponent(weekStart)}` : ''}`;
+  const r = await api<WeeklyDigest & { error?: { code?: string; message?: string } }>(`/ai/digest/weekly?${qs}`, undefined, session.access_token);
+  if (r.status !== 200 || r.data.kind !== 'weekly_digest') throw new WeeklyApiError(r.data.error?.code ?? 'WEEKLY_FAILED', r.data.error?.message ?? 'Could not build the weekly digest.');
+  return r.data;
 }

@@ -162,3 +162,62 @@ At the time of writing, one Gemini client and one ChatGPT client still have live
 ## 8. Next
 
 Development integration (`--no-ff`, one push, one development CI). Then STOP: main and Production remain frozen until the separately authorised release.
+
+## 9. Production closure addendum (2026-10-13)
+
+**AI-10 STATUS: PRODUCTION CERTIFIED / COMPLETE.** This supersedes the "pending development integration" status at the top of this report (kept as written history).
+
+### 9.1 Final release facts
+
+- Production main: `455a0120860405462b73647eca6a65ecd7fad6a7` (main CI `38426359777` success). Development: `5fc2bc4ceb5516b3b6ac69139a6769421e758f64`.
+- Production DB migration head: `20261031100000_ai_hub_oauth_state_length` (29 migrations). `oauth_authorization_requests.state` is `varchar(2048)`.
+- Production ordering followed DB-first: the ordered Production migrations (section 5) were applied before the application deployment; the state-length migration was applied to Production before the hotfix code reached Production.
+- `EXTENSION_TOKEN_ENV=live` proven from Production-issued `jq_oauth_live_` client ids. Unchanged.
+- Production runtime: GET / 200, GET /api/health 200, OAuth authorization-server metadata 200, MCP protected-resource metadata 200, unauthenticated POST /api/mcp 401. AI Hub flags active.
+
+### 9.2 Provider matrix (Production)
+
+| Provider | Result | Validated |
+|---|---|---|
+| Claude | PASS | bearer MCP auth; 11 tools (10 read + 1 ingest); no provider-facing core mutation tool; representative reads; harmless AI Hub ingest; no application/task/status mutation; credential revocation; post-revocation denial |
+| Gemini | PASS | OAuth Authorization Code + PKCE S256; Production `jq_oauth_live_` client; consent + token exchange; MCP initialize; 11 tools; reads; harmless ingest; no core mutation; refresh-token rotation; client/grant/session revocation; post-revocation MCP denial |
+| ChatGPT | PASS | User-Defined OAuth client (`jq_oauth_live_`); consent; MCP initialize; tools/list 11 tools; fresh application read; harmless ingest; no core mutation; refresh rotated naturally in-session; client/grant/session revocation; post-revocation `auth_invalid`. Run `79583298-4e96-45e5-82eb-5796ff566054` |
+
+Smoke-test isolation: no application, task or status was mutated by any provider test; the only writes were harmless AI Hub ingests.
+
+### 9.3 Gemini OAuth state hotfix
+
+Original AI-10 assumed OAuth `state` <= 512 chars. Real Gemini on Production sent opaque state ~1200 chars and exposed the defect. Fix: route maximum 512 -> 2048 and DB `varchar(512)` -> `varchar(2048)` (finite bound retained); PKCE, state requirement, exact redirect matching, resource binding and scopes unchanged. Branch `fix/ai10-gemini-oauth-state-length`, commit `3288138e9e8a4807b19e6991161f00fb775aff06`, development merge `5fc2bc4c`, main merge `455a0120`, migration `20261031100000_ai_hub_oauth_state_length.sql`. A real ~1200-char-state Production authorization then succeeded. Note: the "state (8-512 chars)" wording in section 1 predates this hotfix; the current bound is 8..2048.
+
+### 9.4 Read-only closure check (this session, no writes, no credentials, no provider tests)
+
+| Item | Result |
+|---|---|
+| Production main SHA | `455a0120860405462b73647eca6a65ecd7fad6a7` (origin/main; main CI success) |
+| Production DB head | `20261031100000` (read-only migration ledger listing) |
+| Production health / discovery / MCP | GET / 200, /api/health 200, AS metadata 200, PRM 200, unauthenticated POST /api/mcp 401 |
+| Live OAuth clients (not revoked) | 0 |
+| Live grants (not revoked) | 0 |
+| Live OAuth sessions (not revoked) | 0 |
+| Live connector tokens (not revoked) | 0 |
+| Smoke findings | 3 remain (not dismissed; synthetic provider smoke). Dismiss via supported AI Hub UI only; no manual DELETE. Does not block closure |
+| Deployed-SHA check on Vercel | not rechecked in closure (health only) |
+
+### 9.5 Post-release backlog (P1-P9; numbering preserved)
+
+P1-P8 are unchanged from section 4 (P1 failed `/authorize` has no server-side reason; P2 `/api/oauth/*` not behind `AI_HUB_ENABLED`; P3 code replay does not revoke tokens already issued; P4 no automated concurrent-refresh / replay-revocation test; P5 `/revoke` no rate limit and no audit row; P6 ingested `provider` label not bound to the OAuth client; P7 expired OAuth rows never purged; P8 live validation of refresh-reuse detection and scheduled/unattended provider use). Production observation reinforces P1: first-stage rejected `/authorize` requests (as hit by the Gemini state defect) log too little structured reason information.
+
+- **P9 (new)** Vercel builds emit non-fatal TypeScript diagnostics because `@vercel/node` injects `strict:false` under its current tsconfig handling, which disagrees with the repository (strict CI passes). Audited runtime risk: LOW. Not hotfixed in AI-10 closure.
+
+Other tracked items (not P-numbered):
+
+- Improved rejected-`/authorize` reason logging = P1 (observability work).
+- Scheduled workflows, Gmail/email triage, job discovery and recruiter intelligence move to **AI-11** (JobQuest 2.2). They were intentionally not required to certify OAuth/MCP connectivity and are the primary objective of the next feature release; they are NOT abandoned or out of scope.
+- Provider scheduling adapters (Claude, then ChatGPT, then Gemini) = AI-11G.
+- Refresh-reuse / advanced OAuth abuse testing = P8 (and P3/P4).
+- **Production DB password rotation: SHELVED by operator choice; PENDING security maintenance.** Not rotated in this closure; no credentials requested or created.
+- Three synthetic smoke findings remain in Production; operator may dismiss via the AI Hub UI.
+
+### 9.6 Scope statement
+
+AI-10 delivers provider connectivity and security (OAuth 2.1, MCP, revocation). It does not mean AI automation is finished. Next: JobQuest 2.2 / AI-11 Scheduled Intelligence & Digest Automation (see `ROADMAP.md`), starting with AI-11A Automation Foundation (determine reuse of `ai_workflow_configs`, `ai_runs`, `ai_findings` and AI Hub settings/UI first). No AI-11 implementation, migration or schema change has been made.

@@ -4,12 +4,14 @@
 // same constants the database CHECKs and the AI contract use.
 import { z } from 'zod';
 import {
-  AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES,
-  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_CATEGORIES,
-  JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
+  AI_FINDING_KINDS, AI_FINDING_STATUSES, AI_LIMITS, AI_PRIORITIES, AI_PROVIDERS, AI_RUN_STATUSES, EXECUTION_FAILURE_CATEGORIES,
+  AI_SUGGESTION_ACTIONS, AI_SUGGESTION_STATUSES, AI_WORKFLOWS, CALENDAR_CATEGORIES, CALENDAR_STATUSES, EMAIL_ACTION_STATES, EMAIL_CATEGORIES,
+  EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_URGENCIES,
+  JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, RECRUITER_DISCOVERY_MODES, RECRUITER_RELATIONSHIPS, RECRUITER_VERIFICATIONS,
 } from '../lib/aiContract';
 import { CALENDAR_ORDERS } from '../services/aiCalendarService';
-import { SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
+import { CLAIM_STATUSES } from '../services/aiExecutorBridgeService';
+import { JOB_LEAD_SORTS, SOURCE_SEARCH_MAX, SOURCE_STATUS_FILTERS } from '../services/aiExternalIntelligenceService';
 import {
   APPLICATION_STAGES, APPLICATION_STATUSES, APP_READ_MAX_PAGE, APP_READ_MAX_PAGE_SIZE, APP_SEARCH_MAX_LENGTH,
 } from '../services/applicationReadService';
@@ -77,10 +79,21 @@ export const listJobLeadsInput = z.strictObject({
   discoveredBefore: iso.optional(),
   postedSince: calendarDate.optional(),
   postedBefore: calendarDate.optional(),
+  recentHours: z.union([z.literal(12), z.literal(24), z.literal(48), z.literal(72)]).optional().describe('Only leads posted (or, when the posting time is unknown, first stored) within the last 12, 24, 48 or 72 hours'),
+  remoteScope: z.enum(JOB_REMOTE_SCOPES).optional().describe('Remote roles by the geography they admit: us = open to the whole United States, restricted = certain states only, region = a specific region'),
+  sort: z.enum(JOB_LEAD_SORTS).optional().describe('freshness (default: best known posting time, then match), match, or discovered'),
   ...sourceCommon,
 });
+/** AI-11D: read-only view of the owner's Job Discovery profile. No arguments: workspace and owner come from the connection. */
+export const getJobDiscoveryProfileInput = z.strictObject({});
+/** AI-11E: read-only view of the owner's Recruiter Discovery preferences (target companies, role categories, bounds). No arguments. */
+export const getRecruiterDiscoveryProfileInput = z.strictObject({});
 export const listEmailIntelligenceInput = z.strictObject({
   category: z.enum(EMAIL_CATEGORIES).optional(),
+  group: z.enum(EMAIL_GROUPS).optional().describe('job_related or other'),
+  urgency: z.enum(EMAIL_URGENCIES).optional().describe('HIGH, MEDIUM or LOW'),
+  actionState: z.enum(EMAIL_ACTION_STATES).optional(),
+  applicationMatch: z.enum(EMAIL_MATCH_STATES).optional().describe('Derived from the owner\'s applications; evaluated over the newest 200 items'),
   company: searchText.optional(),
   needsAttention: z.boolean().optional(),
   receivedSince: iso.optional(),
@@ -90,6 +103,10 @@ export const listEmailIntelligenceInput = z.strictObject({
 export const listRecruiterIntelInput = z.strictObject({
   search: searchText.optional().describe('Matches recruiter name or company'),
   company: searchText.optional(),
+  verification: z.enum(RECRUITER_VERIFICATIONS).optional().describe('verified or uncertain'),
+  relationship: z.enum(RECRUITER_RELATIONSHIPS).optional(),
+  mode: z.enum(RECRUITER_DISCOVERY_MODES).optional().describe('job_linked (researched for a stored lead) or target_company (standing networking)'),
+  relatedLeadId: id.optional().describe('Only people already researched for this stored job lead'),
   discoveredSince: iso.optional(),
   discoveredBefore: iso.optional(),
   ...sourceCommon,
@@ -105,6 +122,21 @@ export const listCalendarIntelligenceInput = z.strictObject({
   order: z.enum(CALENDAR_ORDERS).optional().describe('asc = soonest first (default); desc = latest first'),
   ...sourceCommon,
 });
+// ---- AI-11G execution tools (ai:ingest). The provider NEVER supplies a provider, user or workspace: identity is the credential's. ----
+export const claimAiExecutionInput = z.strictObject({
+  automationId: id.describe('The JobQuest automation this scheduled task is bound to (from its setup instructions)'),
+  trigger: z.enum(['scheduled', 'manual']).optional().describe('scheduled (default) = claim the due occurrence; manual = an attended run the owner started in the provider'),
+  clientKey: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional().describe('Required for trigger manual: a fresh key of 8-64 letters, digits, _ or -'),
+});
+export const reportAiExecutionFailureInput = z.strictObject({
+  runId: id.describe('The runId returned by the claim'),
+  category: z.enum(EXECUTION_FAILURE_CATEGORIES),
+  summary: z.string().max(2000).describe('One short plain-text line; no secrets, links or email addresses (JobQuest removes them and keeps at most 200 characters)'),
+});
+const claimStatuses = z.enum(CLAIM_STATUSES);
+export const claimAiExecutionOutput = z.looseObject({ status: claimStatuses, automationId: z.string(), guidance: z.string() });
+export const reportAiExecutionFailureOutput = z.looseObject({ runId: z.string(), status: z.string(), changed: z.boolean() });
+
 export const listAiSuggestionsInput = z.strictObject({
   status: z.enum(AI_SUGGESTION_STATUSES).optional(),
   findingId: id.optional(),
@@ -136,4 +168,6 @@ const notice = z.string();
 const page = { page: z.number(), pageSize: z.number(), hasNext: z.boolean() };
 export const listOutput = z.object({ items: z.array(z.looseObject({ id: z.string() })), ...page, notice });
 export const getApplicationOutput = z.object({ item: z.looseObject({ id: z.string() }), notice });
+export const getJobDiscoveryProfileOutput = z.object({ item: z.looseObject({ configured: z.boolean() }), notice });
+export const getRecruiterDiscoveryProfileOutput = z.object({ item: z.looseObject({ configured: z.boolean() }), notice });
 export const submitAiResultOutput = z.looseObject({ success: z.boolean(), runId: z.string().nullable(), correlationId: z.string() });

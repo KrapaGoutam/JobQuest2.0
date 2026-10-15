@@ -8,8 +8,9 @@ import { randomUUID } from 'node:crypto';
 import { admin } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AI_TRIGGER_TYPES, toIngestRunInput, validateAiResult,
-  type AiErrorCategory, type AiFinding, type AiIssue, type AiRunStatus, type AiSuggestion, type AiTriggerType,
+  AI_TRIGGER_TYPES, discoveryProfileFromRow, evaluateDiscoveryPolicy, mergeRecruiterPayload, planRecruiterBatch, recruiterPreferencesFromRow, recruiterSubmissionAdds,
+  toIngestRunInput, validateAiResult,
+  type AiErrorCategory, type AiFinding, type AiIssue, type AiRunStatus, type AiSuggestion, type AiTriggerType, type JsonRecord, type RecruiterPlanItem,
 } from '../lib/aiContract';
 
 // ---- public types -----------------------------------------------------------
@@ -61,6 +62,21 @@ export interface AiIngestCounts {
   suggestionsFailed: number;
   /** Items the validator dropped before persistence. */
   rejectedItems: number;
+  /**
+   * AI-11D: job leads the owner's discovery profile excluded (stale, wrong arrangement, hard-excluded title ...) or that
+   * exceeded the per-run maximum. Policy outcomes, NOT errors: they never make a run PARTIAL.
+   */
+  filteredItems: number;
+  filteredStale: number;
+  filteredUnknownDate: number;
+  filteredOverLimit: number;
+  /**
+   * AI-11E: recruiter findings the recruiter policy did not store (an obviously irrelevant person, a mode or role the owner switched
+   * off, a contact surfaced recently, a second person at one company, a company with an active contact today). Also policy, NOT errors.
+   */
+  filteredIrrelevant: number;
+  filteredRecent: number;
+  filteredCompanyDuplicate: number;
 }
 
 export interface AiIngestResult {
@@ -90,6 +106,8 @@ export interface AiRpcClient {
 
 export interface AiIntegrationDeps {
   client?: AiRpcClient;
+  /** Clock for the discovery freshness policy (tests). */
+  now?: () => number;
   env?: Record<string, string | undefined>;
   log?: (entry: Record<string, unknown>) => void;
 }
@@ -106,6 +124,7 @@ const CHECK_VIOLATION = '23514';
 const emptyCounts = (): AiIngestCounts => ({
   findingsCreated: 0, findingsDuplicate: 0, findingsUpdated: 0, findingsClosed: 0, findingsFailed: 0,
   suggestionsCreated: 0, suggestionsDuplicate: 0, suggestionsSkipped: 0, suggestionsFailed: 0, rejectedItems: 0,
+  filteredItems: 0, filteredStale: 0, filteredUnknownDate: 0, filteredOverLimit: 0, filteredIrrelevant: 0, filteredRecent: 0, filteredCompanyDuplicate: 0,
 });
 
 const defaultLog = (entry: Record<string, unknown>) => console.info(JSON.stringify(entry));
@@ -179,6 +198,8 @@ const countsForRpc = (c: AiIngestCounts): Record<string, number> => ({
   findings_closed: c.findingsClosed, findings_failed: c.findingsFailed, suggestions_created: c.suggestionsCreated,
   suggestions_duplicate: c.suggestionsDuplicate, suggestions_skipped: c.suggestionsSkipped,
   suggestions_failed: c.suggestionsFailed, rejected_items: c.rejectedItems,
+  filtered_items: c.filteredItems, filtered_stale: c.filteredStale, filtered_unknown_date: c.filteredUnknownDate, filtered_over_limit: c.filteredOverLimit,
+  filtered_irrelevant: c.filteredIrrelevant, filtered_recent: c.filteredRecent, filtered_company_duplicate: c.filteredCompanyDuplicate,
 });
 
 // ---- entry point ------------------------------------------------------------
@@ -277,13 +298,22 @@ export async function ingestAiResult(context: AiTrustedContext, input: unknown, 
   const counts = result.counts;
   let systemic: AiServiceError | null = null;
   const findingIds = new Map<number, { id: string; closed: boolean }>();
+  // AI-11D: deterministic discovery policy (only when this owner has a profile). Best effort: if the profile cannot be read,
+  // leads are stored as before rather than the whole run being lost.
+  const skipLead = await discoveryFilter(client, ctx, data, deps.now ?? Date.now, counts);
+  // AI-11E: recruiter policy (one person per company, bounded new contacts, role relevance, no re-surfacing) and identity resolution.
+  const recruiters = await recruiterPolicy(client, ctx, data, deps.now ?? Date.now, counts);
   for (const [i, f] of data.findings.entries()) {
+    if (skipLead.has(i) || recruiters.skip.has(i)) continue;
     // AI-6: the same posting may reach JobQuest with a different strongest identity (job id vs URL).
     // Reuse the existing lead's key (same owner/workspace, provider-independent) so it is updated, not duplicated.
     // AI-7: the same calendar event may arrive under another provider's id, or as a reschedule with a new id / no id.
     const dedupeKey = f.kind === 'job_lead' && f.job_lead ? await resolveJobLeadKey(client, ctx, f)
       : f.kind === 'calendar_event' && f.calendar ? await resolveCalendarKey(client, ctx, f) : f.dedupe_key;
-    const out = await callRpc(client, 'rpc_ai_ingest_finding', { p_actor_id: ctx.userId, p_run_id: runId, ...toFindingParams({ ...f, dedupe_key: dedupeKey }, data.schema_version) });
+    const out = await callRpc(client, 'rpc_ai_ingest_finding', {
+      p_actor_id: ctx.userId, p_run_id: runId,
+      ...toFindingParams({ ...f, dedupe_key: recruiters.key.get(i) ?? dedupeKey, payload: recruiters.payload.get(i) ?? f.payload }, data.schema_version),
+    });
     const id = out.ok ? str(out.data.finding_id) : null;
     const outcome = out.ok ? str(out.data.outcome) : null;
     if (!out.ok || !id) {
@@ -330,6 +360,7 @@ export async function ingestAiResult(context: AiTrustedContext, input: unknown, 
   if (!systemic) {
     for (const [i, s] of data.suggestions.entries()) {
       const parent = findingIds.get(s.finding_index);
+      if (!parent && skipLead.has(s.finding_index)) { counts.suggestionsSkipped++; continue; } // its lead was filtered by the discovery profile
       if (!parent) { counts.suggestionsFailed++; result.errors.push(svcError('CREATE_SUGGESTION_FAILED', { path: `suggestions[${i}]`, message: 'Suggestion references a finding that was not persisted' })); continue; }
       if (parent.closed) { counts.suggestionsSkipped++; continue; } // closed finding: a proposal on it would be refused
       const out = await callRpc(client, 'rpc_ai_create_suggestion', { p_actor_id: ctx.userId, p_finding_id: parent.id, ...toSuggestionParams(s) });
@@ -393,13 +424,114 @@ function toFindingParams(f: AiFinding, schemaVersion: string) {
   };
 }
 
+/**
+ * AI-11D: which accepted-finding indexes the owner's discovery profile excludes. Only runs that carry job leads, for an owner with a stored profile
+ * are filtered. Stale / unknown-date / hard-excluded leads are dropped; the survivors are capped at the profile's maximum
+ * (best provider score first, stable by position). A suggestion on a dropped lead is skipped by the caller.
+ */
+async function discoveryFilter(
+  client: AiRpcClient, ctx: { userId: string; workspaceId: string }, data: { workflow: string; findings: AiFinding[] }, now: () => number, counts: AiIngestCounts,
+): Promise<Set<number>> {
+  const skip = new Set<number>();
+  // AI-11G: a composite automation (Morning Digest) submits its job leads inside a daily_brief / other run, so the owner's profile
+  // applies to every submitted job lead whatever the run's workflow is - the deterministic backstop cannot be bypassed by the wrapper.
+  if (!data.findings.some((f) => f.kind === 'job_lead' && f.job_lead)) return skip;
+  const out = await callRpc(client, 'rpc_ai_job_discovery_profile_get', { p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId });
+  const row = out.ok ? out.data.profile : null;
+  if (!out.ok || typeof row !== 'object' || row === null) return skip;
+  const profile = discoveryProfileFromRow(row);
+  const nowMs = now();
+  const kept: { i: number; score: number }[] = [];
+  data.findings.forEach((f, i) => {
+    if (f.kind !== 'job_lead' || !f.job_lead) return;
+    const d = evaluateDiscoveryPolicy(profile, { ...f.job_lead, summary: f.summary }, nowMs);
+    if (d.accept) { kept.push({ i, score: f.job_lead.match_score ?? -1 }); return; }
+    skip.add(i); counts.filteredItems++;
+    if (d.reasons.includes('stale_posting')) counts.filteredStale++;
+    else if (d.reasons.includes('unknown_posted_date')) counts.filteredUnknownDate++;
+  });
+  kept.sort((a, b) => b.score - a.score || a.i - b.i);
+  for (const k of kept.slice(profile.maximumResults)) { skip.add(k.i); counts.filteredItems++; counts.filteredOverLimit++; }
+  return skip;
+}
+
+interface RecruiterOutcome { skip: Set<number>; key: Map<number, string>; payload: Map<number, JsonRecord> }
+
+/**
+ * AI-11E: server-side recruiter policy. Resolves each person to an existing finding through every identity tier (so a second source
+ * or a second tier never creates a duplicate), merges a re-submission into the stored person, verifies the discovery mode against the
+ * owner's target list and applies the deterministic plan (one person per company, bounded new contacts, relevance, suppression).
+ * Best effort around reads: if preferences or identity cannot be read, the finding is stored under its own computed key with the
+ * generic defaults rather than the whole run being lost. Dropped findings are COUNTED and never make a run PARTIAL.
+ */
+async function recruiterPolicy(
+  client: AiRpcClient, ctx: { userId: string; workspaceId: string }, data: { findings: AiFinding[] }, now: () => number, counts: AiIngestCounts,
+): Promise<RecruiterOutcome> {
+  const out: RecruiterOutcome = { skip: new Set(), key: new Map(), payload: new Map() };
+  const indexes = data.findings.flatMap((f, i) => (f.kind === 'recruiter_intel' && f.recruiter ? [i] : []));
+  if (indexes.length === 0) return out;
+
+  const pr = await callRpc(client, 'rpc_ai_recruiter_prefs_get', { p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId });
+  const prow = pr.ok ? pr.data.prefs : null;
+  const prefs = pr.ok && typeof prow === 'object' && prow !== null ? recruiterPreferencesFromRow(prow) : null;
+
+  const nowMs = now();
+  const items: RecruiterPlanItem[] = [];
+  const stored = new Map<number, Record<string, unknown>>();
+  for (const i of indexes) {
+    const r = data.findings[i]!.recruiter!;
+    const res = await callRpc(client, 'rpc_ai_resolve_recruiter_key', {
+      p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId, p_keys: r.candidate_keys, p_profile_key: r.profile_key, p_person_key: r.person_key,
+    });
+    const k = res.ok ? res.data.dedupe_key : null;
+    let existing: RecruiterPlanItem['existing'] = null;
+    if (typeof k === 'string' && /^[!-~]{1,255}$/.test(k)) {
+      out.key.set(i, k);
+      const created = res.ok && typeof res.data.created_at === 'string' ? Date.parse(res.data.created_at) : NaN;
+      existing = { createdAtMs: Number.isFinite(created) ? created : nowMs, adds: true };
+      const p = res.ok ? res.data.payload : null;
+      if (typeof p === 'object' && p !== null && !Array.isArray(p)) {
+        stored.set(i, p as Record<string, unknown>);
+        existing.adds = recruiterSubmissionAdds(p as Record<string, unknown>, data.findings[i]!.payload);
+      }
+    }
+    items.push({ index: i, recruiter: r, existing });
+  }
+
+  const companyKeys = [...new Set(items.map((it) => it.recruiter.company_key))].slice(0, 200);
+  const act = await callRpc(client, 'rpc_ai_recruiter_active_companies', {
+    p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId, p_company_keys: companyKeys, p_since: new Date(nowMs - 86_400_000).toISOString(),
+  });
+  const active = new Set<string>(act.ok && Array.isArray(act.data.company_keys) ? act.data.company_keys.filter((x): x is string => typeof x === 'string') : []);
+
+  for (const d of planRecruiterBatch({ items, prefs, activeCompanyKeys: active, nowMs })) {
+    if (!d.keep) {
+      out.skip.add(d.index); counts.filteredItems++;
+      if (d.reason === 'over_limit') counts.filteredOverLimit++;
+      else if (d.reason === 'recent' || d.reason === 'company_active') counts.filteredRecent++;
+      else if (d.reason === 'company_duplicate') counts.filteredCompanyDuplicate++;
+      else counts.filteredIrrelevant++;
+      continue;
+    }
+    const f = data.findings[d.index]!;
+    const old = stored.get(d.index);
+    const merged = (old ? mergeRecruiterPayload(old, f.payload) : { ...f.payload }) as JsonRecord;
+    // The mode is decided here, from facts the server can check (a related job; the owner's own target list), never from the provider's claim alone.
+    const mode = merged.related_job ? 'job_linked' : d.mode;
+    if (mode) merged.discovery_mode = mode; else delete merged.discovery_mode;
+    if (d.stripDrafts) { delete merged.draft_note; delete merged.draft_email; }
+    out.payload.set(d.index, merged);
+  }
+  return out;
+}
+
 /** Best-effort: a lookup failure must never block ingestion, so any problem falls back to the computed key. */
 async function resolveJobLeadKey(client: AiRpcClient, ctx: { userId: string; workspaceId: string }, f: AiFinding): Promise<string> {
   const lead = f.job_lead;
-  if (!lead || (!lead.canonical_url && !lead.external_job_id)) return f.dedupe_key;
+  if (!lead || (!lead.canonical_url && !lead.external_job_id && !lead.logical_key)) return f.dedupe_key;
   const out = await callRpc(client, 'rpc_ai_resolve_job_lead_key', {
     p_actor_id: ctx.userId, p_workspace_id: ctx.workspaceId, p_canonical_url: lead.canonical_url,
-    p_source_name: lead.source_name, p_external_job_id: lead.external_job_id,
+    p_source_name: lead.source_name, p_external_job_id: lead.external_job_id, p_logical_key: lead.logical_key,
   });
   const key = out.ok ? out.data.dedupe_key : null;
   return typeof key === 'string' && /^[!-~]{1,255}$/.test(key) ? key : f.dedupe_key;

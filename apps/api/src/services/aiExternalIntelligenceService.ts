@@ -12,9 +12,13 @@
 // sender addresses, provider ids) can appear. Job descriptions are NOT returned by the
 // list reads (they can be 30,000 characters); the UI reads them for one lead at a time.
 import {
-  AI_PROVIDERS, EMAIL_ATTENTION_CATEGORIES, EMAIL_CATEGORIES, JOB_EMPLOYMENT_TYPES, JOB_WORK_ARRANGEMENTS,
-  STRONG_MATCH_THRESHOLD, type AiFindingStatus, type AiPriority, type AiProvider, type JsonRecord,
+  AI_PROVIDERS, RECRUITER_DISCOVERY_MODES, RECRUITER_RELATIONSHIPS, RECRUITER_VERIFICATIONS, EMAIL_ACTION_STATES, EMAIL_ATTENTION_CATEGORIES, EMAIL_ATTENTION_OR, EMAIL_CATEGORIES, EMAIL_GROUPS, EMAIL_MATCH_STATES, EMAIL_STAGE_HINTS, EMAIL_URGENCIES,
+  DISCOVERY_FRESHNESS_HOURS, JOB_EMPLOYMENT_TYPES, JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, STRONG_MATCH_THRESHOLD, effectiveRemoteScope, emailCategoryGroup, emailCategoryMembers, emailGroupCategories, prioritiesForUrgency, urgencyFromPriority,
+  type AiFindingStatus, type AiPriority, type AiProvider, type JobRemoteScope, type EmailActionState, type EmailGroup, type EmailStageHint, type EmailUrgency, type JsonRecord,
 } from '../lib/aiContract';
+import type { MatchClient } from './aiApplicationMatchService';
+import { matchEmailsToApplications, type EmailApplicationMatch } from './aiEmailMatchService';
+import { matchLeadsToApplications, type LeadApplicationMatch, type LeadMatchInput } from './aiLeadMatchService';
 import type { AiPage, AiPageRequest, AiReadContext, AiReadDeps, AiReadResult } from './aiReadService';
 import { dbFail, fail, num, parsePage, prepare, rec, s, sliced, sn } from './aiReadSupport';
 
@@ -40,7 +44,7 @@ export function safeUrl(raw: unknown): string | null {
 }
 
 const str = (v: unknown, max = 500): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
-const strList = (v: unknown, max = 30): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max).map((x) => x.slice(0, 100)) : []);
+const strList = (v: unknown, max = 30, maxLen = 100): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max).map((x) => x.slice(0, maxLen)) : []);
 
 /** Strips characters that would alter a PostgREST filter expression, then bounds the term. */
 export function sanitizeSearch(v: unknown): string | null {
@@ -90,10 +94,19 @@ function applyCommon(q: any, f: CommonFilters, prefix = '') { // eslint-disable-
 
 // ---- job leads ----------------------------------------------------------------------
 
+/** freshness = best known posting time first (then match); match = provider score first; discovered = when JobQuest stored it. */
+export const JOB_LEAD_SORTS = ['freshness', 'match', 'discovered'] as const;
+export type JobLeadSort = (typeof JOB_LEAD_SORTS)[number];
+
 export interface JobLeadFilters extends CommonFilters {
   search?: string; company?: string; title?: string; location?: string;
   workArrangement?: (typeof JOB_WORK_ARRANGEMENTS)[number]; employmentType?: (typeof JOB_EMPLOYMENT_TYPES)[number];
   minMatchScore?: number;
+  /** AI-11D: only leads whose freshness time (posted time, else first stored) is within the last 12/24/48/72 hours. */
+  recentHours?: (typeof DISCOVERY_FRESHNESS_HOURS)[number];
+  /** AI-11D: restrict remote roles by the geography they admit (us = open to the whole United States). */
+  remoteScope?: JobRemoteScope;
+  sort?: JobLeadSort;
   discoveredSince?: string; discoveredBefore?: string; // ISO-8601 with offset
   postedSince?: string; postedBefore?: string; // YYYY-MM-DD, inclusive
 }
@@ -103,6 +116,18 @@ export interface JobLeadDto {
   id: string; ownerId: string; provider: AiProvider; status: AiFindingStatus; priority: AiPriority; confidence: number | null;
   company: string; title: string; location: string | null; workArrangement: string | null; employmentType: string | null;
   sourceName: string | null; sourceUrl: string | null; postedDate: string | null; discoveredAt: string;
+  /** AI-11D. Exact posting time when the source stated one; null = unknown (NEVER defaulted to today / now). */
+  postedAt: string | null;
+  /** Sort key only: the best known posting time, else when JobQuest first stored the lead. Not a posted time. */
+  freshnessAt: string | null;
+  /** Remote geography: the provider's scope, else a conservative reading of the stated location. Null = not stated / not remote. */
+  remoteScope: JobRemoteScope | null; remoteNote: string | null;
+  experienceMinYears: number | null; experienceMaxYears: number | null;
+  /** Bounded provider reasons (analysis, not fact). */
+  fitReasons: string[]; gapReasons: string[];
+  canonicalUrl: string | null; externalJobId: string | null;
+  /** Derived at read time from the owner's applications; null = not evaluated. A lead is never an application. */
+  applicationMatch: LeadApplicationMatch | null;
   salary: { min: number | null; max: number | null; currency: string | null; period: string | null } | null;
   experienceLevel: string | null;
   /** Provider analysis 0..100 (null = not scored). Never an objective suitability measure. */
@@ -114,7 +139,8 @@ export interface JobLeadDto {
   descriptionAvailable: boolean; descriptionTruncated: boolean;
 }
 
-const LEAD_COLUMNS = 'id, finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, posted_date, discovered_at, '
+export const LEAD_COLUMNS = 'id, finding_id, user_id, company, title, location, work_arrangement, employment_type, source_name, source_url, canonical_url, external_job_id, posted_date, posted_at, discovered_at, '
+  + 'freshness_at, remote_scope, remote_note, experience_min_years, experience_max_years, fit_reasons, gap_reasons, '
   + 'salary_min, salary_max, salary_currency, salary_period, experience_level, match_score, required_skills, preferred_skills, '
   + 'description_truncated, description_length, '
   + 'finding:ai_findings!inner(provider, status, priority, confidence, summary, payload)';
@@ -130,7 +156,12 @@ export function toJobLead(r: Row): JobLeadDto {
     id: s(r.finding_id), ownerId: s(r.user_id), provider: f.provider as AiProvider, status: f.status as AiFindingStatus, priority: f.priority as AiPriority,
     confidence: num(f.confidence), company: s(r.company), title: s(r.title), location: sn(r.location), workArrangement: sn(r.work_arrangement),
     employmentType: sn(r.employment_type), sourceName: sn(r.source_name), sourceUrl: safeUrl(r.source_url), postedDate: sn(r.posted_date),
-    discoveredAt: s(r.discovered_at),
+    discoveredAt: s(r.discovered_at), postedAt: sn(r.posted_at), freshnessAt: sn(r.freshness_at),
+    remoteScope: r.work_arrangement === 'remote'
+      ? effectiveRemoteScope({ remote_scope: sn(r.remote_scope), location: sn(r.location), remote_note: sn(r.remote_note) }) : null,
+    remoteNote: sn(r.remote_note), experienceMinYears: num(r.experience_min_years), experienceMaxYears: num(r.experience_max_years),
+    fitReasons: strList(r.fit_reasons, 8, 200), gapReasons: strList(r.gap_reasons, 8, 200),
+    canonicalUrl: safeUrl(r.canonical_url), externalJobId: str(r.external_job_id, 255), applicationMatch: null,
     salary: min !== null || max !== null ? { min, max, currency: sn(r.salary_currency), period: sn(r.salary_period) } : null,
     experienceLevel: sn(r.experience_level), matchScore: score, strongMatch: isStrongMatch(score),
     requiredSkills: strList(r.required_skills), preferredSkills: strList(r.preferred_skills),
@@ -140,16 +171,23 @@ export function toJobLead(r: Row): JobLeadDto {
 }
 
 const LEAD_FILTERS = {
-  enums: { ...PROVIDER_STATUS, workArrangement: JOB_WORK_ARRANGEMENTS as readonly string[], employmentType: JOB_EMPLOYMENT_TYPES as readonly string[] },
-  texts: ['search', 'company', 'title', 'location'], ints: ['minMatchScore'], times: ['discoveredSince', 'discoveredBefore'], dates: ['postedSince', 'postedBefore'],
+  enums: {
+    ...PROVIDER_STATUS, workArrangement: JOB_WORK_ARRANGEMENTS as readonly string[], employmentType: JOB_EMPLOYMENT_TYPES as readonly string[],
+    remoteScope: JOB_REMOTE_SCOPES as readonly string[], sort: JOB_LEAD_SORTS as readonly string[],
+  },
+  texts: ['search', 'company', 'title', 'location'], ints: ['minMatchScore', 'recentHours'], times: ['discoveredSince', 'discoveredBefore'], dates: ['postedSince', 'postedBefore'],
 } as const;
 
-/** Newest discovered first (stable id tiebreak). `description` is never selected here. */
+/**
+ * Freshest first by default (best known posting time, then provider match, stable id tiebreak); `description` is never selected here.
+ * Each item carries the derived application match as optional context (a failed match read never fails the list).
+ */
 export async function listJobLeads(ctx: AiReadContext, filters?: JobLeadFilters, page?: AiPageRequest, deps: AiReadDeps = {}): Promise<AiReadResult<AiPage<JobLeadDto>>> {
   const p = prepare(ctx, deps); if (!p.ok) return p;
   const f = parseSourceFilters<JobLeadFilters>(filters, LEAD_FILTERS); if (!f.ok) return f;
   const pg = parsePage(page); if (!pg.ok) return pg;
   const v = f.value;
+  if (v.recentHours !== undefined && !(DISCOVERY_FRESHNESS_HOURS as readonly number[]).includes(v.recentHours)) return fail('INVALID_FILTER', 'recentHours');
   let q = p.db.from('ai_job_leads').select(LEAD_COLUMNS).eq('workspace_id', p.ws);
   q = applyCommon(q, v, 'finding.');
   if (v.search) q = q.or(`company.ilike.%${v.search}%,title.ilike.%${v.search}%`);
@@ -158,14 +196,54 @@ export async function listJobLeads(ctx: AiReadContext, filters?: JobLeadFilters,
   if (v.location) q = q.ilike('location', `%${v.location}%`);
   if (v.workArrangement) q = q.eq('work_arrangement', v.workArrangement);
   if (v.employmentType) q = q.eq('employment_type', v.employmentType);
+  if (v.remoteScope) q = q.eq('work_arrangement', 'remote').eq('remote_scope', v.remoteScope);
+  if (v.recentHours !== undefined) q = q.gte('freshness_at', new Date(Date.now() - v.recentHours * 3_600_000).toISOString());
   if (v.minMatchScore !== undefined) q = q.gte('match_score', v.minMatchScore);
   if (v.discoveredSince) q = q.gte('discovered_at', v.discoveredSince);
   if (v.discoveredBefore) q = q.lt('discovered_at', v.discoveredBefore);
   if (v.postedSince) q = q.gte('posted_date', v.postedSince);
   if (v.postedBefore) q = q.lte('posted_date', v.postedBefore);
-  const { data, error } = await q.order('discovered_at', { ascending: false }).order('id', { ascending: false }).range(pg.from, pg.to);
+  const sort = v.sort ?? 'freshness';
+  q = sort === 'match' ? q.order('match_score', { ascending: false, nullsFirst: false }).order('freshness_at', { ascending: false })
+    : sort === 'discovered' ? q.order('discovered_at', { ascending: false })
+    : q.order('freshness_at', { ascending: false }).order('match_score', { ascending: false, nullsFirst: false });
+  const { data, error } = await q.order('id', { ascending: false }).range(pg.from, pg.to);
   if (error) return dbFail(error);
-  return { ok: true, data: sliced(((data ?? []) as Row[]).map(toJobLead), pg.page, pg.size) };
+  const result = sliced(((data ?? []) as Row[]).map(toJobLead), pg.page, pg.size);
+  await attachLeadApplicationMatches(p.db as Db, p.ws, result.items); // optional context: never fails the list
+  return { ok: true, data: result };
+}
+
+const leadMatchInput = (l: JobLeadDto): LeadMatchInput => ({
+  id: l.id, ownerId: l.ownerId, company: l.company, title: l.title, location: l.location, workArrangement: l.workArrangement,
+  canonicalUrl: l.canonicalUrl, sourceUrl: l.sourceUrl, externalJobId: l.externalJobId, sourceName: l.sourceName, referenceDate: l.postedAt ?? l.discoveredAt,
+});
+
+/** Mutates `items` with the derived match; returns false (leaving them null) when the application read failed. */
+export async function attachLeadApplicationMatches(db: Db, ws: string, items: JobLeadDto[]): Promise<boolean> {
+  if (items.length === 0) return true;
+  try {
+    const matches = await matchLeadsToApplications(db as MatchClient, ws, items.map(leadMatchInput));
+    for (const l of items) l.applicationMatch = matches.get(l.id) ?? null;
+    return true;
+  } catch { return false; }
+}
+
+/** Most leads one matches lookup accepts (one UI page is far smaller). */
+export const LEAD_MATCH_LOOKUP_MAX = 50;
+
+/**
+ * The derived application match for specific leads (the AI Hub Job Leads page reads rows under RLS and asks for the matches
+ * here). Read-only; runs AS THE CALLER; an id that is not a readable lead in this workspace is simply absent.
+ */
+export async function getJobLeadApplicationMatches(ctx: AiReadContext, ids: readonly string[], deps: AiReadDeps = {}): Promise<AiReadResult<Record<string, LeadApplicationMatch>>> {
+  const p = prepare(ctx, deps); if (!p.ok) return p;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > LEAD_MATCH_LOOKUP_MAX || !ids.every((i) => typeof i === 'string' && UUID_RE.test(i))) return fail('INVALID_FILTER', 'ids');
+  const { data, error } = await p.db.from('ai_job_leads').select(LEAD_COLUMNS).eq('workspace_id', p.ws).in('finding_id', ids.map((i) => i.toLowerCase()));
+  if (error) return dbFail(error);
+  const items = ((data ?? []) as Row[]).map(toJobLead);
+  if (!(await attachLeadApplicationMatches(p.db as Db, p.ws, items))) return fail('READ_FAILED');
+  return { ok: true, data: Object.fromEntries(items.flatMap((l) => (l.applicationMatch ? [[l.id, l.applicationMatch] as const] : []))) };
 }
 
 // ---- email intelligence -------------------------------------------------------------
@@ -173,7 +251,13 @@ export async function listJobLeads(ctx: AiReadContext, filters?: JobLeadFilters,
 export interface EmailFilters extends CommonFilters {
   category?: (typeof EMAIL_CATEGORIES)[number]; company?: string; needsAttention?: boolean;
   receivedSince?: string; receivedBefore?: string; // ISO-8601 with offset
+  group?: EmailGroup; urgency?: EmailUrgency; actionState?: EmailActionState;
+  /** Derived at read time from the owner's applications; evaluated over a bounded window (EMAIL_MATCH_FILTER_WINDOW). */
+  applicationMatch?: (typeof EMAIL_MATCH_STATES)[number];
 }
+
+/** Most recent items examined when filtering by application match (the match is derived, so it cannot be a SQL filter). */
+export const EMAIL_MATCH_FILTER_WINDOW = 200;
 
 export interface EmailEventDto {
   id: string; ownerId: string; provider: AiProvider; status: AiFindingStatus; priority: AiPriority; confidence: number | null;
@@ -181,18 +265,39 @@ export interface EmailEventDto {
   /** When the email was received (the finding's occurred_at). */
   receivedAt: string | null; deadline: string | null; discoveredAt: string;
   senderName: string | null; senderDomain: string | null; subject: string | null;
-  company: string | null; roleTitle: string | null; nextStep: string | null; needsAttention: boolean;
+  company: string | null; roleTitle: string | null;
+  /** What the person should do (AI-11B `action_summary`; stored as `next_step`). Never an instruction to JobQuest. */
+  nextStep: string | null; needsAttention: boolean;
+  /** AI-11B. job_related | other, derived from the category (null for an unknown category). */
+  group: EmailGroup | null;
+  /** HIGH | MEDIUM | LOW: the stored priority seen through a fixed mapping. */
+  urgency: EmailUrgency;
+  /** needs_action | no_action | null (the provider did not say). */
+  actionState: EmailActionState | null;
+  /** The provider suggests a reply draft. A recommendation only: JobQuest never drafts or sends mail. */
+  draftRecommended: boolean;
+  /** A pipeline signal the email suggests. A hint only: it never changes an application. */
+  stageHint: EmailStageHint | null;
+  /** The run that produced this item. */
+  runId: string | null;
+  /** Derived from the owner's applications. Null = not evaluated (e.g. the lookup failed); never guessed. */
+  applicationMatch: EmailApplicationMatch | null;
 }
 
-const EMAIL_COLUMNS = 'id, user_id, provider, status, priority, confidence, category, title, summary, evidence, occurred_at, due_at, created_at, payload';
-const ATTENTION_OR = `priority.in.(HIGH,CRITICAL),category.in.(${EMAIL_ATTENTION_CATEGORIES.join(',')}),due_at.not.is.null,payload->>needs_attention.eq.true`;
+export const EMAIL_COLUMNS = 'id, user_id, run_id, provider, status, priority, confidence, category, title, summary, evidence, occurred_at, due_at, created_at, payload';
 
-/** Mirrors the `needsAttention` list filter exactly (a NEW email that is urgent, actionable, dated or flagged by the provider). */
+/**
+ * Mirrors the `needsAttention` list filter exactly: an open email that is urgent or provider-flagged, or - only when the
+ * provider gave no explicit action state - in an actionable category or dated. An explicit `no_action` is authoritative.
+ */
 export function emailNeedsAttention(e: { status: string; priority: string; category: string | null; dueAt: string | null; payload: JsonRecord }): boolean {
   if (e.status !== 'NEW') return false;
-  return e.priority === 'HIGH' || e.priority === 'CRITICAL' || (e.category !== null && (EMAIL_ATTENTION_CATEGORIES as readonly string[]).includes(e.category))
-    || e.dueAt !== null || e.payload.needs_attention === true;
+  if (e.priority === 'HIGH' || e.priority === 'CRITICAL' || e.payload.needs_attention === true) return true;
+  if (e.payload.action_state !== undefined && e.payload.action_state !== null) return false;
+  return (e.category !== null && (EMAIL_ATTENTION_CATEGORIES as readonly string[]).includes(e.category)) || e.dueAt !== null;
 }
+
+const oneOfList = <T extends string>(v: unknown, allowed: readonly T[]): T | null => (typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : null);
 
 export function toEmailEvent(r: Row): EmailEventDto {
   const payload = rec(r.payload);
@@ -203,13 +308,32 @@ export function toEmailEvent(r: Row): EmailEventDto {
     senderName: str(payload.sender_name, 200), senderDomain: str(payload.sender_domain, 255), subject: str(payload.subject, 200),
     company: str(payload.company, 200), roleTitle: str(payload.role_title, 300), nextStep: str(payload.next_step, 300),
     needsAttention: emailNeedsAttention({ status: s(r.status), priority: s(r.priority), category: sn(r.category), dueAt: sn(r.due_at), payload }),
+    group: emailCategoryGroup(sn(r.category)), urgency: urgencyFromPriority(s(r.priority)),
+    actionState: oneOfList(payload.action_state, EMAIL_ACTION_STATES), draftRecommended: payload.draft_recommended === true,
+    stageHint: oneOfList(payload.application_stage_hint, EMAIL_STAGE_HINTS),
+    runId: sn(r.run_id), applicationMatch: null,
   };
 }
 
 const EMAIL_FILTERS = {
-  enums: { ...PROVIDER_STATUS, category: EMAIL_CATEGORIES as readonly string[] },
+  enums: {
+    ...PROVIDER_STATUS, category: EMAIL_CATEGORIES as readonly string[], group: EMAIL_GROUPS as readonly string[], urgency: EMAIL_URGENCIES as readonly string[],
+    actionState: EMAIL_ACTION_STATES as readonly string[], applicationMatch: EMAIL_MATCH_STATES as readonly string[],
+  },
   texts: ['company'], bools: ['needsAttention'], times: ['receivedSince', 'receivedBefore'],
 } as const;
+
+/** Attaches the derived application match to job-related items. Best-effort: a lookup failure leaves `applicationMatch` null. */
+export async function attachEmailApplicationMatches(db: Db, ws: string, items: EmailEventDto[]): Promise<boolean> {
+  if (!items.some((e) => e.group === 'job_related')) return true;
+  try {
+    const matches = await matchEmailsToApplications(db as MatchClient, ws, items.map((e) => ({
+      id: e.id, ownerId: e.ownerId, group: e.group, company: e.company, roleTitle: e.roleTitle, receivedAt: e.receivedAt,
+    })));
+    for (const e of items) e.applicationMatch = matches.get(e.id) ?? null;
+    return true;
+  } catch { return false; }
+}
 
 /** Newest received first. Findings without a received time cannot exist for this kind (the contract requires it). */
 export async function listEmailIntelligence(ctx: AiReadContext, filters?: EmailFilters, page?: AiPageRequest, deps: AiReadDeps = {}): Promise<AiReadResult<AiPage<EmailEventDto>>> {
@@ -219,20 +343,62 @@ export async function listEmailIntelligence(ctx: AiReadContext, filters?: EmailF
   const v = f.value;
   let q = p.db.from('ai_findings').select(EMAIL_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'email_event');
   q = applyCommon(q, v);
-  if (v.category) q = q.eq('category', v.category);
+  if (v.group) q = q.in('category', emailGroupCategories(v.group));
+  if (v.category) q = q.in('category', emailCategoryMembers(v.category));
+  if (v.urgency) q = q.in('priority', prioritiesForUrgency(v.urgency));
+  if (v.actionState) q = q.eq('payload->>action_state', v.actionState);
   if (v.company) q = q.ilike('payload->>company', `%${v.company}%`);
-  if (v.needsAttention === true) q = q.eq('status', 'NEW').or(ATTENTION_OR);
+  if (v.needsAttention === true) q = q.eq('status', 'NEW').or(EMAIL_ATTENTION_OR);
   if (v.receivedSince) q = q.gte('occurred_at', v.receivedSince);
   if (v.receivedBefore) q = q.lt('occurred_at', v.receivedBefore);
-  const { data, error } = await q.order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(pg.from, pg.to);
+  q = q.order('occurred_at', { ascending: false }).order('id', { ascending: false });
+
+  if (v.applicationMatch) {
+    // The match is derived from the owner's applications, so it is evaluated over a bounded window of the newest items.
+    const { data, error } = await q.range(0, EMAIL_MATCH_FILTER_WINDOW - 1);
+    if (error) return dbFail(error);
+    const all = ((data ?? []) as Row[]).map(toEmailEvent);
+    if (!(await attachEmailApplicationMatches(p.db as Db, p.ws, all))) return fail('READ_FAILED');
+    const kept = all.filter((e) => e.applicationMatch?.state === v.applicationMatch);
+    return { ok: true, data: { items: kept.slice(pg.from, pg.from + pg.size), page: pg.page, pageSize: pg.size, hasNext: kept.length > pg.from + pg.size } };
+  }
+
+  const { data, error } = await q.range(pg.from, pg.to);
   if (error) return dbFail(error);
-  return { ok: true, data: sliced(((data ?? []) as Row[]).map(toEmailEvent), pg.page, pg.size) };
+  const result = sliced(((data ?? []) as Row[]).map(toEmailEvent), pg.page, pg.size);
+  await attachEmailApplicationMatches(p.db as Db, p.ws, result.items); // optional context: never fails the list
+  return { ok: true, data: result };
+}
+
+/** Most email items one matches lookup accepts (one UI page is far smaller). */
+export const EMAIL_MATCH_LOOKUP_MAX = 50;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The derived application match for specific email items (the AI Hub Email page reads the rows itself under RLS and asks
+ * for the matches here). Read-only; runs AS THE CALLER; an id that is not a readable email in this workspace is simply absent.
+ */
+export async function getEmailApplicationMatches(ctx: AiReadContext, ids: readonly string[], deps: AiReadDeps = {}): Promise<AiReadResult<Record<string, EmailApplicationMatch>>> {
+  const p = prepare(ctx, deps); if (!p.ok) return p;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > EMAIL_MATCH_LOOKUP_MAX || !ids.every((i) => typeof i === 'string' && UUID_RE.test(i))) return fail('INVALID_FILTER', 'ids');
+  const { data, error } = await p.db.from('ai_findings').select(EMAIL_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'email_event').in('id', ids.map((i) => i.toLowerCase()));
+  if (error) return dbFail(error);
+  const items = ((data ?? []) as Row[]).map(toEmailEvent);
+  if (!(await attachEmailApplicationMatches(p.db as Db, p.ws, items))) return fail('READ_FAILED');
+  return { ok: true, data: Object.fromEntries(items.flatMap((e) => (e.applicationMatch ? [[e.id, e.applicationMatch] as const] : []))) };
 }
 
 // ---- recruiter intelligence -----------------------------------------------------------
 
 export interface RecruiterFilters extends CommonFilters {
   search?: string; company?: string; discoveredSince?: string; discoveredBefore?: string;
+  /** AI-11E. verified | uncertain. */
+  verification?: (typeof RECRUITER_VERIFICATIONS)[number];
+  relationship?: (typeof RECRUITER_RELATIONSHIPS)[number];
+  /** job_linked = researched for a stored job lead; target_company = standing networking at a company the owner listed. */
+  mode?: (typeof RECRUITER_DISCOVERY_MODES)[number];
+  /** Only people researched for this stored job lead (its finding id). */
+  relatedLeadId?: string;
 }
 
 export interface RecruiterIntelDto {
@@ -242,21 +408,38 @@ export interface RecruiterIntelDto {
   verification: 'verified' | 'uncertain'; uncertainFields: string[];
   sourceName: string | null; sourceUrl: string | null; profileUrl: string | null;
   /** Present only when the provider cited a contact source URL. Never inferred or guessed. */
-  contact: { email: string | null; phone: string | null; sourceUrl: string | null } | null;
+  contact: { email: string; sourceUrl: string } | null;
   summary: string | null; discoveredAt: string;
+  /** AI-11E. When JobQuest last saw this person (a re-submission refreshes it); discoveredAt stays the first time. */
+  lastSeenAt: string;
+  /** Evidence-based reason this person is useful (bounded; never speculation). */
+  why: string | null;
+  /** What made the person verified (null when uncertain). */
+  verificationBasis: string | null;
+  /** Checked by JobQuest: job_linked (a related job) or target_company (the company is on the owner's list). Null = neither could be shown. */
+  discoveryMode: (typeof RECRUITER_DISCOVERY_MODES)[number] | null;
+  /** The posting itself names this person. */
+  postingContact: boolean;
+  /** Optional DRAFT text for the owner to review. JobQuest never sends it. */
+  draftNote: string | null;
+  draftEmail: { subject: string; body: string } | null;
+  /** Derived at read time from the related lead only: whether the owner already has an Application for that job. Read-only; null = not evaluated. */
+  applicationMatch: LeadApplicationMatch | null;
   /** The job lead this research relates to, resolved inside the caller's own RLS scope. Null when unknown or not stored. */
   relatedLead: { id: string; company: string; title: string } | null;
   relatedJob: { company: string | null; title: string | null } | null;
 }
 
-const RECRUITER_COLUMNS = 'id, user_id, provider, status, confidence, title, summary, source_ref, created_at, payload';
+export const RECRUITER_COLUMNS = 'id, user_id, provider, status, confidence, title, summary, source_ref, created_at, updated_at, payload';
 
 export function toRecruiterIntel(r: Row): RecruiterIntelDto {
   const payload = rec(r.payload);
   const ref = rec(r.source_ref);
-  const email = str(payload.contact_email, 254), phone = str(payload.contact_phone, 32);
+  const email = str(payload.contact_email, 254);
   const contactSource = safeUrl(payload.contact_source_url);
   const related = rec(payload.related_job);
+  const draftEmail = rec(payload.draft_email);
+  const mode = payload.discovery_mode;
   return {
     id: s(r.id), ownerId: s(r.user_id), provider: r.provider as AiProvider, status: r.status as AiFindingStatus, confidence: num(r.confidence),
     name: str(payload.recruiter_name, 200) ?? s(r.title), roleTitle: str(payload.role_title, 200), company: str(payload.company, 200) ?? '',
@@ -264,8 +447,13 @@ export function toRecruiterIntel(r: Row): RecruiterIntelDto {
     verification: payload.verification === 'verified' ? 'verified' : 'uncertain',
     uncertainFields: strList(payload.uncertain_fields, 5),
     sourceName: str(payload.source_name, 100), sourceUrl: safeUrl(ref.url), profileUrl: safeUrl(payload.profile_url),
-    contact: contactSource && (email || phone) ? { email, phone, sourceUrl: contactSource } : null,
-    summary: sn(r.summary), discoveredAt: s(r.created_at), relatedLead: null,
+    contact: contactSource && email ? { email, sourceUrl: contactSource } : null,
+    summary: sn(r.summary), discoveredAt: s(r.created_at), lastSeenAt: sn(r.updated_at) ?? s(r.created_at), relatedLead: null,
+    why: str(payload.why, 300), verificationBasis: payload.verification === 'verified' ? str(payload.verification_basis, 32) : null,
+    discoveryMode: mode === 'job_linked' || mode === 'target_company' ? mode : null, postingContact: payload.posting_contact === true,
+    draftNote: str(payload.draft_note, 300),
+    draftEmail: str(draftEmail.subject, 120) && str(draftEmail.body, 1200) ? { subject: str(draftEmail.subject, 120)!, body: str(draftEmail.body, 1200)! } : null,
+    applicationMatch: null,
     relatedJob: Object.keys(related).length ? { company: str(related.company, 200), title: str(related.title, 300) } : null,
   };
 }
@@ -275,7 +463,7 @@ export function toRecruiterIntel(r: Row): RecruiterIntelDto {
  * reference is a public job identity the server turned into a dedupe key; an id supplied by a
  * provider is never used, and a lead that RLS hides simply does not resolve.
  */
-async function attachRelatedLeads(db: Db, ws: string, rows: Row[], dtos: RecruiterIntelDto[]): Promise<boolean> {
+export async function attachRelatedLeads(db: Db, ws: string, rows: Row[], dtos: RecruiterIntelDto[]): Promise<boolean> {
   const wanted = rows.map((r) => rec(rec(r.payload)));
   const keys = [...new Set(wanted.map((p) => str(p.related_job_key, 255)).filter((k): k is string => k !== null))];
   const urls = [...new Set(wanted.map((p) => safeUrl(rec(p.related_job).job_url)).filter((u): u is string => u !== null))];
@@ -317,15 +505,63 @@ const canon = (u: string): string => {
   } catch { return u; }
 };
 
-const RECRUITER_FILTERS = { enums: PROVIDER_STATUS, texts: ['search', 'company'], times: ['discoveredSince', 'discoveredBefore'] } as const;
+const RECRUITER_FILTERS = {
+  enums: {
+    ...PROVIDER_STATUS, verification: RECRUITER_VERIFICATIONS as readonly string[], relationship: RECRUITER_RELATIONSHIPS as readonly string[],
+    mode: RECRUITER_DISCOVERY_MODES as readonly string[],
+  },
+  texts: ['search', 'company'], times: ['discoveredSince', 'discoveredBefore'],
+} as const;
+
+/** Application match of each person's related lead (read-only, derived now). Best-effort: a lookup failure leaves the match null. */
+export async function attachRecruiterApplicationMatches(db: Db, ws: string, items: RecruiterIntelDto[]): Promise<boolean> {
+  const ids = [...new Set(items.flatMap((d) => (d.relatedLead ? [d.relatedLead.id] : [])))];
+  if (ids.length === 0) return true;
+  try {
+    const { data, error } = await db.from('ai_job_leads').select(LEAD_COLUMNS).eq('workspace_id', ws).in('finding_id', ids);
+    if (error) return false;
+    const leads = ((data ?? []) as Row[]).map(toJobLead);
+    if (!(await attachLeadApplicationMatches(db, ws, leads))) return false;
+    const byId = new Map(leads.map((l) => [l.id, l.applicationMatch] as const));
+    for (const d of items) d.applicationMatch = d.relatedLead ? byId.get(d.relatedLead.id) ?? null : null;
+    return true;
+  } catch { return false; }
+}
 
 export async function listRecruiterIntel(ctx: AiReadContext, filters?: RecruiterFilters, page?: AiPageRequest, deps: AiReadDeps = {}): Promise<AiReadResult<AiPage<RecruiterIntelDto>>> {
   const p = prepare(ctx, deps); if (!p.ok) return p;
-  const f = parseSourceFilters<RecruiterFilters>(filters, RECRUITER_FILTERS); if (!f.ok) return f;
+  const { relatedLeadId, ...rest } = (filters ?? {}) as RecruiterFilters;
+  if (relatedLeadId !== undefined && (typeof relatedLeadId !== 'string' || !UUID_RE.test(relatedLeadId))) return fail('INVALID_FILTER', 'relatedLeadId');
+  const f = parseSourceFilters<RecruiterFilters>(rest, RECRUITER_FILTERS); if (!f.ok) return f;
   const pg = parsePage(page); if (!pg.ok) return pg;
   const v = f.value;
   let q = p.db.from('ai_findings').select(RECRUITER_COLUMNS).eq('workspace_id', p.ws).eq('kind', 'recruiter_intel');
   q = applyCommon(q, v);
+  if (v.verification) q = q.eq('payload->>verification', v.verification);
+  if (v.relationship) q = q.eq('payload->>relationship', v.relationship);
+  if (v.mode) q = q.eq('payload->>discovery_mode', v.mode);
+  if (relatedLeadId) {
+    // People researched for ONE stored lead: the lead is read in the caller's own scope, then matched by public job identity (never a provider id).
+    const [lead, parent] = await Promise.all([
+      p.db.from('ai_job_leads').select('canonical_url').eq('workspace_id', p.ws).eq('finding_id', relatedLeadId.toLowerCase()).limit(1),
+      p.db.from('ai_findings').select('dedupe_key').eq('workspace_id', p.ws).eq('kind', 'job_lead').eq('id', relatedLeadId.toLowerCase()).limit(1),
+    ]);
+    if (lead.error || parent.error) return fail('READ_FAILED');
+    const key = str(rec(((parent.data ?? []) as Row[])[0]).dedupe_key, 255), urlOf = safeUrl(rec(((lead.data ?? []) as Row[])[0]).canonical_url);
+    if (!key && !urlOf) q = q.eq('id', '00000000-0000-0000-0000-000000000000'); // not a lead this caller can read: matches nothing
+    else {
+      const ids = new Set<string>();
+      const probes = [
+        key ? p.db.from('ai_findings').select('id').eq('workspace_id', p.ws).eq('kind', 'recruiter_intel').eq('payload->>related_job_key', key).limit(200) : null,
+        urlOf ? p.db.from('ai_findings').select('id').eq('workspace_id', p.ws).eq('kind', 'recruiter_intel').eq('payload->related_job->>job_url', urlOf).limit(200) : null,
+      ].filter((x): x is NonNullable<typeof x> => x !== null);
+      for (const probe of await Promise.all(probes)) {
+        if (probe.error) return fail('READ_FAILED');
+        for (const r of (probe.data ?? []) as Row[]) ids.add(s(r.id));
+      }
+      q = ids.size > 0 ? q.in('id', [...ids]) : q.eq('id', '00000000-0000-0000-0000-000000000000');
+    }
+  }
   if (v.search) q = q.or(`payload->>recruiter_name.ilike.%${v.search}%,payload->>company.ilike.%${v.search}%`);
   if (v.company) q = q.ilike('payload->>company', `%${v.company}%`);
   if (v.discoveredSince) q = q.gte('created_at', v.discoveredSince);
@@ -335,5 +571,6 @@ export async function listRecruiterIntel(ctx: AiReadContext, filters?: Recruiter
   const rows = ((data ?? []) as Row[]).slice(0, pg.size);
   const items = rows.map(toRecruiterIntel);
   if (!(await attachRelatedLeads(p.db as Db, p.ws, rows, items))) return fail('READ_FAILED');
+  await attachRecruiterApplicationMatches(p.db as Db, p.ws, items); // optional context: never fails the list
   return { ok: true, data: { items, page: pg.page, pageSize: pg.size, hasNext: ((data ?? []) as Row[]).length > pg.size } };
 }

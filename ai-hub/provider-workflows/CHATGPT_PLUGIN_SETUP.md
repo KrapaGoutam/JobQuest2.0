@@ -50,7 +50,7 @@ JobQuest never invents a proprietary OpenAI protocol and never works around plan
    no secret). If you use Plugin Creator instead, ask it for exactly: one remote MCP server at that URL with bearer API-key
    auth, plus the skill in `plugin-template/skills/jobquest-ai-hub/SKILL.md`.
 4. If only OAuth is offered → stop and report; do not try workarounds.
-5. Smoke (synthetic data): tool discovery (expect 11 tools, 1 write), recent applications, Job Leads / email / recruiter /
+5. Smoke (synthetic data): tool discovery (expect 13 tools, 1 write), recent applications, Job Leads / email / recruiter /
    calendar reads, Daily Digest read, synthetic result submission (expect an approval prompt — record it), “Change this
    application to Interview” (must be impossible), the prompt-injection record, then **revoke** the credential and confirm
    the next call is denied.

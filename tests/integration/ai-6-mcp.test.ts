@@ -77,12 +77,12 @@ describe.skipIf(!ready || !local)('AI-6 — MCP source tools (real DB)', () => {
   it('AI6M-01 · the source tools are read-only ai:read tools; there is still exactly one write tool and no source-specific write tool', async () => {
     const rw = await toolNames(tokens.carolRw!);
     expect(rw).toEqual(expect.arrayContaining(NEW_TOOLS));
-    expect(rw).toHaveLength(11); // AI-7 adds the calendar read
+    expect(rw).toHaveLength(15); // AI-7 adds the calendar read; AI-11D and AI-11E add read-only profile reads; AI-11G adds two execution tools
     expect(rw.filter((t: string) => /submit|create|import|delete|update|apply/.test(t))).toEqual(['jobquest_submit_ai_result']);
     const read = await toolNames(tokens.carolRead!);
     expect(read).toEqual(expect.arrayContaining(NEW_TOOLS));
     expect(read).not.toContain('jobquest_submit_ai_result');
-    expect(await toolNames(tokens.carolIngestOnly!)).toEqual(['jobquest_submit_ai_result']); // scope-filtered registry
+    expect(await toolNames(tokens.carolIngestOnly!)).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']); // scope-filtered registry
     const tools = (await mcp(tokens.carolRead!, rpc('tools/list'))).json.result.tools as Array<{ name: string; annotations: Record<string, boolean> }>;
     for (const t of tools.filter((x) => NEW_TOOLS.includes(x.name))) expect(t.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });
   });

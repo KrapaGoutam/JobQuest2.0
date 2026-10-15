@@ -334,15 +334,16 @@ test.describe('AI-7 calendar intelligence', () => {
     await page.goto('/ai-hub/digest');
     await page.getByRole('button', { name: 'Save a JobQuest digest for today' }).click();
     await expect(page.getByText('Saved today’s JobQuest digest.')).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Source availability' }).getByText('Calendar: Available')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Calendar' }).first()).toBeVisible();
-    await expect(page.getByText(/CANCELLED/).first()).toBeVisible(); // a cancellation inside the week is always surfaced
+    // AI-11C: calendar intelligence feeds Upcoming (active work only): a cancelled item is NOT listed, a rescheduled one says where it moved from
+    await expect(page.getByRole('list', { name: 'Source availability' }).getByText('Upcoming: Available')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Upcoming', level: 4 })).toBeVisible();
+    await expect(page.getByText(/CANCELLED/)).toHaveCount(0);
     await expect(page.getByText(/rescheduled from/).first()).toBeVisible();
 
     // ---- 11) SEVEN-TAB SHELL: clipping regression + reachability on every size and every tab ------------------------------------------
     // Tabs are visited by clicking them (in-app navigation, as a user does). Refresh tokens are single-use with replay
     // detection, so a burst of full reloads is not a realistic navigation pattern and would sign the test user out.
-    const tabs: Array<[string, string]> = [['Overview', '/ai-hub'], ['Daily Digest', '/ai-hub/digest'], ['Job Leads', '/ai-hub/job-leads'], ['Email', '/ai-hub/email'],
+    const tabs: Array<[string, string]> = [['Overview', '/ai-hub'], ['Daily Digest', '/ai-hub/digest'], ['Weekly Digest', '/ai-hub/weekly'], ['Job Leads', '/ai-hub/job-leads'], ['Email', '/ai-hub/email'],
       ['Recruiter Intel', '/ai-hub/recruiters'], ['Calendar', '/ai-hub/calendar'], ['History', '/ai-hub/history']];
     for (const w of [375, 768, 1280]) {
       await page.setViewportSize({ width: w, height: 900 });

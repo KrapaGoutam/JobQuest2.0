@@ -104,8 +104,8 @@ test.describe('AI-5 Daily Digest', () => {
     await page.getByRole('button', { name: 'Save a JobQuest digest for today' }).click();
     await expect(page.getByText('Saved today’s JobQuest digest.')).toBeVisible();
     await expect(page.getByRole('list', { name: 'Source availability' })).toBeVisible();
-    await expect(page.getByText('Job Leads: Not configured')).toBeVisible();
-    await expect(page.getByText('Email Activity: Not configured')).toBeVisible();
+    await expect(page.getByText('Recent job leads: Not configured')).toBeVisible(); // AI-11C canonical section names
+    await expect(page.getByText('Job-related email: Not configured')).toBeVisible();
 
     // 3) Historical + second-provider fixtures (service role stands in for a scheduled provider run).
     const longTitle = `Very long unbroken title ${'x'.repeat(120)} <b>not bold</b>`;

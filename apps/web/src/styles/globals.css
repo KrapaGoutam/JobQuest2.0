@@ -703,8 +703,8 @@ a:hover {
   border-bottom: 1px solid var(--color-border);
 }
 /* AI Hub has six sections: the tab row scrolls inside itself instead of widening the page (AI-6). */
-.ai-hub-tabs-wrapper { min-width: 0; }
-.ai-hub-tabs { overflow-x: auto; overflow-y: hidden; max-width: 100%; scrollbar-width: thin; }
+.ai-hub-tabs-wrapper { min-width: 0; max-width: 100%; overflow-x: clip; }
+.ai-hub-tabs { overflow-x: auto; overflow-y: hidden; width: 100%; min-width: 0; max-width: 100%; scrollbar-width: thin; }
 .ai-hub-tabs .tab { flex: 0 0 auto; }
 .tab {
   height: 36px;

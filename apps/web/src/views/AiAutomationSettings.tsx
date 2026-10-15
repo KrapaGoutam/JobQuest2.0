@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { fetchAiWorkflowConfigs } from '../api/aiHub';
+import { useProfileTimeZone } from '../hooks/useProfileTimeZone';
+import { fetchSchedulerStatus } from '../api/aiAutomations';
+import { statusFor, type ProviderSchedulerStatus } from '../lib/aiScheduler';
+import { ProviderSchedulerSummary } from '../components/ai/ProviderSchedulerSummary';
 import {
   AI_PROVIDER_LABELS, AI_WRITE_ACTIONS_ENABLED,
 } from '../lib/aiHubFlags';
@@ -11,33 +14,31 @@ import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
 import { ClaudeConnectorPanel } from '../components/ai/ClaudeConnectorPanel';
 import { ProviderConnectorPanel } from '../components/ai/ProviderConnectorPanel';
 import { PROVIDER_CONNECTORS } from '../lib/providerConnectors';
+import { LegacyCredentialsPanel } from '../components/ai/LegacyCredentialsPanel';
 import { OAuthProviderPanel } from '../components/ai/OAuthProviderPanel';
+import { AutomationsPanel } from '../components/ai/AutomationsPanel';
+import { JobDiscoveryPanel } from '../components/ai/JobDiscoveryPanel';
+import { RecruiterDiscoveryPanel } from '../components/ai/RecruiterDiscoveryPanel';
 import type { PublicSession } from '../api';
 
-// Settings -> AI & Automation (AI-1F1). Workflows and general settings are
-// read-only. AI-4 adds the Claude connector setup (scoped connector token for the
+// Settings -> AI & Automation (AI-1F1). General settings and the Workflows reference are
+// read-only; AI-11D adds Job Discovery (WHAT jobs the user wants; providers read it, JobQuest never searches); AI-11A adds Automations (provider-neutral schedule definitions). AI-4 adds the Claude connector setup (scoped connector token for the
 // remote MCP endpoint); AI-9 adds Gemini and ChatGPT cards on the same generic connector-token panel, each with truthful
 // capability notes (configured is not the same as automation-capable). Rendered only when
 // the AI Hub is exposed (see isAiHubExposed); failures are local to this panel.
 
-type Cfg = { status: 'loading' } | { status: 'error' } | { status: 'ready'; rows: Array<{ workflow: string; enabled: boolean }> };
-
 const rowStyle = { display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' as const, padding: '6px 0' };
 
-export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWorkspaceId: string | null; session?: PublicSession }) {
-  const [cfg, setCfg] = useState<Cfg>({ status: 'loading' });
-
+export function AiAutomationSettings({ activeWorkspaceId, session, currentUserId = null }: { activeWorkspaceId: string | null; session?: PublicSession; currentUserId?: string | null }) {
+  const { timeZone } = useProfileTimeZone(currentUserId);
+  // AI-11G: scheduled-execution state per provider (secondary data: if it cannot load, the connection panels still render).
+  const [scheduling, setScheduling] = useState<ProviderSchedulerStatus[] | null>(null);
   useEffect(() => {
-    if (!activeWorkspaceId) return;
+    if (!session || !activeWorkspaceId) return undefined;
     let live = true;
-    setCfg({ status: 'loading' });
-    fetchAiWorkflowConfigs(activeWorkspaceId)
-      .then((rows) => live && setCfg({ status: 'ready', rows }))
-      .catch(() => live && setCfg({ status: 'error' }));
+    fetchSchedulerStatus(activeWorkspaceId, session).then((s) => live && setScheduling(s), () => live && setScheduling(null));
     return () => { live = false; };
-  }, [activeWorkspaceId]);
-
-  const stored = new Map(cfg.status === 'ready' ? cfg.rows.map((r) => [r.workflow, r.enabled]) : []);
+  }, [activeWorkspaceId, session?.access_token]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -46,11 +47,11 @@ export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWor
           <CardHeader><CardTitle><span id="ai-general">General</span></CardTitle></CardHeader>
           <CardBody>
             <div style={rowStyle}><span>AI Hub</span><b>Enabled in this build</b></div>
-            <div style={rowStyle}><span>Automation</span><b>Not configured yet</b></div>
+            <div style={rowStyle}><span>Automations</span><b>Defined below; run by your AI provider</b></div>
             <div style={rowStyle}><span>Automatic write actions</span><b>{AI_WRITE_ACTIONS_ENABLED ? 'Enabled' : 'Disabled'}</b></div>
             <div style={rowStyle}><span>Human-approved actions</span><b>Available: you review and confirm each change in Actions</b></div>
             <p className="muted" style={{ margin: '8px 0 0', fontSize: '13px' }}>
-              Workflow settings can’t be changed yet. Workspace settings can never override a system-level shutdown.
+              Workspace settings can never override a system-level shutdown.
             </p>
           </CardBody>
         </Card>
@@ -70,29 +71,54 @@ export function AiAutomationSettings({ activeWorkspaceId, session }: { activeWor
                       : session
                         ? <ProviderConnectorPanel provider={PROVIDER_CONNECTORS[p.id]} activeWorkspaceId={activeWorkspaceId} session={session} />
                       : <><span>{p.label}</span><b>Not configured</b></>}
+                  {session && statusFor(scheduling, p.id) && <ProviderSchedulerSummary status={statusFor(scheduling, p.id)!} />}
                 </li>
               ))}
             </ul>
+            {session && <LegacyCredentialsPanel activeWorkspaceId={activeWorkspaceId} session={session} />}
           </CardBody>
         </Card>
       </section>
+
+      {session && (
+        <section aria-labelledby="ai-job-discovery">
+          <Card>
+            <CardHeader><CardTitle><span id="ai-job-discovery">Job Discovery</span></CardTitle></CardHeader>
+            <CardBody><JobDiscoveryPanel activeWorkspaceId={activeWorkspaceId} session={session} /></CardBody>
+          </Card>
+        </section>
+      )}
+
+      {session && (
+        <section aria-labelledby="ai-recruiter-intelligence">
+          <Card>
+            <CardHeader><CardTitle><span id="ai-recruiter-intelligence">Recruiter Intelligence</span></CardTitle></CardHeader>
+            <CardBody><RecruiterDiscoveryPanel activeWorkspaceId={activeWorkspaceId} session={session} /></CardBody>
+          </Card>
+        </section>
+      )}
+
+      {session && (
+        <section aria-labelledby="ai-automations">
+          <Card>
+            <CardHeader><CardTitle><span id="ai-automations">Automations</span></CardTitle></CardHeader>
+            <CardBody><AutomationsPanel activeWorkspaceId={activeWorkspaceId} session={session} defaultTimeZone={timeZone} /></CardBody>
+          </Card>
+        </section>
+      )}
 
       <section aria-labelledby="ai-workflows">
         <Card>
           <CardHeader><CardTitle><span id="ai-workflows">Workflows</span></CardTitle></CardHeader>
           <CardBody>
-            {cfg.status === 'error' && (
-              <p role="alert" style={{ margin: '0 0 8px', color: 'var(--color-danger)' }}>
-                Couldn’t load AI workflow settings. The rest of Settings is unaffected.
-              </p>
-            )}
             <p className="muted" style={{ margin: '0 0 8px', fontSize: '13px' }}>
               Workflows are descriptions of what an AI provider can do for you. JobQuest does not run them: you create the
-              schedule in the provider (for example a Claude scheduled task), and results arrive as AI findings.
+              schedule in the provider (for example a Claude scheduled task), and results arrive as AI findings. Define when each
+              should run under Automations above.
             </p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '12px' }}>
               {AI_WORKFLOW_DEFINITIONS.map((def) => {
-                const status = workflowAvailability(def, { disabled: stored.get(def.id) === false });
+                const status = workflowAvailability(def);
                 return (
                   <li key={def.id} style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>

@@ -1,7 +1,7 @@
 // Provider-neutral normalized types for jobquest.ai-result. Type-only (no runtime
 // imports beyond constants), so it is safe to share with other packages.
 import type {
-  AiFindingKind, AiPriority, AiProvider, AiSourceType, AiSuggestionAction,
+  AiFindingKind, AiPriority, AiProvider, AiSourceStatus, AiSourceType, AiSuggestionAction,
   AiSuggestionTargetType, AiTriggerType, AiWorkflow, AI_CONTRACT_NAME,
 } from './constants';
 
@@ -9,7 +9,8 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [k: string]: JsonValue };
 export type JsonRecord = { [k: string]: JsonValue };
 
-export interface AiSourceRef { type: AiSourceType; ref: string; observed_at: string | null }
+/** status/count/note are AI-11D discovery source health; absent on legacy refs. */
+export interface AiSourceRef { type: AiSourceType; ref: string; observed_at: string | null; status?: AiSourceStatus; count?: number; note?: string }
 
 /** Untrusted hints for server-side application matching (DATA_MODEL_PLAN §4). */
 export interface AiMatchHints {
@@ -50,6 +51,18 @@ export interface AiJobLeadProjection {
   required_skills: string[];
   preferred_skills: string[];
   payload_version: string;
+  // ---- AI-11D (all optional facts; absent = not stated, never guessed) ----
+  /** Exact posting instant (UTC ISO) when the source states one. Null = unknown; never "now". */
+  posted_at: string | null;
+  /** Geography a remote role admits; null = not stated. */
+  remote_scope: string | null;
+  remote_note: string | null;
+  experience_min_years: number | null;
+  experience_max_years: number | null;
+  fit_reasons: string[];
+  gap_reasons: string[];
+  /** Conservative cross-source identity (company + normalized title + location/arrangement), or null. */
+  logical_key: string | null;
 }
 
 /**
@@ -91,6 +104,28 @@ export interface AiCalendarProjection {
   payload_version: string;
 }
 
+/**
+ * AI-11E: server-derived facts about a recruiter_intel finding that the ingestion policy needs but that are not provider
+ * input and are not all persisted. Nothing here carries a provider-supplied database id.
+ */
+export interface AiRecruiterProjection {
+  /** Candidate dedupe keys, strongest first (keys[0] is also the finding's dedupe_key). */
+  candidate_keys: string[];
+  profile_key: string | null;
+  person_key: string | null;
+  /** Normalized company (legal suffixes removed): the unit for "one person per company". */
+  company_key: string;
+  /** The provider's claim; only honoured when the company is on the owner's target list. */
+  mode_hint: 'job_linked' | 'target_company' | null;
+  has_related_job: boolean;
+  /** The posting itself names this person. */
+  posting_contact: boolean;
+  relationship: string | null;
+  role_title: string | null;
+  verification: 'verified' | 'uncertain';
+  verification_basis: string | null;
+}
+
 export interface AiFinding {
   kind: AiFindingKind;
   /** Computed by JobQuest from deterministic fields; never taken from the provider. */
@@ -110,6 +145,8 @@ export interface AiFinding {
   job_lead?: AiJobLeadProjection;
   /** Present only for kind calendar_event. */
   calendar?: AiCalendarProjection;
+  /** Present only for kind recruiter_intel (AI-11E). */
+  recruiter?: AiRecruiterProjection;
 }
 
 /** A PROPOSAL only. No status: nothing here is executable (AI-11). */

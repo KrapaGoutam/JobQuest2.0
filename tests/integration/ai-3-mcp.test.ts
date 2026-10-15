@@ -16,8 +16,8 @@ const NOTE_CANARY = 'PRIVATE-NOTE-CANARY';
 const URL_ = 'http://localhost/api/mcp';
 const ALL = ['jobquest:read', 'ai:read', 'ai:ingest'];
 const APPROVED_TOOLS = [
-  'jobquest_get_application', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
-  'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel', 'jobquest_submit_ai_result',
+  'jobquest_claim_ai_execution', 'jobquest_get_application', 'jobquest_get_job_discovery_profile', 'jobquest_get_recruiter_discovery_profile', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs',
+  'jobquest_list_ai_suggestions', 'jobquest_list_applications', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result',
 ];
 
 describe.skipIf(!ready || !local)('AI-3 — MCP transport, connector auth and tools (real DB)', () => {
@@ -246,17 +246,17 @@ describe.skipIf(!ready || !local)('AI-3 — MCP transport, connector auth and to
     const tools = (await c1.listTools()).tools;
     expect(tools.map((t) => t.name).sort()).toEqual(APPROVED_TOOLS);
     const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
-    for (const name of APPROVED_TOOLS.filter((x) => x !== 'jobquest_submit_ai_result')) {
+    for (const name of APPROVED_TOOLS.filter((x) => !['jobquest_submit_ai_result', 'jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure'].includes(x))) {
       expect(byName[name]!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     }
     expect(byName.jobquest_submit_ai_result!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
     expect(JSON.stringify(tools)).not.toMatch(/user_?id|workspace_?id/i); // no tool takes identity as input
     for (const t of tools) expect((t.inputSchema as { additionalProperties?: boolean }).additionalProperties).toBe(false);
-    expect(tools.map((t) => t.name).join()).not.toMatch(/sql|rpc|http|exec|delete|update|create_/);
+    expect(tools.map((t) => t.name).join()).not.toMatch(/sql|rpc|http|exec(?!ution)|delete|update|create_/);
     await c1.close();
     // A second, independent client (new "function instance"): stateless, no session shared or required.
     const c2 = await sdkClient(tokens.carol!.token);
-    expect((await c2.listTools()).tools).toHaveLength(11);
+    expect((await c2.listTools()).tools).toHaveLength(15);
     await c2.close();
     const raw = await mcp(tokens.carol!.token, rpc('tools/list')); // no initialize, no session id
     expect(raw.status).toBe(200);
@@ -319,8 +319,8 @@ describe.skipIf(!ready || !local)('AI-3 — MCP transport, connector auth and to
     const ingestOnly = await mkToken(carol, ws, ['ai:ingest']);
     const names = async (t: string) => ((await mcp(t, rpc('tools/list'))).json.result.tools as { name: string }[]).map((x) => x.name).sort();
     expect(await names(readOnly.token)).toEqual(['jobquest_get_application', 'jobquest_list_applications']);
-    expect(await names(aiRead.token)).toEqual(['jobquest_list_ai_findings', 'jobquest_list_ai_runs', 'jobquest_list_ai_suggestions', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel']);
-    expect(await names(ingestOnly.token)).toEqual(['jobquest_submit_ai_result']);
+    expect(await names(aiRead.token)).toEqual(['jobquest_get_job_discovery_profile', 'jobquest_get_recruiter_discovery_profile', 'jobquest_list_ai_findings', 'jobquest_list_ai_runs', 'jobquest_list_ai_suggestions', 'jobquest_list_calendar_intelligence', 'jobquest_list_daily_digests', 'jobquest_list_email_intelligence', 'jobquest_list_job_leads', 'jobquest_list_recruiter_intel']);
+    expect(await names(ingestOnly.token)).toEqual(['jobquest_claim_ai_execution', 'jobquest_report_ai_execution_failure', 'jobquest_submit_ai_result']);
 
     expect((await callTool(readOnly.token, 'jobquest_list_applications', {})).status).toBe(200);
     const denied = await callTool(readOnly.token, 'jobquest_list_ai_runs', {});

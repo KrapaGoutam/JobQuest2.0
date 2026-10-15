@@ -58,6 +58,8 @@ export interface ConnectorTokenMetadata {
   last_used_at: string | null;
   revoked_at: string | null;
   revoked_reason: string | null;
+  /** AI-11G: the provider this credential was created for (null = unbound; it cannot claim automation runs). */
+  provider?: 'claude' | 'gemini' | 'chatgpt' | null;
   status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
 }
 

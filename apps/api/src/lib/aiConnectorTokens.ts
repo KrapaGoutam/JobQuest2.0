@@ -10,6 +10,9 @@ export const CONNECTOR_SCOPES = ['jobquest:read', 'ai:read', 'ai:ingest'] as con
 export type ConnectorScope = (typeof CONNECTOR_SCOPES)[number];
 /** Least privilege: ingestion must be requested explicitly. */
 export const DEFAULT_CONNECTOR_SCOPES: readonly ConnectorScope[] = ['jobquest:read', 'ai:read'];
+/** AI-11G: the provider a credential may be bound to at creation. */
+export const CONNECTOR_PROVIDERS = ['claude', 'gemini', 'chatgpt'] as const;
+export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
 export const CONNECTOR_EXPIRY_DAYS = [7, 30, 90] as const;
 export const DEFAULT_CONNECTOR_EXPIRY_DAYS = 30;
 
@@ -25,6 +28,7 @@ export interface ConnectorTokenRecord {
   last_used_at: string | null;
   revoked_at: string | null;
   revoked_reason: string | null;
+  provider: ConnectorProvider | null;
 }
 
 /** Everything the resolver may return: bound identity + scopes. Never a hash. */
@@ -37,6 +41,7 @@ export interface ResolvedConnector {
   tokenPrefix: string;
   expiresAt: string;
   lastUsedAt: string | null;
+  provider: ConnectorProvider | null;
 }
 
 /** `jq_mcp_<dev|live>_` + 43 base62 chars (~256 bits). */
@@ -89,6 +94,7 @@ export async function resolveConnectorToken(raw: string): Promise<ResolvedConnec
   return {
     tokenId: row.token_id, userId: row.user_id, workspaceId: row.workspace_id, sessionId: row.session_id,
     scopes, tokenPrefix: row.token_prefix, expiresAt: row.expires_at, lastUsedAt: row.last_used_at,
+    provider: (CONNECTOR_PROVIDERS as readonly string[]).includes(row.provider) ? row.provider : null,
   };
 }
 
@@ -99,7 +105,7 @@ export function touchConnectorToken(tokenId: string): void {
 }
 
 export const CONNECTOR_PUBLIC_COLUMNS =
-  'id, workspace_id, user_id, name, token_prefix, scopes, created_at, expires_at, last_used_at, revoked_at, revoked_reason';
+  'id, workspace_id, user_id, name, token_prefix, scopes, created_at, expires_at, last_used_at, revoked_at, revoked_reason, provider';
 
 export function connectorStatus(row: Pick<ConnectorTokenRecord, 'revoked_at' | 'expires_at'>, now = Date.now()): 'REVOKED' | 'EXPIRED' | 'ACTIVE' {
   if (row.revoked_at) return 'REVOKED';
@@ -119,6 +125,7 @@ export function publicConnector(row: ConnectorTokenRecord) {
     last_used_at: row.last_used_at,
     revoked_at: row.revoked_at,
     revoked_reason: row.revoked_reason,
+    provider: row.provider ?? null,
     status: connectorStatus(row),
   };
 }

@@ -188,7 +188,7 @@ describe('job lead dedupe (provider is never part of identity)', () => {
   it('company + title + location + posted date is a strong identity; different posting dates stay separate', () => {
     const a = lead({}, { posted_date: '2026-09-28' }, 'claude');
     const b = lead({}, { posted_date: '2026-09-28', company: ' EXAMPLE corp ' }, 'gemini');
-    const c = lead({}, { posted_date: '2026-10-05' });
+    const c = lead({}, { posted_date: '2026-09-20' });
     expect(keyOf(a)).toBe(keyOf(b));
     expect(keyOf(a)).toMatch(/^jobclp:/);
     expect(keyOf(c)).not.toBe(keyOf(a));
@@ -218,7 +218,7 @@ describe('email intelligence validation', () => {
   const email = (over: Record<string, unknown> = {}, payload: Record<string, unknown> = {}) => ({ ...clone(external.emailTriage), findings: [emailTriageFinding(over, payload)] });
 
   it('accepts exactly the approved categories, case-insensitively', () => {
-    expect(EMAIL_CATEGORIES).toHaveLength(10);
+    expect(EMAIL_CATEGORIES).toHaveLength(18); // 10 job-related + 4 other (AI-11B) + 4 legacy AI-6 spellings
     for (const c of EMAIL_CATEGORIES) expect(first(email({ category: c })).category).toBe(c);
     expect(first(email({ category: 'Interview Invitation' })).category).toBe('interview_invitation');
     expect(codes(invalidExternal.badEmailCategory)).toContain('email_category');
@@ -313,7 +313,10 @@ describe('recruiter intelligence validation', () => {
     const r = ok(rec({}, { contact_email: 'Pat@Example.com', contact_source_url: 'https://example.com/contact' }));
     expect(r.data!.findings[0]!.payload).toMatchObject({ contact_email: 'pat@example.com', contact_source_url: 'https://example.com/contact' });
     expect(codes(rec({}, { contact_email: 'not-an-email', contact_source_url: 'https://example.com/contact' }))).toContain('email');
-    expect(codes(rec({}, { contact_phone: 'abc', contact_source_url: 'https://example.com/contact' }))).toContain('phone');
+    // AI-11E: a phone number is never stored, whatever its shape (the public profile is the contact route).
+    const phone = ok(rec({}, { contact_phone: '+1 555 010 0100', contact_source_url: 'https://example.com/contact' }));
+    expect(phone.data!.findings[0]!.payload).not.toHaveProperty('contact_phone');
+    expect(phone.warnings.map((w) => w.code)).toContain('contact_phone_not_stored');
   });
 
   it('defaults to uncertain and downgrades "verified" when the provider flags uncertain fields', () => {
@@ -324,15 +327,16 @@ describe('recruiter intelligence validation', () => {
     expect(codes(rec({}, { uncertain_fields: ['salary'] }))).toContain('enum');
   });
 
-  it('deduplicates across providers by profile URL, then by name + company + role', () => {
+  it('deduplicates across providers by profile URL, then by name + company', () => {
     const claude = rec({}, {});
     const chatgpt = { ...rec({ title: 'Different wording' }, { relationship: 'talent_acquisition' }), provider: 'chatgpt' };
     expect(keyOf(claude)).toBe(keyOf(chatgpt));
     expect(keyOf(claude)).toMatch(/^recruiter:url:/);
     const noProfile = (name: string, role = 'Recruiter', company = 'Example Corp') => rec({ source: { url: 'https://example.com/team' } }, { profile_url: undefined, recruiter_name: name, role_title: role, company });
     expect(keyOf(noProfile(' pat  RECRUITER '))).toBe(keyOf(noProfile('Pat Recruiter')));
-    expect(keyOf(noProfile('Pat Recruiter'))).toMatch(/^recruiter:[0-9a-f]{64}$/);
-    expect(keyOf(noProfile('Pat Recruiter', 'Hiring Manager'))).not.toBe(keyOf(noProfile('Pat Recruiter')));
+    expect(keyOf(noProfile('Pat Recruiter'))).toMatch(/^recruiter:nc:[0-9a-f]{64}$/);
+    // AI-11E: the role title is NOT identity (the same person with a new title is still that person)
+    expect(keyOf(noProfile('Pat Recruiter', 'Hiring Manager'))).toBe(keyOf(noProfile('Pat Recruiter')));
     expect(keyOf(noProfile('Pat Recruiter', 'Recruiter', 'Other Corp'))).not.toBe(keyOf(noProfile('Pat Recruiter')));
   });
 

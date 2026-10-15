@@ -17,7 +17,7 @@ export async function listConnectorTokens(workspaceId: string, session: PublicSe
 }
 
 export async function createConnectorToken(
-  input: { workspace_id: string; name: string; scopes: string[]; expires_in_days: ClaudeExpiryDays },
+  input: { workspace_id: string; name: string; scopes: string[]; expires_in_days: ClaudeExpiryDays; provider?: 'claude' | 'gemini' | 'chatgpt' },
   session: PublicSession,
 ): Promise<{ token: string; metadata: ConnectorTokenMetadata }> {
   const result = await api<{ token?: string; metadata?: ConnectorTokenMetadata } & ErrorPayload>(

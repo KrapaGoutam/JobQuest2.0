@@ -8,7 +8,6 @@ vi.mock('../../apps/web/src/supabase', () => ({ supabase: { from: () => { throw 
 import {
   AI_WRITE_ACTIONS_ENABLED, isAiHubExposed, isAiHubPath, parseAiFlag, resolveAiHubAvailability, workflowStatus,
 } from '../../apps/web/src/lib/aiHubFlags';
-import { fetchAiWorkflowConfigs } from '../../apps/web/src/api/aiHub';
 import { AiAutomationSettings } from '../../apps/web/src/views/AiAutomationSettings';
 import { isAiHubServerEnabled } from '../../apps/api/src/lib/aiHubConfig';
 
@@ -78,9 +77,5 @@ describe('Settings -> AI & Automation', () => {
   it('is read-only and never touches secrets or writes', () => {
     const s = src('views/AiAutomationSettings.tsx') + src('api/aiHub.ts');
     expect(s).not.toMatch(/\.(insert|update|upsert|delete|rpc)\(|service_role|SECRET/);
-  });
-  it('config read failure is opaque', async () => {
-    const client = { from: () => ({ select: () => ({ eq: () => ({ limit: async () => ({ data: null, error: { message: 'pg detail' } }) }) }) }) };
-    await expect(fetchAiWorkflowConfigs('w1', client as never)).rejects.toThrow('AI_HUB_LOAD_FAILED');
   });
 });

@@ -236,7 +236,7 @@ test.describe('AI-6 external intelligence sources', () => {
     // ---- 6) EMAIL ----------------------------------------------------------------------------------------------
     await page.goto('/ai-hub/email');
     await expect(page.getByRole('heading', { name: 'Email Intelligence', level: 2 })).toBeVisible();
-    const emails = page.getByRole('list', { name: 'Email intelligence' }).getByRole('article');
+    const emails = page.getByRole('article'); // AI-11B: the list is split into Job related / Other mail and High / Medium / Low sections
     await expect(emails).toHaveCount(3);
     await expect(page.getByText('Pat Recruiter (example.com)').first()).toBeVisible();
     await expect(page.getByText('We would like to schedule an interview.')).toBeVisible();
@@ -260,13 +260,13 @@ test.describe('AI-6 external intelligence sources', () => {
 
     // ---- 7) RECRUITERS -----------------------------------------------------------------------------------------
     await page.goto('/ai-hub/recruiters');
-    await expect(page.getByRole('heading', { name: 'Recruiter Intelligence', level: 2 })).toBeVisible();
-    const recruiters = page.getByRole('list', { name: 'Recruiter intelligence' }).getByRole('article');
+    await expect(page.getByRole('heading', { name: 'Recruiters to connect with', level: 2 })).toBeVisible(); // AI-11E: grouped page
+    const recruiters = page.getByRole('article'); // AI-11E: the list is split into Job-linked / Target companies / Other groups
     await expect(recruiters).toHaveCount(2);
-    await expect(page.getByText('Public source cited')).toBeVisible();
-    await expect(page.getByText('Unverified', { exact: true })).toBeVisible();
-    await expect(page.getByText('marked these as uncertain: role')).toBeVisible();
-    await expect(page.getByText('Engineer 0 at Company 0 (stored job lead)')).toBeVisible(); // resolved inside the owner's scope
+    await expect(recruiters.getByText('Verified', { exact: true })).toBeVisible();
+    await expect(recruiters.getByText('Uncertain', { exact: true })).toBeVisible();
+    await expect(page.getByText('Not verified: the company or role association was not proven (role)')).toBeVisible();
+    await expect(page.getByText('Engineer 0 at Company 0', { exact: true })).toBeVisible(); // resolved inside the owner's scope
     await expect(page.getByText(/reported by the provider; not in your job leads/)).toBeVisible();
     await expect(page.getByText(/contactable/i)).toHaveCount(0);
     await page.getByLabel('Provider').selectOption('chatgpt');
@@ -289,11 +289,12 @@ test.describe('AI-6 external intelligence sources', () => {
     await page.getByRole('button', { name: 'Save a JobQuest digest for today' }).click();
     await expect(page.getByText('Saved today’s JobQuest digest.')).toBeVisible();
     const avail = page.getByRole('list', { name: 'Source availability' });
-    await expect(avail.getByText('Job Leads: Available')).toBeVisible();
-    await expect(avail.getByText('Email Activity: Available')).toBeVisible();
-    await expect(avail.getByText('Recruiter Intelligence: Available')).toBeVisible();
-    await expect(page.getByText('Strong matches', { exact: true })).toBeVisible();
-    await expect(page.getByText(/job-search email.* your attention/)).toBeVisible();
+    // AI-11C canonical sections: leads, job-related email and recruiters are composed from the stored AI-6 records
+    await expect(avail.getByText('Recent job leads: Available')).toBeVisible();
+    await expect(avail.getByText('Job-related email: Available')).toBeVisible();
+    await expect(avail.getByText('Recruiters: Available')).toBeVisible();
+    await expect(page.getByText('Recent jobs', { exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Needs attention' })).toBeVisible();
 
     // ---- 10) RESPONSIVE + ACCESSIBILITY on all three pages --------------------------------------------------------------
     for (const path of ['/ai-hub/job-leads', '/ai-hub/email', '/ai-hub/recruiters']) {

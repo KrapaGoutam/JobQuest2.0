@@ -11,6 +11,7 @@ import {
 } from './AiHubDetails';
 import { AiHubHistory } from './AiHubHistory';
 import { AiHubDigest } from './AiHubDigest';
+import { AiHubWeekly } from './AiHubWeekly';
 import { AiHubJobLeads } from './AiHubJobLeads';
 import { AiHubEmail } from './AiHubEmail';
 import { AiHubRecruiters } from './AiHubRecruiters';
@@ -25,6 +26,7 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { pendingActionsText } from '../lib/aiActions';
+import { PROVIDER_LABELS as AUTOMATION_PROVIDER_LABELS, automationHealth, describeSchedule, formatInZone, type AutomationOverview } from '../lib/aiAutomation';
 
 export type AiHubLoadState =
   | { status: 'loading' }
@@ -127,6 +129,7 @@ export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun, onOpenTab }:
           </CardBody>
         </Card>
       )}
+      {snapshot.automation && <NextAutomationCard overview={snapshot.automation} />}
       {snapshot.pendingActions !== undefined && (
         <Card>
           <CardHeader><CardTitle>Pending actions</CardTitle></CardHeader>
@@ -164,6 +167,36 @@ export function AiHubOverview({ snapshot, onOpenFinding, onOpenRun, onOpenTab }:
   );
 }
 
+/** AI-11A: the soonest enabled, scheduled automation and a one-line health summary. Definitions only; JobQuest runs nothing. */
+export function NextAutomationCard({ overview }: { overview: AutomationOverview }) {
+  const next = overview.next;
+  const health = next ? automationHealth(next) : null;
+  return (
+    <Card>
+      <CardHeader><CardTitle>Next automation</CardTitle></CardHeader>
+      <CardBody>
+        {next && health ? (
+          <div style={{ display: 'grid', gap: '4px' }}>
+            <strong>{next.name}</strong>
+            <span>{formatInZone(next.state.nextExpectedRunAt, next.timezone)}</span>
+            <span className="muted small">{AUTOMATION_PROVIDER_LABELS[next.provider]} · {describeSchedule(next)}</span>
+            <span><StatusBadge variant="success">Enabled</StatusBadge> <StatusBadge variant={health.variant}>{health.label}</StatusBadge></span>
+          </div>
+        ) : (
+          <span className="muted">
+            {overview.total === 0 ? 'No automations yet. Add one in Settings → AI & Automation.' : overview.enabled === 0 ? 'No automations are enabled.' : 'No scheduled runs (enabled automations are manual-only).'}
+          </span>
+        )}
+        {overview.failing > 0 && (
+          <div className="small" style={{ marginTop: '6px' }} role="status">
+            {overview.failing} automation{overview.failing === 1 ? '' : 's'} need{overview.failing === 1 ? 's' : ''} attention (last run failed or was partial).
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 function SourceCard({ title, value, hint, tab, action, onOpenTab }: {
   title: string; value: number; hint: string; tab: AiHubTab; action: string; onOpenTab?: (tab: AiHubTab) => void;
 }) {
@@ -181,11 +214,11 @@ function SourceCard({ title, value, hint, tab, action, onOpenTab }: {
 
 /** Presentational shell: no data fetching, easy to render in every state. */
 export function AiHubShell({
-  tab, onTabChange, state, onRetry, history, digest, jobLeads, email, recruiters, calendar, actions, onOpenFinding, onOpenRun,
+  tab, onTabChange, state, onRetry, history, digest, weekly, jobLeads, email, recruiters, calendar, actions, onOpenFinding, onOpenRun,
 }: {
   tab: AiHubTab; onTabChange: (t: AiHubTab) => void; state: AiHubLoadState; onRetry?: () => void;
   /** Each section owns its own data/failure state so it is isolated from Overview and from the others. */
-  history?: ReactNode; digest?: ReactNode; jobLeads?: ReactNode; email?: ReactNode; recruiters?: ReactNode; calendar?: ReactNode; actions?: ReactNode;
+  history?: ReactNode; digest?: ReactNode; weekly?: ReactNode; jobLeads?: ReactNode; email?: ReactNode; recruiters?: ReactNode; calendar?: ReactNode; actions?: ReactNode;
   onOpenFinding?: (id: string) => void; onOpenRun?: (run: AiRunRow) => void;
 }) {
   const body = (render: (s: AiHubSnapshot) => ReactNode) =>
@@ -208,6 +241,7 @@ export function AiHubShell({
           {body((s) => <AiHubOverview snapshot={s} onOpenFinding={onOpenFinding} onOpenRun={onOpenRun} onOpenTab={onTabChange} />)}
         </TabPanel>
         <TabPanel id="digest">{digest}</TabPanel>
+        <TabPanel id="weekly">{weekly}</TabPanel>
         <TabPanel id="job-leads">{jobLeads}</TabPanel>
         <TabPanel id="email">{email}</TabPanel>
         <TabPanel id="recruiters">{recruiters}</TabPanel>
@@ -281,9 +315,10 @@ export function AiHubView({ activeWorkspaceId, initialTab, onNavigate, currentUs
         onOpenRun={openRun}
         history={<AiHubHistory activeWorkspaceId={activeWorkspaceId} onOpenRun={openRun} />}
         digest={initialTab === 'digest' ? <AiHubDigest activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
-        jobLeads={initialTab === 'job-leads' ? <AiHubJobLeads activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
-        email={initialTab === 'email' ? <AiHubEmail activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
-        recruiters={initialTab === 'recruiters' ? <AiHubRecruiters activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
+        weekly={initialTab === 'weekly' ? <AiHubWeekly activeWorkspaceId={activeWorkspaceId} session={session} /> : null}
+        jobLeads={initialTab === 'job-leads' ? <AiHubJobLeads activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
+        email={initialTab === 'email' ? <AiHubEmail activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
+        recruiters={initialTab === 'recruiters' ? <AiHubRecruiters activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} /> : null}
         calendar={initialTab === 'calendar' ? <AiHubCalendar activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} onNavigate={onNavigate} /> : null}
         actions={initialTab === 'actions' ? <AiHubActions activeWorkspaceId={activeWorkspaceId} currentUserId={currentUserId} session={session} onNavigate={onNavigate} onChanged={() => setAttempt((n) => n + 1)} /> : null}
       />

@@ -60,7 +60,7 @@ export async function authenticateMcp(c: Context): Promise<McpAuthResult> {
       principal: {
         userId: oauth.userId, workspaceId: oauth.workspaceId, scopes: oauth.scopes,
         credentialType: 'oauth', credentialId: oauth.grantId,
-        credentialPrefix: oauth.clientId.slice(0, 24), sessionId: oauth.sessionId,
+        credentialPrefix: oauth.clientId.slice(0, 24), sessionId: oauth.sessionId, provider: oauth.provider,
       },
     };
   }
@@ -80,6 +80,7 @@ export async function authenticateMcp(c: Context): Promise<McpAuthResult> {
       credentialId: resolved.tokenId,
       credentialPrefix: resolved.tokenPrefix,
       sessionId: resolved.sessionId,
+      provider: resolved.provider,
     },
   };
 }

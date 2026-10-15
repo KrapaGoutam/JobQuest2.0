@@ -3,6 +3,8 @@
 // any server-side validation/hashing code. tests/unit/ai-hub-ui.test.ts fails if
 // these lists drift from the server constants.
 
+import type { AutomationOverview } from './aiAutomation';
+
 export const AI_RUN_STATUS_VALUES = [
   'QUEUED', 'RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'AWAITING_APPROVAL', 'CANCELLED',
 ] as const;
@@ -91,6 +93,8 @@ export interface AiHubSnapshot {
   calendar?: { upcoming: number; interviews: number; deadlines: number };
   /** AI-8: supported actions awaiting THIS user's review; absent when it could not be loaded. */
   pendingActions?: number;
+  /** AI-11A: automation definitions + derived health; absent when they could not be loaded (the rest of the Overview still renders). */
+  automation?: AutomationOverview;
 }
 
 export const RECENT_WINDOW_DAYS = 7;
@@ -247,15 +251,16 @@ export function aiWorkflowLabel(workflow: string): string {
 }
 
 export function isAiHubEmpty(s: AiHubSnapshot): boolean {
-  return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0;
+  return s.runs.length === 0 && s.findings.length === 0 && s.pendingSuggestions === 0 && !(s.automation && s.automation.total > 0);
 }
 
-export type AiHubTab = 'overview' | 'digest' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'actions' | 'history';
+export type AiHubTab = 'overview' | 'digest' | 'weekly' | 'job-leads' | 'email' | 'recruiters' | 'calendar' | 'actions' | 'history';
 
 /** Tab order is the navigation order. */
 export const AI_HUB_TABS: ReadonlyArray<{ id: AiHubTab; label: string; path: string }> = [
   { id: 'overview', label: 'Overview', path: '/ai-hub' },
   { id: 'digest', label: 'Daily Digest', path: '/ai-hub/digest' },
+  { id: 'weekly', label: 'Weekly Digest', path: '/ai-hub/weekly' },
   { id: 'job-leads', label: 'Job Leads', path: '/ai-hub/job-leads' },
   { id: 'email', label: 'Email', path: '/ai-hub/email' },
   { id: 'recruiters', label: 'Recruiter Intel', path: '/ai-hub/recruiters' },

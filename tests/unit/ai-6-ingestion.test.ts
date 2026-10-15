@@ -41,7 +41,7 @@ describe('job lead projection orchestration', () => {
   it('resolves identity, ingests the parent finding, then projects the child (parent audited once by its own RPC)', async () => {
     const { result, f } = await run(external.jobDiscovery);
     expect(result.success).toBe(true);
-    expect(f.names()).toEqual(['rpc_ai_ingest_run', 'rpc_ai_resolve_job_lead_key', 'rpc_ai_ingest_finding', 'rpc_ai_upsert_job_lead', 'rpc_ai_finalize_run']);
+    expect(f.names()).toEqual(['rpc_ai_ingest_run', 'rpc_ai_job_discovery_profile_get', 'rpc_ai_resolve_job_lead_key', 'rpc_ai_ingest_finding', 'rpc_ai_upsert_job_lead', 'rpc_ai_finalize_run']);
     const up = f.of('rpc_ai_upsert_job_lead')[0]!.args;
     expect(up).toMatchObject({ p_actor_id: USER, p_finding_id: 'f-1' });
     expect(up.p_lead).toMatchObject({ company: 'Example Corp', title: 'Staff Engineer', match_score: 86, canonical_url: 'https://jobs.example.com/posting/42', payload_version: '1.0' });
@@ -74,9 +74,9 @@ describe('job lead projection orchestration', () => {
     }
   });
 
-  it('skips resolution when the lead has neither URL nor external id', async () => {
+  it('skips resolution when the lead has no URL, external id or location/arrangement evidence', async () => {
     const doc = clone(external.jobDiscovery) as { findings: Array<Record<string, any>> };
-    doc.findings = [jobLeadFinding({ dedupe: {}, source: undefined }, { job_url: undefined, external_job_id: undefined, source_name: 'Example Jobs', location: undefined })];
+    doc.findings = [jobLeadFinding({ dedupe: {}, source: undefined }, { job_url: undefined, external_job_id: undefined, source_name: 'Example Jobs', location: undefined, work_arrangement: undefined })];
     const { result, f } = await run(doc);
     expect(result.success).toBe(true);
     expect(f.of('rpc_ai_resolve_job_lead_key')).toHaveLength(0);

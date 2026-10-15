@@ -77,6 +77,6 @@ describe('Claude workflow templates (AI-6)', () => {
 
   it('the operator guide covers the new sources, the ten-tool surface and the single write boundary', () => {
     const g = readFileSync('ai-hub/provider-workflows/CLAUDE_SCHEDULED_TASKS.md', 'utf8').replace(/\r\n/g, '\n');
-    for (const phrase of ['eleven tools in total, one write', 'JobQuest stores no next-run time', 'A job lead is never an application', 'recruiter_source_required', 'contact_uncited_dropped']) expect(g).toContain(phrase);
+    for (const phrase of ['thirteen tools in total, one write', 'JobQuest stores no next-run time', 'A job lead is never an application', 'recruiter_source_required', 'contact_uncited_dropped']) expect(g).toContain(phrase);
   });
 });

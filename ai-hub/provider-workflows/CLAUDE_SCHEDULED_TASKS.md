@@ -13,6 +13,10 @@ appear anywhere in this repository; you create the token yourself and it is show
    been verified by JobQuest. Treat "Run now" in step 5 as the real test; if Claude cannot call the connector from a
    scheduled run, use the prompt manually (attended) instead — everything else in JobQuest works the same.
 
+## AI-11G: pull-executor setup (recommended for scheduled runs)
+
+Instead of pasting a per-workflow template into a schedule, create the schedule from JobQuest: **Settings → AI & Automation → Automations → your automation → Set up in Claude**. JobQuest generates claim-first instructions from the stored automation (automation id only, no credential). The scheduled task first calls `jobquest_claim_ai_execution`; JobQuest answers `CLAIMED` (with the ordered steps and the `externalRunId`) or tells the task to stop (`NOT_DUE`, `ALREADY_CLAIMED`, `ALREADY_COMPLETED`, `DISABLED`). The task then submits ONE `jobquest_submit_ai_result` with the claimed `externalRunId`; JobQuest composes the Daily Digest last. `jobquest_report_ai_execution_failure` is called once if the task cannot finish. The Claude connector credential must be created for Claude (Settings → Providers → Claude, *Read + AI findings*); credentials created before AI-11G are not bound to a provider and cannot claim: create a new one. Whether a scheduled run can use the JobQuest connector is **UNVERIFIED** until a scheduled run really finishes (Providers shows *Scheduled execution: Ready* only then). Use *Run in provider* for an attended, run-once check. Acceptance procedure: [`../OPERATOR_ACCEPTANCE_AI-11G.md`](../OPERATOR_ACCEPTANCE_AI-11G.md). The per-workflow templates below remain valid for a provider-side schedule that does not claim (its runs are recorded as before).
+
 ## 1. Connector and scopes
 
 | Task | Preset to choose when creating the credential | Scopes |
@@ -81,7 +85,7 @@ First-run checklist: it read JobQuest; the submitted result was accepted; the di
 
 Job Discovery, Email Triage and Recruiter Intelligence use the same single write tool (`jobquest_submit_ai_result`) and
 the read-only context tools `jobquest_list_job_leads`, `jobquest_list_email_intelligence` and
-`jobquest_list_recruiter_intel` (scope `ai:read`; eleven tools in total, one write, counting the AI-7 `jobquest_list_calendar_intelligence`). Results appear under AI Hub → **Job Leads**,
+`jobquest_list_recruiter_intel` (scope `ai:read`; thirteen tools in total, one write, counting the AI-7 `jobquest_list_calendar_intelligence`, the AI-11D read-only `jobquest_get_job_discovery_profile` and the AI-11E read-only `jobquest_get_recruiter_discovery_profile`). Results appear under AI Hub → **Job Leads**,
 **Email** and **Recruiter Intel** and feed the Daily Digest. A job lead is never an application. A run can be scheduled or
 manual: JobQuest does not know or care. JobQuest stores no next-run time. Suggested cadence: job discovery once on
 weekdays, email triage each weekday morning (optionally afternoon), recruiter research only for new or high-value leads.

@@ -171,10 +171,8 @@ describe.skipIf(!ready || !local)('AI-11H — Weekly Digest, automation health, 
     expect(auto.status, JSON.stringify(auto.json)).toBe(201);
     const id = auto.json.id as string;
     // a failed scheduled run + a succeeded manual run, linked to the automation
-    expect((await admin.from('ai_runs').insert([
-      { workspace_id: ws, user_id: carol.userId!, provider: 'gemini', workflow: 'daily_brief', status: 'SUCCEEDED', trigger_type: 'manual', automation_id: id, sources: [{ type: 'gmail', status: 'unavailable' }], started_at: new Date(Date.now() - 3_600_000).toISOString(), completed_at: new Date(Date.now() - 3_540_000).toISOString() },
-      { workspace_id: ws, user_id: carol.userId!, provider: 'gemini', workflow: 'daily_brief', status: 'FAILED', trigger_type: 'scheduled', automation_id: id, sources: [], error_category: 'CONNECTOR_AUTH_EXPIRED', started_at: new Date().toISOString(), completed_at: new Date().toISOString(), scheduled_for: new Date(Date.now() - 60_000).toISOString() },
-    ])).error).toBeNull();
+    expect((await admin.from('ai_runs').insert({ workspace_id: ws, user_id: carol.userId!, provider: 'gemini', workflow: 'daily_brief', status: 'SUCCEEDED', trigger_type: 'manual', automation_id: id, sources: [{ type: 'gmail', status: 'unavailable' }], created_at: new Date(Date.now() - 120_000).toISOString(), started_at: new Date(Date.now() - 3_600_000).toISOString(), completed_at: new Date(Date.now() - 3_540_000).toISOString() })).error).toBeNull();
+    expect((await admin.from('ai_runs').insert({ workspace_id: ws, user_id: carol.userId!, provider: 'gemini', workflow: 'daily_brief', status: 'FAILED', trigger_type: 'scheduled', automation_id: id, sources: [], error_category: 'CONNECTOR_AUTH_EXPIRED', started_at: new Date().toISOString(), completed_at: new Date().toISOString(), scheduled_for: new Date(Date.now() - 60_000).toISOString() })).error).toBeNull();
     // an expired connector credential for Gemini
     const created = await carol.call('/ai/connector-tokens', { workspace_id: ws, name: `gem ${run}`, scopes: ['jobquest:read', 'ai:read', 'ai:ingest'], provider: 'gemini' });
     expect(created.status, JSON.stringify(created.json)).toBe(201);

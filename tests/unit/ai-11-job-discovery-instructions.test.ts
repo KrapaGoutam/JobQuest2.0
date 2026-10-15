@@ -116,6 +116,11 @@ describe('the generated Job Discovery instructions document the findings[] contr
     expect(CLAIMED_GUIDANCE).toMatch(/submit\.externalRunId copied EXACTLY/);
   });
 
+  it('the claim text stays credential-free (the same pattern the AI11G-06 integration test applies to the whole claim)', () => {
+    const all = JSON.stringify({ rules: claimRules, guidance: CLAIMED_GUIDANCE, envelope: resultEnvelopeRules() });
+    expect(all).not.toMatch(/jq_mcp_|Bearer|secret|password|service_role|client_secret|access_token/i);
+  });
+
   it('is provider-neutral: one shared source, identical step rules and identical setup text apart from the provider name', () => {
     expect(STEP_GUIDES.job_discovery.rules).toBe(claimSteps(['job_discovery'])[0]!.rules);
     const norm = (p: (typeof SCHEDULER_PROVIDERS)[number]) => buildSchedulerSetup(auto({ provider: p }), 'm0123456789abcdef012')!.scheduledInstructions.replace(/Claude|ChatGPT|Gemini|"(claude|chatgpt|gemini)"/g, 'P');

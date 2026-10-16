@@ -5,6 +5,7 @@ import {
   type AutomationDefinition,
 } from '../../apps/api/src/lib/aiContract';
 import { deleteAutomation, listAutomations, saveAutomation, type AutomationContext } from '../../apps/api/src/services/aiAutomationService';
+import { fakeReader, type Row } from './helpers/postgrestFake';
 
 // AI-11A: provider-neutral automation foundation. Pure contract (validation, next-run incl. timezone/DST), derived run
 // state, service scoping with a faithful fake store, and the route/MCP boundary. The database half (RLS, RPCs,
@@ -214,28 +215,6 @@ describe('Run Now contract (execution deferred)', () => {
 });
 
 // ---- service scoping with a faithful fake store ----------------------------------------------------------------
-type Row = Record<string, unknown>;
-function fakeReader(tables: Record<string, Row[]>, failTable?: string) {
-  const calls: Array<{ table: string; eq: Array<[string, unknown]> }> = [];
-  const from = (table: string) => {
-    const eq: Array<[string, unknown]> = [];
-    let order: { col: string; asc: boolean } | null = null;
-    const chain: Record<string, unknown> = {
-      select: () => chain,
-      eq: (c: string, v: unknown) => { eq.push([c, v]); return chain; },
-      order: (col: string, o: { ascending: boolean }) => { order = { col, asc: o.ascending }; return chain; },
-      limit: async (n: number) => {
-        calls.push({ table, eq: [...eq] });
-        if (table === failTable) return { data: null, error: { message: 'boom' } };
-        let rows = (tables[table] ?? []).filter((r) => eq.every(([c, v]) => r[c] === v));
-        if (order) { const o = order; rows = [...rows].sort((a, b) => String(a[o.col]).localeCompare(String(b[o.col])) * (o.asc ? 1 : -1)); }
-        return { data: rows.slice(0, n), error: null };
-      },
-    };
-    return chain;
-  };
-  return { reader: { from }, calls };
-}
 
 const WS = '11111111-1111-4111-8111-111111111111';
 const ME = '22222222-2222-4222-8222-222222222222';
@@ -268,14 +247,14 @@ describe('listAutomations (service)', () => {
       lastRunAt: '2026-10-13T13:01:00Z', lastStatus: 'FAILED', lastTrigger: null, lastSuccessAt: '2026-10-12T13:01:00Z', lastFailureAt: '2026-10-13T13:01:00Z', lastErrorCategory: 'TIMEOUT', nextExpectedRunAt: '2026-10-13T13:00:00.000Z',
     });
     expect(a.runNow).toEqual({ ready: false, reason: 'NO_EXECUTOR' });
-    // Every read is scoped by workspace AND owner (belt and braces on top of RLS); run reads also by workflow + provider.
+    // Every read is scoped by workspace AND owner (belt and braces on top of RLS); run reads by the automation identity (linked runs; the sole automation of its kind also owns unlinked provider runs).
     for (const c of calls) {
       expect(c.eq).toContainEqual(['workspace_id', WS]);
       expect(c.eq).toContainEqual(['user_id', ME]);
     }
     for (const c of calls.filter((x) => x.table === 'ai_runs')) {
-      expect(c.eq).toContainEqual(['workflow', 'daily_brief']);
-      expect(c.eq).toContainEqual(['provider', 'claude']);
+      expect(c.or[0]).toContain('automation_id.eq.44444444-4444-4444-8444-444444444444');
+      expect(c.or[0]).toContain('workflow.eq.daily_brief');
     }
   });
 

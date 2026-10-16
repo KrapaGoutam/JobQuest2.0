@@ -336,7 +336,7 @@ describe('no provider APIs, no new scheduler, no new credential tables, no migra
   });
   it('AI-9 added no provider-specific credential tables; AI-10 adds one provider-neutral OAuth migration (+ state-length hotfix); AI-11A adds one additive automation migration; AI-11D adds one additive discovery migration; AI-11E adds one additive recruiter migration; AI-11F adds one additive schedule-execution migration; AI-11G adds one additive provider-scheduler migration', () => {
     const migrations = readdirSync('supabase/migrations').sort();
-    expect(migrations.slice(-5)).toEqual(['20261101100000_ai_hub_automation_foundation.sql', '20261102100000_ai_hub_fresh_job_discovery.sql', '20261103100000_ai_hub_recruiter_intelligence.sql', '20261104100000_ai_hub_schedule_execution.sql', '20261105100000_ai_hub_provider_scheduler.sql']);
+    expect(migrations.slice(-5)).toEqual(['20261102100000_ai_hub_fresh_job_discovery.sql', '20261103100000_ai_hub_recruiter_intelligence.sql', '20261104100000_ai_hub_schedule_execution.sql', '20261105100000_ai_hub_provider_scheduler.sql', '20261106100000_ai_hub_multi_instance_automations.sql']);
     expect(read('supabase/migrations/20261031100000_ai_hub_oauth_state_length.sql')).not.toMatch(/create table/i);
     const sql = migrations.map((m) => read(`supabase/migrations/${m}`)).join('\n');
     expect(sql).not.toMatch(/gemini_tokens|chatgpt_tokens|openai_tokens/i);

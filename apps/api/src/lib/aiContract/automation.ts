@@ -354,6 +354,39 @@ export interface AutomationRunState {
 
 const stamp = (r: AutomationRunSlice) => r.completed_at ?? r.created_at;
 
+// ---- run attribution (several automations may share a workflow + provider) -----------------------------------------------
+
+/** `external_run_id` namespaces owned by the execution lifecycle: such a run is ALWAYS created linked to one automation. */
+export const LIFECYCLE_RUN_KEY = /^(auto|manual|retry):/;
+
+/**
+ * Which automation a run belongs to (null = none). An automation is identified by its id, never by workflow + provider:
+ *  - a run linked to an automation (`automation_id`) belongs to that automation only;
+ *  - an unlinked run whose key is in a lifecycle namespace is an orphan of a deleted automation: it belongs to nobody;
+ *  - any other unlinked run is a provider-submitted one (a provider-side schedule reporting without a claim). It is attributed by
+ *    workflow + provider ONLY while exactly one automation matches; with several it is ambiguous and attributed to none, so it
+ *    can never inflate or hide another automation's health.
+ */
+export function attributeRunToAutomation(
+  run: { automation_id: string | null; provider: string; workflow: string; external_run_id?: string | null },
+  automations: ReadonlyArray<{ id: string; provider: string; workflow: string }>,
+): string | null {
+  if (run.automation_id) return automations.some((a) => a.id === run.automation_id) ? run.automation_id : null;
+  if (run.external_run_id && LIFECYCLE_RUN_KEY.test(run.external_run_id)) return null;
+  const same = automations.filter((a) => a.provider === run.provider && a.workflow === run.workflow);
+  return same.length === 1 ? same[0]!.id : null;
+}
+
+/**
+ * PostgREST `or` filter over `ai_runs` selecting the runs that belong to ONE automation (same rule as attributeRunToAutomation).
+ * `soleOfKind` = no other automation of the owner shares its workflow + provider (so unlinked provider-submitted runs are its own).
+ */
+export function automationRunsFilter(automationId: string, workflow: string, provider: string | null, soleOfKind: boolean): string {
+  if (!provider || !soleOfKind) return `automation_id.eq.${automationId}`;
+  return `automation_id.eq.${automationId},and(automation_id.is.null,workflow.eq.${workflow},provider.eq.${provider},`
+    + 'or(external_run_id.is.null,and(external_run_id.not.like.auto:*,external_run_id.not.like.manual:*,external_run_id.not.like.retry:*)))';
+}
+
 /**
  * Derive the operational state from the automation's matching runs (same owner, workflow and provider). `latest` is
  * the most recent run of any status, `latestSuccess` the most recent SUCCEEDED run. Nothing is duplicated into the

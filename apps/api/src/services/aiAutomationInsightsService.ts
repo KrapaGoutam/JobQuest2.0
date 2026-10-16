@@ -3,10 +3,10 @@
 // One bounded read of the owner's recent `ai_runs` (RLS: the caller's own rows), joined in memory with the automation definitions
 // (aiAutomationService.listAutomations) and provider connection evidence (aiSchedulerStatusService.getSchedulerStatus). Nothing is
 // stored; there is no aggregate table and no monitoring job. A run is attributed to an automation exactly like the card and its history
-// do: linked by a claim (`automation_id`), or a provider-submitted run of the same workflow + provider.
+// do: linked by a claim (`automation_id`), or (only while it is the sole automation of its workflow + provider) a provider-submitted run.
 import { userClient } from '../lib/db';
 import {
-  AUTOMATION_LIMIT, deriveAutomationHealth, retryAttemptOf, summarizeAutomationRuns,
+  AUTOMATION_LIMIT, attributeRunToAutomation, deriveAutomationHealth, retryAttemptOf, summarizeAutomationRuns,
   type AnalyticsRun, type AutomationAnalytics, type AutomationHealth, type HealthRun, type ProviderSchedulerStatus,
 } from '../lib/aiContract';
 import { listAutomations, type AutomationDeps, type AutomationView } from './aiAutomationService';
@@ -44,10 +44,9 @@ const COLUMNS = 'id, automation_id, provider, workflow, status, trigger_type, cr
 const fail = (code: InsightsError['code'], message: string): InsightsResult => ({ ok: false, error: { code, message } });
 export const isInsightWindow = (n: number): n is InsightWindow => (INSIGHT_WINDOWS as readonly number[]).includes(n);
 
-/** Which automation a run belongs to (null = none). Pure. */
-export function attributeRun(run: Pick<RunRow, 'automation_id' | 'provider' | 'workflow'>, automations: ReadonlyArray<Pick<AutomationView, 'id' | 'provider' | 'workflow'>>): string | null {
-  if (run.automation_id) return automations.some((a) => a.id === run.automation_id) ? run.automation_id : null;
-  return automations.find((a) => a.provider === run.provider && a.workflow === run.workflow)?.id ?? null;
+/** Which automation a run belongs to (null = none). Pure; identity is the automation id, never workflow + provider. */
+export function attributeRun(run: Pick<RunRow, 'automation_id' | 'provider' | 'workflow'> & { external_run_id?: string | null }, automations: ReadonlyArray<Pick<AutomationView, 'id' | 'provider' | 'workflow'>>): string | null {
+  return attributeRunToAutomation(run, automations);
 }
 
 const sourcesOf = (v: unknown): Array<{ type: string; status: string }> =>

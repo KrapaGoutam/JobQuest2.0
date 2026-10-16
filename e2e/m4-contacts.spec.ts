@@ -67,6 +67,15 @@ test.describe('Milestone 4 — Contacts & Networking E2E', () => {
     page,
   }) => {
     const run = randomBytes(3).toString('hex');
+    // Relative to today so the drawer always renders the overdue (danger) follow-up banner,
+    // the variant that regressed color-contrast once a hard-coded date became past-due.
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const overdueFollowUp = [
+      yesterday.getFullYear(),
+      String(yesterday.getMonth() + 1).padStart(2, '0'),
+      String(yesterday.getDate()).padStart(2, '0'),
+    ].join('-');
     const contactName = `Dana Cole ${run}`;
     const company = `Halcyon Health ${run}`;
     const roleTitle = 'Director of Talent';
@@ -121,7 +130,7 @@ test.describe('Milestone 4 — Contacts & Networking E2E', () => {
     await page.locator('#contact-email').fill(email);
     await page.locator('#contact-phone').fill(phone);
     await page.locator('#contact-linkedin').fill(linkedin);
-    await page.locator('#next-follow-up').fill('2026-10-15');
+    await page.locator('#next-follow-up').fill(overdueFollowUp);
     await page.locator('#rel-notes').fill('Met via alumni network');
 
     // Submit form

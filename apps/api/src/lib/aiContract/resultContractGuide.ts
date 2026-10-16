@@ -7,7 +7,8 @@
 
 import {
   AI_CONTRACT_NAME, AI_CONTRACT_VERSION, AI_LIMITS, AI_SOURCE_STATUSES, DISCOVERY_LIMITS, JOB_DESCRIPTION_MAX_CHARS, JOB_EMPLOYMENT_TYPES,
-  JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, SOURCE_PAYLOAD_VERSION,
+  JOB_REMOTE_SCOPES, JOB_WORK_ARRANGEMENTS, RECRUITER_DISCOVERY_MODES, RECRUITER_EMAIL_BASES, RECRUITER_LIMITS, RECRUITER_RELATIONSHIPS, RECRUITER_UNCERTAIN_FIELDS,
+  RECRUITER_VERIFICATION_BASES, RECRUITER_VERIFICATIONS, SOURCE_PAYLOAD_VERSION,
 } from './constants';
 import { SOURCE_KEY_LIMITS } from './validate';
 
@@ -62,6 +63,55 @@ export function jobLeadContractRules(): string[] {
   ];
 }
 
+/** Marks the rule that carries the machine-readable recruiter example (same convention as the job_lead one). */
+export const RECRUITER_EXAMPLE_PREFIX = 'Example recruiter_intel finding (copy the SHAPE, never the values): ';
+
+/** One illustrative, schema-valid recruiter_intel finding. Values are placeholders; they are never data. */
+export const RECRUITER_EXAMPLE = {
+  kind: 'recruiter_intel',
+  title: 'Jordan Example, Technical Recruiter at Example Corp',
+  dedupe: {},
+  payload: {
+    version: SOURCE_PAYLOAD_VERSION,
+    recruiter_name: 'Jordan Example',
+    role_title: 'Technical Recruiter',
+    company: 'Example Corp',
+    relationship: 'technical_recruiter',
+    verification: 'verified',
+    verification_basis: 'company_page',
+    source_name: 'example corp team page',
+    profile_url: 'https://careers.example.com/team/jordan-example',
+    posting_contact: false,
+    discovery_mode: 'job_linked',
+    why: 'Listed on the company team page as the technical recruiter for the engineering role stored as a lead.',
+    related_job: { job_url: 'https://careers.example.com/jobs/12345' },
+  },
+} as const;
+
+/** Longest `source_name` the validator accepts on a recruiter payload. */
+export const RECRUITER_SOURCE_NAME_MAX_CHARS = 100;
+
+/**
+ * Recruiter Intelligence: how to express each person so the canonical validator accepts it. Appended to the recruiter_intel step guide
+ * (the claim carries it), so it is the single source for every provider. Breadth is deliberate: nothing here limits the job family.
+ */
+export function recruiterContractRules(): string[] {
+  const L = AI_LIMITS, R = RECRUITER_LIMITS;
+  return [
+    'USEFUL PEOPLE ARE NOT LIMITED TO ONE JOB FAMILY: any recruiter, talent-acquisition partner, sourcer, technical recruiter, hiring manager, engineering manager or engineering leader who is verifiably relevant to a stored lead, an application or a target company fits. Research from the owner\'s profile, stored leads and target companies, not from assumptions about one role type.',
+    'RESULT SHAPE: every person is ONE object inside the top-level `findings` array of your result (never a bare array, never a nested "recruiters"/"contacts" key). Required on every person: `kind` (exactly "recruiter_intel"), `title` (a short label such as "Name, Role at Company"), a `dedupe` object, and a `payload` object whose `recruiter_name` and `company` are set. Everything else is optional: omit what a public source does not state.',
+    `${RECRUITER_EXAMPLE_PREFIX}${JSON.stringify(RECRUITER_EXAMPLE)}`,
+    'dedupe (REQUIRED object) must be present on every person; it may be an empty object {}. JobQuest derives the person\'s identity itself from the payload (profile_url first, then name + company), so never try to build a key; a missing dedupe object rejects the whole person.',
+    `ENUMS (use ONLY these exact lowercase values; do not invent alternative strings, spellings or synonyms; an unknown value rejects the whole person, so OMIT an optional field you cannot classify): relationship: ${bar(RECRUITER_RELATIONSHIPS)}. verification: ${bar(RECRUITER_VERIFICATIONS)}. verification_basis: ${bar(RECRUITER_VERIFICATION_BASES)}. discovery_mode: ${bar(RECRUITER_DISCOVERY_MODES)}. uncertain_fields (an array of any of): ${bar(RECRUITER_UNCERTAIN_FIELDS)}.`,
+    'PUBLIC EVIDENCE (required): every person needs a usable public source URL, either payload.profile_url (the person\'s own public profile or team-page entry, preferred) or the finding-level source.url (the public page where you found them, for example the posting). It must be a plain absolute http:// or https:// URL that you actually opened and that really shows this person, with no login details embedded. Never guess, construct or pattern-build a URL. A source_name label alone is NOT evidence. A person without such a URL is rejected, so do not submit one; skip that person instead.',
+    'VERIFICATION: verification "verified" requires BOTH a cited public URL AND a verification_basis from the list above; without both the person is recorded as "uncertain". Listing anything in uncertain_fields also makes the person "uncertain". Use "uncertain" when the name, role or employer rests on a single weak signal. posting_contact: true only when the job posting itself names this person (verification_basis "job_posting" implies it). discovery_mode is a hint: "job_linked" when the person came from a stored lead, "target_company" when found through the owner\'s target-company list. related_job (optional) is a public job reference ({job_url} and/or external_job_id + source_name), never a JobQuest id.',
+    `LIMITS (a value over its limit REJECTS that whole person; it is not shortened for you): title <= ${L.title} characters; payload.recruiter_name <= ${SOURCE_KEY_LIMITS.short}; payload.company <= ${SOURCE_KEY_LIMITS.short}; payload.role_title <= ${SOURCE_KEY_LIMITS.short}; source_name <= ${RECRUITER_SOURCE_NAME_MAX_CHARS}; profile_url and source.url <= ${L.url}; payload.version must be "${SOURCE_PAYLOAD_VERSION}". why is evidence only, <= ${R.whyChars} characters (cut if longer; dropped if it speculates about hiring or flatters, so state facts such as "named as the recruiting contact in the posting").`,
+    `DRAFTS (optional, only when the profile says drafts are on; text for the OWNER to review, never sent by JobQuest): draft_note <= ${R.noteChars} characters; draft_email {subject <= ${R.emailSubjectChars} characters, body <= ${R.emailBodyChars} characters}. A draft that is too long, contains a link, email address or phone number, or claims something JobQuest cannot support (you applied, an earlier conversation, a shared connection) is DROPPED, not repaired. Never write a draft that implies contact already happened.`,
+    `CONTACT SAFETY: never invent or infer an email, phone number or profile URL. Phone numbers are never stored (do not send any). A work email may be sent ONLY as payload.contact_email together with contact_source_url (the public page that shows it) and contact_email_basis (${bar(RECRUITER_EMAIL_BASES)}); a personal mailbox or a guessed pattern is discarded. Do not put email addresses or phone numbers in title, name, role, why or evidence. JobQuest never sends outreach, emails or messages on its own, and neither must you.`,
+    'A rejected person is dropped and the whole run ends PARTIAL, so check every person against the shape, enums and limits above BEFORE you submit. Submit at most the profile maximum of NEW people, best matches first, one useful person per company.',
+  ];
+}
+
 const ENVELOPE_EXAMPLE = {
   contract: AI_CONTRACT_NAME,
   schema_version: AI_CONTRACT_VERSION,
@@ -77,7 +127,7 @@ export function resultEnvelopeRules(): string[] {
   return [
     `RESULT ENVELOPE (the \`result\` argument of jobquest_submit_ai_result): ${JSON.stringify(ENVELOPE_EXAMPLE)}`,
     `contract is exactly "${AI_CONTRACT_NAME}" and schema_version is exactly "${AI_CONTRACT_VERSION}". provider is the claim's \`submit.provider\` (the product you are running as) and workflow is the claim's \`submit.workflow\`, both copied exactly. run.external_run_id is the claim's \`externalRunId\` (also \`submit.externalRunId\`) copied EXACTLY, character for character. run.generated_at is the current time as ISO-8601 with an explicit offset or Z.`,
-    `sources: at most ${AI_LIMITS.sourcesPerRun} entries, one per source you tried, each with type (job_site | web | gmail | calendar ...), ref (a short name), status (${bar(AI_SOURCE_STATUSES)}), optional count (whole number) and a short note. findings: at most ${AI_LIMITS.findingsPerRun} canonical finding objects (see the step rules). Unknown extra fields are dropped; never put credentials or raw content in them.`,
+    `sources: at most ${AI_LIMITS.sourcesPerRun} entries, one per source you tried, each with type (job_site | web | gmail | calendar ...), ref (a short GENERIC label of where you looked, for example "company careers page" or "web search": never a person's name, email address, phone number or profile link, because people belong only in findings), status (${bar(AI_SOURCE_STATUSES)}), optional count (whole number) and a short note. findings: at most ${AI_LIMITS.findingsPerRun} canonical finding objects (see the step rules). Unknown extra fields are dropped; never put credentials or raw content in them.`,
   ];
 }
 

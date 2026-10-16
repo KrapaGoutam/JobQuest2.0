@@ -1264,7 +1264,15 @@ export function validateAiResult(input: unknown): AiValidationResult {
       c.strip(s, ['type', 'ref', 'observed_at', 'status', 'count', 'note'], p);
       const e0 = c.errors.length;
       const type = oneOf(c, s.type, `${p}.type`, AI_SOURCE_TYPES);
-      const ref = text(c, s.ref, `${p}.ref`, AI_LIMITS.id, { required: true });
+      // A source is a generic label of where the provider looked. Email addresses and phone numbers never belong in it (people are
+      // reported only as findings, where the recruiter privacy rules apply); a label that was nothing but contact details falls back to the type.
+      const rawRef = text(c, s.ref, `${p}.ref`, AI_LIMITS.id, { required: true });
+      let ref = rawRef;
+      if (rawRef !== null) {
+        const cleaned = redactContact(rawRef);
+        if (cleaned.replace(/\s+/g, ' ') !== rawRef.replace(/\s+/g, ' ')) c.warn(`${p}.ref`, 'source_contact_redacted', 'email addresses and phone numbers are not stored; use a generic source label');
+        ref = cleaned || (typeof s.type === 'string' ? s.type : null);
+      }
       const observed_at = timestamp(c, s.observed_at, `${p}.observed_at`);
       // AI-11D source health: unavailable / blocked / error / skipped are NOT the same as zero results.
       const status = oneOf(c, s.status, `${p}.status`, AI_SOURCE_STATUSES, false);

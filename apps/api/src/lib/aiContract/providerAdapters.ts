@@ -11,7 +11,7 @@
 // No provider schedule is created by JobQuest and no private provider API is used: setup is a copyable instruction set.
 
 import type { AutomationProvider, ExecutionStep } from './automation';
-import { jobLeadContractRules, recruiterContractRules } from './resultContractGuide';
+import { emailContractRules, jobLeadContractRules, recruiterContractRules } from './resultContractGuide';
 
 export const SCHEDULER_PROVIDERS = ['claude', 'chatgpt', 'gemini'] as const;
 export type SchedulerProvider = (typeof SCHEDULER_PROVIDERS)[number];
@@ -185,11 +185,8 @@ export const STEP_GUIDES: Readonly<Record<ExecutionStep, StepGuide>> = {
     step: 'email_triage', title: 'Email triage', readTools: ['jobquest_list_email_intelligence', 'jobquest_list_applications'], findingKind: 'email_event', sourceTypes: ['gmail'],
     rules: [
       'Use only a mailbox connector you already have, READ-ONLY. Never send, reply, forward, archive, delete, label or mark mail, never open attachments, and never create or send a draft (you may only set draft_recommended).',
-      'Split mail into job_related (recruiter_reply, application_confirmation, interview, interview_scheduling, assessment, follow_up, status_update, rejection, offer, other_job_search) and other (important_account, notification, newsletter, other). Skip marketing and bulk promotions.',
-      'Give every item urgency HIGH (action needed today, deadline within ~24h, interview scheduling, direct recruiter question), MEDIUM (action soon) or LOW (FYI, confirmations, newsletters, rejections). Never invent a deadline.',
-      'One finding per message id: dedupe {source_type:"gmail", source_id:<stable message id>}; occurred_at = when it was RECEIVED; evidence <= 500 chars; payload {version:"1.0", sender_name, sender_domain, subject (<=200), company, role_title, group, urgency, action_state, action_summary, deadline_at, draft_recommended, application_stage_hint}.',
-      'Never submit bodies, HTML, attachments, full sender addresses, links, phone numbers, codes or account numbers.',
-      'Call jobquest_list_email_intelligence first so you do not re-report stored messages.',
+      'Call jobquest_list_email_intelligence first so you do not re-report stored messages, and jobquest_list_applications to recognise the companies and roles the owner is pursuing.',
+      ...emailContractRules(),
       SOURCE_STATUS_RULE,
     ],
   },

@@ -202,14 +202,20 @@ describe.skipIf(!ready || !local)('AI-11A — automation foundation (real DB + r
     await admin.rpc('rpc_ai_automation_delete', { p_actor_id: carol.userId, p_workspace_id: ws, p_id: ok.data.id });
   });
 
-  it('AI11A-06 · uniqueness (name, workflow + provider) and the per-owner limit', async () => {
+  it('AI11A-06 · uniqueness (name only; workflow + provider may repeat) and the per-owner limit', async () => {
     // Same workflow, different provider and name is fine (provider is data, not architecture).
     expect((await post(carol, '', { workspace_id: ws, ...digest({ name: 'Gemini digest', provider: 'gemini' }) })).status).toBe(201);
     // A name collides case-insensitively, whatever the workflow/provider.
     expect((await post(carol, '', { workspace_id: ws, ...digest({ name: 'MANUAL ONLY', provider: 'gemini', workflow: 'job_discovery', sections: [] }) })).status).toBe(409);
     expect((await post(carol, '', { workspace_id: ws, ...digest({ name: 'gemini DIGEST', provider: 'chatgpt', workflow: 'job_discovery', sections: [] }) })).status).toBe(409);
-    // Same workflow + provider as the Claude digest, different name.
-    expect((await post(carol, '', { workspace_id: ws, ...digest({ name: 'Second Claude digest' }) })).status).toBe(409);
+    // Same workflow + provider as the Claude digest, different name: allowed (several automations may share a workflow + provider).
+    const second = await post(carol, '', { workspace_id: ws, ...digest({ name: 'Second Claude digest' }) });
+    expect(second.status).toBe(201);
+    // ...but an exact (case-insensitive) duplicate NAME is still refused, with a message that no longer implies workflow/provider uniqueness.
+    const dup = await post(carol, '', { workspace_id: ws, ...digest({ name: 'second claude DIGEST' }) });
+    expect(dup.status).toBe(409);
+    expect(dup.json.error.message).toBe('An automation with this name already exists.');
+    expect((await post(carol, `/${second.json.id}/delete`, { workspace_id: ws })).status).toBe(200);
     // A different owner may reuse both the name and the workflow/provider.
     expect((await post(eve, '', { workspace_id: ws, ...digest() })).status).toBe(201);
     // Limit: fill to 10 for carol (some already exist), the next one is refused.

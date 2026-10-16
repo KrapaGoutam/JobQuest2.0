@@ -13,7 +13,7 @@
 import { admin as adminClient, userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  CLIENT_KEY, EXECUTION_FAILURE_CATEGORIES, executionPlan, executorState, getDueOccurrences, runNowReadiness, sanitizeFailureSummary,
+  AUTOMATION_LIMIT, CLIENT_KEY, EXECUTION_FAILURE_CATEGORIES, automationRunsFilter, executionPlan, executorState, getDueOccurrences, runNowReadiness, sanitizeFailureSummary,
   type AutomationDefinition, type DueCandidate, type DueOccurrence, type ExecutionClaim, type ExecutionFailureCategory, type ExecutionTrigger,
   type ExecutorState,
 } from '../lib/aiContract';
@@ -230,14 +230,16 @@ const HISTORY_COLUMNS = 'id, status, trigger_type, scheduled_for, started_at, co
 export async function listAutomationRuns(ctx: ExecutionContext & { accessToken: string }, automationId: string, deps: ExecutionDeps = {}): Promise<ExecutionResult<AutomationRunView[]>> {
   if (!validCtx(ctx) || !UUID.test(automationId)) return fail('INVALID_INPUT', 'A workspace and an automation are required.');
   const reader = deps.runReader ?? (userClient(ctx.accessToken) as unknown as Reader);
-  // Same attribution rule as the derived state on the card: runs linked to this automation, plus provider-submitted runs
-  // of the same workflow and provider (a provider-side schedule reports through the ingest without a claim).
-  const cfg = await reader.from('ai_workflow_configs').select('workflow, primary_provider')
-    .eq('id', automationId).eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).maybeSingle();
+  // Same attribution rule as the derived state on the card: runs linked to this automation, plus provider-submitted runs of the
+  // same workflow and provider only while no other automation shares them (several automations may; the id is the identity).
+  const cfg = await reader.from('ai_workflow_configs').select('id, workflow, primary_provider')
+    .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).limit(AUTOMATION_LIMIT);
   if (cfg.error) return fail('READ_FAILED', 'Could not load run history.');
-  const c = cfg.data as { workflow: string; primary_provider: string | null } | null;
+  const all = (cfg.data ?? []) as Array<{ id: string; workflow: string; primary_provider: string | null }>;
+  const c = all.find((o) => o.id === automationId);
   if (!c) return fail('AUTOMATION_NOT_FOUND', 'Automation not found.');
-  const match = c.primary_provider ? `automation_id.eq.${automationId},and(workflow.eq.${c.workflow},provider.eq.${c.primary_provider})` : `automation_id.eq.${automationId}`;
+  const sole = all.every((o) => o.id === c.id || o.workflow !== c.workflow || o.primary_provider !== c.primary_provider);
+  const match = automationRunsFilter(automationId, c.workflow, c.primary_provider, sole);
   const res = await reader.from('ai_runs').select(HISTORY_COLUMNS)
     .eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId).or(match)
     .order('created_at', { ascending: false }).limit(10);

@@ -11,7 +11,7 @@
 // No provider schedule is created by JobQuest and no private provider API is used: setup is a copyable instruction set.
 
 import type { AutomationProvider, ExecutionStep } from './automation';
-import { jobLeadContractRules } from './resultContractGuide';
+import { jobLeadContractRules, recruiterContractRules } from './resultContractGuide';
 
 export const SCHEDULER_PROVIDERS = ['claude', 'chatgpt', 'gemini'] as const;
 export type SchedulerProvider = (typeof SCHEDULER_PROVIDERS)[number];
@@ -213,7 +213,7 @@ export const STEP_GUIDES: Readonly<Record<ExecutionStep, StepGuide>> = {
       'Use PUBLIC sources only. Cite a public page for every person (source.url or payload.profile_url). verification "verified" requires a cited URL AND a verification_basis, otherwise "uncertain". Never infer that someone is a recruiter.',
       'Never guess a name, title, employer, email or profile URL. Never construct an email from a naming pattern; a work email only with contact_source_url. No phone numbers.',
       'Drafts (draft_note <= 300 chars, draft_email) only if the preferences ask for them: they are text for the owner to review and are NEVER sent. Never contact anyone.',
-      'Each person: kind recruiter_intel; payload {version:"1.0", recruiter_name, role_title, company, relationship, verification, verification_basis, source_name, profile_url, posting_contact, discovery_mode, why (<=300 chars, evidence only), related_job {job_url}}.',
+      ...recruiterContractRules(),
       SOURCE_STATUS_RULE,
     ],
   },

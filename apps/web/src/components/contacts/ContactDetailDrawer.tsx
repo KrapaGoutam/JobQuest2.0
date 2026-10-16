@@ -255,7 +255,7 @@ export function ContactDetailDrawer({
                     ? 'Follow-up due today'
                     : `Follow-up due ${followUp.label}`}
                 </span>
-                <span className="small" style={{ opacity: 0.9 }}>
+                <span className="small">
                   {contact.next_follow_up_date}
                 </span>
               </div>

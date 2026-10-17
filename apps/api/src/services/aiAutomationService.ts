@@ -5,14 +5,15 @@
 // through the service_role RPCs with the actor id the API derived from the verified session; the RPCs re-verify
 // ACTIVE membership and ownership and re-validate every field. Nothing here is reachable from MCP or a provider.
 //
-// Operational state is DERIVED: last run / last success / last error from `ai_runs` (same owner, workflow and
-// provider; only the normalized error_category is read, never error_detail) and `nextExpectedRunAt` from the
+// Operational state is DERIVED: last run / last success / last error from the `ai_runs` linked to THIS automation
+// (several automations may share a workflow + provider; see attributeRunToAutomation; only the normalized
+// error_category is read, never error_detail) and `nextExpectedRunAt` from the
 // schedule. Nothing is copied back into the configuration row. JobQuest does not execute workflows, so Run Now is
 // reported through `runNow` (see runNowReadiness); AI-11F adds the execution lifecycle in aiExecutionService.
 import { admin as adminClient, userClient } from '../lib/db';
 import { isAiHubServerEnabled } from '../lib/aiHubConfig';
 import {
-  AUTOMATION_LIMIT, computeNextExpectedRun, deriveAutomationRunState, executorState, runNowReadiness, validateAutomation,
+  AUTOMATION_LIMIT, automationRunsFilter, computeNextExpectedRun, deriveAutomationRunState, executorState, runNowReadiness, validateAutomation,
   type AutomationDefinition, type AutomationRunSlice, type ExecutorState, type RunNowReadiness,
 } from '../lib/aiContract';
 import { UUID } from './aiReadSupport';
@@ -95,8 +96,10 @@ export async function listAutomations(ctx: AutomationContext, deps: AutomationDe
 
   // At most AUTOMATION_LIMIT rows -> at most 3 tiny indexed queries each; exact per automation.
   const views = await Promise.all(rows.map(async (row) => {
+    // Linked runs belong to this automation only; unlinked provider-submitted runs only while no sibling shares workflow + provider.
+    const sole = rows.every((o) => o.id === row.id || o.workflow !== row.workflow || o.primary_provider !== row.primary_provider);
     const base = () => reader.from('ai_runs').select(RUN_COLUMNS).eq('workspace_id', ctx.workspaceId).eq('user_id', ctx.userId)
-      .eq('workflow', row.workflow).eq('provider', row.primary_provider ?? '');
+      .or(automationRunsFilter(row.id, row.workflow, row.primary_provider, sole));
     const [latest, success, failure] = await Promise.all([
       base().order('created_at', { ascending: false }).limit(1),
       base().eq('status', 'SUCCEEDED').order('created_at', { ascending: false }).limit(1),
@@ -117,7 +120,7 @@ export async function listAutomations(ctx: AutomationContext, deps: AutomationDe
 const RPC_ERRORS: Record<string, [AutomationErrorCode, string]> = {
   '42501': ['WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
   P0002: ['AUTOMATION_NOT_FOUND', 'Automation not found.'],
-  '23505': ['AUTOMATION_CONFLICT', 'An automation with this name, or for this workflow and provider, already exists.'],
+  '23505': ['AUTOMATION_CONFLICT', 'An automation with this name already exists.'],
   '53400': ['AUTOMATION_LIMIT', `You can have at most ${AUTOMATION_LIMIT} automations. Delete one first.`],
   '22023': ['INVALID_INPUT', 'The automation settings are not valid.'],
 };

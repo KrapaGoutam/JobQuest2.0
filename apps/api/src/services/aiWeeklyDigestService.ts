@@ -134,7 +134,7 @@ export async function buildWeeklyDigest(ctx: WeeklyContext, req: WeekRequest = {
     openDue('id, title, due_date, due_at').order('due_date', { ascending: true, nullsFirst: false }).order('id', { ascending: true }).limit(SCAN.items),
     openDue('id', true),
     db.rpc('rpc_get_goal_progress', { p_workspace_id: ws, p_user_id: me, p_period_count: 36 }),
-    owned('ai_runs', 'id, automation_id, provider, workflow, status, trigger_type, created_at, started_at, completed_at, error_category, sources').gte('created_at', win.start).lt('created_at', win.end)
+    owned('ai_runs', 'id, automation_id, provider, workflow, status, trigger_type, created_at, started_at, completed_at, error_category, sources, external_run_id').gte('created_at', win.start).lt('created_at', win.end)
       .order('created_at', { ascending: false }).limit(SCAN.runs),
     latestRun(SOURCE_WORKFLOWS.email), latestRun(SOURCE_WORKFLOWS.jobs), latestRun(SOURCE_WORKFLOWS.recruiters),
     includeAttention ? owned('interviews', 'id, application_id, scheduled_at').is('outcome', null).gte('scheduled_at', nowIso).lt('scheduled_at', horizonIso).order('scheduled_at', { ascending: true }).limit(4) : Promise.resolve({ data: [] }),
@@ -191,7 +191,7 @@ export async function buildWeeklyDigest(ctx: WeeklyContext, req: WeekRequest = {
   const automations = listed.ok ? listed.data : [];
   const runs: AnalyticsRun[] = [];
   for (const r of rowsOf(runRows)) {
-    const id = attributeRun({ automation_id: (r.automation_id as string | null) ?? null, provider: String(r.provider), workflow: String(r.workflow) }, automations);
+    const id = attributeRun({ automation_id: (r.automation_id as string | null) ?? null, provider: String(r.provider), workflow: String(r.workflow), external_run_id: (r.external_run_id as string | null) ?? null }, automations);
     if (!id) continue;
     runs.push({
       id: String(r.id), automationId: id, provider: String(r.provider), workflow: String(r.workflow), status: String(r.status), trigger: String(r.trigger_type),
